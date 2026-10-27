@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { track } from '../lib/analytics'
-import { careerName, companyOf, daysLeft, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, type Resume } from '../lib/gap'
+import { careerName, COMPANIES, companyOf, daysLeft, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, type Resume } from '../lib/gap'
 import { getLang, localizePath, messages, pick, useMessages } from '../lib/i18n'
 import { pathOf } from '../lib/routes'
 import { showToast } from '../lib/toast'
@@ -39,8 +39,7 @@ const TEXT = messages({
     sources: '워크넷과 기업 채용 페이지에서 하루 한 번 모아요.',
     category: '직무 카테고리',
     location: '지역',
-    suggest: '추천 검색어',
-    suggestHint: 'Enter로 바로 찾기',
+    company: '기업',
     always: '상시 채용',
     view: '원문 보기',
     share: '링크 복사',
@@ -64,8 +63,7 @@ const TEXT = messages({
     sources: 'Collected once a day from Worknet and company career pages.',
     category: 'Job category',
     location: 'Location',
-    suggest: 'Try',
-    suggestHint: 'Press Enter to search',
+    company: 'Company',
     always: 'Rolling',
     view: 'Original',
     share: 'Copy link',
@@ -96,6 +94,7 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
   const [loaded, setLoaded] = useState<Loaded | undefined>(undefined)
   const [attempt, setAttempt] = useState(0)
   const [suggestion, setSuggestion] = useState(0)
+  const [company, setCompany] = useState<string | null>(null)
 
   // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요.
   useEffect(() => {
@@ -124,7 +123,8 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
     }
   }, [query, family, career, attempt])
 
-  const list = Array.isArray(loaded) ? sortPostings(loaded, sort, resume) : loaded
+  // 기업은 받아 온 공고에서 바로 걸러요. 기업마다 공고가 몇 개뿐이라 서버에 다시 묻지 않아요.
+  const list = Array.isArray(loaded) ? sortPostings(company ? loaded.filter((posting) => posting.companyId === company) : loaded, sort, resume) : loaded
 
   return (
     <main className="flex min-h-0 flex-1 flex-col">
@@ -154,13 +154,12 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
             data-search-input
             className="min-w-0 flex-1 bg-transparent text-[15px] text-gray-900 outline-none [&::-webkit-search-cancel-button]:hidden"
           />
+          {/* 추천 검색어는 자리표시 글자처럼 옅게 보여서, 이런 걸 쳐 볼 수 있다는 것만 슬쩍 알려요. */}
           {!query && (
-            <span aria-hidden className="pointer-events-none absolute inset-y-0 left-12 right-5 flex items-center gap-2 overflow-hidden text-[15px] whitespace-nowrap">
-              <span className="text-gray-400">{L.suggest}</span>
-              <span key={suggestion} className="animate-rise font-medium text-gray-700">
+            <span aria-hidden className="pointer-events-none absolute inset-y-0 left-12 right-5 flex items-center overflow-hidden text-[15px] whitespace-nowrap text-gray-400">
+              <span key={suggestion} className="animate-rise">
                 {SUGGESTIONS[suggestion]}
               </span>
-              <span className="ml-auto hidden text-[12px] text-gray-400 sm:inline">{L.suggestHint}</span>
             </span>
           )}
         </label>
@@ -182,6 +181,29 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
               }`}
             >
               {value ? familyName(value) : L.all}
+            </button>
+          ))}
+        </div>
+
+        {/* 기업도 로고를 보고 한 번에 골라요. 다시 누르면 풀려요. */}
+        <div role="radiogroup" aria-label={L.company} className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:flex-wrap md:overflow-visible">
+          {COMPANIES.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="radio"
+              aria-checked={company === item.id}
+              onClick={() => {
+                const next = company === item.id ? null : item.id
+                track('jobs_company_select', { company: next ?? 'all' })
+                setCompany(next)
+              }}
+              className={`flex h-9 shrink-0 items-center gap-2 rounded-full border py-1 pr-3.5 pl-1.5 text-[13px] font-medium transition-colors ${
+                company === item.id ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
+              }`}
+            >
+              <CompanyMark company={item} className="size-6 rounded-full! text-[10px]" />
+              {item.name}
             </button>
           ))}
         </div>
