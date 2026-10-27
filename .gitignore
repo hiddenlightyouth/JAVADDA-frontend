@@ -1,0 +1,17 @@
+node_modules
+dist
+dist-ssr
+build
+.env
+.env.*
+!.env.example
+!.env.production
+*.log
+.DS_Store
+.claude/settings.local.json
+.claude/launch.json
+.dev.vars
+.wrangler
+
+# oh-my-claudecode 플러그인이 만드는 작업 파일
+.omc

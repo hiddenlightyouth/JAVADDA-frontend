@@ -1,0 +1,71 @@
+import { useEffect } from 'react'
+import { useAuth } from '../lib/auth'
+import { AuthForm } from './AuthForm'
+import { History } from './History'
+import { MyPage } from './MyPage'
+import { messages, useLang, useMessages } from '../lib/i18n'
+import { applyMeta, HOME_META, SITE_TITLE } from '../lib/meta'
+
+export type AccountPage = 'login' | 'signup' | 'me' | 'history'
+
+interface Props {
+  page: AccountPage
+  onNavigate: (page: AccountPage, replace?: boolean) => void
+  /** 로그인 화면이나 회원가입 화면에서 로그인했을 때 불러요. */
+  onSignedIn: () => void
+  /** 로그인 화면 위에 따로 보여줄 안내 */
+  notice?: string
+  /** 소셜 로그인을 마치고 돌아갈 주소. 리포트에서 로그인하러 왔을 때 그 주소를 넘겨요. */
+  returnTo?: string
+  /** 내 리포트에서 리포트를 열어요. */
+  onOpenReport: (id: string) => void
+  onHome: () => void
+}
+
+const TEXT = messages({
+  ko: {
+    titles: { login: '로그인', signup: '회원가입', me: '내 정보', history: '내 리포트' } as Record<AccountPage, string>,
+    meNotice: '내 정보는 로그인한 뒤에 볼 수 있어요.',
+    historyNotice: '내 리포트는 로그인한 뒤에 볼 수 있어요.',
+  },
+  en: {
+    titles: { login: 'Sign in', signup: 'Sign up', me: 'Account', history: 'My reports' },
+    meNotice: 'Sign in to see your account.',
+    historyNotice: 'Sign in to see your reports.',
+  },
+})
+
+export function Account({ page, onNavigate, onSignedIn, notice, returnTo, onOpenReport, onHome }: Props) {
+  const { tokens } = useAuth()
+  const signedIn = tokens !== null
+  const guarded = page === 'me' || page === 'history'
+
+  const lang = useLang()
+  const text = useMessages(TEXT)
+
+  useEffect(() => {
+    applyMeta({ ...HOME_META[lang], title: `${TEXT[lang].titles[page]} | ${SITE_TITLE}` }, lang, `/${page}`)
+    return () => applyMeta(HOME_META[lang], lang, '/')
+  }, [lang, page])
+
+  useEffect(() => {
+    if (signedIn && !guarded) onSignedIn()
+  }, [guarded, onSignedIn, signedIn])
+
+  if (!signedIn) {
+    const mode = page === 'signup' ? 'signup' : 'login'
+    return (
+      <AuthForm
+        key={mode}
+        mode={mode}
+        notice={notice ?? (page === 'me' ? text.meNotice : page === 'history' ? text.historyNotice : undefined)}
+        onSwitch={() => onNavigate(mode === 'signup' ? 'login' : 'signup')}
+        returnTo={returnTo}
+      />
+    )
+  }
+
+  if (page === 'me') return <MyPage onSignedOut={onHome} />
+  if (page === 'history') return <History onOpenReport={onOpenReport} onHome={onHome} />
+  return <main className="flex-1" />
+}

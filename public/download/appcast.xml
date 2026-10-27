@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Lofy</title>
+    <item>
+      <title>1.4</title>
+      <pubDate>Fri, 23 Oct 2026 06:11:38 +0000</pubDate>
+      <sparkle:version>5</sparkle:version>
+      <sparkle:shortVersionString>1.4</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://lofy.hidly.dev/download/WhoIsLoafing-1.4.zip" type="application/octet-stream" sparkle:edSignature="oketyuGExesST2iaM5WFdNdnWGjji4xvF/+W4UW3m+l9FC1I6ryqIeTN+c4CIy6vEA4ZPOKnNIaHgjXJBpzlBw==" length="1112284" />
+    </item>
+  </channel>
+</rss>

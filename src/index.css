@@ -1,0 +1,661 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand: #2e90fa;
+  --color-brand-hover: #1570ef;
+  --color-brand-soft: #eff8ff;
+
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo',
+    'Noto Sans KR', sans-serif;
+
+  --tracking-base: -0.02em;
+
+  --animate-typing: typing 1.2s ease-in-out infinite;
+  /* 움직임의 빠르기 두 가지예요. spring은 살짝 넘쳤다가 돌아오는 통통 튀는 느낌, smooth는 빠르게 나와서 부드럽게 멈추는 느낌이에요. */
+  --ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --animate-rise: rise 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pop: pop 0.32s cubic-bezier(0.34, 1.45, 0.64, 1) both;
+  --animate-slide-in: slide-in 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-slide-in-left: slide-in-left 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade: fade 0.2s ease-out both;
+  --animate-grow: grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-shimmer: shimmer 1.8s linear infinite;
+  --animate-shake: shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  --animate-word: word 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-draw: draw 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes typing {
+    0%,
+    60%,
+    100% {
+      opacity: 0.3;
+      transform: translateY(0);
+    }
+    30% {
+      opacity: 1;
+      transform: translateY(-3px);
+    }
+  }
+
+  @keyframes word {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+      filter: blur(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+      filter: blur(0);
+    }
+  }
+
+  @keyframes shake {
+    10%,
+    90% {
+      transform: translateX(-1px);
+    }
+    20%,
+    80% {
+      transform: translateX(3px);
+    }
+    30%,
+    50%,
+    70% {
+      transform: translateX(-6px);
+    }
+    40%,
+    60% {
+      transform: translateX(6px);
+    }
+  }
+
+  @keyframes shimmer {
+    from {
+      background-position: 100% 0;
+    }
+    to {
+      background-position: -100% 0;
+    }
+  }
+
+  /* 메뉴, 확인 창, 툴팁, 떠 있는 카드가 나타날 때 써요. 작게 시작해서 통 하고 커져요. 어디서 커질지는 origin-* 클래스로 정해요. */
+  @keyframes pop {
+    from {
+      opacity: 0;
+      scale: 0.92;
+    }
+    /* 끝의 투명도는 적지 않아요. 흐리게 둔 것(맵에서 손대지 않은 폴더 등)이 제 투명도로 돌아가야 해요. */
+    to {
+      scale: 1;
+    }
+  }
+
+  /* 오른쪽에서 여는 칸이 옆에서 미끄러져 들어와요. */
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(32px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* 웹의 /app에서 좁은 화면의 사이드바 서랍이 왼쪽에서 미끄러져 들어와요. */
+  @keyframes slide-in-left {
+    from {
+      opacity: 0;
+      transform: translateX(-32px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes fade {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /* 막대 그래프의 막대가 왼쪽에서부터 자라나요. */
+  @keyframes grow {
+    from {
+      scale: 0 1;
+    }
+    to {
+      scale: 1 1;
+    }
+  }
+
+  /* 테두리가 한 바퀴 그려지듯 나타나요. 그리는 도형에 pathLength="1"과 stroke-dasharray="1"을 같이 줘요. */
+  @keyframes draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@layer base {
+  /* 버튼은 누르는 동안 살짝 작아졌다가, 떼면 통 하고 돌아와요. 끌어서 옮기는 칸처럼 누름 반응이 어색한 곳은 data-no-press로 빼요. */
+  button {
+    transition: scale 0.18s var(--ease-spring);
+  }
+
+  button:not(:disabled, [data-no-press]):active {
+    scale: 0.96;
+  }
+
+  html {
+    /* 모바일에서 화면을 돌리거나 입력할 때 글자 크기가 멋대로 커지지 않게 해요. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    font-family: var(--font-sans);
+    letter-spacing: var(--tracking-base);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background: var(--color-white);
+    color: var(--color-gray-900);
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  /* 버튼과 링크를 빠르게 두 번 눌러도 화면이 확대되지 않게 해요. 두 손가락 확대는 그대로 돼요. */
+  button,
+  a,
+  input {
+    touch-action: manipulation;
+  }
+
+  button:disabled {
+    cursor: default;
+  }
+}
+
+/* 질문 메뉴를 들고 있는 유리 방울. 가장자리가 흐물흐물 일렁이고, 안에서는 파란 빛이 천천히 떠다녀요. */
+.orb {
+  position: relative;
+  display: block;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border: 1px solid rgb(46 144 250 / 0.22);
+  border-radius: 46% 54% 52% 48% / 50% 46% 54% 50%;
+  background: rgb(239 248 255 / 0.55);
+  backdrop-filter: blur(10px) saturate(1.4);
+  animation: orb-morph 7s ease-in-out infinite;
+  transition: transform 0.2s ease-out;
+}
+
+.orb:hover {
+  transform: scale(1.06);
+}
+
+.orb-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(9px);
+}
+
+.orb-blob-a {
+  top: 18%;
+  left: 8%;
+  width: 60%;
+  height: 60%;
+  background: #2e90fa;
+  animation: orb-drift-a 6s ease-in-out infinite;
+}
+
+.orb-blob-b {
+  right: 2%;
+  bottom: 6%;
+  width: 52%;
+  height: 52%;
+  background: #7dd3fc;
+  animation: orb-drift-b 7.5s ease-in-out infinite;
+}
+
+.orb-blob-c {
+  top: 2%;
+  right: 12%;
+  width: 40%;
+  height: 40%;
+  background: #1570ef;
+  opacity: 0.7;
+  animation: orb-drift-c 9s ease-in-out infinite;
+}
+
+/* 유리 표면에 비친 빛 */
+.orb-shine {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 24%, rgb(255 255 255 / 0.9), rgb(255 255 255 / 0) 42%),
+    radial-gradient(circle at 72% 82%, rgb(255 255 255 / 0.35), rgb(255 255 255 / 0) 38%);
+}
+
+@keyframes orb-morph {
+  0%,
+  100% {
+    border-radius: 46% 54% 52% 48% / 50% 46% 54% 50%;
+    rotate: 0deg;
+  }
+  25% {
+    border-radius: 56% 44% 46% 54% / 44% 56% 44% 56%;
+    rotate: 6deg;
+  }
+  50% {
+    border-radius: 44% 56% 58% 42% / 56% 44% 52% 48%;
+    rotate: -4deg;
+  }
+  75% {
+    border-radius: 52% 48% 42% 58% / 46% 54% 48% 52%;
+    rotate: 5deg;
+  }
+}
+
+@keyframes orb-drift-a {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 26% 20%;
+  }
+}
+
+@keyframes orb-drift-b {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: -32% -26%;
+  }
+}
+
+@keyframes orb-drift-c {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: -24% 46%;
+  }
+}
+
+/* 아티클 본문. 마크다운을 변환한 태그에 직접 모양을 입혀요. */
+.article {
+  font-size: 16px;
+  line-height: 1.8;
+  color: var(--color-gray-700);
+}
+
+.article > * + * {
+  margin-top: 1.1em;
+}
+
+.article h2 {
+  margin-top: 2.6em;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-gray-900);
+}
+
+.article h3 {
+  margin-top: 2em;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--color-gray-900);
+}
+
+.article strong {
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+
+.article a {
+  color: var(--color-brand);
+}
+
+.article a:hover {
+  color: var(--color-brand-hover);
+}
+
+.article ul,
+.article ol {
+  padding-left: 1.3em;
+}
+
+.article ul {
+  list-style: disc;
+}
+
+.article ol {
+  list-style: decimal;
+}
+
+.article li + li {
+  margin-top: 0.45em;
+}
+
+.article li::marker {
+  color: var(--color-gray-400);
+}
+
+.article blockquote {
+  border-left: 2px solid var(--color-gray-200);
+  padding-left: 1em;
+  color: var(--color-gray-500);
+}
+
+.article code {
+  border-radius: 6px;
+  background: var(--color-gray-100);
+  padding: 0.15em 0.4em;
+  font-size: 0.875em;
+  letter-spacing: 0;
+  color: var(--color-gray-800);
+}
+
+.article pre {
+  overflow-x: auto;
+  border-radius: 12px;
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-gray-100);
+  padding: 1em 1.15em;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.article pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+.article table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+.article th,
+.article td {
+  border-bottom: 1px solid var(--color-gray-100);
+  padding: 0.7em 0.9em 0.7em 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.article th {
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--color-gray-900);
+}
+
+/* 모바일에서 아래에서 올라오는 시트 */
+.sheet {
+  animation: sheet-up 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.sheet-backdrop {
+  animation: sheet-fade 0.2s ease-out both;
+}
+
+/* 닫아 둔 로그인 안내 아이콘이 둥둥 떠 있어요. */
+.nudge-float {
+  animation: nudge-float 2.4s ease-in-out infinite;
+}
+
+@keyframes nudge-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes sheet-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/*
+  소개 화면의 스크롤 등장 효과예요. 화면이 준비되면(data-armed) 아직 보이지 않는 기능(data-reveal)을 숨겨 두고,
+  스크롤해서 화면에 들어오면(data-shown) 흐릿한 채로 아래에서 떠오르며 또렷해져요. 한 번 나타나면 그대로 있어요.
+  자바스크립트가 뜨기 전에는 숨기지 않아서, 미리 그려 둔 화면은 그대로 읽을 수 있어요.
+*/
+[data-armed] [data-reveal]:not([data-shown]) {
+  opacity: 0;
+  transform: translateY(32px);
+  filter: blur(8px);
+}
+
+[data-armed] [data-reveal][data-shown] {
+  transition:
+    opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-armed] [data-reveal]:not([data-shown]) {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+
+  [data-armed] [data-reveal][data-shown] {
+    transition: none;
+  }
+}
+
+/*
+ * 손글씨 Lofy(LofyScript)예요. 메인 컬러 획이 이글거리며 한 글자씩 써지고, 다 쓰면 속이 짙은 회색으로 채워지면서 획은 사라져요.
+ * 그 뒤로는 글자를 다시 쓰지 않고, 테두리를 따라 짧은 메인 컬러 빛만 천천히 돌아요. 그라데이션이나 그림자는 쓰지 않아요.
+ */
+.lofy-script .lofy-fill path {
+  fill: var(--color-gray-900);
+  opacity: 0;
+  animation: lofy-fill 0.7s var(--ease-smooth) var(--lofy-written) forwards;
+}
+
+.lofy-script .lofy-write path {
+  fill: none;
+  stroke: var(--color-brand);
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation-name: lofy-write;
+  animation-timing-function: var(--ease-smooth);
+  animation-fill-mode: forwards;
+}
+
+.lofy-script .lofy-write {
+  animation: lofy-fade-out 0.7s var(--ease-smooth) var(--lofy-written) forwards;
+}
+
+.lofy-script .lofy-trace path {
+  fill: none;
+  stroke: var(--color-brand);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-dasharray: 0.12 0.88;
+  stroke-dashoffset: 1;
+  opacity: 0;
+  animation: lofy-trace 4.8s linear infinite;
+}
+
+@keyframes lofy-write {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes lofy-fill {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes lofy-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes lofy-trace {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  10%,
+  85% {
+    opacity: 0.9;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+  }
+
+  /* 손글씨 Lofy는 다 쓴 모습으로 멈춰 있고, 테두리를 도는 빛은 띄우지 않아요. */
+  .lofy-script .lofy-fill path {
+    animation: none;
+    opacity: 1;
+  }
+
+  .lofy-script .lofy-write,
+  .lofy-script .lofy-trace {
+    display: none;
+  }
+
+  /* 끝없이 도는 방울 애니메이션은 아예 멈춰요. */
+  .nudge-float,
+  .orb,
+  .orb-blob {
+    animation: none;
+  }
+}
+
+/*
+ * 앱의 다크 모드예요. html에 dark가 붙으면(src/lib/theme.ts) 색 토큰을 어두운 값으로 바꿔서,
+ * 화면마다 따로 손대지 않아도 흰 배경은 어두운 배경으로, 짙은 글자는 밝은 글자로 바뀌어요.
+ * 브라우저로 들어온 화면에는 dark가 붙지 않아요.
+ */
+.dark {
+  color-scheme: dark;
+
+  --color-white: #1c1c1e;
+  --color-gray-50: #232325;
+  --color-gray-100: #2c2c2e;
+  --color-gray-200: #3a3a3c;
+  --color-gray-300: #48484a;
+  --color-gray-400: #8e8e93;
+  --color-gray-500: #a1a1a6;
+  --color-gray-600: #b9b9be;
+  --color-gray-700: #d1d1d6;
+  --color-gray-800: #e5e5ea;
+  --color-gray-900: #f2f2f7;
+  --color-gray-950: #ffffff;
+
+  --color-brand-hover: #53a5fb;
+  --color-brand-soft: #172b45;
+}
+
+/* 메인 컬러나 빨간 배경 위의 글자는 다크 모드에서도 흰색이에요. */
+.dark .text-white,
+.dark .hover\:text-white:hover {
+  color: #fff;
+}
+
+.dark .text-white\/70 {
+  color: rgb(255 255 255 / 0.7);
+}
+
+/* 메인 컬러 바탕의 안내 카드(탐색의 동아리 안내)에서 닫기 버튼과 체크 칸도 흰색이에요. */
+.dark .hover\:bg-white\/15:hover {
+  background-color: rgb(255 255 255 / 0.15);
+}
+
+.dark .accent-white {
+  accent-color: #fff;
+}
+
+/* 확인 창 뒤를 가리는 막과 토스트는 다크 모드에서도 어두운 색이에요. */
+.dark .bg-gray-900\/25 {
+  background-color: rgb(0 0 0 / 0.5);
+}
+
+.dark .bg-gray-900\/90 {
+  background-color: rgb(72 72 74 / 0.95);
+}
+
+/* 로고는 짙은 회색 그림이라 밝게 뒤집어요. */
+.dark img[src='/logo.svg'] {
+  filter: invert(1);
+}
+
+/* 색만 바뀌던 버튼도 누름 반응(scale)이 부드럽게 이어지게 해요. 색은 전처럼, 크기는 통 튀는 빠르기로 바뀌어요. */
+@layer utilities {
+  button.transition-colors {
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, scale;
+    transition-timing-function:
+      var(--default-transition-timing-function), var(--default-transition-timing-function), var(--default-transition-timing-function),
+      var(--default-transition-timing-function), var(--default-transition-timing-function), var(--default-transition-timing-function),
+      var(--default-transition-timing-function), var(--ease-spring);
+  }
+}

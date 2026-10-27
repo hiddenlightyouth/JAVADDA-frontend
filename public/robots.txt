@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /r/
+Disallow: /me
+Disallow: /history
+Disallow: /app-login
+Disallow: /auth/
+Disallow: /diagnose
+Disallow: /recommend
+Disallow: /resume
+Disallow: /explore
+Disallow: /admin
+Disallow: /app/
+
+Sitemap: https://lofy.hidly.dev/sitemap.xml
