@@ -18,6 +18,10 @@ import { Bone } from './Skeleton'
 const FAMILIES: JobFamily[] = ['backend', 'frontend', 'mobile', 'data', 'devops']
 const CAREERS: CareerLevel[] = ['entry', 'junior', 'any']
 const SORTS: PostingSort[] = ['fit', 'recent', 'deadline']
+/** 검색창에 돌아가며 보여주는 추천 검색어예요. 공고에 실제로 자주 적힌 기업, 기술, 지역이에요. */
+const SUGGESTIONS = ['Spring Boot', '토스', 'React', 'Kubernetes', '카카오', 'TypeScript', 'Kotlin', '판교']
+/** 추천 검색어가 바뀌는 간격이에요. */
+const SUGGEST_MS = 2600
 
 const TEXT = messages({
   ko: {
@@ -35,6 +39,8 @@ const TEXT = messages({
     sources: '워크넷과 기업 채용 페이지에서 하루 한 번 모아요.',
     category: '직무 카테고리',
     location: '지역',
+    suggest: '추천 검색어',
+    suggestHint: 'Enter로 바로 찾기',
     always: '상시 채용',
     view: '원문 보기',
     share: '링크 복사',
@@ -58,6 +64,8 @@ const TEXT = messages({
     sources: 'Collected once a day from Worknet and company career pages.',
     category: 'Job category',
     location: 'Location',
+    suggest: 'Try',
+    suggestHint: 'Press Enter to search',
     always: 'Rolling',
     view: 'Original',
     share: 'Copy link',
@@ -87,6 +95,14 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
   const [sort, setSort] = useState<PostingSort>(resume ? 'fit' : 'recent')
   const [loaded, setLoaded] = useState<Loaded | undefined>(undefined)
   const [attempt, setAttempt] = useState(0)
+  const [suggestion, setSuggestion] = useState(0)
+
+  // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요.
+  useEffect(() => {
+    if (query) return
+    const timer = window.setInterval(() => setSuggestion((value) => (value + 1) % SUGGESTIONS.length), SUGGEST_MS)
+    return () => window.clearInterval(timer)
+  }, [query])
 
   // 검색어는 잠깐 멈췄을 때 보내요.
   useEffect(() => {
@@ -118,44 +134,56 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto bg-gray-50 px-6 pt-6 pb-16 md:px-10">
-        {/* 검색창과 직무 카테고리를 한 칸에 붙여서, 무엇을 어디서 찾는지 한 줄로 읽혀요. */}
-        <div className="flex flex-col rounded-2xl border border-gray-200 bg-white focus-within:border-brand sm:flex-row sm:items-center">
-          <label className="flex h-14 min-w-0 flex-1 items-center gap-3 px-5">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0 text-gray-400" aria-hidden="true">
-              <circle cx="7" cy="7" r="4.5" />
-              <path d="m10.5 10.5 3 3" />
-            </svg>
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={L.placeholder}
-              aria-label={L.label}
-              data-search-input
-              className="min-w-0 flex-1 bg-transparent text-[15px] text-gray-900 outline-none placeholder:text-gray-400 [&::-webkit-search-cancel-button]:hidden"
-            />
-          </label>
-          <span aria-hidden className="mx-5 h-px bg-gray-100 sm:mx-0 sm:h-7 sm:w-px sm:bg-gray-200" />
-          <div className="p-2">
-            <MapMenu
-              label={L.category}
-              value={`${family ? familyName(family) : L.all}${Array.isArray(list) ? ` ${list.length}` : ''}`}
-              active={family !== null}
-              className="h-10! w-full justify-between border-transparent! hover:bg-gray-50 sm:w-auto"
-              groups={[
-                {
-                  items: [null, ...FAMILIES].map((value) => ({
-                    label: value ? familyName(value) : L.all,
-                    checked: family === value,
-                    onSelect: () => {
-                      track('jobs_family_select', { family: value ?? 'all' })
-                      setFamily(value)
-                    },
-                  })),
-                },
-              ]}
-            />
-          </div>
+        <label className="relative flex h-14 items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 focus-within:border-brand">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0 text-gray-400" aria-hidden="true">
+            <circle cx="7" cy="7" r="4.5" />
+            <path d="m10.5 10.5 3 3" />
+          </svg>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              // 비어 있을 때 Enter를 누르면 지금 보이는 추천 검색어로 찾아요.
+              if (event.key === 'Enter' && !query && !event.nativeEvent.isComposing) {
+                track('jobs_suggestion_use', { query: SUGGESTIONS[suggestion] })
+                setQuery(SUGGESTIONS[suggestion])
+              }
+            }}
+            aria-label={L.label}
+            data-search-input
+            className="min-w-0 flex-1 bg-transparent text-[15px] text-gray-900 outline-none [&::-webkit-search-cancel-button]:hidden"
+          />
+          {!query && (
+            <span aria-hidden className="pointer-events-none absolute inset-y-0 left-12 right-5 flex items-center gap-2 overflow-hidden text-[15px] whitespace-nowrap">
+              <span className="text-gray-400">{L.suggest}</span>
+              <span key={suggestion} className="animate-rise font-medium text-gray-700">
+                {SUGGESTIONS[suggestion]}
+              </span>
+              <span className="ml-auto hidden text-[12px] text-gray-400 sm:inline">{L.suggestHint}</span>
+            </span>
+          )}
+        </label>
+
+        {/* 직군은 메뉴에 숨기지 않고 늘어놓아서, 한 번 눌러 바로 골라요. */}
+        <div role="radiogroup" aria-label={L.category} className="mt-4 flex flex-wrap gap-2">
+          {[null, ...FAMILIES].map((value) => (
+            <button
+              key={value ?? 'all'}
+              type="button"
+              role="radio"
+              aria-checked={family === value}
+              onClick={() => {
+                track('jobs_family_select', { family: value ?? 'all' })
+                setFamily(value)
+              }}
+              className={`flex h-9 items-center rounded-full border px-4 text-[13.5px] font-medium transition-colors ${
+                family === value ? 'border-brand bg-brand text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
+              }`}
+            >
+              {value ? familyName(value) : L.all}
+            </button>
+          ))}
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -191,6 +219,7 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
               },
             ]}
           />
+          {Array.isArray(list) && <p className="ml-auto text-[13px] text-gray-500 tabular-nums">{L.items(list.length)}</p>}
         </div>
 
         <div className="mt-4">
