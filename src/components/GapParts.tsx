@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { careerName, companyOf, daysLeft, familyName, type Company, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { primaryButton } from './Dialog'
@@ -45,8 +45,17 @@ const TEXT = messages({
   },
 })
 
-/** 프로필 사진 대신 기업 이름의 머리글자를 둥근 네모에 넣어요. */
+/** 기업 로고를 둥근 네모에 넣어요. 로고가 없거나 불러오지 못하면 기업 이름의 머리글자를 대신 넣어요. */
 export function CompanyMark({ company, className = 'size-12 text-[17px]' }: { company: Company; className?: string }) {
+  const [broken, setBroken] = useState(false)
+  if (company.logo && !broken) {
+    return (
+      // 로고는 흰 바탕에 맞춰 만든 그림이라, 다크 모드에서도 바탕을 진짜 흰색으로 둬요.
+      <span aria-hidden className={`flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-[#fff] ${className}`}>
+        <img src={company.logo} alt="" loading="lazy" onError={() => setBroken(true)} className="size-full object-contain" />
+      </span>
+    )
+  }
   return (
     <span aria-hidden className={`flex shrink-0 items-center justify-center rounded-xl bg-gray-100 font-semibold text-gray-700 ${className}`}>
       {company.initial}

@@ -97,7 +97,7 @@ export const toolButton =
  * 버튼을 누르면 아래로 펼쳐지는 메뉴예요. 심층 분석의 보기 옵션, 참여자, 워크플로와 템플릿 고르기에 같이 써요.
  * 고른 항목에는 체크 표시가 붙고, 바깥을 누르거나 Esc를 누르면 닫혀요.
  */
-export function MapMenu({ label, value, active = false, groups, onOpen }: {
+export function MapMenu({ label, value, active = false, groups, onOpen, className = '' }: {
   /** 버튼에 적는 이름. 고른 값만 보여줘도 뜻이 통하면 넘기지 않아요. */
   label?: string
   /** 지금 고른 값. 있으면 버튼에 이름 옆으로 보여줘요. */
@@ -106,6 +106,8 @@ export function MapMenu({ label, value, active = false, groups, onOpen }: {
   groups: MenuGroup[]
   /** 메뉴를 열 때 불러요. 내용을 그때 받아 올 때 써요. */
   onOpen?: () => void
+  /** 버튼 모양을 덧씌울 때 써요. */
+  className?: string
 }) {
   const L = useMessages(TEXT)
   const [open, setOpen] = useState(false)
@@ -125,7 +127,7 @@ export function MapMenu({ label, value, active = false, groups, onOpen }: {
           if (!open) onOpen?.()
           setOpen((value) => !value)
         }}
-        className={`${toolButton} ${active ? 'border-brand! text-brand-hover!' : ''}`}
+        className={`${toolButton} ${active ? 'border-brand! text-brand-hover!' : ''} ${className}`}
       >
         {label && <span className="text-gray-500">{label}</span>}
         {value && <span className="max-w-40 truncate">{value}</span>}

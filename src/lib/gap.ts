@@ -14,8 +14,10 @@ export type Requirement = 'required' | 'preferred'
 export interface Company {
   id: string
   name: string
-  /** 로고 대신 보여줄 머리글자 */
+  /** 로고가 없거나 불러오지 못했을 때 보여줄 머리글자 */
   initial: string
+  /** 로고 그림 주소(`public/logos`). 기업 사이트의 아이콘을 받아 둔 거예요. */
+  logo?: string
   industry: string
   /** 기업 기술 블로그 주소. 요구 스택의 변화를 읽는 자료예요. */
   techBlog?: string
@@ -202,18 +204,18 @@ const KEYS = {
 // ---------- 자료 ----------
 
 export const COMPANIES: Company[] = [
-  { id: 'toss', name: '토스', initial: 'T', industry: '핀테크', techBlog: 'https://toss.tech' },
-  { id: 'kakao', name: '카카오', initial: 'K', industry: '플랫폼', techBlog: 'https://tech.kakao.com' },
-  { id: 'naver', name: '네이버', initial: 'N', industry: '포털', techBlog: 'https://d2.naver.com' },
-  { id: 'woowa', name: '우아한형제들', initial: '우', industry: '푸드테크', techBlog: 'https://techblog.woowahan.com' },
-  { id: 'coupang', name: '쿠팡', initial: 'C', industry: '커머스', techBlog: 'https://medium.com/coupang-engineering' },
-  { id: 'line', name: '라인플러스', initial: 'L', industry: '메신저', techBlog: 'https://techblog.lycorp.co.jp/ko' },
-  { id: 'daangn', name: '당근', initial: '당', industry: '로컬 커뮤니티', techBlog: 'https://medium.com/daangn' },
-  { id: 'musinsa', name: '무신사', initial: 'M', industry: '패션 커머스' },
-  { id: 'dunamu', name: '두나무', initial: 'D', industry: '핀테크' },
-  { id: 'zigbang', name: '직방', initial: 'Z', industry: '프롭테크' },
-  { id: 'wanted', name: '원티드랩', initial: 'W', industry: 'HR 테크' },
-  { id: 'bucketplace', name: '오늘의집', initial: '오', industry: '리빙 커머스' },
+  { id: 'toss', name: '토스', initial: 'T', logo: '/logos/toss.png', industry: '핀테크', techBlog: 'https://toss.tech' },
+  { id: 'kakao', name: '카카오', initial: 'K', logo: '/logos/kakao.png', industry: '플랫폼', techBlog: 'https://tech.kakao.com' },
+  { id: 'naver', name: '네이버', initial: 'N', logo: '/logos/naver.png', industry: '포털', techBlog: 'https://d2.naver.com' },
+  { id: 'woowa', name: '우아한형제들', initial: '우', logo: '/logos/woowa.png', industry: '푸드테크', techBlog: 'https://techblog.woowahan.com' },
+  { id: 'coupang', name: '쿠팡', initial: 'C', logo: '/logos/coupang.png', industry: '커머스', techBlog: 'https://medium.com/coupang-engineering' },
+  { id: 'line', name: '라인플러스', initial: 'L', logo: '/logos/line.png', industry: '메신저', techBlog: 'https://techblog.lycorp.co.jp/ko' },
+  { id: 'daangn', name: '당근', initial: '당', logo: '/logos/daangn.png', industry: '로컬 커뮤니티', techBlog: 'https://medium.com/daangn' },
+  { id: 'musinsa', name: '무신사', initial: 'M', logo: '/logos/musinsa.png', industry: '패션 커머스' },
+  { id: 'dunamu', name: '두나무', initial: 'D', logo: '/logos/dunamu.png', industry: '핀테크' },
+  { id: 'zigbang', name: '직방', initial: 'Z', logo: '/logos/zigbang.png', industry: '프롭테크' },
+  { id: 'wanted', name: '원티드랩', initial: 'W', logo: '/logos/wanted.png', industry: 'HR 테크' },
+  { id: 'bucketplace', name: '오늘의집', initial: '오', logo: '/logos/bucketplace.png', industry: '리빙 커머스' },
 ]
 
 const companyById = new Map(COMPANIES.map((company) => [company.id, company]))

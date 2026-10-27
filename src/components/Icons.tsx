@@ -74,6 +74,36 @@ export function PinIcon({ className = 'size-3.5 shrink-0 text-gray-400', strokeW
   )
 }
 
+/** 지역을 나타내는 위치 핀이에요. */
+export function MapPinIcon({ className = 'size-3.5 shrink-0 text-gray-400', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M8 14s4.5-4.1 4.5-7.5a4.5 4.5 0 0 0-9 0C3.5 9.9 8 14 8 14z" />
+      <circle cx="8" cy="6.5" r="1.6" />
+    </Icon>
+  )
+}
+
+/** 직군을 나타내는 서류 가방이에요. */
+export function BriefcaseIcon({ className = 'size-3.5 shrink-0 text-gray-400', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <rect x="2" y="4.75" width="12" height="8.5" rx="1.5" />
+      <path d="M5.75 4.75V3.5a1 1 0 0 1 1-1h2.5a1 1 0 0 1 1 1v1.25M2 8.5h12" />
+    </Icon>
+  )
+}
+
+/** 경력을 나타내는 사람 모양이에요. */
+export function PersonIcon({ className = 'size-3.5 shrink-0 text-gray-400', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <circle cx="8" cy="5.25" r="2.5" />
+      <path d="M3 13.5c.6-2.6 2.6-4 5-4s4.4 1.4 5 4" />
+    </Icon>
+  )
+}
+
 export function TrashIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
   return (
     <Icon className={className} strokeWidth={strokeWidth} label={label}>

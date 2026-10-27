@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react'
 import { track } from '../lib/analytics'
-import { careerName, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort } from '../lib/gap'
-import { messages, useMessages } from '../lib/i18n'
-import { PageHeader } from './AppPage'
+import { careerName, companyOf, daysLeft, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, type Resume } from '../lib/gap'
+import { getLang, localizePath, messages, pick, useMessages } from '../lib/i18n'
+import { pathOf } from '../lib/routes'
+import { showToast } from '../lib/toast'
+import { copyText, PageHeader } from './AppPage'
 import { MapMenu } from './DeepParts'
-import { cardsGrid, Failed, Notice, PostingCard, PostingCardsSkeleton } from './GapParts'
+import { CompanyMark, Failed, FitBadge, Notice, SkillChip, type ChipTone } from './GapParts'
+import { BriefcaseIcon, MapPinIcon, PersonIcon } from './Icons'
+import { Bone } from './Skeleton'
 
 /**
  * 공고 탐색 화면이에요. 공고를 화면 가득 펼쳐 놓고 직군과 경력으로 걸러 보다가, 눌러서 진단을 시작해요.
@@ -29,6 +33,15 @@ const TEXT = messages({
     none: '맞는 공고가 없어요.',
     noneBody: '검색어나 걸러 둔 조건을 바꿔 보세요.',
     sources: '워크넷과 기업 채용 페이지에서 하루 한 번 모아요.',
+    category: '직무 카테고리',
+    location: '지역',
+    always: '상시 채용',
+    view: '원문 보기',
+    share: '링크 복사',
+    more: (count: number) => `외 ${count}개`,
+    dday: (days: number) => (days === 0 ? '오늘 마감' : `D-${days}`),
+    copied: '공고 링크를 복사했어요.',
+    copyFailed: '링크를 복사하지 못했어요.',
   },
   en: {
     title: 'Explore jobs',
@@ -43,12 +56,25 @@ const TEXT = messages({
     none: 'No postings match.',
     noneBody: 'Try a different search or filter.',
     sources: 'Collected once a day from Worknet and company career pages.',
+    category: 'Job category',
+    location: 'Location',
+    always: 'Rolling',
+    view: 'Original',
+    share: 'Copy link',
+    more: (count: number) => `+${count} more`,
+    dday: (days: number) => (days === 0 ? 'Closes today' : `D-${days}`),
+    copied: 'Copied the posting link.',
+    copyFailed: "Couldn't copy the link.",
   },
 })
 
-/** 직군 버튼의 모양이에요. 탐색의 동아리 버튼과 같은 크기예요. */
-const chipButton = 'flex h-9 items-center gap-2 rounded-lg border px-3.5 text-[13px] font-medium transition-colors'
-const chipTone = (active: boolean) => (active ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-800 hover:border-gray-300 hover:text-gray-950')
+/** 공고 카드는 넓은 화면에서 한 줄에 둘이나 셋씩 놓여요. */
+const jobsGrid = 'grid gap-4 md:grid-cols-2 2xl:grid-cols-3'
+/** 카드 맨 아래의 작은 글자 버튼이에요. 카드를 덮는 제목 버튼보다 위에 놓여요. */
+const cardAction =
+  'relative z-10 inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900'
+/** 카드에 보여주는 필수 역량 수예요. 나머지는 수만 적어요. */
+const SKILLS_SHOWN = 4
 
 type Loaded = JobPosting[] | 'failed'
 
@@ -87,47 +113,49 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
   return (
     <main className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0 px-6 pt-14 md:px-10">
-        <PageHeader
-          title={L.title}
-          actions={
-            <label className="flex h-9 w-64 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 focus-within:border-brand">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-3.5 shrink-0 text-gray-400" aria-hidden="true">
-                <circle cx="7" cy="7" r="4.5" />
-                <path d="m10.5 10.5 3 3" />
-              </svg>
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={L.placeholder}
-                aria-label={L.label}
-                data-search-input
-                className="min-w-0 flex-1 bg-transparent text-[13px] text-gray-900 outline-none placeholder:text-gray-400 [&::-webkit-search-cancel-button]:hidden"
-              />
-            </label>
-          }
-        />
+        <PageHeader title={L.title} />
         <div className="border-b border-gray-200" />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-gray-50 px-6 pt-4 pb-16 md:px-10">
-        {/* 직군은 메뉴에 넣지 않고 한눈에 보이게 늘어놓아요. */}
-        <div role="radiogroup" aria-label={L.family} className="flex flex-wrap gap-2">
-          {[null, ...FAMILIES].map((value) => (
-            <button
-              key={value ?? 'all'}
-              type="button"
-              role="radio"
-              aria-checked={family === value}
-              onClick={() => {
-                track('jobs_family_select', { family: value ?? 'all' })
-                setFamily(value)
-              }}
-              className={`${chipButton} ${chipTone(family === value)}`}
-            >
-              {value ? familyName(value) : L.all}
-            </button>
-          ))}
+      <div className="min-h-0 flex-1 overflow-y-auto bg-gray-50 px-6 pt-6 pb-16 md:px-10">
+        {/* 검색창과 직무 카테고리를 한 칸에 붙여서, 무엇을 어디서 찾는지 한 줄로 읽혀요. */}
+        <div className="flex flex-col rounded-2xl border border-gray-200 bg-white focus-within:border-brand sm:flex-row sm:items-center">
+          <label className="flex h-14 min-w-0 flex-1 items-center gap-3 px-5">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0 text-gray-400" aria-hidden="true">
+              <circle cx="7" cy="7" r="4.5" />
+              <path d="m10.5 10.5 3 3" />
+            </svg>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={L.placeholder}
+              aria-label={L.label}
+              data-search-input
+              className="min-w-0 flex-1 bg-transparent text-[15px] text-gray-900 outline-none placeholder:text-gray-400 [&::-webkit-search-cancel-button]:hidden"
+            />
+          </label>
+          <span aria-hidden className="mx-5 h-px bg-gray-100 sm:mx-0 sm:h-7 sm:w-px sm:bg-gray-200" />
+          <div className="p-2">
+            <MapMenu
+              label={L.category}
+              value={`${family ? familyName(family) : L.all}${Array.isArray(list) ? ` ${list.length}` : ''}`}
+              active={family !== null}
+              className="h-10! w-full justify-between border-transparent! hover:bg-gray-50 sm:w-auto"
+              groups={[
+                {
+                  items: [null, ...FAMILIES].map((value) => ({
+                    label: value ? familyName(value) : L.all,
+                    checked: family === value,
+                    onSelect: () => {
+                      track('jobs_family_select', { family: value ?? 'all' })
+                      setFamily(value)
+                    },
+                  })),
+                },
+              ]}
+            />
+          </div>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -163,22 +191,22 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
               },
             ]}
           />
-          {Array.isArray(list) && <p className="ml-auto text-[13px] text-gray-500 tabular-nums">{L.items(list.length)}</p>}
         </div>
 
         <div className="mt-4">
           {list === undefined ? (
-            <PostingCardsSkeleton />
+            <JobCardsSkeleton />
           ) : list === 'failed' ? (
             <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
           ) : list.length === 0 ? (
             <Notice title={L.none} body={L.noneBody} className="mt-16" />
           ) : (
-            <ul className={cardsGrid}>
+            <ul className={jobsGrid}>
               {list.map((posting, order) => (
-                <PostingCard
+                <JobCard
                   key={`${sort}:${posting.id}`}
                   posting={posting}
+                  resume={resume}
                   fit={fitOf(posting, resume)}
                   order={order}
                   onOpen={() => {
@@ -193,5 +221,133 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
         <p className="mt-10 text-center text-[12px] text-gray-400">{L.sources}</p>
       </div>
     </main>
+  )
+}
+
+/** 카드는 앞에서부터 조금씩 늦게 떠올라요. 뒤쪽 카드는 더 늦추지 않아요. */
+const STAGGER_MS = 28
+const STAGGER_MAX = 14
+
+/** 10.28 처럼 달과 날만 적어요. */
+const shortDate = (iso: string) => {
+  const date = new Date(iso)
+  return `${date.getMonth() + 1}.${String(date.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * 공고 탐색의 카드예요. 위에 기업과 마감까지 남은 날, 가운데에 공고 제목과 필수 역량, 아래에 모집 기간과 적합도, 원문 보기와 링크 복사가 있어요.
+ * 이력서가 있으면 필수 역량 이름표를 진단 시작 화면과 같은 기준으로 칠해서, 카드만 보고도 무엇이 비는지 보여요.
+ * 카드의 나머지 자리를 누르면 진단 시작으로 가요.
+ */
+function JobCard({ posting, resume, fit, order, onOpen }: { posting: JobPosting; resume: Resume | null; fit: number | null; order: number; onOpen: () => void }) {
+  const L = useMessages(TEXT)
+  const company = companyOf(posting.companyId)
+  const left = daysLeft(posting)
+  const tone = (skill: string): ChipTone => {
+    const level = resume?.skills.find((item) => item.name === skill)?.level ?? 0
+    return !resume ? 'plain' : level >= 3 ? 'met' : level > 0 ? 'partial' : 'missing'
+  }
+  const share = () => {
+    const url = `${window.location.origin}${localizePath(pathOf({ kind: 'diagnose', postingId: posting.id }), getLang())}`
+    void copyText(url).then((done) => showToast(done ? pick(TEXT).copied : pick(TEXT).copyFailed))
+  }
+  return (
+    <li
+      className="group relative flex animate-rise flex-col rounded-2xl border border-gray-200 bg-white p-5 transition-colors hover:border-brand"
+      style={{ animationDelay: `${Math.min(order, STAGGER_MAX) * STAGGER_MS}ms` }}
+    >
+      <div className="flex items-center gap-3">
+        <CompanyMark company={company} className="size-10 text-[15px]" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13.5px] font-medium text-gray-900">{company.name}</p>
+          <p className="truncate text-[12px] text-gray-400">{company.industry}</p>
+        </div>
+        {/* 마감이 사흘 안으로 남으면 메인 컬러로 알려요. */}
+        <span
+          className={`shrink-0 rounded-md px-2 py-1 text-[12px] font-semibold tabular-nums ${
+            left !== null && left <= 3 ? 'bg-brand-soft text-brand-hover' : 'bg-gray-100 text-gray-500'
+          }`}
+        >
+          {left === null ? L.always : L.dday(left)}
+        </span>
+      </div>
+
+      <h3 className="mt-4 text-[17px] leading-snug font-semibold text-gray-900">
+        {/* 제목 버튼이 카드 전체를 덮어서, 카드 어디를 눌러도 진단 시작으로 가요. */}
+        <button type="button" onClick={onOpen} className="text-left transition-colors group-hover:text-brand-hover after:absolute after:inset-0 after:rounded-2xl">
+          {posting.title}
+        </button>
+      </h3>
+      {/* 직군, 경력, 지역은 아이콘을 붙여 한 줄에 늘어놓아서, 훑어볼 때 바로 눈에 들어와요. */}
+      <ul className="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[12.5px] text-gray-600">
+        <li className="flex items-center gap-1.5">
+          <BriefcaseIcon label={L.family} />
+          {familyName(posting.family)}
+        </li>
+        <li className="flex items-center gap-1.5">
+          <PersonIcon label={L.career} />
+          {careerName(posting.career)}
+        </li>
+        <li className="flex min-w-0 items-center gap-1.5">
+          <MapPinIcon label={L.location} />
+          <span className="truncate">{posting.location}</span>
+        </li>
+      </ul>
+      <p className="mt-3 line-clamp-2 text-[13px] leading-relaxed text-gray-500">{posting.summary}</p>
+
+      <div className="mt-4 flex flex-1 flex-wrap content-start gap-1.5">
+        {posting.required.slice(0, SKILLS_SHOWN).map((skill) => (
+          <SkillChip key={skill} name={skill} tone={tone(skill)} />
+        ))}
+        {posting.required.length > SKILLS_SHOWN && <span className="inline-flex h-7 items-center px-1 text-[12px] text-gray-400">{L.more(posting.required.length - SKILLS_SHOWN)}</span>}
+      </div>
+
+      <div className="mt-5 flex items-center gap-2 border-t border-gray-100 pt-3">
+        <span className="min-w-0 flex-1 truncate text-[12.5px] text-gray-400 tabular-nums">
+          {shortDate(posting.postedAt)} ~ {posting.deadline ? shortDate(posting.deadline) : L.always}
+        </span>
+        <FitBadge fit={fit} compact />
+        <a href={posting.url} target="_blank" rel="noreferrer" className={cardAction}>
+          {L.view}
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-3" aria-hidden="true">
+            <path d="M6 3.5h6.5V10M12.5 3.5 4 12" />
+          </svg>
+        </a>
+        <button type="button" onClick={share} className={cardAction}>
+          {L.share}
+        </button>
+      </div>
+    </li>
+  )
+}
+
+/** 공고 카드와 같은 배치의 뼈대예요. */
+function JobCardsSkeleton() {
+  return (
+    <ul className={jobsGrid} aria-busy="true">
+      {Array.from({ length: 6 }, (_, item) => (
+        <li key={item} aria-hidden className="rounded-2xl border border-gray-200 bg-white p-5">
+          <div className="flex items-center gap-3">
+            <Bone className="size-10 shrink-0 rounded-xl!" />
+            <div className="min-w-0 flex-1">
+              <Bone className="h-3.5 w-24" />
+              <Bone className="mt-2 h-3 w-36" />
+            </div>
+            <Bone className="h-6 w-12 rounded-md!" />
+          </div>
+          <Bone className="mt-5 h-4 w-3/4" />
+          <Bone className="mt-3 h-3 w-full" />
+          <div className="mt-4 flex gap-1.5">
+            <Bone className="h-7 w-16 rounded-md!" />
+            <Bone className="h-7 w-20 rounded-md!" />
+            <Bone className="h-7 w-14 rounded-md!" />
+          </div>
+          <div className="mt-5 flex justify-between border-t border-gray-100 pt-4">
+            <Bone className="h-3 w-24" />
+            <Bone className="h-3 w-28" />
+          </div>
+        </li>
+      ))}
+    </ul>
   )
 }
