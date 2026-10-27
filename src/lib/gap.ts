@@ -1028,6 +1028,21 @@ export function sortPostings(list: JobPosting[], sort: PostingSort, resume: Resu
   return copy.sort((a, b) => (fitOf(b, resume) ?? -1) - (fitOf(a, resume) ?? -1))
 }
 
+/**
+ * 다른 서비스 안(iframe)에 보이지 않게 막아 둔 채용 사이트예요(X-Frame-Options나 frame-ancestors).
+ * 이 사이트의 원문은 앱 안의 미니 브라우저에 띄우지 않고, 공고 요약과 새 탭 버튼을 대신 보여줘요.
+ */
+const FRAME_BLOCKED_HOSTS = new Set(['toss.im', 'careers.kakao.com', 'recruit.navercorp.com', 'career.woowahan.com', 'www.coupang.jobs', 'www.wanted.co.kr'])
+
+/** 공고 원문을 앱 안에 띄울 수 있는지예요. */
+export function canEmbed(url: string): boolean {
+  try {
+    return !FRAME_BLOCKED_HOSTS.has(new URL(url).host)
+  } catch {
+    return false
+  }
+}
+
 /** 마감까지 남은 날. 마감이 없으면 null이에요. */
 export function daysLeft(posting: JobPosting): number | null {
   if (!posting.deadline) return null

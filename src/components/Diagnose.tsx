@@ -7,6 +7,7 @@ import { pageFrame, PageHeader, StepLayout, Steps, StepTitle } from './AppPage'
 import { primaryButton, quietButton } from './Dialog'
 import { CompanyMark, FitBadge, Notice, SkillChip, type ChipTone } from './GapParts'
 import { ResumeUploader, SkillEditor } from './MyResume'
+import { PostingBrowser } from './PostingBrowser'
 
 /**
  * 진단 시작 화면이에요. 공고를 확인하고, 이력서를 올리거나 확인한 뒤에 진단을 시작해요.
@@ -82,6 +83,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
   const [step, setStep] = useState<Step>('posting')
   const [replacing, setReplacing] = useState(false)
   const [starting, setStarting] = useState(false)
+  const [viewing, setViewing] = useState(false)
 
   if (!posting) {
     return (
@@ -165,12 +167,13 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
                   ))}
                 </div>
               </div>
-              <a href={posting.url} target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand">
+              {/* 원문은 새 탭 대신 앱 안의 미니 브라우저로 열어요. */}
+              <button type="button" onClick={() => setViewing(true)} className="mt-5 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand">
                 {L.openPosting}
                 <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-3.5" aria-hidden="true">
-                  <path d="M5 11l6-6M6 5h5v5" />
+                  <path d="M6 3.5 10.5 8 6 12.5" />
                 </svg>
-              </a>
+              </button>
             </div>
           </div>
         ) : (
@@ -206,6 +209,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
           </div>
         )}
       </StepLayout>
+      {viewing && <PostingBrowser posting={posting} onClose={() => setViewing(false)} />}
     </main>
   )
 }

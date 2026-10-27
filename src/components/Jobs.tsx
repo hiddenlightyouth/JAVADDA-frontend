@@ -8,6 +8,7 @@ import { copyText, PageHeader } from './AppPage'
 import { MapMenu } from './DeepParts'
 import { CompanyMark, Failed, FitBadge, Notice, SkillChip, type ChipTone } from './GapParts'
 import { BriefcaseIcon, MapPinIcon, PersonIcon } from './Icons'
+import { PostingBrowser } from './PostingBrowser'
 import { Bone } from './Skeleton'
 
 /**
@@ -95,6 +96,7 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
   const [attempt, setAttempt] = useState(0)
   const [suggestion, setSuggestion] = useState(0)
   const [company, setCompany] = useState<string | null>(null)
+  const [viewing, setViewing] = useState<JobPosting | null>(null)
 
   // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요.
   useEffect(() => {
@@ -258,6 +260,7 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
                   key={`${sort}:${posting.id}`}
                   posting={posting}
                   resume={resume}
+                  onView={() => setViewing(posting)}
                   fit={fitOf(posting, resume)}
                   order={order}
                   onOpen={() => {
@@ -271,6 +274,7 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
         </div>
         <p className="mt-10 text-center text-[12px] text-gray-400">{L.sources}</p>
       </div>
+      {viewing && <PostingBrowser posting={viewing} onClose={() => setViewing(null)} />}
     </main>
   )
 }
@@ -286,11 +290,11 @@ const shortDate = (iso: string) => {
 }
 
 /**
- * 공고 탐색의 카드예요. 위에 기업과 마감까지 남은 날, 가운데에 공고 제목과 필수 역량, 아래에 모집 기간과 적합도, 원문 보기와 링크 복사가 있어요.
+ * 공고 탐색의 카드예요. 위에 기업과 마감까지 남은 날, 가운데에 공고 제목과 필수 역량, 아래에 모집 기간과 적합도, 원문 보기(앱 안의 미니 브라우저)와 링크 복사가 있어요.
  * 이력서가 있으면 필수 역량 이름표를 진단 시작 화면과 같은 기준으로 칠해서, 카드만 보고도 무엇이 비는지 보여요.
  * 카드의 나머지 자리를 누르면 진단 시작으로 가요.
  */
-function JobCard({ posting, resume, fit, order, onOpen }: { posting: JobPosting; resume: Resume | null; fit: number | null; order: number; onOpen: () => void }) {
+function JobCard({ posting, resume, fit, order, onOpen, onView }: { posting: JobPosting; resume: Resume | null; fit: number | null; order: number; onOpen: () => void; onView: () => void }) {
   const L = useMessages(TEXT)
   const company = companyOf(posting.companyId)
   const left = daysLeft(posting)
@@ -358,12 +362,10 @@ function JobCard({ posting, resume, fit, order, onOpen }: { posting: JobPosting;
           {shortDate(posting.postedAt)} ~ {posting.deadline ? shortDate(posting.deadline) : L.always}
         </span>
         <FitBadge fit={fit} compact />
-        <a href={posting.url} target="_blank" rel="noreferrer" className={cardAction}>
+        {/* 원문은 새 탭 대신 앱 안의 미니 브라우저로 열어요. */}
+        <button type="button" onClick={onView} className={cardAction}>
           {L.view}
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-3" aria-hidden="true">
-            <path d="M6 3.5h6.5V10M12.5 3.5 4 12" />
-          </svg>
-        </a>
+        </button>
         <button type="button" onClick={share} className={cardAction}>
           {L.share}
         </button>
