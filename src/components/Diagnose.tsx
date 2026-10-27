@@ -20,15 +20,14 @@ const TEXT = messages({
     title: '진단 시작',
     back: '새 진단 화면으로 돌아가기',
     steps: { posting: '공고 확인', resume: '이력서' } as Record<Step, string>,
-    postingTitle: '이 공고에 맞춰 볼까요?',
-    postingHint: '공고에 적힌 필수와 우대 역량이에요. 이력서가 있으면 이미 갖춘 역량은 파랗게 보여요.',
+    postingTitle: '해당 채용 공고와 나는 얼마나 일치할까요?',
+    postingHint: '공고에 적힌 필수와 우대 역량을 확인해 보세요.',
     required: '필수 역량',
     preferred: '우대 역량',
     deadline: (days: number) => (days === 0 ? '오늘 마감' : `마감 ${days}일 전`),
     always: '상시 채용',
     openPosting: '원문 보기',
-    resumeTitle: '어떤 서류로 진단할까요?',
-    resumeHintNone: '이력서나 포트폴리오를 올리면 역량을 읽어요. 한 번 올리면 다음 진단부터는 바로 시작해요.',
+    resumeTitle: '이력서 업로드',
     resumeHint: '올려 둔 서류로 진단해요. 잘못 읽은 역량이 있으면 여기서 고쳐요.',
     uploadedAt: (when: string) => `${when}에 올림`,
     replace: '다른 서류 올리기',
@@ -45,15 +44,14 @@ const TEXT = messages({
     title: 'Start a diagnosis',
     back: 'Back to new diagnosis',
     steps: { posting: 'Posting', resume: 'Resume' },
-    postingTitle: 'Measure against this posting?',
-    postingHint: 'Required and preferred skills from the posting. Skills you already show are highlighted once a resume is uploaded.',
+    postingTitle: 'How well do you match this posting?',
+    postingHint: 'Check the required and preferred skills in the posting.',
     required: 'Required',
     preferred: 'Preferred',
     deadline: (days: number) => (days === 0 ? 'Closes today' : `Closes in ${days} ${days === 1 ? 'day' : 'days'}`),
     always: 'Rolling',
     openPosting: 'Open original',
-    resumeTitle: 'Which document should we use?',
-    resumeHintNone: 'Upload a resume or portfolio and we read the skills. After the first upload, later diagnoses start right away.',
+    resumeTitle: 'Upload your resume',
     resumeHint: "We'll use your uploaded document. Fix any skills we misread here.",
     uploadedAt: (when: string) => `Uploaded ${when}`,
     replace: 'Upload a different document',
@@ -177,7 +175,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
           </div>
         ) : (
           <div className="animate-rise">
-            <StepTitle title={L.resumeTitle} hint={resume ? L.resumeHint : L.resumeHintNone} />
+            <StepTitle title={L.resumeTitle} hint={resume ? L.resumeHint : undefined} />
             <div className="mt-6">
               {!resume || replacing ? (
                 <>
