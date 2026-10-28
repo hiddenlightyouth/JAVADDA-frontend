@@ -134,59 +134,62 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
         </div>
 
         <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
-          <label className="relative flex h-14 items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 focus-within:border-brand">
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0 text-gray-400" aria-hidden="true">
-              <circle cx="7" cy="7" r="4.5" />
-              <path d="m10.5 10.5 3 3" />
-            </svg>
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                // 비어 있을 때 Enter를 누르면 지금 보이는 추천 검색어로 찾아요.
-                if (event.key === 'Enter' && !query && !event.nativeEvent.isComposing) {
-                  track('jobs_suggestion_use', { query: SEARCH_SUGGESTIONS[suggestion] })
-                  setQuery(SEARCH_SUGGESTIONS[suggestion])
-                }
-              }}
-              aria-label={L.label}
-              data-search-input
-              className="min-w-0 flex-1 bg-transparent text-[15px] text-gray-900 outline-none [&::-webkit-search-cancel-button]:hidden"
-            />
-            {/* 추천 검색어는 자리표시 글자처럼 옅게 보여서, 이런 걸 쳐 볼 수 있다는 것만 슬쩍 알려요. */}
-            {!query && (
-              <span aria-hidden className="pointer-events-none absolute inset-y-0 left-12 right-5 flex items-center overflow-hidden text-[15px] whitespace-nowrap text-gray-400">
-                <span key={suggestion} className="animate-rise">
-                  {SEARCH_SUGGESTIONS[suggestion]}
-                </span>
-              </span>
-            )}
-          </label>
-
-          {/* 직군은 메뉴에 숨기지 않고 늘어놓아서, 한 번 눌러 바로 골라요. */}
-          <div role="radiogroup" aria-label={L.category} className="mt-4 flex flex-wrap gap-2">
-            {[null, ...FAMILIES].map((value) => (
-              <button
-                key={value ?? 'all'}
-                type="button"
-                role="radio"
-                aria-checked={family === value}
-                onClick={() => {
-                  track('jobs_family_select', { family: value ?? 'all' })
-                  setFamily(value)
+          {/* 넓으면 검색창과 직군을 한 줄에 나란히 두고, 좁으면 위아래로 쌓아요. */}
+          <div className="grid items-center gap-4 @4xl:grid-cols-2">
+            <label className="relative flex h-14 items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 focus-within:border-brand">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0 text-gray-400" aria-hidden="true">
+                <circle cx="7" cy="7" r="4.5" />
+                <path d="m10.5 10.5 3 3" />
+              </svg>
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  // 비어 있을 때 Enter를 누르면 지금 보이는 추천 검색어로 찾아요.
+                  if (event.key === 'Enter' && !query && !event.nativeEvent.isComposing) {
+                    track('jobs_suggestion_use', { query: SEARCH_SUGGESTIONS[suggestion] })
+                    setQuery(SEARCH_SUGGESTIONS[suggestion])
+                  }
                 }}
-                className={`flex h-9 items-center rounded-full border px-4 text-[13.5px] font-medium transition-colors ${
-                  family === value ? 'border-brand bg-brand text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
-                }`}
-              >
-                {value ? familyName(value) : L.all}
-              </button>
-            ))}
+                aria-label={L.label}
+                data-search-input
+                className="min-w-0 flex-1 bg-transparent text-[15px] text-gray-900 outline-none [&::-webkit-search-cancel-button]:hidden"
+              />
+              {/* 추천 검색어는 자리표시 글자처럼 옅게 보여서, 이런 걸 쳐 볼 수 있다는 것만 슬쩍 알려요. */}
+              {!query && (
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-12 right-5 flex items-center overflow-hidden text-[15px] whitespace-nowrap text-gray-400">
+                  <span key={suggestion} className="animate-rise">
+                    {SEARCH_SUGGESTIONS[suggestion]}
+                  </span>
+                </span>
+              )}
+            </label>
+
+            {/* 직군은 메뉴에 숨기지 않고 늘어놓아서, 한 번 눌러 바로 골라요. */}
+            <div role="radiogroup" aria-label={L.category} className="flex flex-wrap gap-2">
+              {[null, ...FAMILIES].map((value) => (
+                <button
+                  key={value ?? 'all'}
+                  type="button"
+                  role="radio"
+                  aria-checked={family === value}
+                  onClick={() => {
+                    track('jobs_family_select', { family: value ?? 'all' })
+                    setFamily(value)
+                  }}
+                  className={`flex h-9 items-center rounded-full border px-4 text-[13.5px] font-medium transition-colors ${
+                    family === value ? 'border-brand bg-brand text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
+                  }`}
+                >
+                  {value ? familyName(value) : L.all}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* 기업도 로고를 보고 한 번에 골라요. 다시 누르면 풀려요. */}
-          <div role="radiogroup" aria-label={L.company} className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
+          <div role="radiogroup" aria-label={L.company} className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
             {COMPANIES.map((item) => (
               <button
                 key={item.id}
