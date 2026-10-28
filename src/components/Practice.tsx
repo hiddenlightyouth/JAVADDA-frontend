@@ -152,12 +152,12 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
       <div className="shrink-0 px-6 pt-14 md:px-10">
         <PageHeader title={L.title} owner={posting && company ? `${company.name} ${posting.title}` : undefined} onBack={onBack} />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto border-t border-gray-200 bg-gray-50 px-6 py-8 md:px-10">
+      <div className="min-h-0 flex-1 overflow-y-auto border-t border-gray-200 px-6 py-8 md:px-10">
         <div className="mx-auto w-full max-w-[720px]">
           {!report || questions === null ? (
             <Notice title={L.missing} body={L.missingBody} action={L.back} onAction={onBack} className="mt-16" />
           ) : questions === undefined || !current ? (
-            <div aria-busy="true" className="rounded-2xl border border-gray-200 bg-white p-6">
+            <div aria-busy="true" className="rounded-2xl bg-gray-50 p-6">
               <span className="sr-only">{L.loading}</span>
               <Bone className="h-3 w-16" />
               <Bone className="mt-5 h-5 w-4/5" />
@@ -194,7 +194,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
                   {hint ? L.hideHint : L.hint}
                 </button>
                 {hint && (
-                  <div className="mt-2 animate-rise space-y-3 rounded-xl bg-gray-50 p-4">
+                  <div className="mt-2 animate-rise space-y-3 rounded-xl bg-white p-4">
                     <div>
                       <h3 className="text-[12px] font-medium text-gray-500">{L.intent}</h3>
                       <p className="mt-1 text-[13.5px] leading-relaxed text-gray-700">{current.intent}</p>
@@ -250,7 +250,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
                       </section>
                       <section>
                         <h3 className="text-[12.5px] font-medium text-gray-500">{L.followUp}</h3>
-                        <p className="mt-1 rounded-xl bg-gray-50 px-3.5 py-3 text-[13.5px] leading-relaxed text-gray-700">{feedback.followUp}</p>
+                        <p className="mt-1 rounded-xl bg-white px-3.5 py-3 text-[13.5px] leading-relaxed text-gray-700">{feedback.followUp}</p>
                       </section>
                     </div>
                   </div>

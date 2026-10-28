@@ -82,7 +82,7 @@ export function FitBadge({ fit, compact = false }: { fit: number | null; compact
   if (fit === null) return <span className="text-[12px] text-gray-400">{compact ? '' : L.noFit}</span>
   return (
     <span className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap" aria-label={L.fit(fit)}>
-      <span className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-100" aria-hidden>
+      <span className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200/70" aria-hidden>
         <span className="block h-full rounded-full bg-brand" style={{ width: `${fit}%` }} />
       </span>
       <span className="text-[13px] font-semibold text-brand tabular-nums">{fit}%</span>
@@ -144,7 +144,7 @@ export function KindLabel({ kind }: { kind: GapKind }) {
   return (
     <span
       className={`inline-flex h-6 items-center rounded-md px-2 text-[11.5px] font-medium ${
-        kind === 'strength' ? 'bg-brand-soft text-brand-hover' : kind === 'partial' ? 'bg-gray-100 text-gray-600' : 'bg-gray-100 text-gray-500'
+        kind === 'strength' ? 'bg-brand-soft text-brand-hover' : kind === 'partial' ? 'bg-gray-200/70 text-gray-600' : 'bg-gray-200/70 text-gray-500'
       }`}
     >
       {L.kinds[kind]}
@@ -187,7 +187,7 @@ export function PostingCard({ posting, fit, order = 0, onOpen }: { posting: JobP
   const left = daysLeft(posting)
   return (
     <li className="min-h-0 animate-rise" style={{ animationDelay: `${Math.min(order, STAGGER_MAX) * STAGGER_MS}ms` }}>
-      <button type="button" onClick={() => onOpen(posting)} className="flex h-[196px] w-full flex-col rounded-2xl border border-gray-200 bg-white p-5 text-left transition-colors hover:border-brand">
+      <button type="button" onClick={() => onOpen(posting)} className="group flex h-[196px] w-full flex-col rounded-2xl bg-gray-50 p-5 text-left transition-colors hover:bg-gray-100">
         <span className="flex items-center gap-3">
           <CompanyMark company={company} />
           <span className="min-w-0">
@@ -295,7 +295,7 @@ export function PostingCardsSkeleton({ row = false, count }: { row?: boolean; co
     <ul className={row ? cardsRow : cardsGrid} aria-busy="true">
       <li className="sr-only">{L.loading}</li>
       {Array.from({ length: count ?? (row ? 8 : 9) }, (_, item) => (
-        <li key={item} aria-hidden className="flex h-[196px] min-h-0 flex-col rounded-2xl border border-gray-200 bg-white p-5">
+        <li key={item} aria-hidden className="flex h-[196px] min-h-0 flex-col rounded-2xl bg-gray-50 p-5">
           <div className="flex items-center gap-3">
             <Bone className="size-12 shrink-0 rounded-xl!" />
             <div className="min-w-0 flex-1">
@@ -320,7 +320,7 @@ export function PostingCardsSkeleton({ row = false, count }: { row?: boolean; co
 /** 회색 바탕 위의 흰 칸이에요. 제목 줄 오른쪽에 버튼을 둘 수 있어요. */
 export function Panel({ title, action, children, className = '' }: { title?: ReactNode; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded-2xl border border-gray-200 bg-white p-5 ${className}`}>
+    <section className={`rounded-2xl bg-gray-50 p-5 ${className}`}>
       {(title || action) && (
         <div className="mb-4 flex items-center justify-between gap-3">
           {title && <h2 className="text-[14px] font-semibold text-gray-900">{title}</h2>}
@@ -360,7 +360,7 @@ export function Meter({ label, value, max = 100, display, note }: { label: React
     <div>
       <div className="flex items-center gap-3">
         <span className="w-28 shrink-0 truncate text-[13px] text-gray-900">{label}</span>
-        <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-gray-100">
+        <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-gray-200/70">
           <div className="h-full origin-left animate-grow rounded-full bg-brand" style={{ width: `${Math.max(1.5, (value / max) * 100)}%` }} />
         </div>
         <span className="w-12 shrink-0 text-right text-[12.5px] text-gray-700 tabular-nums">{display ?? value}</span>

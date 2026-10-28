@@ -87,7 +87,7 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
           <PageHeader title={L.title} />
           <div className="border-b border-gray-200" />
         </div>
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center bg-gray-50 px-6">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6">
           <Notice title={L.noResume} body={L.noResumeBody} action={L.upload} onAction={onResume} />
         </div>
       </main>
@@ -104,9 +104,9 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
         <div className="border-b border-gray-200" />
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-gray-50 px-6 pt-4 pb-16 md:px-10">
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-16 md:px-10">
         {/* 어떤 이력서를 기준으로 추천하는지 먼저 알려줘요. */}
-        <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-gray-200 bg-white p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl bg-gray-50 p-4">
           <div className="min-w-0">
             <p className="text-[13.5px] font-medium text-gray-900">{L.basis(resume.name, formatDateTime(resume.uploadedAt))}</p>
             <p className="mt-0.5 text-[12.5px] text-gray-500">{L.basisHint}</p>

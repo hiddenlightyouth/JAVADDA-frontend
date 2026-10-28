@@ -19,13 +19,13 @@ const TEXT = messages({
 /** 앱 화면의 바깥 틀이에요. 위의 헤더(56px)만큼 비우고 좌우 여백을 둬요. */
 export const pageFrame = 'flex min-h-0 flex-1 flex-col px-6 pt-14 md:px-10'
 
-/** 제목 줄 아래를 좌우 여백 없이 가득 채우는 옅은 회색 바탕이에요. pageFrame 안에서 써요. */
-export const canvas = '-mx-6 flex min-h-0 flex-1 flex-col border-t border-gray-200 bg-gray-50 md:-mx-10'
+/** 제목 줄 아래를 좌우 여백 없이 가득 채우는 바탕이에요. 새 진단 화면처럼 흰색이고, 위의 선으로 제목 줄과 나눠요. pageFrame 안에서 써요. */
+export const canvas = '-mx-6 flex min-h-0 flex-1 flex-col border-t border-gray-200 bg-white md:-mx-10'
 
-/** 회색 바탕 위에 올리는 흰 종이예요. 이력서와 포트폴리오 미리보기가 같이 써요. */
+/** 흰 바탕 위에 올리는 종이예요. 서류처럼 보이게 테두리를 둘러요. 이력서와 포트폴리오 미리보기가 같이 써요. */
 export const paper = 'mx-auto w-full max-w-[880px] rounded-xl border border-gray-200 bg-white px-6 py-8 md:px-12 md:py-12'
 
-/** 목록 아래의 더 보기 버튼이에요. 회색 바탕 위에 흰 알약으로 떠요. */
+/** 목록 아래의 더 보기 버튼이에요. 테두리를 두른 흰 알약이에요. */
 export const moreButton =
   'h-9 rounded-full border border-gray-200 bg-white px-4 text-[13px] font-medium text-gray-700 transition-colors hover:text-brand disabled:text-gray-400'
 

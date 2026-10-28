@@ -51,7 +51,7 @@ function Loading() {
     <ul aria-busy="true" className="space-y-3">
       <li className="sr-only">{L.picking}</li>
       {[0, 1, 2, 3].map((item) => (
-        <li key={item} aria-hidden className="rounded-2xl border border-gray-200 bg-white p-5">
+        <li key={item} aria-hidden className="rounded-2xl bg-gray-50 p-5">
           <div className="flex items-center gap-3">
             <Bone className="h-3 w-24" />
             <Bone className="h-6 w-14" />
@@ -71,7 +71,7 @@ export function Probability({ value }: { value: number }) {
   const percent = Math.round(value * 100)
   return (
     <span className="inline-flex items-center gap-2 text-[12.5px] text-gray-600 tabular-nums" aria-label={L.probability(percent)}>
-      <span className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-100" aria-hidden>
+      <span className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200/70" aria-hidden>
         <span className="block h-full rounded-full bg-brand" style={{ width: `${percent}%` }} />
       </span>
       {L.probability(percent)}
@@ -83,7 +83,7 @@ function Card({ question, order, onPractice }: { question: InterviewQuestion; or
   const L = useMessages(QUESTION_TEXT)
   const [open, setOpen] = useState(false)
   return (
-    <li className="animate-rise rounded-2xl border border-gray-200 bg-white p-5" style={{ animationDelay: `${Math.min(order, 10) * 30}ms` }}>
+    <li className="animate-rise rounded-2xl bg-gray-50 p-5" style={{ animationDelay: `${Math.min(order, 10) * 30}ms` }}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <Probability value={question.probability} />
         <span className={tag}>{L.categories[question.category]}</span>
@@ -91,7 +91,7 @@ function Card({ question, order, onPractice }: { question: InterviewQuestion; or
       </div>
       <p className="mt-3 text-[15px] leading-relaxed font-semibold text-gray-900">{question.question}</p>
       {open && (
-        <div className="mt-4 animate-rise space-y-3 rounded-xl bg-gray-50 p-4">
+        <div className="mt-4 animate-rise space-y-3 rounded-xl bg-white p-4">
           <div>
             <h3 className="text-[12px] font-medium text-gray-500">{L.intent}</h3>
             <p className="mt-1 text-[13.5px] leading-relaxed text-gray-700">{question.intent}</p>

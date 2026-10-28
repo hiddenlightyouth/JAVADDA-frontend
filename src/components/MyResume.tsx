@@ -130,7 +130,7 @@ export function ResumeUploader({ onDone, compact = false }: { onDone?: (resume: 
 
   if (working) {
     return (
-      <div className="rounded-2xl border border-gray-200 bg-white p-6" aria-busy="true">
+      <div className="rounded-2xl bg-gray-50 p-6" aria-busy="true">
         <p className="text-[13.5px] text-gray-500">{L.reading}</p>
         <div className="mt-5 flex flex-wrap gap-2" aria-hidden>
           {['w-20', 'w-28', 'w-16', 'w-24', 'w-20', 'w-32', 'w-16'].map((width, index) => (
@@ -295,7 +295,7 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
               <>
                 <Panel>
                   <div className="flex items-center gap-4">
-                    <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-[11.5px] font-semibold text-gray-600">{L.sources[resume.source]}</span>
+                    <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-white text-[11.5px] font-semibold text-gray-600">{L.sources[resume.source]}</span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[15px] font-semibold text-gray-900">{resume.name}</p>
                       <p className="mt-0.5 text-[12.5px] text-gray-400">{L.uploadedAt(formatDateTime(resume.uploadedAt))}</p>
@@ -312,7 +312,7 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
                   <ol className="space-y-3">
                     {resume.paragraphs.map((paragraph, index) => (
                       <li key={index} className="flex gap-3 text-[13.5px] leading-relaxed text-gray-700">
-                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[11px] font-semibold text-gray-600 tabular-nums">{index + 1}</span>
+                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-gray-600 tabular-nums">{index + 1}</span>
                         {paragraph}
                       </li>
                     ))}

@@ -76,7 +76,7 @@ const TEXT = messages({
 const jobsGrid = 'grid gap-4 @2xl:grid-cols-2 @7xl:grid-cols-3'
 /** 카드 맨 아래의 작은 글자 버튼이에요. 카드를 덮는 제목 버튼보다 위에 놓여요. */
 const cardAction =
-  'relative z-10 inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900'
+  'relative z-10 inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-gray-500 transition-colors hover:bg-gray-200/70 hover:text-gray-900'
 /** 카드에 보여주는 필수 역량 수예요. 나머지는 수만 적어요. */
 const SKILLS_SHOWN = 4
 
@@ -134,7 +134,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
           <div className="border-b border-gray-200" />
         </div>
 
-        <div className="@container min-h-0 flex-1 overflow-y-auto bg-gray-50 px-6 pt-6 pb-16 md:px-10">
+        <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-16 md:px-10">
           <label className="relative flex h-14 items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 focus-within:border-brand">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0 text-gray-400" aria-hidden="true">
               <circle cx="7" cy="7" r="4.5" />
@@ -303,7 +303,7 @@ function JobCard({ posting, resume, fit, order, onOpen, onView }: { posting: Job
   }
   return (
     <li
-      className="group relative flex animate-rise flex-col rounded-2xl border border-gray-200 bg-white p-5 transition-colors hover:border-brand"
+      className="group relative flex animate-rise flex-col rounded-2xl bg-gray-50 p-5 transition-colors hover:bg-gray-100"
       style={{ animationDelay: `${Math.min(order, STAGGER_MAX) * STAGGER_MS}ms` }}
     >
       <div className="flex items-center gap-3">
@@ -315,7 +315,7 @@ function JobCard({ posting, resume, fit, order, onOpen, onView }: { posting: Job
         {/* 마감이 사흘 안으로 남으면 메인 컬러로 알려요. */}
         <span
           className={`shrink-0 rounded-md px-2 py-1 text-[12px] font-semibold tabular-nums ${
-            left !== null && left <= 3 ? 'bg-brand-soft text-brand-hover' : 'bg-gray-100 text-gray-500'
+            left !== null && left <= 3 ? 'bg-brand-soft text-brand-hover' : 'bg-gray-200/70 text-gray-500'
           }`}
         >
           {left === null ? L.always : L.dday(left)}
@@ -352,7 +352,7 @@ function JobCard({ posting, resume, fit, order, onOpen, onView }: { posting: Job
         {posting.required.length > SKILLS_SHOWN && <span className="inline-flex h-7 items-center px-1 text-[12px] text-gray-400">{L.more(posting.required.length - SKILLS_SHOWN)}</span>}
       </div>
 
-      <div className="mt-5 flex items-center gap-2 border-t border-gray-100 pt-3">
+      <div className="mt-5 flex items-center gap-2 border-t border-gray-200 pt-3">
         <span className="min-w-0 flex-1 truncate text-[12.5px] text-gray-400 tabular-nums">
           {shortDate(posting.postedAt)} ~ {posting.deadline ? shortDate(posting.deadline) : L.always}
         </span>
@@ -374,7 +374,7 @@ function JobCardsSkeleton() {
   return (
     <ul className={jobsGrid} aria-busy="true">
       {Array.from({ length: 6 }, (_, item) => (
-        <li key={item} aria-hidden className="rounded-2xl border border-gray-200 bg-white p-5">
+        <li key={item} aria-hidden className="rounded-2xl bg-gray-50 p-5">
           <div className="flex items-center gap-3">
             <Bone className="size-10 shrink-0 rounded-xl!" />
             <div className="min-w-0 flex-1">
@@ -390,7 +390,7 @@ function JobCardsSkeleton() {
             <Bone className="h-7 w-20 rounded-md!" />
             <Bone className="h-7 w-14 rounded-md!" />
           </div>
-          <div className="mt-5 flex justify-between border-t border-gray-100 pt-4">
+          <div className="mt-5 flex justify-between border-t border-gray-200 pt-4">
             <Bone className="h-3 w-24" />
             <Bone className="h-3 w-28" />
           </div>

@@ -217,12 +217,12 @@ export function PostingBrowser({ posting, onClose }: { posting: JobPosting; onCl
           />
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto bg-gray-50 px-6 py-8 md:px-10">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 md:px-10">
           <div className="mx-auto max-w-[560px]">
             <p className="text-[15px] font-semibold text-gray-900">{L.blocked}</p>
             <p className="mt-1.5 text-[13.5px] leading-relaxed text-gray-500">{L.blockedBody}</p>
 
-            <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-6">
+            <section className="mt-6 rounded-2xl bg-gray-50 p-6">
               <div className="flex items-center gap-3">
                 <CompanyMark company={company} className="size-10 text-[15px]" />
                 <div className="min-w-0">

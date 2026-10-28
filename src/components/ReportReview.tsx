@@ -35,8 +35,8 @@ const TEXT = messages({
 
 const TAG_TONES: Record<ParagraphTag, string> = {
   good: 'bg-brand-soft text-brand-hover',
-  fix: 'bg-gray-100 text-gray-700',
-  missing: 'bg-gray-100 text-gray-500',
+  fix: 'bg-gray-200/70 text-gray-700',
+  missing: 'bg-gray-200/70 text-gray-500',
   interview: 'border border-brand text-brand',
 }
 
@@ -47,14 +47,14 @@ function Loading() {
   return (
     <div aria-busy="true" className="space-y-4">
       <span className="sr-only">{L.reading}</span>
-      <div aria-hidden className="flex items-center gap-5 rounded-2xl border border-gray-200 bg-white p-5">
+      <div aria-hidden className="flex items-center gap-5 rounded-2xl bg-gray-50 p-5">
         <Bone className="size-[88px] shrink-0" />
         <div className="flex-1">
           <Bone className="h-3.5 w-3/5" />
           <Bone className="mt-2.5 h-3.5 w-4/5" />
         </div>
       </div>
-      <div aria-hidden className="space-y-6 rounded-2xl border border-gray-200 bg-white p-5">
+      <div aria-hidden className="space-y-6 rounded-2xl bg-gray-50 p-5">
         {[0, 1, 2].map((item) => (
           <div key={item}>
             <Bone className="h-5 w-16" />

@@ -139,7 +139,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
           {step === 'posting' ? (
             <div className="animate-rise">
               <StepTitle title={L.postingTitle} hint={L.postingHint} />
-              <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
+              <div className="mt-6 rounded-2xl bg-gray-50 p-5">
                 <div className="flex items-start gap-4">
                   <CompanyMark company={company} />
                   <div className="min-w-0 flex-1">
@@ -191,7 +191,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
                     )}
                   </>
                 ) : (
-                  <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                  <div className="rounded-2xl bg-gray-50 p-5">
                     <div className="flex items-center gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[14.5px] font-semibold text-gray-900">{resume.name}</p>
