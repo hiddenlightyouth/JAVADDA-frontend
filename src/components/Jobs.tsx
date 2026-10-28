@@ -298,8 +298,13 @@ function JobCard({ posting, resume, fit, order, onOpen, onView }: { posting: Job
     void copyText(url).then((done) => showToast(done ? pick(TEXT).copied : pick(TEXT).copyFailed))
   }
   return (
+    // 카드의 빈 자리를 누르면 진단 시작으로 가요. 안쪽 버튼(원문 보기, 링크 복사)은 저마다 따로 받아요.
+    // 제목 버튼을 카드 전체에 늘여 덮으면, 누른 곳과 뗀 곳이 달라져 클릭이 한 번 씹혀서 카드가 직접 받아요.
     <li
-      className="group relative flex animate-rise flex-col rounded-2xl bg-gray-50 p-5 transition-colors hover:bg-gray-100"
+      onClick={(event) => {
+        if (!(event.target as Element).closest('button, a')) onOpen()
+      }}
+      className="group relative flex animate-rise cursor-pointer flex-col rounded-2xl bg-gray-50 p-5 transition-colors hover:bg-gray-100"
       style={{ animationDelay: `${Math.min(order, STAGGER_MAX) * STAGGER_MS}ms` }}
     >
       <div className="flex items-center gap-3">
@@ -319,8 +324,7 @@ function JobCard({ posting, resume, fit, order, onOpen, onView }: { posting: Job
       </div>
 
       <h3 className="mt-4 text-[17px] leading-snug font-semibold text-gray-900">
-        {/* 제목 버튼이 카드 전체를 덮어서, 카드 어디를 눌러도 진단 시작으로 가요. */}
-        <button type="button" onClick={onOpen} className="text-left transition-colors group-hover:text-brand-hover after:absolute after:inset-0 after:rounded-2xl">
+        <button type="button" onClick={onOpen} className="text-left transition-colors group-hover:text-brand-hover">
           {posting.title}
         </button>
       </h3>
