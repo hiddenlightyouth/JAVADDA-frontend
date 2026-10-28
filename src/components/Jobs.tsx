@@ -129,7 +129,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   return (
     <SplitView side={viewing && <PostingBrowser key={viewing.id} posting={viewing} onClose={() => setViewing(null)} />}>
       <main className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 px-6 pt-14 md:px-10">
+        <div className="shrink-0 px-6 pt-14 md:px-10 md:pt-9">
           <PageHeader title={L.title} />
           <div className="border-b border-gray-200" />
         </div>

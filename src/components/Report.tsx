@@ -599,14 +599,14 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
               track('report_tab_view', { tab: item })
               onTab(item)
             }}
-            className={`relative -mb-px h-10 border-b-2 px-3 text-[13.5px] font-medium transition-colors ${item === tab ? 'border-brand text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-900'}`}
+            className={`relative -mb-px h-10 border-b-2 px-2 text-[13.5px] font-medium whitespace-nowrap transition-colors sm:px-3 ${item === tab ? 'border-brand text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-900'}`}
           >
             {L.tabs[item]}
             <Kbd corner>{String(index + 1)}</Kbd>
           </button>
         ))}
         {done && (
-          <div className="mb-1.5 ml-auto flex items-center self-end">
+          <div className="mb-1.5 ml-auto hidden items-center self-end sm:flex">
             <FitBadge fit={report.fitScore} />
           </div>
         )}

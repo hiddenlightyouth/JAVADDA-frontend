@@ -16,8 +16,8 @@ const TEXT = messages({
   en: { back: 'Back', copied: 'Copied', copyFailed: 'Could not copy', steps: 'Steps', export: 'Export' },
 })
 
-/** 앱 화면의 바깥 틀이에요. 위의 헤더(56px)만큼 비우고 좌우 여백을 둬요. */
-export const pageFrame = 'flex min-h-0 flex-1 flex-col px-6 pt-14 md:px-10'
+/** 앱 화면의 바깥 틀이에요. 위의 헤더(좁은 화면 56px, 넓은 화면 36px)만큼 비우고 좌우 여백을 둬요. */
+export const pageFrame = 'flex min-h-0 flex-1 flex-col px-6 pt-14 md:px-10 md:pt-9'
 
 /** 제목 줄 아래를 좌우 여백 없이 가득 채우는 바탕이에요. 새 진단 화면처럼 흰색이고, 위의 선으로 제목 줄과 나눠요. pageFrame 안에서 써요. */
 export const canvas = '-mx-6 flex min-h-0 flex-1 flex-col border-t border-gray-200 bg-white md:-mx-10'
@@ -50,7 +50,7 @@ export function PageHeader({ title, owner, onBack, backLabel, actions }: {
 }) {
   const L = useMessages(TEXT)
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 pt-4 pb-4">
+    <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 pt-2 pb-4">
       <div className="flex min-h-11 min-w-0 items-center gap-2">
         {onBack && (
           <button
@@ -63,8 +63,8 @@ export function PageHeader({ title, owner, onBack, backLabel, actions }: {
           </button>
         )}
         <div className="min-w-0">
-          {owner && <p className="text-[12px] text-gray-500">{owner}</p>}
-          <h1 className="truncate text-[20px] leading-tight font-semibold text-gray-900">{title}</h1>
+          {owner && <p className="text-[13px] text-gray-500">{owner}</p>}
+          <h1 className="truncate text-[26px] leading-tight font-semibold text-gray-900">{title}</h1>
         </div>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

@@ -146,7 +146,7 @@ export function PostingBrowser({ posting, onClose }: { posting: JobPosting; onCl
       ref={pane}
       aria-label={L.title(company.name)}
       style={{ '--pane': `${width}px` } as CSSProperties}
-      className="fixed inset-0 z-40 flex animate-fade flex-col bg-white md:relative md:inset-auto md:z-auto md:w-(--pane) md:shrink-0 md:pt-14 md:border-l md:border-gray-200"
+      className="fixed inset-0 z-40 flex animate-fade flex-col bg-white md:relative md:inset-auto md:z-auto md:w-(--pane) md:shrink-0 md:pt-9 md:border-l md:border-gray-200"
     >
       {/* 왼쪽 가장자리의 손잡이예요. 끌거나 방향키로 폭을 바꾸고, 두 번 누르면 처음 폭으로 돌아가요. */}
       <div

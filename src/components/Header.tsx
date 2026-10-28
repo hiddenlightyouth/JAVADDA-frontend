@@ -143,7 +143,7 @@ export function Header({
     <>
       <header
         data-app-drag={app || undefined}
-        className="absolute inset-x-0 top-0 z-20 flex h-14 items-center justify-between bg-white/70 px-4 backdrop-blur-md sm:px-6"
+        className={`absolute inset-x-0 top-0 z-20 flex ${app ? 'h-14 md:h-9' : 'h-14'} items-center justify-between bg-white/70 px-4 backdrop-blur-md sm:px-6`}
       >
         {app ? (
           <span />
