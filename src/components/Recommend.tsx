@@ -5,7 +5,7 @@ import { formatDateTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
 import { PageHeader } from './AppPage'
 import { MapMenu } from './DeepParts'
-import { cardsGrid, Failed, Notice, PostingCard, PostingCardsSkeleton, SkillChip } from './GapParts'
+import { cardsGrid, Failed, Notice, PostingCardsSkeleton, PostingTile, SkillChip } from './GapParts'
 
 /**
  * 추천 공고 화면이에요. 올려 둔 이력서의 역량과 가까운 공고를 적합도 순서로 보여줘요.
@@ -165,10 +165,11 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
           ) : (
             <ul className={cardsGrid}>
               {list.map((posting, order) => (
-                <PostingCard
+                <PostingTile
                   key={`${sort}:${threshold}:${posting.id}`}
                   posting={posting}
-                  fit={fitOf(posting, resume)}
+                  resume={resume}
+                  tag="fit"
                   order={order}
                   onOpen={() => {
                     track('posting_select', { posting: posting.id, from: 'recommend' })

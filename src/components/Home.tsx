@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { track } from '../lib/analytics'
 import { COMPANIES, fitOf, POSTINGS, SEARCH_SUGGESTIONS, sortPostings, SUGGEST_MS, useReports, useResume, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
-import { cardsRow, CompanyMark, FitBadge, PostingCard, PostingTile } from './GapParts'
+import { cardsRow, CompanyMark, FitBadge, PostingTile } from './GapParts'
 import { companyOf } from '../lib/gap'
 import { LofyScript } from './LofyScript'
 
@@ -265,14 +265,10 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
                 </ul>
               ) : (
                 <ul className={`mt-3 ${cardsRow}`}>
-                  {list.map((posting, order) =>
-                    // 요즘 올라온 공고와 마감이 가까운 공고는 공고를 앞에 세운 카드로, 왼쪽 위 태그만 달리 보여줘요.
-                    key === 'recent' || key === 'closing' ? (
-                      <PostingTile key={posting.id} posting={posting} resume={resume} tag={key === 'recent' ? 'posted' : 'deadline'} order={order} onOpen={pick} />
-                    ) : (
-                      <PostingCard key={posting.id} posting={posting} fit={fitOf(posting, resume)} order={order} onOpen={pick} />
-                    ),
-                  )}
+                  {/* 모든 줄이 같은 카드를 쓰고, 왼쪽 위 태그만 줄에 맞게 달라요. 올라온 때, 마감까지 남은 날, 얼마나 맞는지예요. */}
+                  {list.map((posting, order) => (
+                    <PostingTile key={posting.id} posting={posting} resume={resume} tag={key === 'recent' ? 'posted' : key === 'closing' ? 'deadline' : 'fit'} order={order} onOpen={pick} />
+                  ))}
                 </ul>
               )}
             </section>

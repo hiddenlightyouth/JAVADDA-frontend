@@ -3,7 +3,6 @@ import { useDismiss } from '../hooks/useDismiss'
 import { track } from '../lib/analytics'
 import {
   companyOf,
-  fitOf,
   postingOf,
   rerunReport,
   saveNote,
@@ -26,7 +25,7 @@ import { showToast } from '../lib/toast'
 import { pageFrame, PageHeader } from './AppPage'
 import { primaryButton } from './Dialog'
 import { toolButton } from './DeepParts'
-import { CheckMark, Delta, FitBadge, KindLabel, Meter, Notice, Panel, PostingCard, Radar, RequirementLabel, ScoreRing, Sparkline, percent } from './GapParts'
+import { CheckMark, Delta, FitBadge, KindLabel, Meter, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreRing, Sparkline, percent } from './GapParts'
 import { DeleteReportDialog, removeReport } from './History'
 import { CheckIcon, CloseButton, RefreshIcon, TrashIcon } from './Icons'
 import { ReviewTab } from './ReportReview'
@@ -435,7 +434,7 @@ function SummaryTab({ report, posting, onOpenGap, onPick }: { report: ReportData
             <ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
               {report.alternatives.map((id, order) => {
                 const alternative = postingOf(id)
-                return alternative ? <PostingCard key={id} posting={alternative} fit={fitOf(alternative, resume)} order={order} onOpen={() => onPick(id)} /> : null
+                return alternative ? <PostingTile key={id} posting={alternative} resume={resume} tag="fit" onGray order={order} onOpen={() => onPick(id)} /> : null
               })}
             </ul>
           </Panel>
@@ -487,7 +486,7 @@ function FitTab({ report, onPick }: { report: ReportData; onPick: (postingId: st
             <ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
               {report.alternatives.map((id, order) => {
                 const alternative = postingOf(id)
-                return alternative ? <PostingCard key={id} posting={alternative} fit={fitOf(alternative, resume)} order={order} onOpen={() => onPick(id)} /> : null
+                return alternative ? <PostingTile key={id} posting={alternative} resume={resume} tag="fit" onGray order={order} onOpen={() => onPick(id)} /> : null
               })}
             </ul>
           )}

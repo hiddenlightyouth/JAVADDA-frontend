@@ -22,6 +22,7 @@ const TEXT = messages({
     deadline: (days: number) => (days === 0 ? '오늘 마감' : `마감 ${days}일 전`),
     always: '상시 채용',
     posted: (days: number) => (days <= NEW_DAYS ? '신규' : `${days}일 전`),
+    fitTag: (fit: number): string => (fit >= 70 ? '잘 맞아요' : fit >= 50 ? '조금만 채우면 돼요' : '갭이 커요'),
     dday: (days: number) => (days === 0 ? 'D-day' : `D-${days}`),
     family: '직군',
     career: '경력',
@@ -45,6 +46,7 @@ const TEXT = messages({
     deadline: (days: number) => (days === 0 ? 'Closes today' : `Closes in ${days} ${days === 1 ? 'day' : 'days'}`),
     always: 'Rolling',
     posted: (days: number) => (days <= NEW_DAYS ? 'New' : `${days} days ago`),
+    fitTag: (fit: number) => (fit >= 70 ? 'Good fit' : fit >= 50 ? 'Almost there' : 'Big gap'),
     dday: (days: number) => (days === 0 ? 'D-day' : `D-${days}`),
     family: 'Role',
     career: 'Level',
@@ -210,36 +212,6 @@ export const cardsGrid = 'grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] g
 /** 한 줄만 보여주는 카드 줄. 둘째 줄부터는 높이를 0으로 두고 잘라서, 화면 폭에 들어가는 만큼만 보여요. */
 export const cardsRow = 'grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] auto-rows-[0px] grid-rows-[auto] gap-x-4 overflow-hidden'
 
-/** 공고 카드예요. 기업 머리글자, 공고 제목, 기업과 지역, 소개 두 줄, 직군과 마감, 적합도가 있어요. */
-export function PostingCard({ posting, fit, order = 0, onOpen }: { posting: JobPosting; fit: number | null; order?: number; onOpen: (posting: JobPosting) => void }) {
-  const L = useMessages(TEXT)
-  const company = companyOf(posting.companyId)
-  const left = daysLeft(posting)
-  return (
-    <li className="min-h-0 animate-rise" style={{ animationDelay: `${Math.min(order, STAGGER_MAX) * STAGGER_MS}ms` }}>
-      <button type="button" onClick={() => onOpen(posting)} className="group flex h-[196px] w-full flex-col rounded-2xl bg-gray-50 p-5 text-left transition-colors hover:bg-gray-100">
-        <span className="flex items-center gap-3">
-          <CompanyMark company={company} />
-          <span className="min-w-0">
-            <span className="block truncate text-[15px] font-semibold text-gray-900">{posting.title}</span>
-            <span className="block truncate text-[12px] text-gray-400">
-              {company.name}, {posting.location}
-            </span>
-          </span>
-        </span>
-        <span className="mt-3 line-clamp-2 min-h-0 flex-1 text-[13px] leading-relaxed text-gray-600">{posting.summary}</span>
-        <span className="mt-2 flex items-center justify-between gap-2 text-[12px] text-gray-400">
-          <span className="min-w-0 truncate">
-            {familyName(posting.family)}, {careerName(posting.career)}
-            {left !== null ? `, ${L.deadline(left)}` : `, ${L.always}`}
-          </span>
-          <FitBadge fit={fit} compact />
-        </span>
-      </button>
-    </li>
-  )
-}
-
 const CARD_TAG_TONES = { brand: 'bg-brand-soft text-brand-hover', red: 'bg-red-50 text-red-600', gray: 'bg-gray-200/70 text-gray-700' }
 
 /** 카드 왼쪽 위에 붙는 작은 태그예요. 신규는 메인 컬러, 마감까지 남은 날은 빨간색, 나머지는 회색이에요. */
@@ -259,24 +231,35 @@ export function skillTone(skill: string, resume: Resume | null): ChipTone {
 }
 
 /**
- * 공고 자체를 앞에 세운 카드예요. 새 진단 화면의 요즘 올라온 공고와 마감이 가까운 공고 줄에서 써요.
- * 왼쪽 위 태그에 올라온 때(posted)나 마감까지 남은 날(deadline)을 적고, 그 아래에 공고 제목, 기업,
+ * 공고 자체를 앞에 세운 카드예요. 새 진단 화면의 모든 공고 줄에서 써요.
+ * 왼쪽 위 태그에 올라온 때(posted)나 마감까지 남은 날(deadline)이나 얼마나 맞는지(fit, 나와 잘 맞는 공고와 다시 볼 공고)를 적고, 그 아래에 공고 제목, 기업,
  * 아이콘을 붙인 직군과 경력과 지역, 필수 역량을 놓아요. 테두리 없이 옅은 회색 바탕으로 구분해요.
  * 공고 카드와 크기가 같아서 같은 줄 규칙(cardsRow)에 들어가요.
  */
-export function PostingTile({ posting, resume, tag, order = 0, onOpen }: { posting: JobPosting; resume: Resume | null; tag: 'posted' | 'deadline'; order?: number; onOpen: (posting: JobPosting) => void }) {
+export function PostingTile({ posting, resume, tag, onGray = false, order = 0, onOpen }: {
+  posting: JobPosting
+  resume: Resume | null
+  tag: 'posted' | 'deadline' | 'fit'
+  /** 회색 칸(`Panel`) 안에 놓일 때예요. 회색 위에서도 보이게 흰 바탕으로 그려요. */
+  onGray?: boolean
+  order?: number
+  onOpen: (posting: JobPosting) => void
+}) {
   const L = useMessages(TEXT)
   const company = companyOf(posting.companyId)
   const since = daysSince(posting)
   const left = daysLeft(posting)
+  const fit = fitOf(posting, resume)
   return (
     <li className="min-h-0 animate-rise" style={{ animationDelay: `${Math.min(order, STAGGER_MAX) * STAGGER_MS}ms` }}>
-      <button type="button" onClick={() => onOpen(posting)} className="group flex h-[196px] w-full flex-col rounded-2xl bg-gray-50 p-5 text-left transition-colors hover:bg-gray-100">
+      <button type="button" onClick={() => onOpen(posting)} className={`group flex h-[196px] w-full flex-col rounded-2xl p-5 text-left transition-colors ${onGray ? 'bg-white hover:bg-gray-100' : 'bg-gray-50 hover:bg-gray-100'}`}>
         <span className="flex items-center justify-between gap-2">
           {tag === 'posted' ? (
             <CardTag tone={since <= NEW_DAYS ? 'brand' : 'gray'}>{L.posted(since)}</CardTag>
-          ) : (
+          ) : tag === 'deadline' ? (
             <CardTag tone="red">{left === null ? L.always : L.dday(left)}</CardTag>
+          ) : (
+            fit !== null && <CardTag tone={fit >= 70 ? 'brand' : 'gray'}>{L.fitTag(fit)}</CardTag>
           )}
           <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-gray-500">
             <CompanyMark company={company} className="size-5 rounded-md text-[9px]" />
@@ -311,7 +294,7 @@ export function PostingTile({ posting, resume, tag, order = 0, onOpen }: { posti
               )
             })}
           </span>
-          <FitBadge fit={fitOf(posting, resume)} compact />
+          <FitBadge fit={fit} compact />
         </span>
       </button>
     </li>
