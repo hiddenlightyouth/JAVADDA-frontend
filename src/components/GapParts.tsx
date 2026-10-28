@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { careerName, companyOf, daysLeft, daysSince, familyName, fitOf, type Company, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { primaryButton } from './Dialog'
@@ -84,30 +85,66 @@ export function CompanyMark({ company, className = 'size-12 text-[17px]' }: { co
 
 /** 적합도 퍼센트예요. 숫자만 메인 컬러로 강조하고, 아래에 가는 막대로 한 번 더 보여줘요. */
 /**
- * 마우스를 올리거나 키보드로 안쪽에 가면 위에 뜨는 짧은 설명이에요. 숫자나 색만 보고는 뜻을 모를 때 붙여요.
- * 라이브러리 없이 CSS로만 띄우고, 잠깐 머물러야 떠서 훑고 지나갈 때는 거슬리지 않아요. 화면 오른쪽 끝에 붙은 것은 `align="end"`로 오른쪽에 맞춰요.
+ * 마우스를 올리거나 키보드로 안쪽에 가면 뜨는 짧은 설명이에요. 숫자나 색만 보고는 뜻을 모를 때 붙여요.
+ * 잠깐(0.3초) 머물러야 떠서 훑고 지나갈 때는 거슬리지 않아요. 카드나 스크롤 칸이 넘치는 부분을 잘라도 가려지지 않게,
+ * 말풍선은 화면 맨 바깥(body)에 고정 위치로 그려요. 위에 자리가 없으면 아래로 뒤집고, 창 가장자리를 넘지 않게 맞춰요.
  */
-export function Tip({ text, align = 'center', children }: { text: string; align?: 'center' | 'end'; children: ReactNode }) {
+export function Tip({ text, children }: { text: string; children: ReactNode }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const timer = useRef(0)
+  const [anchor, setAnchor] = useState<DOMRect | null>(null)
+  const show = () => {
+    window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => ref.current && setAnchor(ref.current.getBoundingClientRect()), 300)
+  }
+  const hide = () => {
+    window.clearTimeout(timer.current)
+    setAnchor(null)
+  }
+  useEffect(() => () => window.clearTimeout(timer.current), [])
+  // 스크롤하면 붙어 있던 자리를 벗어나니 닫아요.
+  useEffect(() => {
+    if (!anchor) return
+    window.addEventListener('scroll', hide, true)
+    return () => window.removeEventListener('scroll', hide, true)
+  }, [anchor])
   return (
-    <span className="group/tip relative inline-flex max-w-full">
+    <span ref={ref} onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide} className="inline-flex max-w-full">
       {children}
-      <span
-        role="tooltip"
-        className={`pointer-events-none absolute bottom-full z-30 mb-2 w-max max-w-60 translate-y-1 rounded-lg bg-gray-900 px-2.5 py-1.5 text-left text-[12px] leading-snug font-normal whitespace-normal text-white opacity-0 transition duration-150 group-hover/tip:translate-y-0 group-hover/tip:opacity-100 group-hover/tip:delay-300 group-focus-within/tip:translate-y-0 group-focus-within/tip:opacity-100 ${
-          align === 'end' ? 'right-0' : 'left-1/2 -translate-x-1/2'
-        }`}
-      >
-        {text}
-      </span>
+      {anchor && createPortal(<TipBubble anchor={anchor} text={text} />, document.body)}
     </span>
   )
 }
 
-export function FitBadge({ fit, compact = false, tipAlign }: { fit: number | null; compact?: boolean; tipAlign?: 'center' | 'end' }) {
+const TIP_GAP = 8
+
+function TipBubble({ anchor, text }: { anchor: DOMRect; text: string }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [place, setPlace] = useState<{ left: number; top: number } | null>(null)
+  // 그린 뒤에 크기를 재서 자리를 정해요. 정하기 전에는 보이지 않게 둬요.
+  useLayoutEffect(() => {
+    const box = ref.current!.getBoundingClientRect()
+    const left = Math.min(Math.max(anchor.left + anchor.width / 2 - box.width / 2, TIP_GAP), window.innerWidth - box.width - TIP_GAP)
+    const above = anchor.top - box.height - TIP_GAP
+    setPlace({ left, top: above >= TIP_GAP ? above : anchor.bottom + TIP_GAP })
+  }, [anchor])
+  return (
+    <span
+      ref={ref}
+      role="tooltip"
+      style={place ?? { left: 0, top: 0, visibility: 'hidden' }}
+      className="pointer-events-none fixed z-[70] w-max max-w-60 animate-fade rounded-lg bg-gray-900 px-2.5 py-1.5 text-left text-[12px] leading-snug font-normal text-white"
+    >
+      {text}
+    </span>
+  )
+}
+
+export function FitBadge({ fit, compact = false }: { fit: number | null; compact?: boolean }) {
   const L = useMessages(TEXT)
   if (fit === null) return <span className="text-[12px] text-gray-400">{compact ? '' : L.noFit}</span>
   return (
-    <Tip text={L.fitTip} align={tipAlign}>
+    <Tip text={L.fitTip}>
       <span className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap" aria-label={L.fit(fit)}>
         <span className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200/70" aria-hidden>
           <span className="block h-full rounded-full bg-brand" style={{ width: `${fit}%` }} />
