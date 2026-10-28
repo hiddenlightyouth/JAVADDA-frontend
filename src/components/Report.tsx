@@ -4,6 +4,7 @@ import { track } from '../lib/analytics'
 import {
   companyOf,
   postingOf,
+  PROVIDER_LOGOS,
   rerunReport,
   saveNote,
   togglePlan,
@@ -12,7 +13,6 @@ import {
   useReport,
   useResume,
   type Course,
-  type JobPosting,
   type Report as ReportData,
   type RequirementCheck,
   type ScoreItem,
@@ -25,9 +25,9 @@ import { showToast } from '../lib/toast'
 import { pageFrame, PageHeader } from './AppPage'
 import { primaryButton } from './Dialog'
 import { toolButton } from './DeepParts'
-import { CheckMark, Delta, FitBadge, KindLabel, Meter, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreRing, Sparkline, percent } from './GapParts'
+import { CheckMark, CompanyMark, Delta, FitBadge, KindLabel, Meter, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreHero, ScoreRing, Sparkline, Tip, percent } from './GapParts'
 import { DeleteReportDialog, removeReport } from './History'
-import { CheckIcon, CloseButton, RefreshIcon, TrashIcon } from './Icons'
+import { CheckIcon, ChevronRightIcon, ClockIcon, CloseButton, LevelIcon, RefreshIcon, TrashIcon } from './Icons'
 import { ReviewTab } from './ReportReview'
 import { QuestionsTab } from './ReportQuestions'
 import { Kbd } from './Shortcuts'
@@ -53,13 +53,21 @@ const TEXT = messages({
     pending: '공고와 서류를 맞춰 보고 있어요.',
     pendingBody: '보통 몇 초 안에 끝나요.',
     fitTitle: '적합도',
+    verdict: (score: number): string => (score >= 70 ? '잘 맞아요! 바로 지원해 볼 만해요.' : score >= 50 ? '좋아요! 조금만 채우면 돼요.' : '갭이 있어요. 하나씩 채워 봐요.'),
     createdAt: (when: string) => `${when} 진단`,
     radar: '역량 레이더',
     gaps: '갭 목록',
-    gapsHint: '칸을 누르면 판단 근거와 보완 방법이 열려요.',
-    groups: { missing: '부족한 역량', partial: '보완할 역량', strength: '강점' } as Record<SkillGap['kind'], string>,
+    notFound: (weeks: number) => `약 ${weeks}주의 과정으로 보완할 수 있음`,
+    shareTip: '같은 직군 공고 중 이 역량을 적은 비율이에요.',
+    gainTip: '이 역량을 채우면 오를 것으로 보는 적합도예요.',
+    gain: (value: number) => `+${value}점`,
+    level: '난이도',
+    duration: '강의 시간',
+    groups: { missing: '서류에서 찾지 못한 역량', partial: '서류에 있지만 찾지 못함', strength: '강점' } as Record<SkillGap['kind'], string>,
     trends: '시장 요구 변화',
     trendsHint: '같은 직군 공고에서 지난 12주 동안 이 스킬을 적은 수예요.',
+    trendColumns: { skill: '역량', weeks: '최근 12주', share: '공고 비중', change: '6개월 변화' },
+    changeTip: '지난 6개월 사이 이 역량을 적은 공고 비율이 얼마나 바뀌었는지예요.',
     courses: '추천 강의',
     hours: (hours: number) => `${hours}시간`,
     breakdown: '점수 구성',
@@ -86,7 +94,6 @@ const TEXT = messages({
     planToast: (skill: string) => `${skill}을(를) 보완 계획에 넣었어요.`,
     planRemoved: (skill: string) => `${skill}을(를) 보완 계획에서 뺐어요.`,
     nothing: '해당하는 역량이 없어요.',
-    signal: (count: number) => `${count}개의 요구 역량을 서류와 맞춰 봤어요. 적합도 숫자는 판결이 아니라 참고할 신호예요.`,
   },
   en: {
     tabs: { summary: 'Report', fit: 'Fit breakdown', review: 'Document check', questions: 'Questions' },
@@ -102,13 +109,21 @@ const TEXT = messages({
     pending: 'Comparing the posting with your documents.',
     pendingBody: 'This usually takes a few seconds.',
     fitTitle: 'Fit',
+    verdict: (score: number) => (score >= 70 ? 'Great fit! Worth applying now.' : score >= 50 ? 'Nice! Just a little more to go.' : 'Some gaps here. Close them one by one.'),
     createdAt: (when: string) => `Diagnosed ${when}`,
     radar: 'Skill radar',
     gaps: 'Gaps',
-    gapsHint: 'Tap a card to see the reasoning and how to close the gap.',
-    groups: { missing: 'Missing', partial: 'Needs work', strength: 'Strengths' },
+    notFound: (weeks: number) => `About ${weeks} weeks to close`,
+    shareTip: 'Share of postings in this job family that list this skill.',
+    gainTip: 'How much your fit score should rise once you close this gap.',
+    gain: (value: number) => `+${value}`,
+    level: 'Level',
+    duration: 'Length',
+    groups: { missing: 'Not in your documents', partial: 'Listed but not shown', strength: 'Strengths' },
     trends: 'Market demand',
     trendsHint: 'How many postings in this job family listed each skill over the last 12 weeks.',
+    trendColumns: { skill: 'Skill', weeks: 'Last 12 weeks', share: 'Share', change: '6-month change' },
+    changeTip: 'How much the share of postings listing this skill moved over the last 6 months.',
     courses: 'Suggested courses',
     hours: (hours: number) => `${hours}h`,
     breakdown: 'Score breakdown',
@@ -135,7 +150,6 @@ const TEXT = messages({
     planToast: (skill: string) => `Added ${skill} to your plan.`,
     planRemoved: (skill: string) => `Removed ${skill} from your plan.`,
     nothing: 'Nothing here.',
-    signal: (count: number) => `We compared ${count} listed skills with your documents. Fit numbers are signals, not verdicts.`,
   },
 })
 
@@ -166,12 +180,14 @@ function Loading() {
         </div>
         <div className="rounded-2xl bg-gray-50 p-5">
           <Bone className="h-3.5 w-20" />
-          <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
+          <div className="mt-4 divide-y divide-gray-100 overflow-hidden rounded-xl bg-white">
             {[0, 1, 2, 3, 4, 5].map((item) => (
-              <div key={item} className="rounded-xl border border-gray-200 p-4">
-                <Bone className="h-3.5 w-24" />
-                <Bone className="mt-3 h-3 w-full" />
-                <Bone className="mt-2 h-3 w-4/5" />
+              <div key={item} className="flex items-center gap-4 px-4 py-3.5">
+                <div className="min-w-0 flex-1">
+                  <Bone className="h-3.5 w-24" />
+                  <Bone className="mt-2 h-3 w-3/5" />
+                </div>
+                <Bone className="h-3 w-12" />
               </div>
             ))}
           </div>
@@ -185,16 +201,25 @@ function Loading() {
   )
 }
 
+/** 강의 한 줄이에요. 플랫폼 로고와 제목, 아이콘을 붙인 난이도와 강의 시간을 보여줘요. */
 function CourseRow({ course }: { course: Course }) {
   const L = useMessages(TEXT)
   return (
     <li>
-      <a href={course.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-gray-200/50">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-[11px] font-semibold text-gray-600">{course.provider[0]}</span>
+      <a href={course.url} target="_blank" rel="noopener noreferrer" className="group flex items-start gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-gray-200/50">
+        <img src={PROVIDER_LOGOS[course.provider]} alt={course.provider} width={36} height={36} className="size-9 shrink-0 rounded-lg" />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13.5px] font-medium text-gray-900">{course.title}</span>
-          <span className="block text-[12px] text-gray-400">
-            {course.provider}, {course.level}, {L.hours(course.hours)}
+          <span className="line-clamp-2 text-[13.5px] leading-snug font-medium text-gray-900 transition-colors group-hover:text-brand">{course.title}</span>
+          <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12px] text-gray-500">
+            <span>{course.provider}</span>
+            <span className="flex items-center gap-1">
+              <LevelIcon label={L.level} />
+              {course.level}
+            </span>
+            <span className="flex items-center gap-1 tabular-nums">
+              <ClockIcon label={L.duration} />
+              {L.hours(course.hours)}
+            </span>
           </span>
         </span>
       </a>
@@ -202,23 +227,76 @@ function CourseRow({ course }: { course: Course }) {
   )
 }
 
-/** 갭 하나를 보여주는 카드예요. 누르면 오른쪽에 자세한 칸이 열려요. */
-function GapCard({ gap, inPlan, onOpen }: { gap: SkillGap; inPlan: boolean; onOpen: () => void }) {
+/** 갭 하나를 보여주는 줄이에요. 이름과 근거 한 줄, 오른쪽에 공고 비중과 오를 점수를 맞춰 세워요. 누르면 오른쪽에 자세한 칸이 열려요. */
+function GapRow({ gap, inPlan, onOpen }: { gap: SkillGap; inPlan: boolean; onOpen: () => void }) {
   const L = useMessages(TEXT)
+  const line = gap.kind === 'missing' ? L.notFound(gap.estimatedWeeks) : (gap.evidence ?? gap.reason)
   return (
-    <li className="min-h-0 animate-rise">
-      <button type="button" onClick={onOpen} className="flex h-full w-full flex-col rounded-xl border border-gray-200 bg-white p-4 text-left transition-colors hover:border-brand">
-        <span className="flex w-full items-center justify-between gap-2">
-          <span className="truncate text-[14px] font-semibold text-gray-900">{gap.skill}</span>
-          <RequirementLabel requirement={gap.requirement} />
+    <li className="animate-rise">
+      <button type="button" onClick={onOpen} className="group flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-gray-50">
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2">
+            <span className="truncate text-[14px] font-semibold text-gray-900 transition-colors group-hover:text-brand">{gap.skill}</span>
+            <RequirementLabel requirement={gap.requirement} />
+            {gap.kind !== 'strength' && inPlan && <CheckIcon className="size-3.5 shrink-0 text-brand" label={L.inPlan} />}
+          </span>
+          <span className="mt-1 block truncate text-[12.5px] text-gray-500">{line}</span>
         </span>
-        <span className="mt-2 line-clamp-2 flex-1 text-[12.5px] leading-relaxed text-gray-500">{gap.reason}</span>
-        <span className="mt-3 flex w-full items-center justify-between gap-2 text-[12px] text-gray-400">
-          <span>{L.share(percent(gap.share))}</span>
-          {gap.kind !== 'strength' && inPlan && <CheckIcon className="size-3.5 shrink-0 text-brand" label={L.inPlan} />}
+        <span className="hidden shrink-0 sm:block">
+          <Tip text={L.shareTip}>
+            <span className="block w-16">
+              <span className="block text-right text-[12.5px] font-medium text-gray-700 tabular-nums">{percent(gap.share)}</span>
+              <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-gray-200/70">
+                <span className="block h-full rounded-full bg-gray-400" style={{ width: `${Math.round(gap.share * 100)}%` }} />
+              </span>
+            </span>
+          </Tip>
         </span>
+        <span className="w-11 shrink-0 text-right text-[12.5px] font-medium tabular-nums">
+          {gap.kind !== 'strength' && (
+            <Tip text={L.gainTip}>
+              <span className="text-brand">{L.gain(gap.scoreGain)}</span>
+            </Tip>
+          )}
+        </span>
+        <ChevronRightIcon />
       </button>
     </li>
+  )
+}
+
+/** 시장 요구 변화를 표처럼 한 줄씩 보여줘요. 많이 늘어난 역량이 위에 와요. */
+function TrendList({ report }: { report: ReportData }) {
+  const L = useMessages(TEXT)
+  const rows = report.trends
+    .map((trend) => ({ ...trend, gap: report.gaps.find((item) => item.skill === trend.skill) }))
+    .sort((a, b) => (b.gap?.marketChange ?? 0) - (a.gap?.marketChange ?? 0))
+  const columns = 'grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)_3.5rem_4.5rem] items-center gap-4 px-4 sm:grid-cols-[minmax(0,9rem)_minmax(0,1fr)_4rem_5rem]'
+  return (
+    <div className="overflow-hidden rounded-xl bg-white">
+      <div className={`${columns} pt-3 pb-2 text-[11.5px] text-gray-400`}>
+        <span>{L.trendColumns.skill}</span>
+        <span>{L.trendColumns.weeks}</span>
+        <span className="text-right">{L.trendColumns.share}</span>
+        <span className="text-right">{L.trendColumns.change}</span>
+      </div>
+      <ul className="divide-y divide-gray-100">
+        {rows.map((row) => (
+          <li key={row.skill} className={`${columns} py-3`}>
+            <span className="truncate text-[13.5px] font-medium text-gray-900">{row.skill}</span>
+            <Sparkline series={row.series} className="h-7 max-w-56" />
+            <span className="text-right text-[12.5px] text-gray-700 tabular-nums">{row.gap ? percent(row.gap.share) : ''}</span>
+            <span className="text-right">
+              {row.gap && (
+                <Tip text={L.changeTip}>
+                  <Delta value={row.gap.marketChange} unit="%p" />
+                </Tip>
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -262,7 +340,7 @@ function GapPanel({ gap, trend, onClose }: { gap: SkillGap; trend: number[] | un
           <div className="rounded-xl border border-gray-200 p-3.5">
             <p className="text-[11.5px] text-gray-400">{L.change}</p>
             <p className="mt-1 text-[20px] font-semibold text-gray-900 tabular-nums">
-              <Delta value={gap.marketChange} unit="p" />
+              <Delta value={gap.marketChange} unit="%p" />
             </p>
           </div>
         </div>
@@ -372,89 +450,69 @@ function GapPanel({ gap, trend, onClose }: { gap: SkillGap; trend: number[] | un
   )
 }
 
-function SummaryTab({ report, posting, onOpenGap, onPick }: { report: ReportData; posting: JobPosting; onOpenGap: (gap: SkillGap) => void; onPick: (postingId: string) => void }) {
+function SummaryTab({ report, onOpenGap, onPick }: { report: ReportData; onOpenGap: (gap: SkillGap) => void; onPick: (postingId: string) => void }) {
   const L = useMessages(TEXT)
   const plans = usePlans()
   const resume = useResume()
   const groups: SkillGap['kind'][] = ['missing', 'partial', 'strength']
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="flex min-w-0 flex-col gap-4">
-        <Panel>
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
-            <ScoreRing score={report.fitScore} />
-            <div className="min-w-0 flex-1">
-              <p className="text-[12.5px] text-gray-400">{L.createdAt(formatDateTime(report.createdAt))}</p>
-              <p className="mt-1.5 text-[14.5px] leading-relaxed text-gray-800">{report.summary}</p>
-            </div>
-          </div>
-        </Panel>
+    <div className="space-y-10">
+      <ScoreHero score={report.fitScore} label={L.fitTitle} meta={L.createdAt(formatDateTime(report.createdAt))} title={L.verdict(report.fitScore)} body={report.summary} />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-w-0 flex-col gap-4">
 
-        <Panel title={L.gaps} action={<span className="text-[12px] text-gray-400">{L.gapsHint}</span>}>
-          <div className="space-y-6">
-            {groups.map((kind) => {
-              const list = report.gaps.filter((gap) => gap.kind === kind)
-              if (list.length === 0) return null
-              return (
-                <section key={kind}>
-                  <h3 className="flex items-center gap-2 text-[13px] font-medium text-gray-700">
-                    {L.groups[kind]}
-                    <span className="text-[12px] font-normal text-gray-400 tabular-nums">{list.length}</span>
-                  </h3>
-                  <ul className="mt-2.5 grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3">
-                    {list.map((gap) => (
-                      <GapCard key={gap.skill} gap={gap} inPlan={plans.includes(gap.skill)} onOpen={() => onOpenGap(gap)} />
-                    ))}
-                  </ul>
-                </section>
-              )
-            })}
-          </div>
-        </Panel>
-
-        <Panel title={L.trends} action={<span className="text-[12px] text-gray-400">{L.trendsHint}</span>}>
-          <ul className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3">
-            {report.trends.map((trend) => {
-              const gap = report.gaps.find((item) => item.skill === trend.skill)
-              return (
-                <li key={trend.skill} className="rounded-xl border border-gray-200 p-3.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-[13px] font-medium text-gray-900">{trend.skill}</span>
-                    {gap && <Delta value={gap.marketChange} unit="p" />}
-                  </div>
-                  <Sparkline series={trend.series} className="mt-3 h-10" />
-                </li>
-              )
-            })}
-          </ul>
-        </Panel>
-
-        {report.alternatives.length > 0 && (
-          <Panel title={L.alternatives}>
-            <ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
-              {report.alternatives.map((id, order) => {
-                const alternative = postingOf(id)
-                return alternative ? <PostingTile key={id} posting={alternative} resume={resume} tag="fit" onGray order={order} onOpen={() => onPick(id)} /> : null
+          <Panel title={L.gaps}>
+            <div className="space-y-6">
+              {groups.map((kind) => {
+                const list = report.gaps.filter((gap) => gap.kind === kind)
+                if (list.length === 0) return null
+                return (
+                  <section key={kind}>
+                    <h3 className="flex items-center gap-1.5 px-1 text-[13px] font-semibold text-gray-800">
+                      {L.groups[kind]}
+                      <span className="font-normal text-gray-400 tabular-nums">{list.length}</span>
+                    </h3>
+                    <ul className="mt-2.5 divide-y divide-gray-100 overflow-hidden rounded-xl bg-white">
+                      {list.map((gap) => (
+                        <GapRow key={gap.skill} gap={gap} inPlan={plans.includes(gap.skill)} onOpen={() => onOpenGap(gap)} />
+                      ))}
+                    </ul>
+                  </section>
+                )
               })}
-            </ul>
+            </div>
           </Panel>
-        )}
-      </div>
 
-      <div className="flex min-w-0 flex-col gap-4">
-        <Panel title={L.radar}>
-          <Radar axes={report.radar} size={280} />
-        </Panel>
-        {report.courses.length > 0 && (
-          <Panel title={L.courses}>
-            <ul className="-mx-3">
-              {report.courses.map((course) => (
-                <CourseRow key={course.id} course={course} />
-              ))}
-            </ul>
+          <Panel title={L.trends} action={<span className="text-[12px] text-gray-400">{L.trendsHint}</span>}>
+            <TrendList report={report} />
           </Panel>
-        )}
-        <p className="px-1 text-[12px] leading-relaxed text-gray-400">{L.signal(posting.required.length + posting.preferred.length)}</p>
+
+          {report.alternatives.length > 0 && (
+            <Panel title={L.alternatives}>
+              <ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
+                {report.alternatives.map((id, order) => {
+                  const alternative = postingOf(id)
+                  return alternative ? <PostingTile key={id} posting={alternative} resume={resume} tag="fit" onGray order={order} onOpen={() => onPick(id)} /> : null
+                })}
+              </ul>
+            </Panel>
+          )}
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-4">
+          <Panel title={L.radar}>
+            <Radar axes={report.radar} size={280} />
+          </Panel>
+          {report.courses.length > 0 && (
+            <Panel title={L.courses}>
+              <ul className="-mx-3">
+                {report.courses.map((course) => (
+                  <CourseRow key={course.id} course={course} />
+                ))}
+              </ul>
+            </Panel>
+          )}
+          </div>
       </div>
     </div>
   )
@@ -568,6 +626,7 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
       <PageHeader
         title={posting.title}
         owner={company.name}
+        mark={<CompanyMark company={company} className="size-11 text-[15px]" />}
         onBack={onBack}
         backLabel={L.back}
         actions={
@@ -620,7 +679,7 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
             </p>
           </>
         ) : tab === 'summary' ? (
-          <SummaryTab report={report} posting={posting} onOpenGap={(item) => {
+          <SummaryTab report={report} onOpenGap={(item) => {
             track('gap_open', { kind: item.kind, skill: item.skill })
             setGap(item)
           }} onPick={onPick} />

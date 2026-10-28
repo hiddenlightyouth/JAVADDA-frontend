@@ -116,7 +116,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
   return (
     <SplitView side={viewing && <PostingBrowser posting={posting} onClose={() => setViewing(false)} />}>
       <main className={pageFrame}>
-        <PageHeader title={L.title} owner={company.name} onBack={onBack} backLabel={L.back} />
+        <PageHeader title={L.title} owner={company.name} mark={<CompanyMark company={company} className="size-11 text-[15px]" />} onBack={onBack} backLabel={L.back} />
         <StepLayout
           top={<Steps steps={STEPS.map((key) => ({ key, label: L.steps[key] }))} current={step} onSelect={setStep} />}
           buttons={

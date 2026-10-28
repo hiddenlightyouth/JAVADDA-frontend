@@ -94,6 +94,34 @@ export function BriefcaseIcon({ className = 'size-3.5 shrink-0 text-gray-400', s
   )
 }
 
+/** 강의 난이도를 나타내는 세 칸 막대예요. */
+export function LevelIcon({ className = 'size-3.5 shrink-0 text-gray-400', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M3.5 13V10M8 13V6.5M12.5 13V3" />
+    </Icon>
+  )
+}
+
+/** 강의 시간을 나타내는 시계예요. */
+export function ClockIcon({ className = 'size-3.5 shrink-0 text-gray-400', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <circle cx="8" cy="8" r="5.75" />
+      <path d="M8 5v3.25l2 1.25" />
+    </Icon>
+  )
+}
+
+/** 줄을 열면 자세한 칸이 나온다는 걸 알려주는 오른쪽 화살표예요. */
+export function ChevronRightIcon({ className = 'size-3.5 shrink-0 text-gray-300', strokeWidth = 1.6, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M6 3.5l4.5 4.5L6 12.5" />
+    </Icon>
+  )
+}
+
 /** 경력을 나타내는 사람 모양이에요. */
 export function PersonIcon({ className = 'size-3.5 shrink-0 text-gray-400', strokeWidth = 1.4, label }: IconProps) {
   return (

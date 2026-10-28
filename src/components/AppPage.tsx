@@ -41,9 +41,11 @@ export const iconButton =
  * 앱 화면 맨 위의 제목 줄이에요. 레포를 보는 화면이면 제목 위에 소유자를 작게 적고, 왼쪽에 뒤로 가기를 둬요.
  * 오른쪽에는 그 화면의 버튼을 둬요. 탭이 있으면 이 줄 바로 아래에 붙여요.
  */
-export function PageHeader({ title, owner, onBack, backLabel, actions }: {
+export function PageHeader({ title, owner, mark, onBack, backLabel, actions }: {
   title: string
   owner?: string
+  /** 제목 왼쪽에 두는 그림. 기업 로고 같은 것이에요. */
+  mark?: ReactNode
   onBack?: () => void
   backLabel?: string
   actions?: ReactNode
@@ -62,7 +64,8 @@ export function PageHeader({ title, owner, onBack, backLabel, actions }: {
             <BackIcon />
           </button>
         )}
-        <div className="min-w-0">
+        {mark}
+        <div className={`min-w-0 ${mark ? 'ml-1' : ''}`}>
           {owner && <p className="text-[13px] text-gray-500">{owner}</p>}
           <h1 className="truncate text-[26px] leading-tight font-semibold text-gray-900">{title}</h1>
         </div>

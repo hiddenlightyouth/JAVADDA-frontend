@@ -74,6 +74,9 @@ export interface Course {
   url: string
 }
 
+/** 강의 플랫폼의 로고예요. public/providers에 받아 둔 아이콘이에요. */
+export const PROVIDER_LOGOS: Record<Course['provider'], string> = { 인프런: '/providers/inflearn.png' }
+
 export interface SkillGap {
   skill: string
   kind: GapKind
@@ -84,6 +87,8 @@ export interface SkillGap {
   marketChange: number
   /** 이렇게 판단한 근거 */
   reason: string
+  /** 서류에서 찾은 근거 한 줄. 부족이거나 예전 리포트면 없어요. */
+  evidence?: string
   /** 보완 방법. 부족과 보완에만 있어요. */
   actionPlan: string[]
   /** 보완에 걸리는 주 수 */
@@ -908,6 +913,7 @@ function buildGaps(posting: JobPosting, resume: Resume): SkillGap[] {
           : kind === 'partial'
             ? `서류에 ${skill}이(가) 보이지만 깊이를 보여주는 근거가 약해요. ${evidence ?? ''}`.trim()
             : `서류 어디에도 ${skill}을(를) 다룬 흔적이 없어요. 이 공고는 ${requirement === 'required' ? '필수' : '우대'} 역량으로 적고 있어요.`,
+      evidence: kind === 'missing' ? undefined : evidence,
       actionPlan:
         kind === 'strength'
           ? []

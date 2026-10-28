@@ -221,10 +221,14 @@ export function KindLabel({ kind }: { kind: GapKind }) {
   )
 }
 
-/** 필수와 우대 이름표예요. */
+/** 필수와 우대 이름표예요. 필수가 한 단계 짙어요. */
 export function RequirementLabel({ requirement }: { requirement: 'required' | 'preferred' }) {
   const L = useMessages(TEXT)
-  return <span className="text-[11.5px] text-gray-400">{requirement === 'required' ? L.required : L.preferred}</span>
+  return (
+    <span className={`inline-flex h-5 shrink-0 items-center rounded px-1.5 text-[11px] font-medium ${requirement === 'required' ? 'bg-gray-200/70 text-gray-700' : 'bg-gray-100 text-gray-400'}`}>
+      {requirement === 'required' ? L.required : L.preferred}
+    </span>
+  )
 }
 
 /** 필수 역량을 갖췄는지를 체크, 세모, 엑스로 보여줘요. 빠진 것만 빨간색이에요. */
@@ -447,6 +451,59 @@ export function ScoreRing({ score, size = 112 }: { score: number; size?: number 
         <span className="ml-0.5 text-[14px] font-medium text-gray-400">%</span>
       </span>
     </div>
+  )
+}
+
+/** 점수 띠의 구간이에요. 공고 카드의 얼마나 맞는지 태그와 같은 기준이에요. */
+const BANDS = [
+  { from: 0, to: 50 },
+  { from: 50, to: 70 },
+  { from: 70, to: 100 },
+]
+
+/**
+ * 점수를 크게 내세우는 머리말이에요. 회색 칸 없이 흰 바탕에 놓고, 왼쪽에 한마디 평가와 설명, 오른쪽에 큰 숫자와 구간 띠를 둬요.
+ * 띠는 50과 70에서 끊겨서, 점수가 어느 구간에 있는지 한눈에 보여요. 리포트의 적합도와 서류 검증의 부합도가 같이 써요.
+ */
+export function ScoreHero({ score, label, meta, title, body }: { score: number; label: string; meta?: ReactNode; title: string; body: string }) {
+  const L = useMessages(TEXT)
+  return (
+    <section className="flex animate-rise flex-col gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-12">
+      <div className="min-w-0 max-w-2xl">
+        {meta && <p className="text-[12.5px] text-gray-400">{meta}</p>}
+        <h2 className="mt-1.5 text-[22px] leading-snug font-semibold text-gray-900">{title}</h2>
+        <p className="mt-2 text-[14.5px] leading-relaxed text-gray-600">{body}</p>
+      </div>
+      <div className="w-full shrink-0 sm:w-72">
+        <div className="flex items-end justify-between gap-3">
+          <p className="text-[13px] text-gray-500">
+            {label}
+            <span className="mt-0.5 block font-medium text-brand">{L.fitTag(score)}</span>
+          </p>
+          <p className="text-[44px] leading-none font-semibold text-gray-900 tabular-nums">
+            {score}
+            <span className="ml-0.5 text-[18px] font-medium text-gray-400">%</span>
+          </p>
+        </div>
+        <div className="mt-3 flex gap-1" aria-hidden>
+          {BANDS.map((band) => (
+            <span key={band.from} className="h-2 overflow-hidden rounded-full bg-gray-200/70" style={{ flexGrow: band.to - band.from, flexBasis: 0 }}>
+              <span
+                className="block h-full origin-left animate-grow rounded-full bg-brand"
+                style={{ width: `${Math.min(100, Math.max(0, ((score - band.from) / (band.to - band.from)) * 100))}%` }}
+              />
+            </span>
+          ))}
+        </div>
+        <div className="mt-2 flex text-[11.5px] tabular-nums" aria-hidden>
+          {BANDS.map((band) => (
+            <span key={band.from} className="text-gray-400" style={{ flexGrow: band.to - band.from, flexBasis: 0 }}>
+              {band.from}
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
   )
 }
 
