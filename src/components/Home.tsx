@@ -14,7 +14,7 @@ const TEXT = messages({
   ko: {
     title: '어떤 기업에 맞춰 볼까요?',
     description: '기업 이름이나 공고를 찾아 고르면, 내 이력서와 공고 사이의 갭을 진단해요',
-    descriptionNoResume: '기업 이름이나 공고를 찾아 고르면 진단을 시작해요. 첫 진단에서 이력서를 올려요',
+    descriptionNoResume: '어떤 회사나 직무를 목표로 하고 있나요?',
     label: '기업과 공고 찾기',
     noResult: (query: string) => `"${query}"에 맞는 공고가 없어요.`,
     rows: { recent: '요즘 올라온 공고', fit: '나와 잘 맞는 공고', closing: '마감이 가까운 공고', again: '다시 볼 공고' },
@@ -25,7 +25,7 @@ const TEXT = messages({
   en: {
     title: 'Which company should we measure against?',
     description: 'Search for a company or posting and pick one to see the gap between your resume and the role',
-    descriptionNoResume: 'Search for a company or posting to start. You upload your resume in the first diagnosis',
+    descriptionNoResume: 'Which company or role are you aiming for?',
     label: 'Search companies and postings',
     noResult: (query: string) => `No postings match "${query}".`,
     rows: { recent: 'Just posted', fit: 'Good fits for you', closing: 'Closing soon', again: 'Worth another look' },
