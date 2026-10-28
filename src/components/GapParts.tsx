@@ -12,6 +12,8 @@ import { CheckIcon, CloseIcon } from './Icons'
 
 /** 올라온 지 이 날수까지는 신규로 보여줘요. */
 const NEW_DAYS = 3
+/** 마감까지 이 날수 안이면 태그를 메인 컬러로 칠해요. */
+const CLOSING_DAYS = 3
 
 const TEXT = messages({
   ko: {
@@ -173,7 +175,8 @@ export const cardsGrid = 'grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] g
 export const cardsRow = 'grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] auto-rows-[0px] grid-rows-[auto] gap-x-4 overflow-hidden'
 
 /** 공고 카드예요. 기업 머리글자, 공고 제목, 기업과 지역, 소개 두 줄, 직군과 마감, 적합도가 있어요. */
-export function PostingCard({ posting, fit, order = 0, onOpen }: { posting: JobPosting; fit: number | null; order?: number; onOpen: (posting: JobPosting) => void }) {
+/** deadlineTag를 켜면 마감까지 남은 날을 아래 줄 맨 앞의 태그로 보여줘요. 마감이 가까운 공고 줄에서 써요. */
+export function PostingCard({ posting, fit, order = 0, onOpen, deadlineTag = false }: { posting: JobPosting; fit: number | null; order?: number; onOpen: (posting: JobPosting) => void; deadlineTag?: boolean }) {
   const L = useMessages(TEXT)
   const company = companyOf(posting.companyId)
   const left = daysLeft(posting)
@@ -191,14 +194,26 @@ export function PostingCard({ posting, fit, order = 0, onOpen }: { posting: JobP
         </span>
         <span className="mt-3 line-clamp-2 min-h-0 flex-1 text-[13px] leading-relaxed text-gray-600">{posting.summary}</span>
         <span className="mt-2 flex items-center justify-between gap-2 text-[12px] text-gray-400">
-          <span className="min-w-0 truncate">
-            {familyName(posting.family)}, {careerName(posting.career)}
-            {left !== null ? `, ${L.deadline(left)}` : `, ${L.always}`}
+          <span className="flex min-w-0 items-center gap-2">
+            {deadlineTag && left !== null && <CardTag strong={left <= CLOSING_DAYS}>{L.deadline(left)}</CardTag>}
+            <span className="min-w-0 truncate">
+              {familyName(posting.family)}, {careerName(posting.career)}
+              {deadlineTag ? '' : left !== null ? `, ${L.deadline(left)}` : `, ${L.always}`}
+            </span>
           </span>
           <FitBadge fit={fit} compact />
         </span>
       </button>
     </li>
+  )
+}
+
+/** 카드 위쪽에 붙는 작은 태그예요. 신규나 마감이 가까운 것은 메인 컬러로, 나머지는 회색으로 칠해요. */
+function CardTag({ strong, children }: { strong: boolean; children: ReactNode }) {
+  return (
+    <span className={`inline-flex h-6 shrink-0 items-center rounded-md px-2 text-[12px] font-medium whitespace-nowrap ${strong ? 'bg-brand-soft text-brand-hover' : 'bg-gray-100 text-gray-600'}`}>
+      {children}
+    </span>
   )
 }
 
@@ -212,7 +227,7 @@ export function skillTone(skill: string, resume: Resume | null): ChipTone {
 /**
  * 공고 자체를 앞에 세운 카드예요. 요즘 올라온 공고 줄에서 써요.
  * 올라온 때와 공고 제목을 크게 두고, 기업은 작은 로고와 이름으로 한 줄만 적고, 필수 역량을 이름표로 보여줘요.
- * 공고 카드와 크기가 같아서 같은 줄 규칙(cardsRow)에 들어가요.
+ * 공고 카드와 크기가 같아서 같은 줄 규칙(cardsRow)에 들어가요. 테두리 없이 회색 바탕으로 구분해요.
  */
 export function RecentPostingCard({ posting, resume, order = 0, onOpen }: { posting: JobPosting; resume: Resume | null; order?: number; onOpen: (posting: JobPosting) => void }) {
   const L = useMessages(TEXT)
@@ -220,21 +235,30 @@ export function RecentPostingCard({ posting, resume, order = 0, onOpen }: { post
   const days = daysSince(posting)
   return (
     <li className="min-h-0 animate-rise" style={{ animationDelay: `${Math.min(order, STAGGER_MAX) * STAGGER_MS}ms` }}>
-      <button type="button" onClick={() => onOpen(posting)} className="group flex h-[196px] w-full flex-col rounded-2xl border border-gray-200 bg-white p-5 text-left transition-colors hover:border-brand">
-        <span className={`text-[12px] font-medium ${days <= NEW_DAYS ? 'text-brand' : 'text-gray-400'}`}>{L.posted(days)}</span>
-        <span className="mt-1.5 line-clamp-2 text-[16px] leading-snug font-semibold text-gray-900 transition-colors group-hover:text-brand">{posting.title}</span>
+      {/* 테두리 대신 옅은 회색 바탕으로 칸을 나눠서, 줄이 가볍게 보여요. */}
+      <button type="button" onClick={() => onOpen(posting)} className="group flex h-[196px] w-full flex-col rounded-2xl bg-gray-50 p-5 text-left transition-colors hover:bg-gray-100">
+        <span className="flex">
+          <CardTag strong={days <= NEW_DAYS}>{L.posted(days)}</CardTag>
+        </span>
+        <span className="mt-2.5 line-clamp-2 text-[16px] leading-snug font-semibold text-gray-900 transition-colors group-hover:text-brand">{posting.title}</span>
         <span className="mt-2 flex min-w-0 items-center gap-1.5 text-[12px] text-gray-500">
           <CompanyMark company={company} className="size-5 rounded-md text-[9px]" />
           <span className="truncate">
             {company.name}, {posting.location}, {careerName(posting.career)}
           </span>
         </span>
-        <span className="mt-2.5 mb-3 line-clamp-2 min-h-0 flex-1 text-[13px] leading-relaxed text-gray-600">{posting.summary}</span>
+        <span className="mt-2.5 mb-3 line-clamp-1 min-h-0 flex-1 text-[13px] leading-relaxed text-gray-600">{posting.summary}</span>
         <span className="flex items-end justify-between gap-3">
-          <span className="flex min-w-0 flex-wrap gap-1.5 overflow-hidden [max-height:28px]">
-            {posting.required.slice(0, 3).map((skill) => (
-              <SkillChip key={skill} name={skill} tone={skillTone(skill, resume)} className="h-6! px-2! text-[12px]!" />
-            ))}
+          {/* 회색 바탕 위라 테두리 있는 이름표 대신 흰 바탕의 작은 태그로 적어요. 이력서가 있으면 갖춘 역량만 메인 컬러로 칠해요. */}
+          <span className="flex min-w-0 flex-wrap gap-1 overflow-hidden [max-height:24px]">
+            {posting.required.slice(0, 3).map((skill) => {
+              const tone = skillTone(skill, resume)
+              return (
+                <span key={skill} className={`inline-flex h-6 items-center rounded-md px-2 text-[12px] whitespace-nowrap ${tone === 'met' ? 'bg-brand-soft text-brand-hover' : tone === 'missing' ? 'bg-white text-gray-400' : 'bg-white text-gray-600'}`}>
+                  {skill}
+                </span>
+              )
+            })}
           </span>
           <FitBadge fit={fitOf(posting, resume)} compact />
         </span>

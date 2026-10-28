@@ -245,7 +245,8 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
               </div>
               {key === 'companies' ? (
                 // 기업을 누르면 그 기업 공고만 골라 둔 채로 공고 탐색을 열어요.
-                <ul className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(168px,1fr))] gap-2.5">
+                // 테두리 없이 로고와 이름만 늘어놓아서, 공고 카드 사이에서 가볍게 보여요.
+                <ul className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-1">
                   {BROWSE_COMPANIES.map((company, order) => (
                     <li key={company.id} className="animate-rise" style={{ animationDelay: `${Math.min(order, 8) * 30}ms` }}>
                       <button
@@ -254,13 +255,10 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
                           track('home_company_select', { company: company.id })
                           onCompany(company.id)
                         }}
-                        className="group flex w-full items-center gap-3 rounded-2xl border border-gray-200 bg-white px-3.5 py-3 text-left transition-colors hover:border-brand"
+                        className="group flex w-full flex-col items-center gap-2 rounded-2xl px-2 py-3 transition-colors hover:bg-gray-50"
                       >
-                        <CompanyMark company={company} className="size-10 text-[15px]" />
-                        <span className="min-w-0">
-                          <span className="block truncate text-[13.5px] font-medium text-gray-900 transition-colors group-hover:text-brand">{company.name}</span>
-                          <span className="block truncate text-[12px] text-gray-400">{company.industry}</span>
-                        </span>
+                        <CompanyMark company={company} className="size-12 rounded-2xl! text-[17px]" />
+                        <span className="w-full truncate text-center text-[12.5px] text-gray-700 transition-colors group-hover:text-gray-950">{company.name}</span>
                       </button>
                     </li>
                   ))}
@@ -272,7 +270,7 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
                     key === 'recent' ? (
                       <RecentPostingCard key={posting.id} posting={posting} resume={resume} order={order} onOpen={pick} />
                     ) : (
-                      <PostingCard key={posting.id} posting={posting} fit={fitOf(posting, resume)} order={order} onOpen={pick} />
+                      <PostingCard key={posting.id} posting={posting} fit={fitOf(posting, resume)} order={order} onOpen={pick} deadlineTag={key === 'closing'} />
                     ),
                   )}
                 </ul>
