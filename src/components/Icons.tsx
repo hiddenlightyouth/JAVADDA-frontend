@@ -112,6 +112,27 @@ export function TrashIcon({ className = 'size-4', strokeWidth = 1.4, label }: Ic
   )
 }
 
+/** 갤러리형 보기예요. 네모 네 칸이에요. */
+export function GridIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1" />
+      <rect x="9" y="2.5" width="4.5" height="4.5" rx="1" />
+      <rect x="2.5" y="9" width="4.5" height="4.5" rx="1" />
+      <rect x="9" y="9" width="4.5" height="4.5" rx="1" />
+    </Icon>
+  )
+}
+
+/** 리스트형 보기예요. 가로줄 세 개예요. */
+export function ListIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M2.5 4h11M2.5 8h11M2.5 12h11" />
+    </Icon>
+  )
+}
+
 export function RefreshIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
   return (
     <Icon className={className} strokeWidth={strokeWidth} label={label}>

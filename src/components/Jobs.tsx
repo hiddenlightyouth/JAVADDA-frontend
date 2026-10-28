@@ -3,11 +3,12 @@ import { track } from '../lib/analytics'
 import { careerName, COMPANIES, companyOf, type Company, daysLeft, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, type Resume, SEARCH_SUGGESTIONS, SUGGEST_MS } from '../lib/gap'
 import { getLang, localizePath, messages, pick, useMessages } from '../lib/i18n'
 import { pathOf } from '../lib/routes'
+import { readItem, writeItem } from '../lib/storage'
 import { showToast } from '../lib/toast'
 import { copyText, PageHeader } from './AppPage'
 import { MapMenu } from './DeepParts'
 import { CompanyMark, Failed, FitBadge, Notice, SkillChip, skillTone } from './GapParts'
-import { BriefcaseIcon, MapPinIcon, PersonIcon } from './Icons'
+import { BriefcaseIcon, GridIcon, ListIcon, MapPinIcon, PersonIcon } from './Icons'
 import { PostingBrowser, SplitView } from './PostingBrowser'
 import { Bone } from './Skeleton'
 
@@ -26,6 +27,8 @@ const TEXT = messages({
     placeholder: '기업, 공고, 기술 이름으로 찾기',
     label: '공고 찾기',
     companyInfo: (name: string) => `${name} 기업 정보 보기`,
+    layout: '보기 방식',
+    layouts: { gallery: '갤러리형으로 보기', list: '리스트형으로 보기' } as Record<Layout, string>,
     all: '전체',
     family: '직군',
     career: '경력',
@@ -50,6 +53,8 @@ const TEXT = messages({
     placeholder: 'Search companies, postings, or skills',
     label: 'Search postings',
     companyInfo: (name: string) => `About ${name}`,
+    layout: 'View',
+    layouts: { gallery: 'Gallery view', list: 'List view' },
     all: 'All',
     family: 'Role',
     career: 'Level',
@@ -80,6 +85,12 @@ const cardAction =
 /** 카드에 보여주는 필수 역량 수예요. 나머지는 수만 적어요. */
 const SKILLS_SHOWN = 4
 
+// 갤러리형은 카드를 여러 칸으로, 리스트형은 한 줄에 공고 하나씩 늘어놓아요. 고른 것은 이 기기에 기억해요.
+type Layout = 'gallery' | 'list'
+const LAYOUTS: Layout[] = ['gallery', 'list']
+const LAYOUT_KEY = 'whoisloafing:jobs-layout'
+const readLayout = (): Layout => (readItem(LAYOUT_KEY) === 'list' ? 'list' : 'gallery')
+
 type Loaded = JobPosting[] | 'failed'
 
 /** company를 주면 그 기업 공고만 골라 둔 채로 열어요. 새 진단 화면의 기업 둘러보기에서 와요. */
@@ -96,6 +107,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   const [company, setCompany] = useState<string | null>(initialCompany)
   // 미니 브라우저로 여는 것이에요. 공고의 원문이나 기업 소개 사이트예요.
   const [viewing, setViewing] = useState<{ posting: JobPosting } | { company: Company } | null>(null)
+  const [layout, setLayout] = useState<Layout>(readLayout)
 
   // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요.
   useEffect(() => {
@@ -251,20 +263,43 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
             ))}
           </div>
 
-          {Array.isArray(list) && <p className="mt-5 text-[13px] text-gray-500 tabular-nums">{L.items(list.length)}</p>}
+          <div className="mt-5 flex h-8 items-center justify-between gap-3">
+            <p className="text-[13px] text-gray-500 tabular-nums">{Array.isArray(list) ? L.items(list.length) : ''}</p>
+            <div role="radiogroup" aria-label={L.layout} className="flex items-center gap-0.5 rounded-lg bg-gray-100 p-0.5">
+              {LAYOUTS.map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={layout === value}
+                  aria-label={L.layouts[value]}
+                  title={L.layouts[value]}
+                  onClick={() => {
+                    track('jobs_layout_change', { layout: value })
+                    setLayout(value)
+                    writeItem(LAYOUT_KEY, value)
+                  }}
+                  className={`flex size-7 items-center justify-center rounded-md transition-colors ${layout === value ? 'bg-white text-gray-900' : 'text-gray-400 hover:text-gray-700'}`}
+                >
+                  {value === 'gallery' ? <GridIcon /> : <ListIcon />}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div className="mt-3">
             {list === undefined ? (
-              <JobCardsSkeleton />
+              layout === 'gallery' ? <JobCardsSkeleton /> : <JobRowsSkeleton />
             ) : list === 'failed' ? (
               <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
             ) : list.length === 0 ? (
               <Notice title={L.none} body={L.noneBody} className="mt-16" />
             ) : (
-              <ul className={jobsGrid}>
+              <ul className={layout === 'gallery' ? jobsGrid : 'flex flex-col gap-2'}>
                 {list.map((posting, order) => (
-                  <JobCard
-                    key={`${sort}:${posting.id}`}
+                  <JobItem
+                    key={`${layout}:${sort}:${posting.id}`}
+                    layout={layout}
                     posting={posting}
                     resume={resume}
                     onView={() => setViewing({ posting })}
@@ -302,7 +337,7 @@ const shortDate = (iso: string) => {
  * 이력서가 있으면 필수 역량 이름표를 진단 시작 화면과 같은 기준으로 칠해서, 카드만 보고도 무엇이 비는지 보여요.
  * 카드의 나머지 자리를 누르면 진단 시작으로 가요.
  */
-function JobCard({ posting, resume, fit, order, onOpen, onView, onCompany }: { posting: JobPosting; resume: Resume | null; fit: number | null; order: number; onOpen: () => void; onView: () => void; onCompany: () => void }) {
+function JobCard({ posting, resume, fit, order, onOpen, onView, onCompany }: JobItemProps) {
   const L = useMessages(TEXT)
   const company = companyOf(posting.companyId)
   const left = daysLeft(posting)
@@ -382,6 +417,90 @@ function JobCard({ posting, resume, fit, order, onOpen, onView, onCompany }: { p
         </button>
       </div>
     </li>
+  )
+}
+
+type JobItemProps = { posting: JobPosting; resume: Resume | null; fit: number | null; order: number; onOpen: () => void; onView: () => void; onCompany: () => void }
+
+/** 고른 보기 방식에 맞춰 카드나 줄로 그려요. */
+function JobItem({ layout, ...props }: JobItemProps & { layout: Layout }) {
+  return layout === 'gallery' ? <JobCard {...props} /> : <JobRow {...props} />
+}
+
+/**
+ * 리스트형 보기의 한 줄이에요. 왼쪽에 기업 로고, 가운데에 공고 제목과 기업, 직군, 경력, 지역, 넓으면 필수 역량, 오른쪽에 마감까지 남은 날과 적합도, 원문 보기가 있어요.
+ * 목록 폭이 좁으면 경력, 지역, 필수 역량, 적합도, 원문 보기를 차례로 숨겨요. 카드처럼 줄의 빈 자리를 누르면 진단 시작으로 가고, 로고를 누르면 기업 소개를 미니 브라우저로 열어요.
+ */
+function JobRow({ posting, resume, fit, order, onOpen, onView, onCompany }: JobItemProps) {
+  const L = useMessages(TEXT)
+  const company = companyOf(posting.companyId)
+  const left = daysLeft(posting)
+  return (
+    <li
+      onClick={(event) => {
+        if (!(event.target as Element).closest('button, a')) onOpen()
+      }}
+      className="group flex animate-rise cursor-pointer items-center gap-4 rounded-2xl bg-gray-50 px-4 py-3.5 transition-colors hover:bg-gray-100"
+      style={{ animationDelay: `${Math.min(order, STAGGER_MAX) * STAGGER_MS}ms` }}
+    >
+      <button type="button" onClick={onCompany} aria-label={L.companyInfo(company.name)} className="shrink-0 rounded-xl transition-opacity hover:opacity-80">
+        <CompanyMark company={company} className="size-10 text-[15px]" />
+      </button>
+      <div className="min-w-0 flex-1">
+        <h3 className="flex text-[15px] font-semibold text-gray-900">
+          <button type="button" onClick={onOpen} className="min-w-0 truncate text-left transition-colors group-hover:text-brand-hover">
+            {posting.title}
+          </button>
+        </h3>
+        <p className="mt-1 flex min-w-0 items-center gap-x-3 text-[12.5px] text-gray-500">
+          <span className="truncate font-medium text-gray-700">{company.name}</span>
+          <span className="flex shrink-0 items-center gap-1">
+            <BriefcaseIcon label={L.family} />
+            {familyName(posting.family)}
+          </span>
+          <span className="hidden shrink-0 items-center gap-1 @xl:flex">
+            <PersonIcon label={L.career} />
+            {careerName(posting.career)}
+          </span>
+          <span className="hidden min-w-0 items-center gap-1 @2xl:flex">
+            <MapPinIcon label={L.location} />
+            <span className="truncate">{posting.location}</span>
+          </span>
+        </p>
+      </div>
+      <div className="hidden shrink-0 gap-1.5 @5xl:flex">
+        {posting.required.slice(0, 3).map((skill) => (
+          <SkillChip key={skill} name={skill} tone={skillTone(skill, resume)} />
+        ))}
+      </div>
+      <span className={`shrink-0 rounded-md px-2 py-1 text-[12px] font-semibold tabular-nums ${left !== null && left <= 3 ? 'bg-brand-soft text-brand-hover' : 'bg-gray-200/70 text-gray-500'}`}>
+        {left === null ? L.always : L.dday(left)}
+      </span>
+      <span className="hidden shrink-0 @lg:inline-flex">
+        <FitBadge fit={fit} compact />
+      </span>
+      <button type="button" onClick={onView} className={`${cardAction} hidden! @3xl:inline-flex!`}>
+        {L.view}
+      </button>
+    </li>
+  )
+}
+
+/** 리스트형 줄과 같은 배치의 뼈대예요. */
+function JobRowsSkeleton() {
+  return (
+    <ul className="flex flex-col gap-2" aria-busy="true">
+      {Array.from({ length: 8 }, (_, item) => (
+        <li key={item} aria-hidden className="flex items-center gap-4 rounded-2xl bg-gray-50 px-4 py-3.5">
+          <Bone className="size-10 shrink-0 rounded-xl!" />
+          <div className="min-w-0 flex-1">
+            <Bone className="h-4 w-1/2" />
+            <Bone className="mt-2 h-3 w-1/3" />
+          </div>
+          <Bone className="h-6 w-12 shrink-0 rounded-md!" />
+        </li>
+      ))}
+    </ul>
   )
 }
 
