@@ -7,7 +7,7 @@ import { pageFrame, PageHeader, StepLayout, Steps, StepTitle } from './AppPage'
 import { primaryButton, quietButton } from './Dialog'
 import { CompanyMark, FitBadge, Notice, SkillChip, type ChipTone } from './GapParts'
 import { ResumeUploader, SkillEditor } from './MyResume'
-import { PostingBrowser } from './PostingBrowser'
+import { PostingBrowser, SplitView } from './PostingBrowser'
 
 /**
  * 진단 시작 화면이에요. 공고를 확인하고, 이력서를 올리거나 확인한 뒤에 진단을 시작해요.
@@ -114,102 +114,103 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
   const canStart = resume !== null && resume.skills.length > 0 && !replacing
 
   return (
-    <main className={pageFrame}>
-      <PageHeader title={L.title} owner={company.name} onBack={onBack} backLabel={L.back} />
-      <StepLayout
-        top={<Steps steps={STEPS.map((key) => ({ key, label: L.steps[key] }))} current={step} onSelect={setStep} />}
-        buttons={
-          step === 'posting' ? (
-            <button type="button" onClick={() => setStep('resume')} className={primaryButton}>
-              {L.next}
-            </button>
+    <SplitView side={viewing && <PostingBrowser posting={posting} onClose={() => setViewing(false)} />}>
+      <main className={pageFrame}>
+        <PageHeader title={L.title} owner={company.name} onBack={onBack} backLabel={L.back} />
+        <StepLayout
+          top={<Steps steps={STEPS.map((key) => ({ key, label: L.steps[key] }))} current={step} onSelect={setStep} />}
+          buttons={
+            step === 'posting' ? (
+              <button type="button" onClick={() => setStep('resume')} className={primaryButton}>
+                {L.next}
+              </button>
+            ) : (
+              <>
+                <button type="button" onClick={() => setStep('posting')} className={quietButton}>
+                  {L.prev}
+                </button>
+                <button type="button" disabled={!canStart || starting} onClick={() => void start()} className={primaryButton}>
+                  {starting ? L.starting : L.start}
+                </button>
+              </>
+            )
+          }
+        >
+          {step === 'posting' ? (
+            <div className="animate-rise">
+              <StepTitle title={L.postingTitle} hint={L.postingHint} />
+              <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
+                <div className="flex items-start gap-4">
+                  <CompanyMark company={company} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[16px] font-semibold text-gray-900">{posting.title}</p>
+                    <p className="mt-0.5 text-[13px] text-gray-500">
+                      {company.name}, {posting.location}, {familyName(posting.family)}, {careerName(posting.career)}
+                    </p>
+                    <p className="mt-0.5 text-[12.5px] text-gray-400">{left !== null ? L.deadline(left) : L.always}</p>
+                  </div>
+                  <FitBadge fit={fit} compact />
+                </div>
+                <p className="mt-4 text-[13.5px] leading-relaxed text-gray-700">{posting.summary}</p>
+                <div className="mt-5">
+                  <h3 className="text-[12.5px] font-medium text-gray-400">{L.required}</h3>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {posting.required.map((skill) => (
+                      <SkillChip key={skill} name={skill} tone={tone(skill)} />
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <h3 className="text-[12.5px] font-medium text-gray-400">{L.preferred}</h3>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {posting.preferred.map((skill) => (
+                      <SkillChip key={skill} name={skill} tone={tone(skill)} />
+                    ))}
+                  </div>
+                </div>
+                {/* 원문은 새 탭 대신 앱 안의 미니 브라우저로 열어요. */}
+                <button type="button" onClick={() => setViewing(true)} className="mt-5 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand">
+                  {L.openPosting}
+                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-3.5" aria-hidden="true">
+                    <path d="M6 3.5 10.5 8 6 12.5" />
+                  </svg>
+                </button>
+              </div>
+            </div>
           ) : (
-            <>
-              <button type="button" onClick={() => setStep('posting')} className={quietButton}>
-                {L.prev}
-              </button>
-              <button type="button" disabled={!canStart || starting} onClick={() => void start()} className={primaryButton}>
-                {starting ? L.starting : L.start}
-              </button>
-            </>
-          )
-        }
-      >
-        {step === 'posting' ? (
-          <div className="animate-rise">
-            <StepTitle title={L.postingTitle} hint={L.postingHint} />
-            <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
-              <div className="flex items-start gap-4">
-                <CompanyMark company={company} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[16px] font-semibold text-gray-900">{posting.title}</p>
-                  <p className="mt-0.5 text-[13px] text-gray-500">
-                    {company.name}, {posting.location}, {familyName(posting.family)}, {careerName(posting.career)}
-                  </p>
-                  <p className="mt-0.5 text-[12.5px] text-gray-400">{left !== null ? L.deadline(left) : L.always}</p>
-                </div>
-                <FitBadge fit={fit} compact />
-              </div>
-              <p className="mt-4 text-[13.5px] leading-relaxed text-gray-700">{posting.summary}</p>
-              <div className="mt-5">
-                <h3 className="text-[12.5px] font-medium text-gray-400">{L.required}</h3>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {posting.required.map((skill) => (
-                    <SkillChip key={skill} name={skill} tone={tone(skill)} />
-                  ))}
-                </div>
-              </div>
-              <div className="mt-4">
-                <h3 className="text-[12.5px] font-medium text-gray-400">{L.preferred}</h3>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {posting.preferred.map((skill) => (
-                    <SkillChip key={skill} name={skill} tone={tone(skill)} />
-                  ))}
-                </div>
-              </div>
-              {/* 원문은 새 탭 대신 앱 안의 미니 브라우저로 열어요. */}
-              <button type="button" onClick={() => setViewing(true)} className="mt-5 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand">
-                {L.openPosting}
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-3.5" aria-hidden="true">
-                  <path d="M6 3.5 10.5 8 6 12.5" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="animate-rise">
-            <StepTitle title={L.resumeTitle} hint={resume ? L.resumeHint : undefined} />
-            <div className="mt-6">
-              {!resume || replacing ? (
-                <>
-                  <ResumeUploader compact onDone={() => setReplacing(false)} />
-                  {resume && (
-                    <button type="button" onClick={() => setReplacing(false)} className="mt-3 w-full text-center text-[13px] text-gray-500 transition-colors hover:text-gray-900">
-                      {L.keep}
-                    </button>
-                  )}
-                </>
-              ) : (
-                <div className="rounded-2xl border border-gray-200 bg-white p-5">
-                  <div className="flex items-center gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[14.5px] font-semibold text-gray-900">{resume.name}</p>
-                      <p className="mt-0.5 text-[12.5px] text-gray-400">{L.uploadedAt(formatDateTime(resume.uploadedAt))}</p>
+            <div className="animate-rise">
+              <StepTitle title={L.resumeTitle} hint={resume ? L.resumeHint : undefined} />
+              <div className="mt-6">
+                {!resume || replacing ? (
+                  <>
+                    <ResumeUploader compact onDone={() => setReplacing(false)} />
+                    {resume && (
+                      <button type="button" onClick={() => setReplacing(false)} className="mt-3 w-full text-center text-[13px] text-gray-500 transition-colors hover:text-gray-900">
+                        {L.keep}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <div className="rounded-2xl border border-gray-200 bg-white p-5">
+                    <div className="flex items-center gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[14.5px] font-semibold text-gray-900">{resume.name}</p>
+                        <p className="mt-0.5 text-[12.5px] text-gray-400">{L.uploadedAt(formatDateTime(resume.uploadedAt))}</p>
+                      </div>
+                      <button type="button" onClick={() => setReplacing(true)} className="shrink-0 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand">
+                        {L.replace}
+                      </button>
                     </div>
-                    <button type="button" onClick={() => setReplacing(true)} className="shrink-0 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand">
-                      {L.replace}
-                    </button>
+                    <div className="mt-5">
+                      <SkillEditor resume={resume} />
+                    </div>
                   </div>
-                  <div className="mt-5">
-                    <SkillEditor resume={resume} />
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        )}
-      </StepLayout>
-      {viewing && <PostingBrowser posting={posting} onClose={() => setViewing(false)} />}
-    </main>
+          )}
+        </StepLayout>
+      </main>
+    </SplitView>
   )
 }

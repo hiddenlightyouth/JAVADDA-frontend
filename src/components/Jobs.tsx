@@ -8,7 +8,7 @@ import { copyText, PageHeader } from './AppPage'
 import { MapMenu } from './DeepParts'
 import { CompanyMark, Failed, FitBadge, Notice, SkillChip, type ChipTone } from './GapParts'
 import { BriefcaseIcon, MapPinIcon, PersonIcon } from './Icons'
-import { PostingBrowser } from './PostingBrowser'
+import { PostingBrowser, SplitView } from './PostingBrowser'
 import { Bone } from './Skeleton'
 
 /**
@@ -76,7 +76,8 @@ const TEXT = messages({
 })
 
 /** 공고 카드는 넓은 화면에서 한 줄에 둘이나 셋씩 놓여요. */
-const jobsGrid = 'grid gap-4 md:grid-cols-2 2xl:grid-cols-3'
+// 원문 칸이 열리면 목록 폭이 줄어서, 화면 폭이 아니라 목록 폭(@container)을 보고 칸 수를 정해요.
+const jobsGrid = 'grid gap-4 @2xl:grid-cols-2 @7xl:grid-cols-3'
 /** 카드 맨 아래의 작은 글자 버튼이에요. 카드를 덮는 제목 버튼보다 위에 놓여요. */
 const cardAction =
   'relative z-10 inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900'
@@ -129,153 +130,154 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
   const list = Array.isArray(loaded) ? sortPostings(company ? loaded.filter((posting) => posting.companyId === company) : loaded, sort, resume) : loaded
 
   return (
-    <main className="flex min-h-0 flex-1 flex-col">
-      <div className="shrink-0 px-6 pt-14 md:px-10">
-        <PageHeader title={L.title} />
-        <div className="border-b border-gray-200" />
-      </div>
+    <SplitView side={viewing && <PostingBrowser key={viewing.id} posting={viewing} onClose={() => setViewing(null)} />}>
+      <main className="flex min-h-0 flex-1 flex-col">
+        <div className="shrink-0 px-6 pt-14 md:px-10">
+          <PageHeader title={L.title} />
+          <div className="border-b border-gray-200" />
+        </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-gray-50 px-6 pt-6 pb-16 md:px-10">
-        <label className="relative flex h-14 items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 focus-within:border-brand">
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0 text-gray-400" aria-hidden="true">
-            <circle cx="7" cy="7" r="4.5" />
-            <path d="m10.5 10.5 3 3" />
-          </svg>
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              // 비어 있을 때 Enter를 누르면 지금 보이는 추천 검색어로 찾아요.
-              if (event.key === 'Enter' && !query && !event.nativeEvent.isComposing) {
-                track('jobs_suggestion_use', { query: SUGGESTIONS[suggestion] })
-                setQuery(SUGGESTIONS[suggestion])
-              }
-            }}
-            aria-label={L.label}
-            data-search-input
-            className="min-w-0 flex-1 bg-transparent text-[15px] text-gray-900 outline-none [&::-webkit-search-cancel-button]:hidden"
-          />
-          {/* 추천 검색어는 자리표시 글자처럼 옅게 보여서, 이런 걸 쳐 볼 수 있다는 것만 슬쩍 알려요. */}
-          {!query && (
-            <span aria-hidden className="pointer-events-none absolute inset-y-0 left-12 right-5 flex items-center overflow-hidden text-[15px] whitespace-nowrap text-gray-400">
-              <span key={suggestion} className="animate-rise">
-                {SUGGESTIONS[suggestion]}
+        <div className="@container min-h-0 flex-1 overflow-y-auto bg-gray-50 px-6 pt-6 pb-16 md:px-10">
+          <label className="relative flex h-14 items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 focus-within:border-brand">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0 text-gray-400" aria-hidden="true">
+              <circle cx="7" cy="7" r="4.5" />
+              <path d="m10.5 10.5 3 3" />
+            </svg>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                // 비어 있을 때 Enter를 누르면 지금 보이는 추천 검색어로 찾아요.
+                if (event.key === 'Enter' && !query && !event.nativeEvent.isComposing) {
+                  track('jobs_suggestion_use', { query: SUGGESTIONS[suggestion] })
+                  setQuery(SUGGESTIONS[suggestion])
+                }
+              }}
+              aria-label={L.label}
+              data-search-input
+              className="min-w-0 flex-1 bg-transparent text-[15px] text-gray-900 outline-none [&::-webkit-search-cancel-button]:hidden"
+            />
+            {/* 추천 검색어는 자리표시 글자처럼 옅게 보여서, 이런 걸 쳐 볼 수 있다는 것만 슬쩍 알려요. */}
+            {!query && (
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 left-12 right-5 flex items-center overflow-hidden text-[15px] whitespace-nowrap text-gray-400">
+                <span key={suggestion} className="animate-rise">
+                  {SUGGESTIONS[suggestion]}
+                </span>
               </span>
-            </span>
-          )}
-        </label>
+            )}
+          </label>
 
-        {/* 직군은 메뉴에 숨기지 않고 늘어놓아서, 한 번 눌러 바로 골라요. */}
-        <div role="radiogroup" aria-label={L.category} className="mt-4 flex flex-wrap gap-2">
-          {[null, ...FAMILIES].map((value) => (
-            <button
-              key={value ?? 'all'}
-              type="button"
-              role="radio"
-              aria-checked={family === value}
-              onClick={() => {
-                track('jobs_family_select', { family: value ?? 'all' })
-                setFamily(value)
-              }}
-              className={`flex h-9 items-center rounded-full border px-4 text-[13.5px] font-medium transition-colors ${
-                family === value ? 'border-brand bg-brand text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
-              }`}
-            >
-              {value ? familyName(value) : L.all}
-            </button>
-          ))}
-        </div>
+          {/* 직군은 메뉴에 숨기지 않고 늘어놓아서, 한 번 눌러 바로 골라요. */}
+          <div role="radiogroup" aria-label={L.category} className="mt-4 flex flex-wrap gap-2">
+            {[null, ...FAMILIES].map((value) => (
+              <button
+                key={value ?? 'all'}
+                type="button"
+                role="radio"
+                aria-checked={family === value}
+                onClick={() => {
+                  track('jobs_family_select', { family: value ?? 'all' })
+                  setFamily(value)
+                }}
+                className={`flex h-9 items-center rounded-full border px-4 text-[13.5px] font-medium transition-colors ${
+                  family === value ? 'border-brand bg-brand text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
+                }`}
+              >
+                {value ? familyName(value) : L.all}
+              </button>
+            ))}
+          </div>
 
-        {/* 기업도 로고를 보고 한 번에 골라요. 다시 누르면 풀려요. */}
-        <div role="radiogroup" aria-label={L.company} className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:flex-wrap md:overflow-visible">
-          {COMPANIES.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="radio"
-              aria-checked={company === item.id}
-              onClick={() => {
-                const next = company === item.id ? null : item.id
-                track('jobs_company_select', { company: next ?? 'all' })
-                setCompany(next)
-              }}
-              className={`flex h-9 shrink-0 items-center gap-2 rounded-full border py-1 pr-3.5 pl-1.5 text-[13px] font-medium transition-colors ${
-                company === item.id ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
-              }`}
-            >
-              <CompanyMark company={item} className="size-6 rounded-full! text-[10px]" />
-              {item.name}
-            </button>
-          ))}
-        </div>
+          {/* 기업도 로고를 보고 한 번에 골라요. 다시 누르면 풀려요. */}
+          <div role="radiogroup" aria-label={L.company} className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
+            {COMPANIES.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="radio"
+                aria-checked={company === item.id}
+                onClick={() => {
+                  const next = company === item.id ? null : item.id
+                  track('jobs_company_select', { company: next ?? 'all' })
+                  setCompany(next)
+                }}
+                className={`flex h-9 shrink-0 items-center gap-2 rounded-full border py-1 pr-3.5 pl-1.5 text-[13px] font-medium transition-colors ${
+                  company === item.id ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
+                }`}
+              >
+                <CompanyMark company={item} className="size-6 rounded-full! text-[10px]" />
+                {item.name}
+              </button>
+            ))}
+          </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <MapMenu
-            label={L.career}
-            value={career ? careerName(career) : L.all}
-            groups={[
-              {
-                items: [null, ...CAREERS].map((value) => ({
-                  label: value ? careerName(value) : L.all,
-                  checked: career === value,
-                  onSelect: () => {
-                    track('jobs_career_select', { career: value ?? 'all' })
-                    setCareer(value)
-                  },
-                })),
-              },
-            ]}
-          />
-          <MapMenu
-            label={L.sort}
-            value={L.sorts[sort]}
-            groups={[
-              {
-                items: SORTS.filter((value) => value !== 'fit' || resume).map((value) => ({
-                  label: L.sorts[value],
-                  checked: sort === value,
-                  onSelect: () => {
-                    track('jobs_sort_change', { sort: value })
-                    setSort(value)
-                  },
-                })),
-              },
-            ]}
-          />
-          {Array.isArray(list) && <p className="ml-auto text-[13px] text-gray-500 tabular-nums">{L.items(list.length)}</p>}
-        </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <MapMenu
+              label={L.career}
+              value={career ? careerName(career) : L.all}
+              groups={[
+                {
+                  items: [null, ...CAREERS].map((value) => ({
+                    label: value ? careerName(value) : L.all,
+                    checked: career === value,
+                    onSelect: () => {
+                      track('jobs_career_select', { career: value ?? 'all' })
+                      setCareer(value)
+                    },
+                  })),
+                },
+              ]}
+            />
+            <MapMenu
+              label={L.sort}
+              value={L.sorts[sort]}
+              groups={[
+                {
+                  items: SORTS.filter((value) => value !== 'fit' || resume).map((value) => ({
+                    label: L.sorts[value],
+                    checked: sort === value,
+                    onSelect: () => {
+                      track('jobs_sort_change', { sort: value })
+                      setSort(value)
+                    },
+                  })),
+                },
+              ]}
+            />
+            {Array.isArray(list) && <p className="ml-auto text-[13px] text-gray-500 tabular-nums">{L.items(list.length)}</p>}
+          </div>
 
-        <div className="mt-4">
-          {list === undefined ? (
-            <JobCardsSkeleton />
-          ) : list === 'failed' ? (
-            <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
-          ) : list.length === 0 ? (
-            <Notice title={L.none} body={L.noneBody} className="mt-16" />
-          ) : (
-            <ul className={jobsGrid}>
-              {list.map((posting, order) => (
-                <JobCard
-                  key={`${sort}:${posting.id}`}
-                  posting={posting}
-                  resume={resume}
-                  onView={() => setViewing(posting)}
-                  fit={fitOf(posting, resume)}
-                  order={order}
-                  onOpen={() => {
-                    track('posting_select', { posting: posting.id, from: 'explore' })
-                    onPick(posting.id)
-                  }}
-                />
-              ))}
-            </ul>
-          )}
+          <div className="mt-4">
+            {list === undefined ? (
+              <JobCardsSkeleton />
+            ) : list === 'failed' ? (
+              <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
+            ) : list.length === 0 ? (
+              <Notice title={L.none} body={L.noneBody} className="mt-16" />
+            ) : (
+              <ul className={jobsGrid}>
+                {list.map((posting, order) => (
+                  <JobCard
+                    key={`${sort}:${posting.id}`}
+                    posting={posting}
+                    resume={resume}
+                    onView={() => setViewing(posting)}
+                    fit={fitOf(posting, resume)}
+                    order={order}
+                    onOpen={() => {
+                      track('posting_select', { posting: posting.id, from: 'explore' })
+                      onPick(posting.id)
+                    }}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+          <p className="mt-10 text-center text-[12px] text-gray-400">{L.sources}</p>
         </div>
-        <p className="mt-10 text-center text-[12px] text-gray-400">{L.sources}</p>
-      </div>
-      {viewing && <PostingBrowser posting={viewing} onClose={() => setViewing(null)} />}
-    </main>
+      </main>
+    </SplitView>
   )
 }
 
