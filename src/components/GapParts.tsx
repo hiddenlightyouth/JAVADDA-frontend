@@ -210,7 +210,7 @@ export function PostingCard({ posting, fit, order = 0, onOpen }: { posting: JobP
   )
 }
 
-const CARD_TAG_TONES = { brand: 'bg-brand-soft text-brand-hover', red: 'bg-red-50 text-red-600', gray: 'bg-white text-gray-600' }
+const CARD_TAG_TONES = { brand: 'bg-brand-soft text-brand-hover', red: 'bg-red-50 text-red-600', gray: 'bg-gray-200/70 text-gray-700' }
 
 /** 카드 왼쪽 위에 붙는 작은 태그예요. 신규는 메인 컬러, 마감까지 남은 날은 빨간색, 나머지는 회색이에요. */
 function CardTag({ tone, children }: { tone: keyof typeof CARD_TAG_TONES; children: ReactNode }) {
@@ -270,12 +270,12 @@ export function PostingTile({ posting, resume, tag, order = 0, onOpen }: { posti
           </span>
         </span>
         <span className="mt-auto flex items-end justify-between gap-3 pt-3">
-          {/* 회색 바탕 위라 테두리 있는 이름표 대신 흰 바탕의 작은 태그로 적어요. 이력서가 있으면 갖춘 역량만 메인 컬러로 칠해요. */}
+          {/* 회색 바탕 위라 테두리 있는 이름표 대신 한 단계 짙은 회색 태그로 적어요. 이력서가 있으면 갖춘 역량만 메인 컬러로 칠해요. */}
           <span className="flex min-w-0 flex-wrap gap-1 overflow-hidden [max-height:24px]">
             {posting.required.slice(0, 3).map((skill) => {
               const tone = skillTone(skill, resume)
               return (
-                <span key={skill} className={`inline-flex h-6 items-center rounded-md px-2 text-[12px] whitespace-nowrap ${tone === 'met' ? 'bg-brand-soft text-brand-hover' : tone === 'missing' ? 'bg-white text-gray-400' : 'bg-white text-gray-600'}`}>
+                <span key={skill} className={`inline-flex h-6 items-center rounded-md px-2 text-[12px] whitespace-nowrap ${tone === 'met' ? 'bg-brand-soft text-brand-hover' : tone === 'missing' ? 'bg-gray-200/40 text-gray-400' : 'bg-gray-200/70 text-gray-700'}`}>
                   {skill}
                 </span>
               )
