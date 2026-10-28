@@ -131,10 +131,9 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
       <main className="flex min-h-0 flex-1 flex-col">
         <div className="shrink-0 px-6 pt-14 md:px-10 md:pt-9">
           <PageHeader title={L.title} />
-          <div className="border-b border-gray-200" />
         </div>
 
-        <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-16 md:px-10">
+        <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
           <label className="relative flex h-14 items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 focus-within:border-brand">
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0 text-gray-400" aria-hidden="true">
               <circle cx="7" cy="7" r="4.5" />

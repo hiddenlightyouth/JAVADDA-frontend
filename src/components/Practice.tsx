@@ -152,7 +152,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
       <div className="shrink-0 px-6 pt-14 md:px-10 md:pt-9">
         <PageHeader title={L.title} owner={posting && company ? `${company.name} ${posting.title}` : undefined} onBack={onBack} />
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto border-t border-gray-200 px-6 py-8 md:px-10">
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 md:px-10">
         <div className="mx-auto w-full max-w-[720px]">
           {!report || questions === null ? (
             <Notice title={L.missing} body={L.missingBody} action={L.back} onAction={onBack} className="mt-16" />

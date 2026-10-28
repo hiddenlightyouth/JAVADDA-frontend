@@ -85,8 +85,7 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
       <main className="flex min-h-0 flex-1 flex-col">
         <div className="shrink-0 px-6 pt-14 md:px-10 md:pt-9">
           <PageHeader title={L.title} />
-          <div className="border-b border-gray-200" />
-        </div>
+                  </div>
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6">
           <Notice title={L.noResume} body={L.noResumeBody} action={L.upload} onAction={onResume} />
         </div>
@@ -101,10 +100,9 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
     <main className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0 px-6 pt-14 md:px-10 md:pt-9">
         <PageHeader title={L.title} />
-        <div className="border-b border-gray-200" />
-      </div>
+              </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-16 md:px-10">
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
         {/* 어떤 이력서를 기준으로 추천하는지 먼저 알려줘요. */}
         <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl bg-gray-50 p-4">
           <div className="min-w-0">

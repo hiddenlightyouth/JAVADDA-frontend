@@ -280,7 +280,7 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
         }
       />
       <div className={canvas}>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 md:px-10">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-6 md:px-10">
           <div className="mx-auto flex w-full max-w-[880px] flex-col gap-4">
             {!resume || replacing ? (
               <>
