@@ -34,7 +34,6 @@ const TEXT = messages({
     none: '맞는 공고가 없어요.',
     noneBody: '검색어나 걸러 둔 조건을 바꿔 보세요.',
     sources: '워크넷과 기업 채용 페이지에서 하루 한 번 모아요.',
-    category: '직무 카테고리',
     location: '지역',
     company: '기업',
     always: '상시 채용',
@@ -58,7 +57,6 @@ const TEXT = messages({
     none: 'No postings match.',
     noneBody: 'Try a different search or filter.',
     sources: 'Collected once a day from Worknet and company career pages.',
-    category: 'Job category',
     location: 'Location',
     company: 'Company',
     always: 'Rolling',
@@ -134,9 +132,9 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
         </div>
 
         <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
-          {/* 넓으면 검색창과 직군을 한 줄에 나란히 두고, 좁으면 위아래로 쌓아요. */}
-          <div className="grid items-center gap-4 @4xl:grid-cols-2">
-            <label className="relative flex h-14 items-center gap-3 rounded-2xl border border-gray-200 bg-white px-5 focus-within:border-brand">
+          {/* 검색창 옆에 직군, 경력, 정렬을 드롭다운으로 나란히 둬요. 좁으면 검색창이 한 줄을 다 쓰고 메뉴는 아래로 내려가요. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="relative flex h-11 min-w-0 flex-1 basis-full items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-4 focus-within:border-brand @2xl:basis-0">
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0 text-gray-400" aria-hidden="true">
                 <circle cx="7" cy="7" r="4.5" />
                 <path d="m10.5 10.5 3 3" />
@@ -154,42 +152,72 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
                 }}
                 aria-label={L.label}
                 data-search-input
-                className="min-w-0 flex-1 bg-transparent text-[15px] text-gray-900 outline-none [&::-webkit-search-cancel-button]:hidden"
+                className="min-w-0 flex-1 bg-transparent text-[14px] text-gray-900 outline-none [&::-webkit-search-cancel-button]:hidden"
               />
               {/* 추천 검색어는 자리표시 글자처럼 옅게 보여서, 이런 걸 쳐 볼 수 있다는 것만 슬쩍 알려요. */}
               {!query && (
-                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-12 right-5 flex items-center overflow-hidden text-[15px] whitespace-nowrap text-gray-400">
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-[42px] right-4 flex items-center overflow-hidden text-[14px] whitespace-nowrap text-gray-400">
                   <span key={suggestion} className="animate-rise">
                     {SEARCH_SUGGESTIONS[suggestion]}
                   </span>
                 </span>
               )}
             </label>
-
-            {/* 직군은 메뉴에 숨기지 않고 늘어놓아서, 한 번 눌러 바로 골라요. */}
-            <div role="radiogroup" aria-label={L.category} className="flex flex-wrap gap-2">
-              {[null, ...FAMILIES].map((value) => (
-                <button
-                  key={value ?? 'all'}
-                  type="button"
-                  role="radio"
-                  aria-checked={family === value}
-                  onClick={() => {
-                    track('jobs_family_select', { family: value ?? 'all' })
-                    setFamily(value)
-                  }}
-                  className={`flex h-9 items-center rounded-full border px-4 text-[13.5px] font-medium transition-colors ${
-                    family === value ? 'border-brand bg-brand text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
-                  }`}
-                >
-                  {value ? familyName(value) : L.all}
-                </button>
-              ))}
-            </div>
+            <MapMenu
+              className="h-11! rounded-xl! px-4!"
+              label={L.family}
+              value={family ? familyName(family) : L.all}
+              groups={[
+                {
+                  items: [null, ...FAMILIES].map((value) => ({
+                    label: value ? familyName(value) : L.all,
+                    checked: family === value,
+                    onSelect: () => {
+                      track('jobs_family_select', { family: value ?? 'all' })
+                      setFamily(value)
+                    },
+                  })),
+                },
+              ]}
+            />
+            <MapMenu
+              className="h-11! rounded-xl! px-4!"
+              label={L.career}
+              value={career ? careerName(career) : L.all}
+              groups={[
+                {
+                  items: [null, ...CAREERS].map((value) => ({
+                    label: value ? careerName(value) : L.all,
+                    checked: career === value,
+                    onSelect: () => {
+                      track('jobs_career_select', { career: value ?? 'all' })
+                      setCareer(value)
+                    },
+                  })),
+                },
+              ]}
+            />
+            <MapMenu
+              className="h-11! rounded-xl! px-4!"
+              label={L.sort}
+              value={L.sorts[sort]}
+              groups={[
+                {
+                  items: SORTS.filter((value) => value !== 'fit' || resume).map((value) => ({
+                    label: L.sorts[value],
+                    checked: sort === value,
+                    onSelect: () => {
+                      track('jobs_sort_change', { sort: value })
+                      setSort(value)
+                    },
+                  })),
+                },
+              ]}
+            />
           </div>
 
           {/* 기업도 로고를 보고 한 번에 골라요. 다시 누르면 풀려요. */}
-          <div role="radiogroup" aria-label={L.company} className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
+          <div role="radiogroup" aria-label={L.company} className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
             {COMPANIES.map((item) => (
               <button
                 key={item.id}
@@ -211,43 +239,9 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
             ))}
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <MapMenu
-              label={L.career}
-              value={career ? careerName(career) : L.all}
-              groups={[
-                {
-                  items: [null, ...CAREERS].map((value) => ({
-                    label: value ? careerName(value) : L.all,
-                    checked: career === value,
-                    onSelect: () => {
-                      track('jobs_career_select', { career: value ?? 'all' })
-                      setCareer(value)
-                    },
-                  })),
-                },
-              ]}
-            />
-            <MapMenu
-              label={L.sort}
-              value={L.sorts[sort]}
-              groups={[
-                {
-                  items: SORTS.filter((value) => value !== 'fit' || resume).map((value) => ({
-                    label: L.sorts[value],
-                    checked: sort === value,
-                    onSelect: () => {
-                      track('jobs_sort_change', { sort: value })
-                      setSort(value)
-                    },
-                  })),
-                },
-              ]}
-            />
-            {Array.isArray(list) && <p className="ml-auto text-[13px] text-gray-500 tabular-nums">{L.items(list.length)}</p>}
-          </div>
+          {Array.isArray(list) && <p className="mt-5 text-[13px] text-gray-500 tabular-nums">{L.items(list.length)}</p>}
 
-          <div className="mt-4">
+          <div className="mt-3">
             {list === undefined ? (
               <JobCardsSkeleton />
             ) : list === 'failed' ? (
