@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { careerName, companyOf, daysLeft, familyName, type Company, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
+import { careerName, companyOf, daysLeft, daysSince, familyName, fitOf, type Company, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { primaryButton } from './Dialog'
 import { Bone } from './Skeleton'
@@ -10,12 +10,16 @@ import { CheckIcon, CloseIcon } from './Icons'
  * 새 화면도 여기 것을 쓰고, 같은 모양을 화면마다 다시 그리지 않아요.
  */
 
+/** 올라온 지 이 날수까지는 신규로 보여줘요. */
+const NEW_DAYS = 3
+
 const TEXT = messages({
   ko: {
     fit: (value: number) => `적합도 ${value}%`,
     noFit: '이력서를 올리면 적합도가 보여요',
     deadline: (days: number) => (days === 0 ? '오늘 마감' : `마감 ${days}일 전`),
     always: '상시 채용',
+    posted: (days: number) => (days <= NEW_DAYS ? '신규' : `${days}일 전`),
     required: '필수',
     preferred: '우대',
     kinds: { missing: '부족', partial: '보완', strength: '강점' } as Record<GapKind, string>,
@@ -32,6 +36,7 @@ const TEXT = messages({
     noFit: 'Upload a resume to see your fit',
     deadline: (days: number) => (days === 0 ? 'Closes today' : `Closes in ${days} ${days === 1 ? 'day' : 'days'}`),
     always: 'Rolling',
+    posted: (days: number) => (days <= NEW_DAYS ? 'New' : `${days} days ago`),
     required: 'Required',
     preferred: 'Preferred',
     kinds: { missing: 'Missing', partial: 'Weak', strength: 'Strength' },
@@ -191,6 +196,47 @@ export function PostingCard({ posting, fit, order = 0, onOpen }: { posting: JobP
             {left !== null ? `, ${L.deadline(left)}` : `, ${L.always}`}
           </span>
           <FitBadge fit={fit} compact />
+        </span>
+      </button>
+    </li>
+  )
+}
+
+/** 이력서 기준으로 스킬 이름표의 색을 정해요. 진단 시작 화면과 같은 기준이에요. */
+export function skillTone(skill: string, resume: Resume | null): ChipTone {
+  if (!resume) return 'plain'
+  const level = resume.skills.find((item) => item.name === skill)?.level ?? 0
+  return level >= 3 ? 'met' : level > 0 ? 'partial' : 'missing'
+}
+
+/**
+ * 공고 자체를 앞에 세운 카드예요. 요즘 올라온 공고 줄에서 써요.
+ * 올라온 때와 공고 제목을 크게 두고, 기업은 작은 로고와 이름으로 한 줄만 적고, 필수 역량을 이름표로 보여줘요.
+ * 공고 카드와 크기가 같아서 같은 줄 규칙(cardsRow)에 들어가요.
+ */
+export function RecentPostingCard({ posting, resume, order = 0, onOpen }: { posting: JobPosting; resume: Resume | null; order?: number; onOpen: (posting: JobPosting) => void }) {
+  const L = useMessages(TEXT)
+  const company = companyOf(posting.companyId)
+  const days = daysSince(posting)
+  return (
+    <li className="min-h-0 animate-rise" style={{ animationDelay: `${Math.min(order, STAGGER_MAX) * STAGGER_MS}ms` }}>
+      <button type="button" onClick={() => onOpen(posting)} className="group flex h-[196px] w-full flex-col rounded-2xl border border-gray-200 bg-white p-5 text-left transition-colors hover:border-brand">
+        <span className={`text-[12px] font-medium ${days <= NEW_DAYS ? 'text-brand' : 'text-gray-400'}`}>{L.posted(days)}</span>
+        <span className="mt-1.5 line-clamp-2 text-[16px] leading-snug font-semibold text-gray-900 transition-colors group-hover:text-brand">{posting.title}</span>
+        <span className="mt-2 flex min-w-0 items-center gap-1.5 text-[12px] text-gray-500">
+          <CompanyMark company={company} className="size-5 rounded-md text-[9px]" />
+          <span className="truncate">
+            {company.name}, {posting.location}, {careerName(posting.career)}
+          </span>
+        </span>
+        <span className="mt-2.5 mb-3 line-clamp-2 min-h-0 flex-1 text-[13px] leading-relaxed text-gray-600">{posting.summary}</span>
+        <span className="flex items-end justify-between gap-3">
+          <span className="flex min-w-0 flex-wrap gap-1.5 overflow-hidden [max-height:28px]">
+            {posting.required.slice(0, 3).map((skill) => (
+              <SkillChip key={skill} name={skill} tone={skillTone(skill, resume)} className="h-6! px-2! text-[12px]!" />
+            ))}
+          </span>
+          <FitBadge fit={fitOf(posting, resume)} compact />
         </span>
       </button>
     </li>

@@ -60,7 +60,7 @@ export function adminFromPath(): AdminTab | null {
 export type Page =
   | { kind: 'about' }
   | { kind: 'app-login' }
-  | { kind: 'explore' }
+  | { kind: 'explore'; company?: string }
   | { kind: 'recommend' }
   | { kind: 'resume' }
   | { kind: 'diagnose'; postingId: string }
@@ -85,7 +85,8 @@ export function pageFromPath(): Page | null {
   const path = currentPath()
   if (aboutFromPath()) return { kind: 'about' }
   if (appLoginFromPath()) return { kind: 'app-login' }
-  if (EXPLORE_PATH.test(path)) return { kind: 'explore' }
+  // 공고 탐색은 ?company=기업아이디로 그 기업 공고만 골라 둔 채 열 수 있어요.
+  if (EXPLORE_PATH.test(path)) return { kind: 'explore', company: new URLSearchParams(window.location.search).get('company') ?? undefined }
   if (RECOMMEND_PATH.test(path)) return { kind: 'recommend' }
   if (RESUME_PATH.test(path)) return { kind: 'resume' }
   const postingId = diagnoseFromPath()
@@ -115,7 +116,7 @@ export function pathOf(page: Page | null): string {
     case 'app-login':
       return '/app-login'
     case 'explore':
-      return '/explore'
+      return `/explore${page.company ? `?company=${encodeURIComponent(page.company)}` : ''}`
     case 'recommend':
       return '/recommend'
     case 'resume':

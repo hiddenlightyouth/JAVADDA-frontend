@@ -69,6 +69,7 @@ export default function App() {
   const openPractice = useCallback((id: string, question?: string) => open({ kind: 'practice', id, question }), [open])
   const openExplore = useCallback(() => open({ kind: 'explore' }), [open])
   const openRecommend = useCallback(() => open({ kind: 'recommend' }), [open])
+  const openCompany = useCallback((company: string) => open({ kind: 'explore', company }), [open])
   const openResume = useCallback(() => open({ kind: 'resume' }), [open])
   const openAdmin = useCallback((tab: AdminTab = 'overview') => open({ kind: 'admin', tab }), [open])
 
@@ -176,7 +177,7 @@ export default function App() {
         />
       ) : (
         <Suspense fallback={<main className="flex-1" />}>
-          <Home onPick={openDiagnose} onExplore={openExplore} onRecommend={openRecommend} onResume={openResume} />
+          <Home onPick={openDiagnose} onExplore={openExplore} onRecommend={openRecommend} onResume={openResume} onCompany={openCompany} />
         </Suspense>
       )}
       {feedback.bugOpen && (

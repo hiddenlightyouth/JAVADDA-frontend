@@ -57,7 +57,7 @@ export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExp
       {page.kind === 'app-login' ? (
         <AppLogin onCancel={onHome} />
       ) : page.kind === 'explore' ? (
-        <Jobs onPick={onDiagnose} />
+        <Jobs key={page.company ?? 'all'} onPick={onDiagnose} initialCompany={page.company ?? null} />
       ) : page.kind === 'recommend' ? (
         <Recommend onPick={onDiagnose} onResume={onResume} />
       ) : page.kind === 'resume' ? (

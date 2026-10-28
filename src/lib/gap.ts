@@ -1044,6 +1044,17 @@ export function canEmbed(url: string): boolean {
 }
 
 /** 마감까지 남은 날. 마감이 없으면 null이에요. */
+/** 공고가 올라온 지 며칠 지났는지예요. 오늘 올라왔으면 0이에요. */
+export function daysSince(posting: JobPosting): number {
+  return Math.max(0, Math.floor((Date.now() - new Date(posting.postedAt).getTime()) / DAY))
+}
+
+/** 검색창에 돌아가며 보여주는 추천 검색어예요. 공고에 실제로 자주 적힌 기업, 기술, 지역이에요. */
+export const SEARCH_SUGGESTIONS = ['Spring Boot', '토스', 'React', 'Kubernetes', '카카오', 'TypeScript', 'Kotlin', '판교']
+
+/** 추천 검색어가 바뀌는 간격(ms)이에요. */
+export const SUGGEST_MS = 2600
+
 export function daysLeft(posting: JobPosting): number | null {
   if (!posting.deadline) return null
   return Math.max(0, Math.ceil((new Date(posting.deadline).getTime() - Date.now()) / DAY))

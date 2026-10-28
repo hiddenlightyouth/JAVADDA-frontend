@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { track } from '../lib/analytics'
-import { fitOf, POSTINGS, sortPostings, useReports, useResume, type JobPosting } from '../lib/gap'
+import { COMPANIES, fitOf, POSTINGS, SEARCH_SUGGESTIONS, sortPostings, SUGGEST_MS, useReports, useResume, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
-import { cardsRow, CompanyMark, FitBadge, PostingCard } from './GapParts'
+import { cardsRow, CompanyMark, FitBadge, PostingCard, RecentPostingCard } from './GapParts'
 import { companyOf } from '../lib/gap'
 import { LofyScript } from './LofyScript'
 
@@ -15,10 +15,10 @@ const TEXT = messages({
     title: '어떤 기업에 맞춰 볼까요?',
     description: '기업 이름이나 공고를 찾아 고르면, 내 이력서와 공고 사이의 갭을 진단해요',
     descriptionNoResume: '기업 이름이나 공고를 찾아 고르면 진단을 시작해요. 첫 진단에서 이력서를 올려요',
-    placeholder: '기업, 공고, 기술 이름으로 찾기',
     label: '기업과 공고 찾기',
     noResult: (query: string) => `"${query}"에 맞는 공고가 없어요.`,
     rows: { recent: '요즘 올라온 공고', fit: '나와 잘 맞는 공고', closing: '마감이 가까운 공고', again: '다시 볼 공고' },
+    companies: '기업으로 둘러보기',
     seeAll: '전체 보기',
     results: (count: number) => `${count}개의 공고`,
   },
@@ -26,10 +26,10 @@ const TEXT = messages({
     title: 'Which company should we measure against?',
     description: 'Search for a company or posting and pick one to see the gap between your resume and the role',
     descriptionNoResume: 'Search for a company or posting to start. You upload your resume in the first diagnosis',
-    placeholder: 'Search companies, postings, or skills',
     label: 'Search companies and postings',
     noResult: (query: string) => `No postings match "${query}".`,
     rows: { recent: 'Just posted', fit: 'Good fits for you', closing: 'Closing soon', again: 'Worth another look' },
+    companies: 'Browse by company',
     seeAll: 'See all',
     results: (count: number) => `${count} ${count === 1 ? 'posting' : 'postings'}`,
   },
@@ -61,6 +61,8 @@ interface Props {
   onExplore: () => void
   onRecommend: () => void
   onResume: () => void
+  /** 기업을 골라 그 기업 공고만 공고 탐색에서 봐요. */
+  onCompany: (companyId: string) => void
 }
 
 /** 검색어로 공고를 걸러요. 기업 이름, 공고 제목, 지역, 스킬에서 찾아요. */
@@ -73,12 +75,16 @@ function search(query: string): JobPosting[] {
   })
 }
 
-export function Home({ onPick, onExplore, onRecommend }: Props) {
+/** 공고가 하나라도 있는 기업이에요. */
+const BROWSE_COMPANIES = COMPANIES.filter((company) => POSTINGS.some((posting) => posting.companyId === company.id))
+
+export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   const L = useMessages(TEXT)
   const resume = useResume()
   const reports = useReports()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
+  const [suggestion, setSuggestion] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const results = useMemo(() => search(query), [query])
 
@@ -92,8 +98,22 @@ export function Home({ onPick, onExplore, onRecommend }: Props) {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [open])
 
+  // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요. 공고 탐색과 같아요.
+  useEffect(() => {
+    if (query) return
+    const timer = window.setInterval(() => setSuggestion((value) => (value + 1) % SEARCH_SUGGESTIONS.length), SUGGEST_MS)
+    return () => window.clearInterval(timer)
+  }, [query])
+
   function submit(event: FormEvent) {
     event.preventDefault()
+    // 비어 있을 때 Enter를 누르면 지금 보이는 추천 검색어로 찾아요.
+    if (!query) {
+      track('home_suggestion_use', { query: SEARCH_SUGGESTIONS[suggestion] })
+      setQuery(SEARCH_SUGGESTIONS[suggestion])
+      setOpen(true)
+      return
+    }
     if (results.length === 1) pick(results[0])
   }
 
@@ -113,8 +133,9 @@ export function Home({ onPick, onExplore, onRecommend }: Props) {
     .filter((posting): posting is JobPosting => posting !== undefined)
     .slice(0, ROW_SIZE)
 
-  const rows: { key: keyof typeof L.rows; list: JobPosting[]; more?: () => void }[] = [
+  const rows: { key: keyof typeof L.rows | 'companies'; list: JobPosting[]; more?: () => void }[] = [
     ...(fit.length > 0 ? [{ key: 'fit' as const, list: fit, more: onRecommend }] : []),
+    { key: 'companies', list: [] },
     { key: 'recent', list: recent, more: onExplore },
     { key: 'closing', list: closing, more: onExplore },
     ...(again.length > 0 ? [{ key: 'again' as const, list: again }] : []),
@@ -134,7 +155,7 @@ export function Home({ onPick, onExplore, onRecommend }: Props) {
             <form
               onSubmit={submit}
               role="search"
-              className="flex h-[52px] w-full items-center rounded-full border border-gray-200/90 bg-white/55 pr-5 pl-5 backdrop-blur-md"
+              className="relative flex h-[52px] w-full items-center rounded-full border border-gray-200/90 bg-white/55 pr-5 pl-5 backdrop-blur-md"
             >
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mr-2.5 size-4 shrink-0 text-gray-400" aria-hidden="true">
                 <circle cx="7" cy="7" r="4.5" />
@@ -151,13 +172,20 @@ export function Home({ onPick, onExplore, onRecommend }: Props) {
                   setOpen(true)
                 }}
                 onFocus={() => setOpen(true)}
-                placeholder={L.placeholder}
                 data-search-input
                 aria-label={L.label}
                 aria-expanded={open && query.trim().length > 0}
                 // 모바일에서 글자가 16px보다 작으면 입력창을 누를 때 화면이 확대돼서, 모바일에서는 16px로 둬요.
                 className="h-full min-w-0 flex-1 bg-transparent text-base text-gray-900 outline-none placeholder:text-gray-400 sm:text-[14px] [&::-webkit-search-cancel-button]:hidden"
               />
+              {/* 추천 검색어는 자리표시 글자처럼 옅게 보여서, 이런 걸 쳐 볼 수 있다는 것만 슬쩍 알려요. */}
+              {!query && (
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-[46px] right-5 flex items-center overflow-hidden text-base whitespace-nowrap text-gray-400 sm:text-[14px]">
+                  <span key={suggestion} className="animate-rise">
+                    {SEARCH_SUGGESTIONS[suggestion]}
+                  </span>
+                </span>
+              )}
               {query && <span className="shrink-0 text-[12px] text-gray-400 tabular-nums">{L.results(results.length)}</span>}
             </form>
 
@@ -197,7 +225,7 @@ export function Home({ onPick, onExplore, onRecommend }: Props) {
             <section key={key} aria-labelledby={`home-${key}`}>
               <div className="flex items-center justify-between gap-4">
                 <h2 id={`home-${key}`} className="text-[15px] font-semibold text-gray-900">
-                  {L.rows[key]}
+                  {key === 'companies' ? L.companies : L.rows[key]}
                 </h2>
                 {more && (
                   <button
@@ -215,11 +243,40 @@ export function Home({ onPick, onExplore, onRecommend }: Props) {
                   </button>
                 )}
               </div>
-              <ul className={`mt-3 ${cardsRow}`}>
-                {list.map((posting, order) => (
-                  <PostingCard key={posting.id} posting={posting} fit={fitOf(posting, resume)} order={order} onOpen={pick} />
-                ))}
-              </ul>
+              {key === 'companies' ? (
+                // 기업을 누르면 그 기업 공고만 골라 둔 채로 공고 탐색을 열어요.
+                <ul className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(168px,1fr))] gap-2.5">
+                  {BROWSE_COMPANIES.map((company, order) => (
+                    <li key={company.id} className="animate-rise" style={{ animationDelay: `${Math.min(order, 8) * 30}ms` }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          track('home_company_select', { company: company.id })
+                          onCompany(company.id)
+                        }}
+                        className="group flex w-full items-center gap-3 rounded-2xl border border-gray-200 bg-white px-3.5 py-3 text-left transition-colors hover:border-brand"
+                      >
+                        <CompanyMark company={company} className="size-10 text-[15px]" />
+                        <span className="min-w-0">
+                          <span className="block truncate text-[13.5px] font-medium text-gray-900 transition-colors group-hover:text-brand">{company.name}</span>
+                          <span className="block truncate text-[12px] text-gray-400">{company.industry}</span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <ul className={`mt-3 ${cardsRow}`}>
+                  {list.map((posting, order) =>
+                    // 요즘 올라온 공고는 기업보다 공고를 앞에 세운 카드로 보여줘요.
+                    key === 'recent' ? (
+                      <RecentPostingCard key={posting.id} posting={posting} resume={resume} order={order} onOpen={pick} />
+                    ) : (
+                      <PostingCard key={posting.id} posting={posting} fit={fitOf(posting, resume)} order={order} onOpen={pick} />
+                    ),
+                  )}
+                </ul>
+              )}
             </section>
           ))}
         </div>

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { track } from '../lib/analytics'
-import { careerName, COMPANIES, companyOf, daysLeft, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, type Resume } from '../lib/gap'
+import { careerName, COMPANIES, companyOf, daysLeft, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, type Resume, SEARCH_SUGGESTIONS, SUGGEST_MS } from '../lib/gap'
 import { getLang, localizePath, messages, pick, useMessages } from '../lib/i18n'
 import { pathOf } from '../lib/routes'
 import { showToast } from '../lib/toast'
 import { copyText, PageHeader } from './AppPage'
 import { MapMenu } from './DeepParts'
-import { CompanyMark, Failed, FitBadge, Notice, SkillChip, type ChipTone } from './GapParts'
+import { CompanyMark, Failed, FitBadge, Notice, SkillChip, skillTone } from './GapParts'
 import { BriefcaseIcon, MapPinIcon, PersonIcon } from './Icons'
 import { PostingBrowser, SplitView } from './PostingBrowser'
 import { Bone } from './Skeleton'
@@ -19,10 +19,6 @@ import { Bone } from './Skeleton'
 const FAMILIES: JobFamily[] = ['backend', 'frontend', 'mobile', 'data', 'devops']
 const CAREERS: CareerLevel[] = ['entry', 'junior', 'any']
 const SORTS: PostingSort[] = ['fit', 'recent', 'deadline']
-/** 검색창에 돌아가며 보여주는 추천 검색어예요. 공고에 실제로 자주 적힌 기업, 기술, 지역이에요. */
-const SUGGESTIONS = ['Spring Boot', '토스', 'React', 'Kubernetes', '카카오', 'TypeScript', 'Kotlin', '판교']
-/** 추천 검색어가 바뀌는 간격이에요. */
-const SUGGEST_MS = 2600
 
 const TEXT = messages({
   ko: {
@@ -86,7 +82,8 @@ const SKILLS_SHOWN = 4
 
 type Loaded = JobPosting[] | 'failed'
 
-export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
+/** company를 주면 그 기업 공고만 골라 둔 채로 열어요. 새 진단 화면의 기업 둘러보기에서 와요. */
+export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: string) => void; initialCompany?: string | null }) {
   const L = useMessages(TEXT)
   const resume = useResume()
   const [query, setQuery] = useState('')
@@ -96,13 +93,13 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
   const [loaded, setLoaded] = useState<Loaded | undefined>(undefined)
   const [attempt, setAttempt] = useState(0)
   const [suggestion, setSuggestion] = useState(0)
-  const [company, setCompany] = useState<string | null>(null)
+  const [company, setCompany] = useState<string | null>(initialCompany)
   const [viewing, setViewing] = useState<JobPosting | null>(null)
 
   // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요.
   useEffect(() => {
     if (query) return
-    const timer = window.setInterval(() => setSuggestion((value) => (value + 1) % SUGGESTIONS.length), SUGGEST_MS)
+    const timer = window.setInterval(() => setSuggestion((value) => (value + 1) % SEARCH_SUGGESTIONS.length), SUGGEST_MS)
     return () => window.clearInterval(timer)
   }, [query])
 
@@ -150,8 +147,8 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
               onKeyDown={(event) => {
                 // 비어 있을 때 Enter를 누르면 지금 보이는 추천 검색어로 찾아요.
                 if (event.key === 'Enter' && !query && !event.nativeEvent.isComposing) {
-                  track('jobs_suggestion_use', { query: SUGGESTIONS[suggestion] })
-                  setQuery(SUGGESTIONS[suggestion])
+                  track('jobs_suggestion_use', { query: SEARCH_SUGGESTIONS[suggestion] })
+                  setQuery(SEARCH_SUGGESTIONS[suggestion])
                 }
               }}
               aria-label={L.label}
@@ -162,7 +159,7 @@ export function Jobs({ onPick }: { onPick: (postingId: string) => void }) {
             {!query && (
               <span aria-hidden className="pointer-events-none absolute inset-y-0 left-12 right-5 flex items-center overflow-hidden text-[15px] whitespace-nowrap text-gray-400">
                 <span key={suggestion} className="animate-rise">
-                  {SUGGESTIONS[suggestion]}
+                  {SEARCH_SUGGESTIONS[suggestion]}
                 </span>
               </span>
             )}
@@ -300,10 +297,6 @@ function JobCard({ posting, resume, fit, order, onOpen, onView }: { posting: Job
   const L = useMessages(TEXT)
   const company = companyOf(posting.companyId)
   const left = daysLeft(posting)
-  const tone = (skill: string): ChipTone => {
-    const level = resume?.skills.find((item) => item.name === skill)?.level ?? 0
-    return !resume ? 'plain' : level >= 3 ? 'met' : level > 0 ? 'partial' : 'missing'
-  }
   const share = () => {
     const url = `${window.location.origin}${localizePath(pathOf({ kind: 'diagnose', postingId: posting.id }), getLang())}`
     void copyText(url).then((done) => showToast(done ? pick(TEXT).copied : pick(TEXT).copyFailed))
@@ -354,7 +347,7 @@ function JobCard({ posting, resume, fit, order, onOpen, onView }: { posting: Job
 
       <div className="mt-4 flex flex-1 flex-wrap content-start gap-1.5">
         {posting.required.slice(0, SKILLS_SHOWN).map((skill) => (
-          <SkillChip key={skill} name={skill} tone={tone(skill)} />
+          <SkillChip key={skill} name={skill} tone={skillTone(skill, resume)} />
         ))}
         {posting.required.length > SKILLS_SHOWN && <span className="inline-flex h-7 items-center px-1 text-[12px] text-gray-400">{L.more(posting.required.length - SKILLS_SHOWN)}</span>}
       </div>

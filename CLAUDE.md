@@ -210,8 +210,10 @@ src/
 새 진단 (`Home`, 앱의 메인 주소)
 
 - 손글씨 Lofy, "어떤 기업에 맞춰 볼까요?" 타이틀, 설명 한 줄, 검색창이 위쪽에 있어요. 검색어를 적으면 기업 이름, 공고 제목, 지역, 스킬에서 찾아 그 아래로 목록이 펼쳐지고, 줄마다 기업 머리글자, 공고 제목, 기업과 지역, 적합도가 보여요. 결과가 하나뿐일 때 Enter를 누르면 바로 고른 것으로 쳐요. 바깥을 누르거나 Esc를 누르면 닫혀요.
-- 검색창 아래에는 공고 줄이 한 줄씩 있어요. 이력서를 올려 두었으면 "나와 잘 맞는 공고"(적합도순, 전체 보기는 추천 공고로)가 맨 위에 오고, "요즘 올라온 공고", "마감이 가까운 공고"(전체 보기는 공고 탐색으로), 진단해 둔 공고 중 적합도가 70% 아래였던 "다시 볼 공고"가 이어져요. 줄마다 카드는 화면 폭에 들어가는 만큼만 보여요.
+- 검색창이 비어 있는 동안에는 공고 탐색처럼 추천 검색어(`SEARCH_SUGGESTIONS`, `src/lib/gap.ts`)가 자리표시 글자처럼 옅게 돌아가며 바뀌고, Enter를 누르면 그 검색어로 찾아요.
+- 검색창 아래에는 공고 줄이 한 줄씩 있어요. 이력서를 올려 두었으면 "나와 잘 맞는 공고"(적합도순, 전체 보기는 추천 공고로)가 맨 위에 오고, 그다음 "기업으로 둘러보기"(공고가 있는 기업의 로고, 이름, 업종 칸. 누르면 그 기업 공고만 골라 둔 공고 탐색 `/explore?company=기업아이디`로 가요. 공고 수는 적지 않아요), "요즘 올라온 공고", "마감이 가까운 공고"(전체 보기는 공고 탐색으로), 진단해 둔 공고 중 적합도가 70% 아래였던 "다시 볼 공고"가 이어져요. 줄마다 카드는 화면 폭에 들어가는 만큼만 보여요.
 - 공고 카드(`PostingCard`)에는 기업 머리글자, 공고 제목, 기업과 지역, 소개 두 줄, 직군과 경력과 마감, 적합도가 있어요. 이력서가 없으면 적합도 자리는 비워 둬요. 누르면 진단 시작 화면으로 가요.
+- "요즘 올라온 공고" 줄만 공고를 앞에 세운 카드(`RecentPostingCard`)를 써요. 맨 위에 올라온 때(사흘 안이면 메인 컬러로 "신규", 그 뒤로는 "6일 전"), 크게 공고 제목, 작은 로고와 기업, 지역, 경력 한 줄, 소개 두 줄, 필수 역량 이름표 셋(이력서 기준으로 칠해요)과 적합도가 있어요.
 
 공고 탐색 (`Jobs`, `/explore`, 단축키 T)
 
@@ -351,6 +353,8 @@ src/
 | `page_view` | 화면이 바뀔 때 | `screen`(home, explore, recommend, resume, diagnose, report, practice, about, articles, article, login, signup, me, history, app-login, admin), `posting`, `tab`, `slug` |
 | `posting_select` | 공고 카드나 검색 결과를 눌러 진단 시작으로 갔을 때 | `posting`, `from`(home, explore, recommend), `query` |
 | `home_more_click` | 새 진단 화면의 공고 줄에서 전체 보기를 눌렀을 때 | `row`(fit, recent, closing) |
+| `home_company_select` | 새 진단 화면의 기업으로 둘러보기에서 기업을 눌렀을 때 | `company` |
+| `home_suggestion_use` | 새 진단 화면의 빈 검색창에서 Enter로 추천 검색어를 썼을 때 | `query` |
 | `explore_open`, `recommend_open`, `resume_open` | 사이드바에서 공고 탐색, 추천 공고, 내 이력서를 눌렀을 때 | `from`(sidebar) |
 | `jobs_family_select`, `jobs_career_select`, `jobs_sort_change` | 공고 탐색에서 직군, 경력, 정렬을 바꿨을 때 | `family`, `career`, `sort` |
 | `posting_browser_open` | 공고 원문을 미니 브라우저로 열었을 때 | `posting`, `embedded`(원문을 띄웠는지) |
