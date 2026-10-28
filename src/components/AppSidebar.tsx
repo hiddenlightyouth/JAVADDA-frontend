@@ -8,6 +8,7 @@ import { formatWhen } from '../lib/format'
 import { companyOf, postingOf, useReports, useResume, type Report } from '../lib/gap'
 import { DeleteReportDialog, removeReport, REPORT_LIST_TEXT } from './History'
 import { Kbd } from './Shortcuts'
+import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
 import { PlusIcon } from './Icons'
@@ -203,7 +204,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
             }}
             className="inline-flex items-center"
           >
-            <img src="/logo.svg" alt="Lofy" width={1592} height={367} draggable={false} className="h-[13px] w-auto translate-y-px" />
+            <ScriptMark className="h-6 w-auto" />
           </a>
         </div>
       ) : (
