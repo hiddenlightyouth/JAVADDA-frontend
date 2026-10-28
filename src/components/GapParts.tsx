@@ -17,6 +17,8 @@ const TEXT = messages({
   ko: {
     fit: (value: number) => `적합도 ${value}%`,
     noFit: '이력서를 올리면 적합도가 보여요',
+    fitTip: '내 이력서가 이 공고의 요구 역량을 얼마나 채우는지예요. 필수 역량을 가장 크게 보고, 우대 역량과 역량의 폭을 더해요.',
+    toneTips: { met: '이력서에서 충분히 보여요.', partial: '이력서에 있지만 근거가 약해요.', missing: '이력서에서 보이지 않아요.' } as Partial<Record<ChipTone, string>>,
     deadline: (days: number) => (days === 0 ? '오늘 마감' : `마감 ${days}일 전`),
     always: '상시 채용',
     posted: (days: number) => (days <= NEW_DAYS ? '신규' : `${days}일 전`),
@@ -38,6 +40,8 @@ const TEXT = messages({
   en: {
     fit: (value: number) => `${value}% fit`,
     noFit: 'Upload a resume to see your fit',
+    fitTip: 'How well your resume covers what this posting asks for. Required skills count most, then preferred skills and breadth.',
+    toneTips: { met: 'Clearly shown in your resume.', partial: 'In your resume, but with thin evidence.', missing: 'Not found in your resume.' },
     deadline: (days: number) => (days === 0 ? 'Closes today' : `Closes in ${days} ${days === 1 ? 'day' : 'days'}`),
     always: 'Rolling',
     posted: (days: number) => (days <= NEW_DAYS ? 'New' : `${days} days ago`),
@@ -77,16 +81,38 @@ export function CompanyMark({ company, className = 'size-12 text-[17px]' }: { co
 }
 
 /** 적합도 퍼센트예요. 숫자만 메인 컬러로 강조하고, 아래에 가는 막대로 한 번 더 보여줘요. */
-export function FitBadge({ fit, compact = false }: { fit: number | null; compact?: boolean }) {
+/**
+ * 마우스를 올리거나 키보드로 안쪽에 가면 위에 뜨는 짧은 설명이에요. 숫자나 색만 보고는 뜻을 모를 때 붙여요.
+ * 라이브러리 없이 CSS로만 띄우고, 잠깐 머물러야 떠서 훑고 지나갈 때는 거슬리지 않아요. 화면 오른쪽 끝에 붙은 것은 `align="end"`로 오른쪽에 맞춰요.
+ */
+export function Tip({ text, align = 'center', children }: { text: string; align?: 'center' | 'end'; children: ReactNode }) {
+  return (
+    <span className="group/tip relative inline-flex max-w-full">
+      {children}
+      <span
+        role="tooltip"
+        className={`pointer-events-none absolute bottom-full z-30 mb-2 w-max max-w-60 translate-y-1 rounded-lg bg-gray-900 px-2.5 py-1.5 text-left text-[12px] leading-snug font-normal whitespace-normal text-white opacity-0 transition duration-150 group-hover/tip:translate-y-0 group-hover/tip:opacity-100 group-hover/tip:delay-300 group-focus-within/tip:translate-y-0 group-focus-within/tip:opacity-100 ${
+          align === 'end' ? 'right-0' : 'left-1/2 -translate-x-1/2'
+        }`}
+      >
+        {text}
+      </span>
+    </span>
+  )
+}
+
+export function FitBadge({ fit, compact = false, tipAlign }: { fit: number | null; compact?: boolean; tipAlign?: 'center' | 'end' }) {
   const L = useMessages(TEXT)
   if (fit === null) return <span className="text-[12px] text-gray-400">{compact ? '' : L.noFit}</span>
   return (
-    <span className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap" aria-label={L.fit(fit)}>
-      <span className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200/70" aria-hidden>
-        <span className="block h-full rounded-full bg-brand" style={{ width: `${fit}%` }} />
+    <Tip text={L.fitTip} align={tipAlign}>
+      <span className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap" aria-label={L.fit(fit)}>
+        <span className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200/70" aria-hidden>
+          <span className="block h-full rounded-full bg-brand" style={{ width: `${fit}%` }} />
+        </span>
+        <span className="text-[13px] font-semibold text-brand tabular-nums">{fit}%</span>
       </span>
-      <span className="text-[13px] font-semibold text-brand tabular-nums">{fit}%</span>
-    </span>
+    </Tip>
   )
 }
 
@@ -119,14 +145,17 @@ export function SkillChip({ name, tone = 'plain', hint, onRemove, onClick, class
       {hint && <span className="text-[11px] opacity-70 tabular-nums">{hint}</span>}
     </>
   )
+  // 공고 기준으로 칠한 이름표는 색만으로는 뜻을 모르니, 올리면 무슨 뜻인지 알려줘요.
+  const tip = L.toneTips[tone]
   if (onClick) {
-    return (
+    const button = (
       <button type="button" onClick={onClick} className={`${base} transition-colors hover:border-brand hover:text-brand-hover`}>
         {body}
       </button>
     )
+    return tip ? <Tip text={tip}>{button}</Tip> : button
   }
-  return (
+  const chip = (
     <span className={base}>
       {body}
       {onRemove && (
@@ -136,6 +165,7 @@ export function SkillChip({ name, tone = 'plain', hint, onRemove, onClick, class
       )}
     </span>
   )
+  return tip ? <Tip text={tip}>{chip}</Tip> : chip
 }
 
 /** 부족, 보완, 강점 이름표예요. 강점만 메인 컬러로 표시해요. */

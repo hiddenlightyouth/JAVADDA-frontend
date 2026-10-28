@@ -35,6 +35,7 @@
 - 탭 제목은 Lofy, 파비콘은 흰 배경에 짙은 회색 중절모
 - 링크를 카카오톡이나 디스코드에 붙이면 뜨는 미리보기 카드는 `index.html`의 og 태그와 `public/og.png`로 정해요. 영어 주소(`/en`으로 시작)의 카드는 `public/og-en.png`와 영어 문구를 써요. 주소는 실제 서비스 주소(https://lofy.hidly.dev)로 적혀 있어서, 도메인이 바뀌면 같이 바꿔야 해요(`index.html`, `src/lib/meta.ts`의 `SITE`, `scripts/prerender.mjs`의 `SITE`, `public/robots.txt`, 업데이트 목록과 앱 레포). 예전 주소(https://whoisloafing.hidly.dev)는 1.3까지의 macOS 앱이 열어서 같은 Worker에 계속 연결해 둬요.
 - 디자인 원칙: 여백 위주의 미니멀. 장식, 그라데이션, 이모지, 아이콘 남발 금지. 공고 카드의 직군, 경력, 지역처럼 훑어보는 정보에만 작은 선 아이콘을 붙여요(공고 탐색의 `JobCard`, 새 진단 화면의 `PostingTile`). 기업 로고는 그 회사의 색 그대로 보여줘서 메인 컬러 규칙의 예외예요. 타이틀 위에 태그, 뱃지, 라벨을 붙이지 않아요.
+- 숫자나 색만으로는 뜻을 모르는 것에는 마우스를 올리면 뜨는 짧은 설명(`Tip`)을 붙여요. 적합도(`FitBadge`)는 무엇을 재는지, 공고 기준으로 칠한 스킬 이름표(`SkillChip`의 met, partial, missing)는 충분히 보여요, 근거가 약해요, 보이지 않아요를 알려줘요. 잠깐(0.3초) 머물러야 뜨고, 짙은 회색 말풍선이에요.
 - 그림자 효과는 쓰지 않아요. 경계가 필요하면 옅은 회색 테두리나 배경색 차이로 구분해요.
 - 앱 화면의 바탕은 새 진단 화면처럼 모두 흰색이에요. 그 위의 카드와 칸(`Panel`, `JobCard`, `PostingCard`, `PostingTile`)은 테두리 없이 옅은 회색(gray-50)으로 채우고, 마우스를 올리면 한 단계 짙어져요. 회색 칸 안의 이름표와 작은 칸은 흰색, 막대의 빈 부분과 회색 배지는 gray-200/70이라 회색 바탕에서도 보여요. 서류를 흉내 내는 종이(`paper`)와 입력칸만 흰 바탕에 테두리를 둘러요.
 - 앱 화면의 제목(`PageHeader`)은 26px이고, 아래에 구분선 없이 여백(32px)만으로 내용과 나눠요. 리포트처럼 탭이 있는 화면만 탭 줄 아래에 선이 있어요. 넓은 화면에서는 헤더를 36px로 줄여서 제목이 사이드바 로고와 같은 높이에 와요. 좁은 화면은 사이드바 버튼 자리 때문에 56px 그대로예요.
@@ -121,7 +122,7 @@ src/
   components/ReportReview.tsx   리포트의 서류 검증 탭
   components/ReportQuestions.tsx 리포트의 예상 질문 탭
   components/Practice.tsx    면접 연습 (/r/아이디/practice). 질문에 글로 답하면 피드백을 줘요
-  components/GapParts.tsx    진단 화면이 같이 쓰는 부품. 기업 로고(CompanyMark, 로고가 없거나 못 불러오면 머리글자), 적합도(FitBadge, ScoreRing), 스킬 이름표(SkillChip), 부족과 보완과 강점 이름표(KindLabel), 체크 표시(CheckMark), 공고 카드(PostingCard)와 뼈대, 회색 칸(Panel), 안내(Notice, Failed), 막대(Meter), 레이더(Radar), 작은 막대 그래프(Sparkline), 변화량(Delta)
+  components/GapParts.tsx    진단 화면이 같이 쓰는 부품. 기업 로고(CompanyMark, 로고가 없거나 못 불러오면 머리글자), 적합도(FitBadge, ScoreRing), 짧은 설명 말풍선(Tip), 스킬 이름표(SkillChip), 부족과 보완과 강점 이름표(KindLabel), 체크 표시(CheckMark), 공고 카드(PostingCard)와 뼈대, 회색 칸(Panel), 안내(Notice, Failed), 막대(Meter), 레이더(Radar), 작은 막대 그래프(Sparkline), 변화량(Delta)
   components/History.tsx     내 리포트 화면(/history)과, 사이드바가 같이 쓰는 리포트 지우기 창과 문구
   components/AppPage.tsx     앱 화면이 같이 쓰는 틀. 제목 줄(PageHeader), 제목 줄 아래 바탕(canvas), 종이(paper), 단계 표시와 아래 버튼 줄(Steps, StepLayout), 다듬기 칸, 내보내기 메뉴, 복사, 작은 버튼 모양
   components/DeepParts.tsx   도구 버튼(toolButton)과 이름표(tag), 드롭다운 메뉴(MapMenu), 원문 칸(Source). 이름은 예전 심층 분석에서 왔지만 지금은 진단 화면이 써요

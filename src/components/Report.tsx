@@ -607,7 +607,7 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
         ))}
         {done && (
           <div className="mb-1.5 ml-auto hidden items-center self-end sm:flex">
-            <FitBadge fit={report.fitScore} />
+            <FitBadge fit={report.fitScore} tipAlign="end" />
           </div>
         )}
       </div>
