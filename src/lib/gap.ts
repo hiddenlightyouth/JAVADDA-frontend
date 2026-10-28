@@ -19,6 +19,8 @@ export interface Company {
   /** 로고 그림 주소(`public/logos`). 기업 사이트의 아이콘을 받아 둔 거예요. */
   logo?: string
   industry: string
+  /** 기업 소개 사이트 주소. 공고 탐색에서 로고를 누르면 미니 브라우저로 열어요. */
+  site: string
   /** 기업 기술 블로그 주소. 요구 스택의 변화를 읽는 자료예요. */
   techBlog?: string
 }
@@ -204,23 +206,23 @@ const KEYS = {
 // ---------- 자료 ----------
 
 export const COMPANIES: Company[] = [
-  { id: 'toss', name: '토스', initial: 'T', logo: '/logos/toss.png', industry: '핀테크', techBlog: 'https://toss.tech' },
-  { id: 'kakao', name: '카카오', initial: 'K', logo: '/logos/kakao.png', industry: '플랫폼', techBlog: 'https://tech.kakao.com' },
-  { id: 'naver', name: '네이버', initial: 'N', logo: '/logos/naver.png', industry: '포털', techBlog: 'https://d2.naver.com' },
-  { id: 'woowa', name: '우아한형제들', initial: '우', logo: '/logos/woowa.png', industry: '푸드테크', techBlog: 'https://techblog.woowahan.com' },
-  { id: 'coupang', name: '쿠팡', initial: 'C', logo: '/logos/coupang.png', industry: '커머스', techBlog: 'https://medium.com/coupang-engineering' },
-  { id: 'line', name: '라인플러스', initial: 'L', logo: '/logos/line.png', industry: '메신저', techBlog: 'https://techblog.lycorp.co.jp/ko' },
-  { id: 'daangn', name: '당근', initial: '당', logo: '/logos/daangn.png', industry: '로컬 커뮤니티', techBlog: 'https://medium.com/daangn' },
-  { id: 'musinsa', name: '무신사', initial: 'M', logo: '/logos/musinsa.png', industry: '패션 커머스' },
-  { id: 'dunamu', name: '두나무', initial: 'D', logo: '/logos/dunamu.png', industry: '핀테크' },
-  { id: 'zigbang', name: '직방', initial: 'Z', logo: '/logos/zigbang.png', industry: '프롭테크' },
-  { id: 'wanted', name: '원티드랩', initial: 'W', logo: '/logos/wanted.png', industry: 'HR 테크' },
-  { id: 'bucketplace', name: '오늘의집', initial: '오', logo: '/logos/bucketplace.png', industry: '리빙 커머스' },
+  { id: 'toss', name: '토스', initial: 'T', logo: '/logos/toss.png', industry: '핀테크', site: 'https://toss.im/company', techBlog: 'https://toss.tech' },
+  { id: 'kakao', name: '카카오', initial: 'K', logo: '/logos/kakao.png', industry: '플랫폼', site: 'https://www.kakaocorp.com/page/', techBlog: 'https://tech.kakao.com' },
+  { id: 'naver', name: '네이버', initial: 'N', logo: '/logos/naver.png', industry: '포털', site: 'https://www.navercorp.com', techBlog: 'https://d2.naver.com' },
+  { id: 'woowa', name: '우아한형제들', initial: '우', logo: '/logos/woowa.png', industry: '푸드테크', site: 'https://www.woowahan.com', techBlog: 'https://techblog.woowahan.com' },
+  { id: 'coupang', name: '쿠팡', initial: 'C', logo: '/logos/coupang.png', industry: '커머스', site: 'https://www.aboutcoupang.com', techBlog: 'https://medium.com/coupang-engineering' },
+  { id: 'line', name: '라인플러스', initial: 'L', logo: '/logos/line.png', industry: '메신저', site: 'https://www.linepluscorp.com', techBlog: 'https://techblog.lycorp.co.jp/ko' },
+  { id: 'daangn', name: '당근', initial: '당', logo: '/logos/daangn.png', industry: '로컬 커뮤니티', site: 'https://about.daangn.com', techBlog: 'https://medium.com/daangn' },
+  { id: 'musinsa', name: '무신사', initial: 'M', logo: '/logos/musinsa.png', industry: '패션 커머스', site: 'https://www.musinsacareers.com/ko/home' },
+  { id: 'dunamu', name: '두나무', initial: 'D', logo: '/logos/dunamu.png', industry: '핀테크', site: 'https://www.dunamu.com' },
+  { id: 'zigbang', name: '직방', initial: 'Z', logo: '/logos/zigbang.png', industry: '프롭테크', site: 'https://career.zigbang.com' },
+  { id: 'wanted', name: '원티드랩', initial: 'W', logo: '/logos/wanted.png', industry: 'HR 테크', site: 'https://www.wantedlab.com' },
+  { id: 'bucketplace', name: '오늘의집', initial: '오', logo: '/logos/bucketplace.png', industry: '리빙 커머스', site: 'https://www.bucketplace.com' },
 ]
 
 const companyById = new Map(COMPANIES.map((company) => [company.id, company]))
 
-export const companyOf = (id: string): Company => companyById.get(id) ?? { id, name: id, initial: id[0]?.toUpperCase() ?? '?', industry: '' }
+export const companyOf = (id: string): Company => companyById.get(id) ?? { id, name: id, initial: id[0]?.toUpperCase() ?? '?', industry: '', site: '' }
 
 /** 스킬이 어느 묶음인지. 레이더의 축이에요. */
 export const SKILL_AXES = ['언어', '프레임워크', '데이터베이스', '인프라', '협업', 'CS 기초'] as const
@@ -1032,12 +1034,25 @@ export function sortPostings(list: JobPosting[], sort: PostingSort, resume: Resu
  * 다른 서비스 안(iframe)에 보이지 않게 막아 둔 채용 사이트예요(X-Frame-Options나 frame-ancestors).
  * 이 사이트의 원문은 앱 안의 미니 브라우저에 띄우지 않고, 공고 요약과 새 탭 버튼을 대신 보여줘요.
  */
-const FRAME_BLOCKED_HOSTS = new Set(['toss.im', 'careers.kakao.com', 'recruit.navercorp.com', 'career.woowahan.com', 'www.coupang.jobs', 'www.wanted.co.kr'])
+// 다른 서비스 안에 보이지 않게 막아 둔 사이트예요(X-Frame-Options, frame-ancestors). 같은 도메인도 페이지마다 달라서 주소 앞부분으로 적어요.
+const FRAME_BLOCKED = [
+  'toss.im/career',
+  'careers.kakao.com',
+  'recruit.navercorp.com',
+  'www.navercorp.com',
+  'career.woowahan.com',
+  'www.woowahan.com',
+  'www.coupang.jobs',
+  'www.aboutcoupang.com',
+  'www.wanted.co.kr',
+  'www.wantedlab.com',
+]
 
-/** 공고 원문을 앱 안에 띄울 수 있는지예요. */
+/** 공고 원문이나 기업 사이트를 앱 안에 띄울 수 있는지예요. */
 export function canEmbed(url: string): boolean {
   try {
-    return !FRAME_BLOCKED_HOSTS.has(new URL(url).host)
+    const { host, pathname } = new URL(url)
+    return !FRAME_BLOCKED.some((prefix) => `${host}${pathname}`.startsWith(prefix))
   } catch {
     return false
   }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
-import { canEmbed, companyOf, type JobPosting } from '../lib/gap'
+import { canEmbed, careerName, companyOf, familyName, POSTINGS, type Company, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { readItem, writeItem } from '../lib/storage'
 import { primaryButton } from './Dialog'
@@ -9,9 +9,9 @@ import { CloseButton, RefreshIcon } from './Icons'
 import { Bone } from './Skeleton'
 
 /**
- * 공고 원문을 새 탭 대신 앱 안에서 보는 미니 브라우저예요. 화면을 가리지 않고 오른쪽에 나란히 붙어서, 공고 목록을 보면서 원문을 같이 봐요.
+ * 공고 원문이나 기업 소개 사이트를 새 탭 대신 앱 안에서 보는 미니 브라우저예요. 화면을 가리지 않고 오른쪽에 나란히 붙어서, 공고 목록을 보면서 원문을 같이 봐요.
  * 왼쪽 가장자리를 끌어서 폭을 바꾸고(방향키도 돼요, 두 번 누르면 처음 폭으로), 바꾼 폭은 이 기기에 기억해요. 좁은 화면에서는 화면 전체를 덮어요.
- * 채용 사이트가 다른 서비스 안에 보이지 않게 막아 두었으면(`canEmbed`) 원문 대신 공고 요약을 보여주고, 새 탭은 마지막 방법으로만 둬요.
+ * 사이트가 다른 서비스 안에 보이지 않게 막아 두었으면(`canEmbed`) 원문 대신 공고 요약이나 기업 정보와 열려 있는 공고를 보여주고, 새 탭은 마지막 방법으로만 둬요.
  * 감싸는 줄(`SplitView`)이 왼쪽 화면과 이 칸을 나란히 놓아요.
  */
 
@@ -23,6 +23,10 @@ const TEXT = messages({
     close: '닫기',
     blocked: '이 채용 사이트는 다른 서비스 안에서 열 수 없게 막아 두었어요.',
     blockedBody: '공고의 핵심은 아래에 정리해 두었어요. 원문을 꼭 봐야 할 때만 새 탭으로 열어 주세요.',
+    companyTitle: (company: string) => `${company} 기업 소개`,
+    companyBlocked: '이 기업 사이트는 다른 서비스 안에서 열 수 없게 막아 두었어요.',
+    companyBlockedBody: '기업 정보와 열려 있는 공고를 아래에 정리해 두었어요. 사이트를 꼭 봐야 할 때만 새 탭으로 열어 주세요.',
+    openings: (count: number) => `열려 있는 공고 ${count}개`,
     required: '필수 역량',
     preferred: '우대 역량',
     loading: '원문을 불러오고 있어요.',
@@ -35,6 +39,10 @@ const TEXT = messages({
     close: 'Close',
     blocked: "This careers site doesn't allow being shown inside other services.",
     blockedBody: "We've summarized the posting below. Open it in a new tab only if you need the original.",
+    companyTitle: (company: string) => `About ${company}`,
+    companyBlocked: "This company's site doesn't allow being shown inside other services.",
+    companyBlockedBody: "We've summarized the company and its open postings below. Open the site in a new tab only if you need it.",
+    openings: (count: number) => `${count} open ${count === 1 ? 'posting' : 'postings'}`,
     required: 'Required',
     preferred: 'Preferred',
     loading: 'Loading the original.',
@@ -64,10 +72,13 @@ export function SplitView({ children, side }: { children: ReactNode; side: React
 
 const toolbarButton = 'flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900'
 
-export function PostingBrowser({ posting, onClose }: { posting: JobPosting; onClose: () => void }) {
+/** 공고(`posting`)나 기업(`company`) 하나를 받아요. 기업 사이트가 막혀 있으면 대신 보여주는 공고를 눌러 그 공고로 바꿔요(`onPosting`). */
+export function PostingBrowser({ posting, company: about, onClose, onPosting }: { posting?: JobPosting; company?: Company; onClose: () => void; onPosting?: (posting: JobPosting) => void }) {
   const L = useMessages(TEXT)
-  const company = companyOf(posting.companyId)
-  const embeddable = canEmbed(posting.url)
+  const company = posting ? companyOf(posting.companyId) : about!
+  const url = posting ? posting.url : company.site
+  const title = posting ? L.title(company.name) : L.companyTitle(company.name)
+  const embeddable = canEmbed(url)
   const [loaded, setLoaded] = useState(false)
   const [version, setVersion] = useState(0)
   const [width, setWidth] = useState(() => Number(readItem(WIDTH_KEY)) || DEFAULT_WIDTH)
@@ -119,8 +130,9 @@ export function PostingBrowser({ posting, onClose }: { posting: JobPosting; onCl
   }
 
   useEffect(() => {
-    track('posting_browser_open', { posting: posting.id, embedded: embeddable })
-  }, [posting.id, embeddable])
+    if (posting) track('posting_browser_open', { posting: posting.id, embedded: embeddable })
+    else track('company_browser_open', { company: company.id, embedded: embeddable })
+  }, [posting, company.id, embeddable])
 
   // 다른 창이나 메뉴가 열려 있으면 그쪽이 먼저 Esc를 받아요.
   useEffect(() => {
@@ -135,16 +147,16 @@ export function PostingBrowser({ posting, onClose }: { posting: JobPosting; onCl
 
   const host = (() => {
     try {
-      return new URL(posting.url).host.replace(/^www\./, '')
+      return new URL(url).host.replace(/^www\./, '')
     } catch {
-      return posting.url
+      return url
     }
   })()
 
   return (
     <aside
       ref={pane}
-      aria-label={L.title(company.name)}
+      aria-label={title}
       style={{ '--pane': `${width}px` } as CSSProperties}
       className="fixed inset-0 z-40 flex animate-fade flex-col bg-white md:relative md:inset-auto md:z-auto md:w-(--pane) md:shrink-0 md:pt-9 md:border-l md:border-gray-200"
     >
@@ -187,7 +199,7 @@ export function PostingBrowser({ posting, onClose }: { posting: JobPosting; onCl
             <RefreshIcon className="size-4" />
           </button>
         )}
-        <a href={posting.url} target="_blank" rel="noopener noreferrer" aria-label={L.external} title={L.external} className={toolbarButton}>
+        <a href={url} target="_blank" rel="noopener noreferrer" aria-label={L.external} title={L.external} className={toolbarButton}>
           <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
             <path d="M9 2.5h4.5V7M13.5 2.5 7.5 8.5M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3" />
           </svg>
@@ -208,8 +220,8 @@ export function PostingBrowser({ posting, onClose }: { posting: JobPosting; onCl
           )}
           <iframe
             key={version}
-            src={posting.url}
-            title={L.title(company.name)}
+            src={url}
+            title={title}
             onLoad={() => setLoaded(true)}
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
             referrerPolicy="no-referrer"
@@ -219,39 +231,72 @@ export function PostingBrowser({ posting, onClose }: { posting: JobPosting; onCl
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 md:px-10">
           <div className="mx-auto max-w-[560px]">
-            <p className="text-[15px] font-semibold text-gray-900">{L.blocked}</p>
-            <p className="mt-1.5 text-[13.5px] leading-relaxed text-gray-500">{L.blockedBody}</p>
+            <p className="text-[15px] font-semibold text-gray-900">{posting ? L.blocked : L.companyBlocked}</p>
+            <p className="mt-1.5 text-[13.5px] leading-relaxed text-gray-500">{posting ? L.blockedBody : L.companyBlockedBody}</p>
 
-            <section className="mt-6 rounded-2xl bg-gray-50 p-6">
-              <div className="flex items-center gap-3">
-                <CompanyMark company={company} className="size-10 text-[15px]" />
-                <div className="min-w-0">
-                  <p className="truncate text-[13.5px] font-medium text-gray-900">{company.name}</p>
-                  <p className="truncate text-[12px] text-gray-400">{posting.location}</p>
+            {posting ? (
+              <section className="mt-6 rounded-2xl bg-gray-50 p-6">
+                <div className="flex items-center gap-3">
+                  <CompanyMark company={company} className="size-10 text-[15px]" />
+                  <div className="min-w-0">
+                    <p className="truncate text-[13.5px] font-medium text-gray-900">{company.name}</p>
+                    <p className="truncate text-[12px] text-gray-400">{posting.location}</p>
+                  </div>
                 </div>
-              </div>
-              <h2 className="mt-4 text-[18px] leading-snug font-semibold text-gray-900">{posting.title}</h2>
-              <p className="mt-2 text-[13.5px] leading-relaxed text-gray-600">{posting.summary}</p>
-              <h3 className="mt-5 text-[12.5px] font-medium text-gray-400">{L.required}</h3>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {posting.required.map((skill) => (
-                  <SkillChip key={skill} name={skill} />
-                ))}
-              </div>
-              <h3 className="mt-4 text-[12.5px] font-medium text-gray-400">{L.preferred}</h3>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {posting.preferred.map((skill) => (
-                  <SkillChip key={skill} name={skill} />
-                ))}
-              </div>
-            </section>
+                <h2 className="mt-4 text-[18px] leading-snug font-semibold text-gray-900">{posting.title}</h2>
+                <p className="mt-2 text-[13.5px] leading-relaxed text-gray-600">{posting.summary}</p>
+                <h3 className="mt-5 text-[12.5px] font-medium text-gray-400">{L.required}</h3>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {posting.required.map((skill) => (
+                    <SkillChip key={skill} name={skill} />
+                  ))}
+                </div>
+                <h3 className="mt-4 text-[12.5px] font-medium text-gray-400">{L.preferred}</h3>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {posting.preferred.map((skill) => (
+                    <SkillChip key={skill} name={skill} />
+                  ))}
+                </div>
+              </section>
+            ) : (
+              <CompanySummary company={company} postings={POSTINGS.filter((item) => item.companyId === company.id)} onPosting={onPosting} />
+            )}
 
-            <a href={posting.url} target="_blank" rel="noopener noreferrer" className={`${primaryButton} mt-6 inline-flex items-center`}>
+            <a href={url} target="_blank" rel="noopener noreferrer" className={`${primaryButton} mt-6 inline-flex items-center`}>
               {L.external}
             </a>
           </div>
         </div>
       )}
     </aside>
+  )
+}
+
+/** 기업 사이트를 띄울 수 없을 때 대신 보여주는 기업 정보와 열려 있는 공고예요. 공고를 누르면 그 공고의 원문으로 바꿔요. */
+function CompanySummary({ company, postings, onPosting }: { company: Company; postings: JobPosting[]; onPosting?: (posting: JobPosting) => void }) {
+  const L = useMessages(TEXT)
+  return (
+    <section className="mt-6 rounded-2xl bg-gray-50 p-6">
+      <div className="flex items-center gap-3">
+        <CompanyMark company={company} className="size-10 text-[15px]" />
+        <div className="min-w-0">
+          <p className="truncate text-[15px] font-semibold text-gray-900">{company.name}</p>
+          <p className="truncate text-[12.5px] text-gray-400">{company.industry}</p>
+        </div>
+      </div>
+      <h3 className="mt-5 text-[12.5px] font-medium text-gray-400">{L.openings(postings.length)}</h3>
+      <ul className="mt-2 space-y-1.5">
+        {postings.map((item) => (
+          <li key={item.id}>
+            <button type="button" onClick={() => onPosting?.(item)} className="flex w-full flex-col rounded-xl bg-white px-4 py-3 text-left transition-colors hover:text-brand-hover">
+              <span className="text-[14px] font-medium">{item.title}</span>
+              <span className="mt-0.5 text-[12px] text-gray-400">
+                {familyName(item.family)}, {careerName(item.career)}, {item.location}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }

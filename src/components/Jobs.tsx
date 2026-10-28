@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { track } from '../lib/analytics'
-import { careerName, COMPANIES, companyOf, daysLeft, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, type Resume, SEARCH_SUGGESTIONS, SUGGEST_MS } from '../lib/gap'
+import { careerName, COMPANIES, companyOf, type Company, daysLeft, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, type Resume, SEARCH_SUGGESTIONS, SUGGEST_MS } from '../lib/gap'
 import { getLang, localizePath, messages, pick, useMessages } from '../lib/i18n'
 import { pathOf } from '../lib/routes'
 import { showToast } from '../lib/toast'
@@ -25,6 +25,7 @@ const TEXT = messages({
     title: '공고 탐색',
     placeholder: '기업, 공고, 기술 이름으로 찾기',
     label: '공고 찾기',
+    companyInfo: (name: string) => `${name} 기업 정보 보기`,
     all: '전체',
     family: '직군',
     career: '경력',
@@ -48,6 +49,7 @@ const TEXT = messages({
     title: 'Explore jobs',
     placeholder: 'Search companies, postings, or skills',
     label: 'Search postings',
+    companyInfo: (name: string) => `About ${name}`,
     all: 'All',
     family: 'Role',
     career: 'Level',
@@ -92,7 +94,8 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   const [attempt, setAttempt] = useState(0)
   const [suggestion, setSuggestion] = useState(0)
   const [company, setCompany] = useState<string | null>(initialCompany)
-  const [viewing, setViewing] = useState<JobPosting | null>(null)
+  // 미니 브라우저로 여는 것이에요. 공고의 원문이나 기업 소개 사이트예요.
+  const [viewing, setViewing] = useState<{ posting: JobPosting } | { company: Company } | null>(null)
 
   // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요.
   useEffect(() => {
@@ -125,7 +128,16 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   const list = Array.isArray(loaded) ? sortPostings(company ? loaded.filter((posting) => posting.companyId === company) : loaded, sort, resume) : loaded
 
   return (
-    <SplitView side={viewing && <PostingBrowser key={viewing.id} posting={viewing} onClose={() => setViewing(null)} />}>
+    <SplitView
+      side={
+        viewing &&
+        ('posting' in viewing ? (
+          <PostingBrowser key={viewing.posting.id} posting={viewing.posting} onClose={() => setViewing(null)} />
+        ) : (
+          <PostingBrowser key={viewing.company.id} company={viewing.company} onClose={() => setViewing(null)} onPosting={(posting) => setViewing({ posting })} />
+        ))
+      }
+    >
       <main className="flex min-h-0 flex-1 flex-col">
         <div className="shrink-0 px-6 pt-14 md:px-10 md:pt-9">
           <PageHeader title={L.title} />
@@ -255,7 +267,8 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
                     key={`${sort}:${posting.id}`}
                     posting={posting}
                     resume={resume}
-                    onView={() => setViewing(posting)}
+                    onView={() => setViewing({ posting })}
+                    onCompany={() => setViewing({ company: companyOf(posting.companyId) })}
                     fit={fitOf(posting, resume)}
                     order={order}
                     onOpen={() => {
@@ -289,7 +302,7 @@ const shortDate = (iso: string) => {
  * 이력서가 있으면 필수 역량 이름표를 진단 시작 화면과 같은 기준으로 칠해서, 카드만 보고도 무엇이 비는지 보여요.
  * 카드의 나머지 자리를 누르면 진단 시작으로 가요.
  */
-function JobCard({ posting, resume, fit, order, onOpen, onView }: { posting: JobPosting; resume: Resume | null; fit: number | null; order: number; onOpen: () => void; onView: () => void }) {
+function JobCard({ posting, resume, fit, order, onOpen, onView, onCompany }: { posting: JobPosting; resume: Resume | null; fit: number | null; order: number; onOpen: () => void; onView: () => void; onCompany: () => void }) {
   const L = useMessages(TEXT)
   const company = companyOf(posting.companyId)
   const left = daysLeft(posting)
@@ -298,7 +311,7 @@ function JobCard({ posting, resume, fit, order, onOpen, onView }: { posting: Job
     void copyText(url).then((done) => showToast(done ? pick(TEXT).copied : pick(TEXT).copyFailed))
   }
   return (
-    // 카드의 빈 자리를 누르면 진단 시작으로 가요. 안쪽 버튼(원문 보기, 링크 복사)은 저마다 따로 받아요.
+    // 카드의 빈 자리를 누르면 진단 시작으로 가요. 안쪽 버튼(기업, 원문 보기, 링크 복사)은 저마다 따로 받아요.
     // 제목 버튼을 카드 전체에 늘여 덮으면, 누른 곳과 뗀 곳이 달라져 클릭이 한 번 씹혀서 카드가 직접 받아요.
     <li
       onClick={(event) => {
@@ -308,14 +321,17 @@ function JobCard({ posting, resume, fit, order, onOpen, onView }: { posting: Job
       style={{ animationDelay: `${Math.min(order, STAGGER_MAX) * STAGGER_MS}ms` }}
     >
       <div className="flex items-center gap-3">
-        <CompanyMark company={company} className="size-10 text-[15px]" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[13.5px] font-medium text-gray-900">{company.name}</p>
-          <p className="truncate text-[12px] text-gray-400">{company.industry}</p>
-        </div>
+        {/* 로고와 기업 이름을 누르면 기업 소개를 미니 브라우저로 열어요. */}
+        <button type="button" onClick={onCompany} aria-label={L.companyInfo(company.name)} className="group/company -m-1 flex min-w-0 items-center gap-3 rounded-xl p-1 text-left">
+          <CompanyMark company={company} className="size-10 text-[15px] transition-opacity group-hover/company:opacity-80" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[13.5px] font-medium text-gray-900 group-hover/company:underline">{company.name}</span>
+            <span className="block truncate text-[12px] text-gray-400">{company.industry}</span>
+          </span>
+        </button>
         {/* 마감이 사흘 안으로 남으면 메인 컬러로 알려요. */}
         <span
-          className={`shrink-0 rounded-md px-2 py-1 text-[12px] font-semibold tabular-nums ${
+          className={`ml-auto shrink-0 rounded-md px-2 py-1 text-[12px] font-semibold tabular-nums ${
             left !== null && left <= 3 ? 'bg-brand-soft text-brand-hover' : 'bg-gray-200/70 text-gray-500'
           }`}
         >
