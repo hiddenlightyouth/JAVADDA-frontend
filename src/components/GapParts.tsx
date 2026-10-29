@@ -89,7 +89,8 @@ export function CompanyMark({ company, className = 'size-12 text-[17px]' }: { co
  * 잠깐(0.3초) 머물러야 떠서 훑고 지나갈 때는 거슬리지 않아요. 카드나 스크롤 칸이 넘치는 부분을 잘라도 가려지지 않게,
  * 말풍선은 화면 맨 바깥(body)에 고정 위치로 그려요. 위에 자리가 없으면 아래로 뒤집고, 창 가장자리를 넘지 않게 맞춰요.
  */
-export function Tip({ text, children, className = 'inline-flex max-w-full' }: { text: string; children: ReactNode; className?: string }) {
+/** side가 right면 오른쪽에 꼬리 달린 말풍선으로 띄워요. 사이드바처럼 옆이 비어 있는 곳에 써요. */
+export function Tip({ text, children, className = 'inline-flex max-w-full', side = 'top' }: { text: string; children: ReactNode; className?: string; side?: TipSide }) {
   const ref = useRef<HTMLSpanElement>(null)
   const timer = useRef(0)
   const [anchor, setAnchor] = useState<DOMRect | null>(null)
@@ -111,30 +112,38 @@ export function Tip({ text, children, className = 'inline-flex max-w-full' }: { 
   return (
     <span ref={ref} onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide} className={className}>
       {children}
-      {anchor && createPortal(<TipBubble anchor={anchor} text={text} />, document.body)}
+      {anchor && createPortal(<TipBubble anchor={anchor} text={text} side={side} />, document.body)}
     </span>
   )
 }
 
 const TIP_GAP = 8
 
-function TipBubble({ anchor, text }: { anchor: DOMRect; text: string }) {
+type TipSide = 'top' | 'right'
+
+function TipBubble({ anchor, text, side }: { anchor: DOMRect; text: string; side: TipSide }) {
   const ref = useRef<HTMLSpanElement>(null)
-  const [place, setPlace] = useState<{ left: number; top: number } | null>(null)
+  const [place, setPlace] = useState<{ left: number; top: number; right?: boolean } | null>(null)
   // 그린 뒤에 크기를 재서 자리를 정해요. 정하기 전에는 보이지 않게 둬요.
   useLayoutEffect(() => {
     const box = ref.current!.getBoundingClientRect()
+    // 오른쪽에 자리가 있으면 가운데 높이를 맞춰 옆에 띄우고, 없으면 위나 아래로 띄워요.
+    if (side === 'right' && anchor.right + TIP_GAP + box.width <= window.innerWidth - TIP_GAP) {
+      setPlace({ left: anchor.right + TIP_GAP, top: anchor.top + anchor.height / 2 - box.height / 2, right: true })
+      return
+    }
     const left = Math.min(Math.max(anchor.left + anchor.width / 2 - box.width / 2, TIP_GAP), window.innerWidth - box.width - TIP_GAP)
     const above = anchor.top - box.height - TIP_GAP
     setPlace({ left, top: above >= TIP_GAP ? above : anchor.bottom + TIP_GAP })
-  }, [anchor])
+  }, [anchor, side])
   return (
     <span
       ref={ref}
       role="tooltip"
-      style={place ?? { left: 0, top: 0, visibility: 'hidden' }}
+      style={place ? { left: place.left, top: place.top } : { left: 0, top: 0, visibility: 'hidden' }}
       className="pointer-events-none fixed z-[70] w-max max-w-60 animate-fade rounded-lg bg-gray-900 px-2.5 py-1.5 text-left text-[12px] leading-snug font-normal text-white"
     >
+      {place?.right && <span aria-hidden className="absolute top-1/2 -left-1 size-2 -translate-y-1/2 rotate-45 rounded-[1px] bg-gray-900" />}
       {text}
     </span>
   )

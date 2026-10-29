@@ -168,7 +168,7 @@ function NavLink({ href, active, onClick, icon, label, shortcut, locked }: { hre
   // 아직 쓸 수 없는 메뉴는 흐리게 두고, 마우스를 올리면 왜 쓸 수 없는지 알려줘요.
   if (locked)
     return (
-      <Tip text={locked} className="mt-1.5 flex w-full">
+      <Tip text={locked} side="right" className="mt-1.5 flex w-full">
         <span aria-disabled="true" className={`${link} cursor-not-allowed gap-2 text-gray-400`}>
           {icon}
           <span className="flex-1">{label}</span>
