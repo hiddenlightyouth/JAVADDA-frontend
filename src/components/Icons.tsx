@@ -190,3 +190,12 @@ export function CloseButton({ label, onClick, size = 'sm', disabled, className =
     </button>
   )
 }
+
+/** 대표 이력서 표시예요. filled면 안을 채워요. */
+export function StarIcon({ className = 'size-4', strokeWidth = 1.4, label, filled = false }: IconProps & { filled?: boolean }) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M8 2.2l1.8 3.7 4 .6-2.9 2.8.7 4L8 11.4l-3.6 1.9.7-4L2.2 6.5l4-.6z" fill={filled ? 'currentColor' : 'none'} />
+    </Icon>
+  )
+}

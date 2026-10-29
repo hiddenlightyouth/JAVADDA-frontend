@@ -1,14 +1,14 @@
 import { useRef, useState, type DragEvent, type FormEvent } from 'react'
 import { track } from '../lib/analytics'
-import { canonical, clearResume, saveResumeSkills, uploadResume, useResume, type Resume, type ResumeSkill } from '../lib/gap'
+import { canonical, removeResume, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type Resume, type ResumeSkill } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { showToast } from '../lib/toast'
 import { canvas, pageFrame, PageHeader } from './AppPage'
 import { ConfirmDialog, primaryButton } from './Dialog'
 import { toolButton } from './DeepParts'
-import { Panel, SkillChip } from './GapParts'
-import { PlusIcon, TrashIcon } from './Icons'
+import { Panel, SkillChip, Tip } from './GapParts'
+import { PlusIcon, StarIcon, TrashIcon } from './Icons'
 import { Bone } from './Skeleton'
 
 /**
@@ -45,10 +45,19 @@ const TEXT = messages({
     paragraphs: '읽은 문단',
     paragraphsHint: '서류 검증과 예상 질문에 이 문단을 써요.',
     replace: '다른 서류 올리기',
+    addDoc: '서류 올리기',
+    cancel: '올리지 않고 돌아가기',
+    shelfHint: '별을 누른 서류가 대표 이력서예요. 적합도와 추천 공고, 진단은 대표 이력서로 해요.',
+    primary: '대표 이력서',
+    makePrimary: '대표 이력서로 정하기',
+    primaryTip: '적합도와 추천, 진단에 이 서류를 써요',
+    primaryChanged: (name: string) => `${name}을(를) 대표 이력서로 정했어요.`,
+    skillCount: (count: number) => `역량 ${count}개`,
     remove: '삭제',
-    removeTitle: '이력서를 지울까요?',
-    removeBody: '올린 서류와 읽은 역량을 지워요. 리포트는 그대로 남지만, 새 진단과 추천 공고에는 다시 올려야 해요.',
-    removed: '이력서를 지웠어요.',
+    removeTitle: '이 서류를 지울까요?',
+    removeBody: '올린 서류와 읽은 역량을 지워요. 리포트는 그대로 남아요.',
+    removePrimaryBody: '대표 이력서예요. 지우면 남은 서류 중 가장 최근에 올린 것이 대표가 돼요. 리포트는 그대로 남아요.',
+    removed: '서류를 지웠어요.',
     evidence: '근거',
     privacy: '서류는 이 기기와 내 계정에만 저장되고, 공고와 맞춰 보는 데만 써요.',
     browse: '이 이력서로 공고 보기',
@@ -82,10 +91,19 @@ const TEXT = messages({
     paragraphs: 'Paragraphs we read',
     paragraphsHint: 'The document check and likely questions use these paragraphs.',
     replace: 'Upload a different document',
+    addDoc: 'Upload a document',
+    cancel: 'Go back without uploading',
+    shelfHint: 'The starred document is your main resume. Fit scores, recommendations and diagnoses all use it.',
+    primary: 'Main resume',
+    makePrimary: 'Make main resume',
+    primaryTip: 'Fit, recommendations and diagnoses use this document',
+    primaryChanged: (name: string) => `${name} is now your main resume.`,
+    skillCount: (count: number) => `${count} ${count === 1 ? 'skill' : 'skills'}`,
     remove: 'Delete',
-    removeTitle: 'Delete your resume?',
-    removeBody: 'This removes the uploaded document and the skills we read. Reports stay, but new diagnoses and recommendations need a new upload.',
-    removed: 'Resume deleted.',
+    removeTitle: 'Delete this document?',
+    removeBody: 'This removes the document and the skills we read. Reports stay.',
+    removePrimaryBody: 'This is your main resume. Once deleted, your most recent other document becomes the main one. Reports stay.',
+    removed: 'Document deleted.',
     evidence: 'Evidence',
     privacy: 'Your document stays on this device and in your account, and is only used to compare against postings.',
     browse: 'Browse jobs with this resume',
@@ -96,7 +114,8 @@ const TEXT = messages({
 const LINK = /^https?:\/\/(?:www\.)?(?:github\.com|notion\.so|[\w-]+\.notion\.site)\/\S+/i
 
 /** 서류를 올리는 칸이에요. PDF 끌어다 놓기와 링크 두 가지를 받아요. 올리면 onDone으로 알려줘요. */
-export function ResumeUploader({ onDone, compact = false }: { onDone?: (resume: Resume) => void; compact?: boolean }) {
+/** primary면 올린 서류를 바로 대표 이력서로 삼아요. 진단 시작 화면에서 서류를 바꿀 때 써요. */
+export function ResumeUploader({ onDone, compact = false, primary = false }: { onDone?: (resume: Resume) => void; compact?: boolean; primary?: boolean }) {
   const L = useMessages(TEXT)
   const [working, setWorking] = useState(false)
   const [over, setOver] = useState(false)
@@ -106,7 +125,7 @@ export function ResumeUploader({ onDone, compact = false }: { onDone?: (resume: 
 
   async function upload(input: { file?: File; link?: string }) {
     setWorking(true)
-    const resume = await uploadResume(input)
+    const resume = await uploadResume(input, primary)
     setWorking(false)
     track('resume_upload', { source: resume.source, skills: resume.skills.length })
     showToast(pick(TEXT).uploaded)
@@ -239,7 +258,7 @@ export function SkillEditor({ resume }: { resume: Resume }) {
   const [draft, setDraft] = useState('')
 
   function save(skills: ResumeSkill[]) {
-    saveResumeSkills(skills)
+    saveResumeSkills(skills, resume.id)
     track('resume_skills_edit', { count: skills.length })
   }
 
@@ -299,89 +318,172 @@ export function SkillEditor({ resume }: { resume: Resume }) {
 
 export function MyResume({ onExplore }: { onExplore: () => void }) {
   const L = useMessages(TEXT)
-  const resume = useResume()
-  const [replacing, setReplacing] = useState(false)
-  const [removing, setRemoving] = useState(false)
+  const shelf = useResumeShelf()
+  const [adding, setAdding] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [removing, setRemoving] = useState<Resume | null>(null)
+  // 고른 서류가 없거나 지워졌으면 대표 서류를 보여줘요.
+  const selected = shelf.list.find((resume) => resume.id === selectedId) ?? shelf.list.find((resume) => resume.id === shelf.primaryId) ?? shelf.list[0] ?? null
+  const empty = shelf.list.length === 0
+
+  function makePrimary(resume: Resume) {
+    if (resume.id === shelf.primaryId) return
+    setPrimaryResume(resume.id)
+    track('resume_primary_change', { count: shelf.list.length })
+    showToast(pick(TEXT).primaryChanged(resume.name))
+  }
 
   return (
     <main className={pageFrame}>
       <PageHeader
         title={L.title}
         actions={
-          resume && !replacing ? (
-            <>
-              <button type="button" onClick={() => setRemoving(true)} className={`${toolButton} text-red-500! hover:border-red-200!`}>
-                <TrashIcon className="size-4" />
-                {L.remove}
-              </button>
-              <button type="button" onClick={() => setReplacing(true)} className={toolButton}>
-                <PlusIcon className="size-3.5" />
-                {L.replace}
-              </button>
-            </>
+          !empty && !adding ? (
+            <button type="button" onClick={() => setAdding(true)} className={toolButton}>
+              <PlusIcon className="size-3.5" />
+              {L.addDoc}
+            </button>
           ) : undefined
         }
       />
       <div className={canvas}>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-6 md:px-10">
           <div className="mx-auto flex w-full max-w-[880px] flex-col gap-4">
-            {!resume || replacing ? (
+            {empty || adding ? (
               <>
-                <ResumeUploader onDone={() => setReplacing(false)} />
-                {resume && (
-                  <button type="button" onClick={() => setReplacing(false)} className="self-center text-[13px] text-gray-500 transition-colors hover:text-gray-900">
-                    {L.keep}
+                <ResumeUploader
+                  onDone={(resume) => {
+                    setAdding(false)
+                    setSelectedId(resume.id)
+                  }}
+                />
+                {!empty && (
+                  <button type="button" onClick={() => setAdding(false)} className="self-center text-[13px] text-gray-500 transition-colors hover:text-gray-900">
+                    {L.cancel}
                   </button>
                 )}
               </>
             ) : (
               <>
-                <Panel>
-                  <div className="flex items-center gap-4">
-                    <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-white text-[11.5px] font-semibold text-gray-600">{L.sources[resume.source]}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[15px] font-semibold text-gray-900">{resume.name}</p>
-                      <p className="mt-0.5 text-[12.5px] text-gray-400">{L.uploadedAt(formatDateTime(resume.uploadedAt))}</p>
-                    </div>
-                    <button type="button" onClick={onExplore} className={primaryButton}>
-                      {L.browse}
-                    </button>
-                  </div>
-                </Panel>
-                <Panel title={L.skills}>
-                  <SkillEditor resume={resume} />
-                </Panel>
-                <Panel title={L.paragraphs} action={<span className="text-[12px] text-gray-400">{L.paragraphsHint}</span>}>
-                  <ol className="space-y-3">
-                    {resume.paragraphs.map((paragraph, index) => (
-                      <li key={index} className="flex gap-3 text-[13.5px] leading-relaxed text-gray-700">
-                        <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-gray-600 tabular-nums">{index + 1}</span>
-                        {paragraph}
-                      </li>
-                    ))}
-                  </ol>
-                </Panel>
+                <p className="text-[13px] text-gray-500">{L.shelfHint}</p>
+                <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {shelf.list.map((resume) => (
+                    <ResumeCard
+                      key={resume.id}
+                      resume={resume}
+                      primary={resume.id === shelf.primaryId}
+                      selected={resume.id === selected?.id}
+                      onSelect={() => setSelectedId(resume.id)}
+                      onPrimary={() => makePrimary(resume)}
+                    />
+                  ))}
+                </ul>
+                {selected && (
+                  <>
+                    <Panel>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[15px] font-semibold text-gray-900">{selected.name}</p>
+                          <p className="mt-0.5 text-[12.5px] text-gray-400">
+                            {L.sources[selected.source]}, {L.uploadedAt(formatDateTime(selected.uploadedAt))}
+                          </p>
+                        </div>
+                        <button type="button" onClick={() => setRemoving(selected)} className={`${toolButton} text-red-500! hover:border-red-200!`}>
+                          <TrashIcon className="size-4" />
+                          {L.remove}
+                        </button>
+                        {selected.id === shelf.primaryId ? (
+                          <button type="button" onClick={onExplore} className={primaryButton}>
+                            {L.browse}
+                          </button>
+                        ) : (
+                          <button type="button" onClick={() => makePrimary(selected)} className={primaryButton}>
+                            {L.makePrimary}
+                          </button>
+                        )}
+                      </div>
+                    </Panel>
+                    <Panel title={L.skills}>
+                      <SkillEditor resume={selected} />
+                    </Panel>
+                    <Panel title={L.paragraphs} action={<span className="text-[12px] text-gray-400">{L.paragraphsHint}</span>}>
+                      <ol className="space-y-3">
+                        {selected.paragraphs.map((paragraph, index) => (
+                          <li key={index} className="flex gap-3 text-[13.5px] leading-relaxed text-gray-700">
+                            <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-gray-600 tabular-nums">{index + 1}</span>
+                            {paragraph}
+                          </li>
+                        ))}
+                      </ol>
+                    </Panel>
+                  </>
+                )}
               </>
             )}
             <p className="text-center text-[12px] text-gray-400">{L.privacy}</p>
           </div>
         </div>
       </div>
-      {removing && resume && (
+      {removing && (
         <ConfirmDialog
           title={L.removeTitle}
-          body={L.removeBody}
+          body={removing.id === shelf.primaryId ? L.removePrimaryBody : L.removeBody}
           confirm={L.remove}
           danger
-          onCancel={() => setRemoving(false)}
+          onCancel={() => setRemoving(null)}
           onConfirm={() => {
-            clearResume()
+            removeResume(removing.id)
             track('resume_delete')
-            setRemoving(false)
+            setRemoving(null)
             showToast(pick(TEXT).removed)
           }}
         />
       )}
     </main>
+  )
+}
+
+/** 올려 둔 서류 하나의 카드예요. 누르면 아래에 그 서류의 역량과 문단을 보여주고, 별을 누르면 대표 이력서로 정해요. */
+function ResumeCard({ resume, primary, selected, onSelect, onPrimary }: { resume: Resume; primary: boolean; selected: boolean; onSelect: () => void; onPrimary: () => void }) {
+  const L = useMessages(TEXT)
+  return (
+    // 안쪽 별 버튼과 겹치지 않게, 카드(li)가 직접 클릭을 받아요. 공고 탐색의 카드와 같아요.
+    <li
+      onClick={onSelect}
+      aria-current={selected ? 'true' : undefined}
+      className={`group flex cursor-pointer flex-col rounded-2xl p-5 transition-colors ${selected ? 'bg-gray-200/60' : 'bg-gray-50 hover:bg-gray-100'}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <span className="flex h-9 min-w-9 items-center justify-center rounded-lg bg-white px-2 text-[11px] font-semibold text-gray-600">{L.sources[resume.source]}</span>
+        <Tip text={primary ? L.primaryTip : L.makePrimary}>
+          <button
+            type="button"
+            aria-label={primary ? L.primary : L.makePrimary}
+            aria-pressed={primary}
+            onClick={(event) => {
+              event.stopPropagation()
+              onPrimary()
+            }}
+            className={`flex size-8 items-center justify-center rounded-lg transition-colors ${primary ? 'text-brand' : 'text-gray-300 hover:bg-white hover:text-gray-500'}`}
+          >
+            <StarIcon filled={primary} className="size-[18px]" />
+          </button>
+        </Tip>
+      </div>
+      <button type="button" onClick={onSelect} className="mt-3 truncate text-left text-[14.5px] font-semibold text-gray-900 group-hover:text-brand">
+        {resume.name}
+      </button>
+      <p className="mt-0.5 text-[12px] text-gray-400">
+        {primary && <span className="font-medium text-brand">{L.primary}, </span>}
+        {formatDateTime(resume.uploadedAt)}, {L.skillCount(resume.skills.length)}
+      </p>
+      <ul className="mt-4 flex flex-wrap gap-1">
+        {resume.skills.slice(0, 4).map((skill) => (
+          <li key={skill.name} className="rounded-md bg-white px-2 py-0.5 text-[12px] text-gray-600">
+            {skill.name}
+          </li>
+        ))}
+      </ul>
+    </li>
   )
 }

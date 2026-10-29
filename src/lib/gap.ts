@@ -201,7 +201,9 @@ export interface InterviewNote {
 export const LEVEL_MAX = 5
 
 const KEYS = {
+  /** 예전에 하나만 두던 이력서. 처음 읽을 때 목록으로 옮겨요. */
   resume: 'whoisloafing:gap:resume:v1',
+  resumes: 'whoisloafing:gap:resumes:v1',
   reports: 'whoisloafing:gap:reports:v1',
   bookmarks: 'whoisloafing:gap:bookmarks:v1',
   notes: 'whoisloafing:gap:notes:v1',
@@ -821,15 +823,33 @@ const marketOf = (skill: string) => MARKET[skill] ?? { share: 0.1, change: 0 }
 
 // ---------- 저장소 ----------
 
-const resumeStore = createStore<Resume | null>(readJson<Resume | null>(KEYS.resume, null))
+/** 올려 둔 서류 목록과, 진단과 추천에 쓰는 대표 서류의 아이디예요. */
+export interface ResumeShelf {
+  list: Resume[]
+  primaryId: string | null
+}
+
+function readShelf(): ResumeShelf {
+  const shelf = readJson<ResumeShelf | null>(KEYS.resumes, null)
+  if (shelf) return shelf
+  // 예전에 하나만 올려 두었으면 그 서류를 대표로 옮겨요.
+  const legacy = readJson<Resume | null>(KEYS.resume, null)
+  return legacy ? { list: [legacy], primaryId: legacy.id } : { list: [], primaryId: null }
+}
+
+const shelfStore = createStore<ResumeShelf>(readShelf())
+const primaryOf = (shelf: ResumeShelf) => shelf.list.find((resume) => resume.id === shelf.primaryId) ?? null
 const reportsStore = createStore<Report[]>(readJson<Report[]>(KEYS.reports, []))
 const bookmarksStore = createStore<string[]>(readJson<string[]>(KEYS.bookmarks, []))
 const notesStore = createStore<InterviewNote[]>(readJson<InterviewNote[]>(KEYS.notes, []))
 /** 보완 계획에 넣어 둔 스킬 */
 const plansStore = createStore<string[]>(readJson<string[]>(KEYS.plans, []))
 
-export const useResume = () => useStore(resumeStore)
-export const getResume = () => resumeStore.get()
+/** 대표 이력서예요. 적합도, 추천, 진단은 모두 이 서류를 기준으로 해요. */
+export const useResume = () => useStore(shelfStore, primaryOf)
+export const getResume = () => primaryOf(shelfStore.get())
+/** 올려 둔 서류 전부와 대표 서류의 아이디 */
+export const useResumeShelf = () => useStore(shelfStore)
 export const useReports = () => useStore(reportsStore)
 export const getReports = () => reportsStore.get()
 export const useBookmarks = () => useStore(bookmarksStore)
@@ -1135,8 +1155,11 @@ function buildParagraphs(skills: ResumeSkill[], hint: 'backend' | 'frontend'): s
       ]
 }
 
-/** 이력서나 포트폴리오를 올려요. PDF 파일이나 GitHub, 노션 링크를 받아요. 서버가 파싱한 것처럼 역량 목록과 문단을 돌려줘요. */
-export async function uploadResume(input: { file?: File; link?: string }): Promise<Resume> {
+/**
+ * 이력서나 포트폴리오를 올려요. PDF 파일이나 GitHub, 노션 링크를 받아요. 서버가 파싱한 것처럼 역량 목록과 문단을 돌려줘요.
+ * 목록 맨 앞에 더하고, 대표 서류가 없거나 primary를 주면 대표로 삼아요.
+ */
+export async function uploadResume(input: { file?: File; link?: string }, primary = false): Promise<Resume> {
   await wait(1400)
   const name = input.file?.name ?? input.link?.replace(/^https?:\/\//, '') ?? '이력서'
   const source: Resume['source'] = input.file ? 'pdf' : /notion/i.test(input.link ?? '') ? 'notion' : 'github'
@@ -1151,23 +1174,32 @@ export async function uploadResume(input: { file?: File; link?: string }): Promi
     skills,
     paragraphs: buildParagraphs(skills, hint),
   }
-  resumeStore.set(resume)
-  writeJson(KEYS.resume, resume)
+  const shelf = shelfStore.get()
+  saveShelf({ list: [resume, ...shelf.list], primaryId: primary || !primaryOf(shelf) ? resume.id : shelf.primaryId })
   return resume
 }
 
-/** 추출한 역량을 사용자가 고친 뒤에 저장해요. */
-export function saveResumeSkills(skills: ResumeSkill[]) {
-  const current = resumeStore.get()
-  if (!current) return
-  const next = { ...current, skills }
-  resumeStore.set(next)
-  writeJson(KEYS.resume, next)
+function saveShelf(shelf: ResumeShelf) {
+  shelfStore.set(shelf)
+  writeJson(KEYS.resumes, shelf)
 }
 
-export function clearResume() {
-  resumeStore.set(null)
-  writeJson(KEYS.resume, null)
+/** 추출한 역량을 사용자가 고친 뒤에 저장해요. id가 없으면 대표 서류를 고쳐요. */
+export function saveResumeSkills(skills: ResumeSkill[], id = shelfStore.get().primaryId) {
+  const shelf = shelfStore.get()
+  saveShelf({ ...shelf, list: shelf.list.map((resume) => (resume.id === id ? { ...resume, skills } : resume)) })
+}
+
+/** 대표 이력서를 바꿔요. */
+export function setPrimaryResume(id: string) {
+  saveShelf({ ...shelfStore.get(), primaryId: id })
+}
+
+/** 서류를 지워요. 대표 서류를 지우면 남은 것 중 가장 최근 것이 대표가 돼요. */
+export function removeResume(id: string) {
+  const shelf = shelfStore.get()
+  const list = shelf.list.filter((resume) => resume.id !== id)
+  saveShelf({ list, primaryId: shelf.primaryId === id ? (list[0]?.id ?? null) : shelf.primaryId })
 }
 
 // ---------- 리포트 ----------
@@ -1175,7 +1207,7 @@ export function clearResume() {
 /** 리포트를 만들기 시작해요. 바로 pending 리포트를 돌려주고, 잠시 뒤에 done으로 바뀌어요. 서버의 POST /reports 202와 같은 흐름이에요. */
 export async function createReport(postingId: string): Promise<Report | null> {
   const posting = postingOf(postingId)
-  const resume = resumeStore.get()
+  const resume = getResume()
   if (!posting || !resume) return null
   await wait(200)
   const id = `r-${Date.now().toString(36)}`
@@ -1262,7 +1294,7 @@ export async function fetchReview(reportId: string, docType: DocType): Promise<D
   await wait(1600)
   const report = reportOf(reportId)
   const posting = report ? postingOf(report.postingId) : null
-  const resume = resumeStore.get()
+  const resume = getResume()
   if (!report || !posting || !resume) return null
   const company = companyOf(posting.companyId)
   const missing = report.gaps.filter((gap) => gap.kind === 'missing' && gap.requirement === 'required').map((gap) => gap.skill)
@@ -1318,7 +1350,7 @@ export async function fetchQuestions(reportId: string): Promise<InterviewQuestio
   await wait(1200)
   const report = reportOf(reportId)
   const posting = report ? postingOf(report.postingId) : null
-  const resume = resumeStore.get()
+  const resume = getResume()
   if (!report || !posting || !resume) return []
   const company = companyOf(posting.companyId)
   const random = seeded(reportId)

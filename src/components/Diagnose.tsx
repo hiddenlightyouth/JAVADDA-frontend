@@ -183,7 +183,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
               <div className="mt-6">
                 {!resume || replacing ? (
                   <>
-                    <ResumeUploader compact onDone={() => setReplacing(false)} />
+                    <ResumeUploader compact primary onDone={() => setReplacing(false)} />
                     {resume && (
                       <button type="button" onClick={() => setReplacing(false)} className="mt-3 w-full text-center text-[13px] text-gray-500 transition-colors hover:text-gray-900">
                         {L.keep}
