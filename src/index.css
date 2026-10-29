@@ -673,8 +673,8 @@ header[data-on-dark] :is(nav > a, nav > button, nav > div > button, header > div
   background-color: transparent;
 }
 
-header[data-on-dark] img[src='/logo.svg'] {
-  filter: invert(1);
+header[data-on-dark] .logo-mark {
+  fill: #fff;
 }
 
 @media (prefers-reduced-motion: reduce) {

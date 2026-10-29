@@ -1,3 +1,6 @@
+import { ScriptMark } from './LofyScript'
+
+/** 헤더 왼쪽의 로고예요. 사이드바와 같은 손글씨를 움직임 없이 그려요. */
 export function Logo({ onClick }: { onClick?: () => void }) {
   return (
     <a
@@ -9,7 +12,7 @@ export function Logo({ onClick }: { onClick?: () => void }) {
       }}
       className="inline-flex items-center"
     >
-      <img src="/logo.svg" alt="Lofy" width={1592} height={367} draggable={false} className="h-[14px] w-auto translate-y-px" />
+      <ScriptMark className="logo-mark h-6 w-auto" />
     </a>
   )
 }

@@ -26,7 +26,7 @@
 ## 브랜딩 규칙
 
 - 서비스명: 표기는 Lofy, 패키지명처럼 소문자가 필요한 곳은 lofy. 예전 이름은 WhoIsLoafing이었어요. API 서버 주소(api.whoisloafing.hidly.dev), Workers 이름, localStorage 키(`whoisloafing:`), 앱과 약속한 값(User-Agent의 `WhoIsLoafingApp`, `whoisloafing://` 주소, 웹뷰 메시지 이름 `whoisloafing`, 설치 파일 이름 `WhoIsLoafing.dmg`)은 바꾸면 저장된 값이 사라지거나 앱과 어긋나서 예전 이름 그대로 둬요. 화면에 보이는 이름만 Lofy예요.
-- 로고: 중절모 그림과 Lofy 글자를 하나로 묶은 그림 파일(`public/logo.svg`)이에요. 손글씨(`LofyScript`)는 Javadda라고 쓰고, 새 진단 화면, 소개 화면 맨 위, 앱 로그인 화면에 써요. 웹 앱 사이드바 맨 위의 로고도 같은 손글씨를 움직임 없이 그린 것(`ScriptMark`)이에요. 색은 짙은 회색(#2C2C2C) 한 가지예요. 파비콘과 미리보기 이미지는 따로 만든 파일이라 같이 고쳐야 해요.
+- 로고: 화면에 보이는 로고는 모두 Javadda라고 쓴 손글씨예요. 헤더(`Logo`), 앱 로그인 화면, 웹 앱 사이드바 맨 위는 움직임 없이 그린 것(`ScriptMark`)이고, 소개 화면 첫 화면에서는 흰색으로 써져요. 예전의 중절모와 Lofy 글자 그림(`public/logo.svg`)은 더 이상 화면에 쓰지 않아요. 손글씨(`LofyScript`)는 Javadda라고 쓰고, 새 진단 화면, 소개 화면 맨 위, 앱 로그인 화면에 써요. 웹 앱 사이드바 맨 위의 로고도 같은 손글씨를 움직임 없이 그린 것(`ScriptMark`)이에요. 색은 짙은 회색(#2C2C2C) 한 가지예요. 파비콘과 미리보기 이미지는 따로 만든 파일이라 같이 고쳐야 해요.
 - 본문 폰트: Pretendard. 전체 자간은 -0.02em
 - 메인 컬러: #2E90FA, hover는 #1570EF, 연한 배경은 #EFF8FF
   - 버튼, 링크, 입력창 포커스, 적합도 숫자와 막대, 레이더의 내 영역, 갖춘 역량 이름표, 강점 이름표 같은 강조 요소에만 써요.
@@ -60,14 +60,13 @@
 
 ```
 index.html            폰트 로드, 탭 제목, 파비콘, 링크 미리보기 태그
-public/logo.svg       로고 (중절모와 서비스명). 헤더에 그대로 쓰여요.
 public/favicon.svg    파비콘
 
 ## 프로젝트 구조
 
 ```
 index.html            폰트 로드, 탭 제목, 파비콘, 링크 미리보기 태그
-public/logo.svg       로고 (중절모와 서비스명). 헤더에 그대로 쓰여요.
+public/logo.svg       예전 로고 (중절모와 서비스명). 지금은 화면에 쓰지 않아요.
 public/favicon.svg    파비콘 (로고의 중절모만 따온 그림)
 public/og.png         링크 미리보기 카드에 뜨는 대표 이미지 (1200x630). 흰 바탕 한가운데에 손글씨 Lofy만 있어요.
 public/og-en.png      영어 주소의 미리보기 카드 이미지 (1200x630). 지금은 og.png와 같은 그림이에요.
