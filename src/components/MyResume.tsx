@@ -396,7 +396,6 @@ function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resum
               {resume.name}
             </h2>
             <p className="mt-1 text-[12.5px] text-gray-400">
-              {primary && <span className="font-medium text-brand">{L.primary}, </span>}
               {L.sources[resume.source]}, {L.uploadedAt(formatDateTime(resume.uploadedAt))}
             </p>
           </div>

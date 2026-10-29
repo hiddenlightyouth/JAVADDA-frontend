@@ -32,7 +32,6 @@ const TEXT = messages({
     resumeHint: '올려 둔 서류로 진단해요. 잘못 읽은 역량이 있으면 여기서 고쳐요.',
     pickHint: '진단할 서류를 골라요. 처음에는 대표 이력서가 골라져 있어요. 잘못 읽은 역량이 있으면 여기서 고쳐요.',
     pickLabel: '진단할 서류',
-    primary: '대표 이력서',
     uploadedAt: (when: string) => `${when}에 올림`,
     replace: '다른 서류 올리기',
     keep: '올리지 않고 돌아가기',
@@ -59,7 +58,6 @@ const TEXT = messages({
     resumeHint: "We'll use your uploaded document. Fix any skills we misread here.",
     pickHint: 'Choose the document to diagnose with. Your main resume is selected to start. Fix any skills we misread here.',
     pickLabel: 'Document to diagnose',
-    primary: 'Main resume',
     uploadedAt: (when: string) => `Uploaded ${when}`,
     replace: 'Upload a different document',
     keep: 'Go back without uploading',
@@ -225,7 +223,6 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
                               <span className="min-w-0 flex-1">
                                 <span className="block truncate text-[13.5px] font-semibold text-gray-900">{item.name}</span>
                                 <span className="block truncate text-[12px] text-gray-400">
-                                  {item.id === shelf.primaryId && <span className="font-medium text-brand">{L.primary}, </span>}
                                   {L.uploadedAt(formatDateTime(item.uploadedAt))}
                                 </span>
                               </span>
