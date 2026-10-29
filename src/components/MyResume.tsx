@@ -46,12 +46,10 @@ const TEXT = messages({
     replace: '다른 서류 올리기',
     addDoc: '서류 추가',
     addTitle: '서류 추가',
-    addBody: '이력서나 포트폴리오를 올리면 역량을 읽어 목록에 더해요.',
     emptyTitle: '아직 올린 이력서가 없어요',
     emptyBody: '이력서나 포트폴리오를 올려 두면 공고마다 얼마나 맞는지 보여줘요. 여러 개 올리고 하나를 대표로 정할 수 있어요.',
     count: (count: number) => `서류 ${count}개`,
     close: '닫기',
-    shelfHint: '별을 누른 서류가 대표 이력서예요. 적합도와 추천 공고, 진단은 대표 이력서로 해요.',
     primary: '대표 이력서',
     makePrimary: '대표 이력서로 정하기',
     primaryTip: '적합도와 추천, 진단에 이 서류를 써요',
@@ -63,7 +61,6 @@ const TEXT = messages({
     removePrimaryBody: '대표 이력서예요. 지우면 남은 서류 중 가장 최근에 올린 것이 대표가 돼요. 리포트는 그대로 남아요.',
     removed: '서류를 지웠어요.',
     evidence: '근거',
-    privacy: '서류는 이 기기와 내 계정에만 저장되고, 공고와 맞춰 보는 데만 써요.',
     browse: '이 이력서로 공고 보기',
     keep: '지금 서류 그대로 두기',
   },
@@ -94,12 +91,10 @@ const TEXT = messages({
     replace: 'Upload a different document',
     addDoc: 'Add document',
     addTitle: 'Add a document',
-    addBody: 'Upload a resume or portfolio and we will read its skills and add it to your list.',
     emptyTitle: 'No resumes yet',
     emptyBody: 'Upload a resume or portfolio to see how well you fit each posting. You can keep several and pick one as your main resume.',
     count: (count: number) => `${count} ${count === 1 ? 'document' : 'documents'}`,
     close: 'Close',
-    shelfHint: 'The starred document is your main resume. Fit scores, recommendations and diagnoses all use it.',
     primary: 'Main resume',
     makePrimary: 'Make main resume',
     primaryTip: 'Fit, recommendations and diagnoses use this document',
@@ -111,7 +106,6 @@ const TEXT = messages({
     removePrimaryBody: 'This is your main resume. Once deleted, your most recent other document becomes the main one. Reports stay.',
     removed: 'Document deleted.',
     evidence: 'Evidence',
-    privacy: 'Your document stays on this device and in your account, and is only used to compare against postings.',
     browse: 'Browse jobs with this resume',
     keep: 'Keep the current document',
   },
@@ -331,16 +325,14 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
         }
       />
       <div className={canvas}>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-6 md:px-10">
+        {/* 공고 탐색처럼 제목 줄과 같은 폭으로 늘어놓고, 칸 수는 목록 폭을 보고 정해요. */}
+        <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
           {shelf.list.length === 0 ? (
             <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={() => setAdding(true)} className="mt-24" />
           ) : (
-            <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-4">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <p className="text-[13px] text-gray-500">{L.shelfHint}</p>
-                <p className="text-[12.5px] text-gray-400 tabular-nums">{L.count(shelf.list.length)}</p>
-              </div>
-              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <>
+              <p className="mb-4 text-[13px] text-gray-500 tabular-nums">{L.count(shelf.list.length)}</p>
+              <ul className="grid gap-4 @2xl:grid-cols-2 @5xl:grid-cols-3">
                 {shelf.list.map((resume) => (
                   <ResumeCard
                     key={resume.id}
@@ -352,8 +344,7 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
                   />
                 ))}
               </ul>
-              <p className="mt-4 text-center text-[12px] text-gray-400">{L.privacy}</p>
-            </div>
+            </>
           )}
         </div>
       </div>
@@ -368,12 +359,11 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
       )}
       {adding && (
         <Modal onClose={() => setAdding(false)} labelledBy="resume-add-title" className="w-full max-w-2xl p-6">
-          <div className="mb-5 flex items-start justify-between gap-4">
+          <div className="mb-5 flex items-center justify-between gap-4">
             <div>
               <h2 id="resume-add-title" className="text-[17px] font-semibold text-gray-900">
                 {L.addTitle}
               </h2>
-              <p className="mt-1 text-[13px] text-gray-500">{L.addBody}</p>
             </div>
             <CloseButton label={L.close} size="md" onClick={() => setAdding(false)} />
           </div>
