@@ -696,7 +696,7 @@ header[data-on-dark] .logo-mark {
 }
 
 /*
- * 손글씨 Lofy(LofyScript)예요. 메인 컬러 획이 이글거리며 한 글자씩 써지고, 다 쓰면 속이 짙은 회색으로 채워지면서 획은 사라져요.
+ * 손글씨 Javadda(LofyScript)예요. 메인 컬러 획이 이글거리며 한 글자씩 써지고, 다 쓰면 속이 짙은 회색으로 채워지면서 획은 사라져요.
  * 그 뒤로는 글자를 다시 쓰지 않고, 테두리를 따라 짧은 메인 컬러 빛만 천천히 돌아요. 그라데이션이나 그림자는 쓰지 않아요.
  */
 .lofy-script .lofy-fill path {
@@ -770,7 +770,7 @@ header[data-on-dark] .logo-mark {
     animation-duration: 0.01ms !important;
   }
 
-  /* 손글씨 Lofy는 다 쓴 모습으로 멈춰 있고, 테두리를 도는 빛은 띄우지 않아요. */
+  /* 손글씨 Javadda는 다 쓴 모습으로 멈춰 있고, 테두리를 도는 빛은 띄우지 않아요. */
   .lofy-script .lofy-fill path {
     animation: none;
     opacity: 1;

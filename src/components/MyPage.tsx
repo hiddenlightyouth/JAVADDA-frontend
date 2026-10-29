@@ -75,7 +75,7 @@ const TEXT = messages({
     unknownAddress: 'Unknown address',
     working: 'Working',
     more: 'Show more',
-    withdrawn: 'Your account has been deleted. Thanks for using Lofy.',
+    withdrawn: 'Your account has been deleted. Thanks for using Javadda.',
     title: 'Account',
     account: 'Profile',
     name: 'Name',

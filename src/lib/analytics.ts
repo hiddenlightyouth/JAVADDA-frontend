@@ -38,22 +38,22 @@ export function track(event: string, params: Params = {}): void {
 }
 
 const PAGE_TITLES = {
-  home: 'Lofy',
-  articles: 'Lofy 아티클',
-  article: 'Lofy 아티클',
-  login: 'Lofy 로그인',
-  signup: 'Lofy 회원가입',
-  me: 'Lofy 내 정보',
-  history: 'Lofy 내 리포트',
-  'app-login': 'Lofy 앱 로그인',
-  explore: 'Lofy 공고 탐색',
-  recommend: 'Lofy 추천 공고',
-  resume: 'Lofy 내 이력서',
-  diagnose: 'Lofy 진단 시작',
-  report: 'Lofy 리포트',
-  practice: 'Lofy 면접 연습',
-  admin: 'Lofy 관리자',
-  about: 'Lofy 소개',
+  home: 'Javadda',
+  articles: 'Javadda 아티클',
+  article: 'Javadda 아티클',
+  login: 'Javadda 로그인',
+  signup: 'Javadda 회원가입',
+  me: 'Javadda 내 정보',
+  history: 'Javadda 내 리포트',
+  'app-login': 'Javadda 앱 로그인',
+  explore: 'Javadda 공고 탐색',
+  recommend: 'Javadda 추천 공고',
+  resume: 'Javadda 내 이력서',
+  diagnose: 'Javadda 진단 시작',
+  report: 'Javadda 리포트',
+  practice: 'Javadda 면접 연습',
+  admin: 'Javadda 관리자',
+  about: 'Javadda 소개',
 }
 
 type Screen = keyof typeof PAGE_TITLES
