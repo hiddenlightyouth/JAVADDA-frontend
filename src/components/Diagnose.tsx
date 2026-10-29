@@ -194,7 +194,6 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
                 {!resume || replacing ? (
                   <>
                     <ResumeUploader
-                      compact
                       onDone={(next) => {
                         setReplacing(false)
                         setPickedId(next.id)

@@ -1,14 +1,16 @@
 import { useRef, useState, type DragEvent, type FormEvent } from 'react'
+import { createPortal } from 'react-dom'
+import { useDismiss } from '../hooks/useDismiss'
 import { track } from '../lib/analytics'
 import { canonical, removeResume, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type Resume, type ResumeSkill } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { showToast } from '../lib/toast'
 import { canvas, pageFrame, PageHeader } from './AppPage'
-import { ConfirmDialog, primaryButton } from './Dialog'
+import { ConfirmDialog, Modal, primaryButton } from './Dialog'
 import { toolButton } from './DeepParts'
-import { Panel, SkillChip, Tip } from './GapParts'
-import { PlusIcon, StarIcon, TrashIcon } from './Icons'
+import { Notice, SkillChip, Tip } from './GapParts'
+import { CloseButton, PlusIcon, StarIcon, TrashIcon } from './Icons'
 import { Bone } from './Skeleton'
 
 /**
@@ -19,8 +21,6 @@ import { Bone } from './Skeleton'
 const TEXT = messages({
   ko: {
     title: '내 이력서',
-    intro: '이력서를 올려 주세요',
-    introBody: '서류에서 역량을 읽어 두면, 공고마다 얼마나 맞는지 바로 보여줘요. 두 가지 방법 중 편한 쪽으로 올려요.',
     fileTitle: 'PDF 파일',
     fileBody: '이력서나 포트폴리오 PDF를 여기로 끌어다 놓거나 눌러서 골라요.',
     fileDrop: '여기에 놓으면 바로 읽어요',
@@ -30,7 +30,6 @@ const TEXT = messages({
     linkPlaceholder: 'https://github.com/...',
     linkLabel: 'GitHub나 노션 링크',
     linkSubmit: '링크로 올리기',
-    steps: ['서류를 올려요', '읽은 역량을 확인해요', '공고와 맞춰 봐요'],
     invalidLink: '올바른 링크가 맞는지 확인해 주세요',
     onlyPdf: 'PDF 파일만 올릴 수 있어요.',
     reading: '서류를 읽고 있어요. 역량을 뽑는 데 몇 초 걸려요.',
@@ -45,8 +44,13 @@ const TEXT = messages({
     paragraphs: '읽은 문단',
     paragraphsHint: '서류 검증과 예상 질문에 이 문단을 써요.',
     replace: '다른 서류 올리기',
-    addDoc: '서류 올리기',
-    cancel: '올리지 않고 돌아가기',
+    addDoc: '서류 추가',
+    addTitle: '서류 추가',
+    addBody: '이력서나 포트폴리오를 올리면 역량을 읽어 목록에 더해요.',
+    emptyTitle: '아직 올린 이력서가 없어요',
+    emptyBody: '이력서나 포트폴리오를 올려 두면 공고마다 얼마나 맞는지 보여줘요. 여러 개 올리고 하나를 대표로 정할 수 있어요.',
+    count: (count: number) => `서류 ${count}개`,
+    close: '닫기',
     shelfHint: '별을 누른 서류가 대표 이력서예요. 적합도와 추천 공고, 진단은 대표 이력서로 해요.',
     primary: '대표 이력서',
     makePrimary: '대표 이력서로 정하기',
@@ -65,8 +69,6 @@ const TEXT = messages({
   },
   en: {
     title: 'My resume',
-    intro: 'Upload your resume',
-    introBody: 'Once we read the skills in your document, every posting shows how well you fit. Pick whichever way is easier.',
     fileTitle: 'PDF file',
     fileBody: 'Drop your resume or portfolio PDF here, or click to choose one.',
     fileDrop: 'Drop it here and we will read it',
@@ -76,7 +78,6 @@ const TEXT = messages({
     linkPlaceholder: 'https://github.com/...',
     linkLabel: 'GitHub or Notion link',
     linkSubmit: 'Use link',
-    steps: ['Upload a document', 'Check the skills we read', 'Compare with postings'],
     invalidLink: 'Please check that the link is correct',
     onlyPdf: 'Only PDF files are supported.',
     reading: 'Reading your document. Extracting skills takes a few seconds.',
@@ -91,8 +92,13 @@ const TEXT = messages({
     paragraphs: 'Paragraphs we read',
     paragraphsHint: 'The document check and likely questions use these paragraphs.',
     replace: 'Upload a different document',
-    addDoc: 'Upload a document',
-    cancel: 'Go back without uploading',
+    addDoc: 'Add document',
+    addTitle: 'Add a document',
+    addBody: 'Upload a resume or portfolio and we will read its skills and add it to your list.',
+    emptyTitle: 'No resumes yet',
+    emptyBody: 'Upload a resume or portfolio to see how well you fit each posting. You can keep several and pick one as your main resume.',
+    count: (count: number) => `${count} ${count === 1 ? 'document' : 'documents'}`,
+    close: 'Close',
     shelfHint: 'The starred document is your main resume. Fit scores, recommendations and diagnoses all use it.',
     primary: 'Main resume',
     makePrimary: 'Make main resume',
@@ -114,7 +120,7 @@ const TEXT = messages({
 const LINK = /^https?:\/\/(?:www\.)?(?:github\.com|notion\.so|[\w-]+\.notion\.site)\/\S+/i
 
 /** 서류를 올리는 칸이에요. PDF 끌어다 놓기와 링크 두 가지를 받아요. 올리면 onDone으로 알려줘요. */
-export function ResumeUploader({ onDone, compact = false }: { onDone?: (resume: Resume) => void; compact?: boolean }) {
+export function ResumeUploader({ onDone }: { onDone?: (resume: Resume) => void }) {
   const L = useMessages(TEXT)
   const [working, setWorking] = useState(false)
   const [over, setOver] = useState(false)
@@ -158,7 +164,7 @@ export function ResumeUploader({ onDone, compact = false }: { onDone?: (resume: 
 
   if (working) {
     return (
-      <div className={`rounded-2xl bg-gray-50 ${compact ? 'p-6' : 'p-8'}`} aria-busy="true">
+      <div className="rounded-2xl bg-gray-50 p-6" aria-busy="true">
         <p className="text-[13.5px] text-gray-500">{L.reading}</p>
         <div className="mt-5 flex flex-wrap gap-2" aria-hidden>
           {['w-20', 'w-28', 'w-16', 'w-24', 'w-20', 'w-32', 'w-16'].map((width, index) => (
@@ -181,18 +187,12 @@ export function ResumeUploader({ onDone, compact = false }: { onDone?: (resume: 
       }}
       onDrop={drop}
     >
-      {!compact && (
-        <div className="mb-6">
-          <h2 className="text-[18px] font-semibold text-gray-900">{L.intro}</h2>
-          <p className="mt-1.5 text-[13.5px] leading-relaxed text-gray-500">{L.introBody}</p>
-        </div>
-      )}
       <div className="grid gap-3 sm:grid-cols-2">
         <input ref={fileRef} type="file" accept="application/pdf,.pdf" hidden onChange={(event) => takeFile(event.target.files?.[0])} />
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className={`group flex flex-col items-start rounded-2xl border-2 border-dashed text-left transition-colors ${compact ? 'min-h-48 p-[22px]' : 'min-h-60 p-[30px]'} ${
+          className={`group flex flex-col items-start rounded-2xl border-2 border-dashed text-left transition-colors min-h-48 p-[22px] ${
             over ? 'border-brand bg-brand-soft' : 'border-transparent bg-gray-50 hover:bg-gray-100'
           }`}
         >
@@ -208,7 +208,7 @@ export function ResumeUploader({ onDone, compact = false }: { onDone?: (resume: 
           </span>
         </button>
 
-        <form onSubmit={submitLink} noValidate className={`flex flex-col rounded-2xl bg-gray-50 ${compact ? 'min-h-48 p-6' : 'min-h-60 p-8'}`}>
+        <form onSubmit={submitLink} noValidate className={`flex flex-col rounded-2xl bg-gray-50 min-h-48 p-6`}>
           <span className="flex size-12 items-center justify-center rounded-full bg-white text-gray-500">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-6" aria-hidden="true">
               <path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1" />
@@ -237,16 +237,6 @@ export function ResumeUploader({ onDone, compact = false }: { onDone?: (resume: 
           </div>
         </form>
       </div>
-      {!compact && (
-        <ol className="mt-6 grid grid-cols-3 gap-3">
-          {L.steps.map((step, index) => (
-            <li key={step} className="flex items-center gap-2 text-[12.5px] text-gray-500">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[11px] font-semibold text-gray-600 tabular-nums">{index + 1}</span>
-              {step}
-            </li>
-          ))}
-        </ol>
-      )}
     </div>
   )
 }
@@ -319,11 +309,8 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
   const L = useMessages(TEXT)
   const shelf = useResumeShelf()
   const [adding, setAdding] = useState(false)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [removing, setRemoving] = useState<Resume | null>(null)
-  // 고른 서류가 없거나 지워졌으면 대표 서류를 보여줘요.
-  const selected = shelf.list.find((resume) => resume.id === selectedId) ?? shelf.list.find((resume) => resume.id === shelf.primaryId) ?? shelf.list[0] ?? null
-  const empty = shelf.list.length === 0
+  const [openId, setOpenId] = useState<string | null>(null)
+  const open = shelf.list.find((resume) => resume.id === openId) ?? null
 
   function makePrimary(resume: Resume) {
     if (resume.id === shelf.primaryId) return
@@ -337,108 +324,148 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
       <PageHeader
         title={L.title}
         actions={
-          !empty && !adding ? (
-            <button type="button" onClick={() => setAdding(true)} className={toolButton}>
-              <PlusIcon className="size-3.5" />
-              {L.addDoc}
-            </button>
-          ) : undefined
+          <button type="button" onClick={() => setAdding(true)} className={`${primaryButton} flex items-center gap-1.5`}>
+            <PlusIcon className="size-3.5" />
+            {L.addDoc}
+          </button>
         }
       />
       <div className={canvas}>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-6 md:px-10">
-          <div className="mx-auto flex w-full max-w-[880px] flex-col gap-4">
-            {empty || adding ? (
-              <>
-                <ResumeUploader
-                  onDone={(resume) => {
-                    setAdding(false)
-                    setSelectedId(resume.id)
-                  }}
-                />
-                {!empty && (
-                  <button type="button" onClick={() => setAdding(false)} className="self-center text-[13px] text-gray-500 transition-colors hover:text-gray-900">
-                    {L.cancel}
-                  </button>
-                )}
-              </>
-            ) : (
-              <>
+          {shelf.list.length === 0 ? (
+            <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={() => setAdding(true)} className="mt-24" />
+          ) : (
+            <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <p className="text-[13px] text-gray-500">{L.shelfHint}</p>
-                <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {shelf.list.map((resume) => (
-                    <ResumeCard
-                      key={resume.id}
-                      resume={resume}
-                      primary={resume.id === shelf.primaryId}
-                      selected={resume.id === selected?.id}
-                      onSelect={() => setSelectedId(resume.id)}
-                      onPrimary={() => makePrimary(resume)}
-                    />
-                  ))}
-                </ul>
-                {selected && (
-                  <>
-                    <Panel>
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[15px] font-semibold text-gray-900">{selected.name}</p>
-                          <p className="mt-0.5 text-[12.5px] text-gray-400">
-                            {L.sources[selected.source]}, {L.uploadedAt(formatDateTime(selected.uploadedAt))}
-                          </p>
-                        </div>
-                        <button type="button" onClick={() => setRemoving(selected)} className={`${toolButton} text-red-500! hover:border-red-200!`}>
-                          <TrashIcon className="size-4" />
-                          {L.remove}
-                        </button>
-                        {selected.id === shelf.primaryId ? (
-                          <button type="button" onClick={onExplore} className={primaryButton}>
-                            {L.browse}
-                          </button>
-                        ) : (
-                          <button type="button" onClick={() => makePrimary(selected)} className={primaryButton}>
-                            {L.makePrimary}
-                          </button>
-                        )}
-                      </div>
-                    </Panel>
-                    <Panel title={L.skills}>
-                      <SkillEditor resume={selected} />
-                    </Panel>
-                    <Panel title={L.paragraphs} action={<span className="text-[12px] text-gray-400">{L.paragraphsHint}</span>}>
-                      <ol className="space-y-3">
-                        {selected.paragraphs.map((paragraph, index) => (
-                          <li key={index} className="flex gap-3 text-[13.5px] leading-relaxed text-gray-700">
-                            <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-gray-600 tabular-nums">{index + 1}</span>
-                            {paragraph}
-                          </li>
-                        ))}
-                      </ol>
-                    </Panel>
-                  </>
-                )}
-              </>
-            )}
-            <p className="text-center text-[12px] text-gray-400">{L.privacy}</p>
-          </div>
+                <p className="text-[12.5px] text-gray-400 tabular-nums">{L.count(shelf.list.length)}</p>
+              </div>
+              <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {shelf.list.map((resume) => (
+                  <ResumeCard
+                    key={resume.id}
+                    resume={resume}
+                    primary={resume.id === shelf.primaryId}
+                    selected={resume.id === openId}
+                    onSelect={() => setOpenId(resume.id)}
+                    onPrimary={() => makePrimary(resume)}
+                  />
+                ))}
+              </ul>
+              <p className="mt-4 text-center text-[12px] text-gray-400">{L.privacy}</p>
+            </div>
+          )}
         </div>
       </div>
+      {open && (
+        <ResumeSheet
+          resume={open}
+          primary={open.id === shelf.primaryId}
+          onPrimary={() => makePrimary(open)}
+          onExplore={onExplore}
+          onClose={() => setOpenId(null)}
+        />
+      )}
+      {adding && (
+        <Modal onClose={() => setAdding(false)} labelledBy="resume-add-title" className="w-full max-w-2xl p-6">
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <div>
+              <h2 id="resume-add-title" className="text-[17px] font-semibold text-gray-900">
+                {L.addTitle}
+              </h2>
+              <p className="mt-1 text-[13px] text-gray-500">{L.addBody}</p>
+            </div>
+            <CloseButton label={L.close} size="md" onClick={() => setAdding(false)} />
+          </div>
+          <ResumeUploader
+            onDone={(resume) => {
+              setAdding(false)
+              setOpenId(resume.id)
+            }}
+          />
+        </Modal>
+      )}
+    </main>
+  )
+}
+
+/** 서류 하나를 오른쪽에서 열어 보는 칸이에요. 역량을 고치고 읽은 문단을 보고, 대표로 정하거나 지워요. 갭 상세 칸과 같은 모양이에요. */
+function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resume: Resume; primary: boolean; onPrimary: () => void; onExplore: () => void; onClose: () => void }) {
+  const L = useMessages(TEXT)
+  const ref = useRef<HTMLElement>(null)
+  const [removing, setRemoving] = useState(false)
+  // 지울지 묻는 창이 떠 있는 동안에는 그 창이 먼저라 칸을 닫지 않아요.
+  useDismiss(!removing, ref, onClose)
+
+  return createPortal(
+    <>
+      <aside ref={ref} role="dialog" aria-labelledby="resume-sheet-title" className="fixed inset-y-0 right-0 z-30 flex w-full max-w-[480px] animate-slide-in flex-col border-l border-gray-200 bg-white">
+        <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-4">
+          <div className="min-w-0">
+            <h2 id="resume-sheet-title" className="truncate text-[19px] font-semibold text-gray-900">
+              {resume.name}
+            </h2>
+            <p className="mt-1 text-[12.5px] text-gray-400">
+              {primary && <span className="font-medium text-brand">{L.primary}, </span>}
+              {L.sources[resume.source]}, {L.uploadedAt(formatDateTime(resume.uploadedAt))}
+            </p>
+          </div>
+          <CloseButton label={L.close} size="md" onClick={onClose} />
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
+          <section>
+            <h3 className="text-[13.5px] font-semibold text-gray-900">{L.skills}</h3>
+            <div className="mt-3">
+              <SkillEditor resume={resume} />
+            </div>
+          </section>
+          <section className="mt-8">
+            <h3 className="text-[13.5px] font-semibold text-gray-900">{L.paragraphs}</h3>
+            <p className="mt-1 text-[12px] text-gray-400">{L.paragraphsHint}</p>
+            <ol className="mt-3 space-y-3">
+              {resume.paragraphs.map((paragraph, index) => (
+                <li key={index} className="flex gap-3 text-[13.5px] leading-relaxed text-gray-700">
+                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[11px] font-semibold text-gray-600 tabular-nums">{index + 1}</span>
+                  {paragraph}
+                </li>
+              ))}
+            </ol>
+          </section>
+        </div>
+        <div className="flex items-center gap-2 border-t border-gray-200 px-6 py-4">
+          <button type="button" onClick={() => setRemoving(true)} className={`${toolButton} text-red-500! hover:border-red-200!`}>
+            <TrashIcon className="size-4" />
+            {L.remove}
+          </button>
+          <span className="flex-1" />
+          {primary ? (
+            <button type="button" onClick={onExplore} className={primaryButton}>
+              {L.browse}
+            </button>
+          ) : (
+            <button type="button" onClick={onPrimary} className={primaryButton}>
+              {L.makePrimary}
+            </button>
+          )}
+        </div>
+      </aside>
       {removing && (
         <ConfirmDialog
           title={L.removeTitle}
-          body={removing.id === shelf.primaryId ? L.removePrimaryBody : L.removeBody}
+          body={primary ? L.removePrimaryBody : L.removeBody}
           confirm={L.remove}
           danger
-          onCancel={() => setRemoving(null)}
+          onCancel={() => setRemoving(false)}
           onConfirm={() => {
-            removeResume(removing.id)
+            removeResume(resume.id)
             track('resume_delete')
-            setRemoving(null)
             showToast(pick(TEXT).removed)
+            onClose()
           }}
         />
       )}
-    </main>
+    </>,
+    document.body,
   )
 }
 
