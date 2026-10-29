@@ -108,7 +108,6 @@ export default function App() {
   useShortcuts(
     {
       KeyN: goHome,
-      KeyA: appShell ? undefined : () => go('articles'),
       Slash: () => document.querySelector<HTMLInputElement>('input[data-search-input]')?.focus(),
       KeyT: appShell ? openExplore : undefined,
       KeyR: appShell ? openRecommend : undefined,
@@ -148,10 +147,6 @@ export default function App() {
               }
             : undefined
         }
-        onArticles={() => {
-          track('article_nav_click', { from: navFrom })
-          go('articles')
-        }}
         signedIn={tokens !== null}
         // 계정 화면은 웹의 /app 안에 있어요. 소개와 아티클 화면에서는 시작하기 버튼이 대신해요.
         onAccount={appShell ? (next) => go(next) : undefined}
