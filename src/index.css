@@ -467,33 +467,231 @@
 }
 
 /*
-  소개 화면의 스크롤 등장 효과예요. 화면이 준비되면(data-armed) 아직 보이지 않는 기능(data-reveal)을 숨겨 두고,
-  스크롤해서 화면에 들어오면(data-shown) 흐릿한 채로 아래에서 떠오르며 또렷해져요. 한 번 나타나면 그대로 있어요.
+  소개 화면의 스크롤 등장 효과예요. 화면이 준비되면(data-armed) 아직 보이지 않는 덩어리(data-reveal)를 숨겨 두고,
+  스크롤해서 화면에 들어오면(data-shown) 아래에서 천천히 떠올라요. 같은 때 들어온 것끼리는 --d만큼 늦게 떠올라요. 한 번 나타나면 그대로 있어요.
   자바스크립트가 뜨기 전에는 숨기지 않아서, 미리 그려 둔 화면은 그대로 읽을 수 있어요.
 */
-[data-armed] [data-reveal]:not([data-shown]) {
-  opacity: 0;
-  transform: translateY(32px);
-  filter: blur(8px);
+[data-armed] [data-reveal] {
+  transition:
+    opacity 1.4s,
+    transform 1.6s cubic-bezier(0.33, 1, 0.68, 1);
+  transition-delay: calc(var(--d, 0) * 0.18s);
 }
 
-[data-armed] [data-reveal][data-shown] {
+[data-armed] [data-reveal]:not([data-shown]) {
+  opacity: 0;
+  transform: translateY(40px);
+}
+
+/*
+  소개 화면 맨 위의 검은 첫 화면이에요(About의 Hero). data-phase가 idle, intro, sweep, final 순서로 바뀌어요.
+  모서리 네 곳만 그린 틀은 테두리 전체에 모서리만 남기는 마스크를 씌워 만들어요. 바깥에서 안으로 조여들며 나타나요.
+*/
+.kv::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(#00000047, #0000 30% 70%, #00000047);
+}
+
+.kv-frame::before {
+  --arm: 36px;
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border: 2px solid #ffffff59;
+  mask:
+    linear-gradient(#000 0 0) top left / var(--arm) var(--arm) no-repeat,
+    linear-gradient(#000 0 0) top right / var(--arm) var(--arm) no-repeat,
+    linear-gradient(#000 0 0) bottom left / var(--arm) var(--arm) no-repeat,
+    linear-gradient(#000 0 0) bottom right / var(--arm) var(--arm) no-repeat;
   transition:
-    opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.9s cubic-bezier(0.16, 1, 0.3, 1),
-    filter 0.9s cubic-bezier(0.16, 1, 0.3, 1);
-  transition-delay: var(--reveal-delay, 0ms);
+    opacity 0.8s,
+    transform 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.kv[data-phase='idle'] .kv-frame::before {
+  opacity: 0;
+  transform: scale(1.08);
+}
+
+.kv-intro p {
+  transition:
+    opacity 1.5s,
+    transform 1.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.kv-intro p + p {
+  transition-delay: 0.3s;
+}
+
+.kv[data-phase='idle'] .kv-intro p {
+  opacity: 0;
+  transform: translateY(48px);
+}
+
+.kv[data-phase='final'] .kv-intro {
+  visibility: hidden;
+}
+
+/* 빛줄기가 지나가기 전에는 로고 쪽이 가려져 있어요. 지나가는 동안에는 줄의 위치에 맞춰 스크립트가 가림을 걷어요. */
+.kv[data-phase='idle'] .kv-final,
+.kv[data-phase='intro'] .kv-final {
+  clip-path: inset(100% 0 0 0);
+}
+
+.kv-final .lofy-script .lofy-fill path {
+  fill: #fff;
+}
+
+/* 굴러가는 낱말. 위로 한 칸씩 올라가고, 감싼 칸의 폭도 낱말에 맞춰 바뀌어요. */
+.kv-roll {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  height: 1.38em;
+  vertical-align: bottom;
+  font-style: normal;
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.kv-roll > em {
+  display: block;
+  height: 1.38em;
+  width: max-content;
+  white-space: nowrap;
+  font-style: normal;
+  color: var(--color-brand);
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.kv-roll.jump > em {
+  transition: none;
+}
+
+/* 아래에서 위로 지나가는 빛줄기. 가운데가 가장 밝은 2px 줄 아래로 잔광이 끌리고, 위로 옅은 빛이 번져요. */
+.kv-sweep {
+  position: absolute;
+  top: -1px;
+  left: 40px;
+  right: 40px;
+  height: 2px;
+  z-index: 3;
+  opacity: 0;
+  mix-blend-mode: plus-lighter;
+  will-change: transform, opacity;
+  background: linear-gradient(90deg, #ffffff14, #ffffff8c 18%, #fff 38% 62%, #ffffff8c 82%, #ffffff14);
+}
+
+.kv-sweep::before,
+.kv-sweep::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  mask-image: linear-gradient(90deg, #0000000d, #00000080 18%, #000 38% 62%, #00000080 82%, #0000000d);
+}
+
+.kv-sweep::before {
+  top: 2px;
+  height: var(--tail, clamp(60px, 10vh, 110px));
+  background: linear-gradient(#d1e9ffbf, #d1e9ff4d 12%, #d1e9ff1a 45%, #d1e9ff00);
+}
+
+.kv-sweep::after {
+  bottom: 2px;
+  height: 18px;
+  background: linear-gradient(#d1e9ff00, #d1e9ff99);
+}
+
+@media (max-width: 767px) {
+  .kv-frame::before {
+    --arm: 32px;
+  }
+}
+
+/* 자주 묻는 질문. 답은 높이가 0에서 제 높이로 부드럽게 늘어나고, 더하기의 세로 막대가 돌아 빼기가 돼요. */
+.faq-answer {
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.faq-answer > p {
+  opacity: 0;
+  transform: translateY(-8px);
+  transition:
+    opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.faq-item[data-open] .faq-answer {
+  grid-template-rows: 1fr;
+}
+
+.faq-item[data-open] .faq-answer > p {
+  opacity: 1;
+  transform: none;
+}
+
+.faq-icon::before,
+.faq-icon::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 14px;
+  height: 1.5px;
+  margin-top: -0.75px;
+  background: var(--color-gray-900);
+  transition: transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.faq-icon::after {
+  transform: rotate(90deg);
+}
+
+.faq-item[data-open] .faq-icon::after {
+  transform: rotate(0deg);
+}
+
+/* 첫 화면이 헤더 뒤에 깔려 있으면 헤더가 투명해지고 글자와 로고가 흰색이 돼요. */
+header[data-on-dark] {
+  background-color: transparent;
+  backdrop-filter: none;
+}
+
+header[data-on-dark] :is(nav > a, nav > button, nav > div > button, header > div > button) {
+  color: rgb(255 255 255 / 0.6);
+}
+
+header[data-on-dark] :is(nav > a, nav > button, nav > div > button, header > div > button):hover {
+  color: #fff;
+  background-color: transparent;
+}
+
+header[data-on-dark] img[src='/logo.svg'] {
+  filter: invert(1);
 }
 
 @media (prefers-reduced-motion: reduce) {
+  [data-armed] [data-reveal],
+  .kv-frame::before,
+  .kv-intro p,
+  .kv-roll,
+  .kv-roll > em,
+  .faq-answer,
+  .faq-answer > p,
+  .faq-icon::after {
+    transition: none;
+  }
+
   [data-armed] [data-reveal]:not([data-shown]) {
     opacity: 1;
     transform: none;
-    filter: none;
-  }
-
-  [data-armed] [data-reveal][data-shown] {
-    transition: none;
   }
 }
 

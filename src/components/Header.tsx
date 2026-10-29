@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { useDismiss } from '../hooks/useDismiss'
 import { track } from '../lib/analytics'
 import { MAC_DOWNLOAD, MAC_DOWNLOAD_OPEN, MAC_SUPPORT } from '../lib/app'
+import { heroDark } from '../lib/hero'
 import { LANG_NAMES, localizePath, messages, pick, setLang, useLang, useMessages } from '../lib/i18n'
+import { useStore } from '../lib/store'
 import type { AccountPage } from './Account'
 import { Logo } from './Logo'
 
@@ -92,6 +94,8 @@ export function Header({
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileDownloadOpen, setMobileDownloadOpen] = useState(false)
   const downloadRef = useRef<HTMLDivElement>(null)
+  // 소개 화면의 검은 첫 화면 위에서는 투명한 헤더에 흰 글자예요. 모바일 메뉴를 열면 흰 헤더로 돌아와요.
+  const onDark = useStore(heroDark) && !app && !menuOpen
 
   // 드롭다운이 열려 있을 때 바깥을 누르거나 Esc를 누르면 닫아요.
   useDismiss(downloadOpen, downloadRef, () => setDownloadOpen(false))
@@ -143,7 +147,8 @@ export function Header({
     <>
       <header
         data-app-drag={app || undefined}
-        className={`absolute inset-x-0 top-0 z-20 flex ${app ? 'h-14 md:h-9' : 'h-14'} items-center justify-between bg-white/70 px-4 backdrop-blur-md sm:px-6`}
+        data-on-dark={onDark || undefined}
+        className={`absolute inset-x-0 top-0 z-20 flex ${app ? 'h-14 md:h-9' : 'h-14'} items-center justify-between bg-white/70 px-4 backdrop-blur-md transition-colors duration-250 sm:px-6`}
       >
         {app ? (
           <span />
