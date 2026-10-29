@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { track } from '../lib/analytics'
-import { careerName, companyOf, createReport, daysLeft, familyName, fitOf, postingOf, useResume } from '../lib/gap'
+import { careerName, companyOf, createReport, daysLeft, familyName, fitOf, postingOf, useResume, useResumeShelf } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
 import { pageFrame, PageHeader, StepLayout, Steps, StepTitle } from './AppPage'
@@ -30,9 +30,12 @@ const TEXT = messages({
     openPosting: '원문 보기',
     resumeTitle: '이력서 업로드',
     resumeHint: '올려 둔 서류로 진단해요. 잘못 읽은 역량이 있으면 여기서 고쳐요.',
+    pickHint: '진단할 서류를 골라요. 처음에는 대표 이력서가 골라져 있어요. 잘못 읽은 역량이 있으면 여기서 고쳐요.',
+    pickLabel: '진단할 서류',
+    primary: '대표 이력서',
     uploadedAt: (when: string) => `${when}에 올림`,
     replace: '다른 서류 올리기',
-    keep: '지금 서류 그대로 두기',
+    keep: '올리지 않고 돌아가기',
     next: '다음',
     prev: '이전',
     start: '진단 시작',
@@ -54,9 +57,12 @@ const TEXT = messages({
     openPosting: 'Open original',
     resumeTitle: 'Upload your resume',
     resumeHint: "We'll use your uploaded document. Fix any skills we misread here.",
+    pickHint: 'Choose the document to diagnose with. Your main resume is selected to start. Fix any skills we misread here.',
+    pickLabel: 'Document to diagnose',
+    primary: 'Main resume',
     uploadedAt: (when: string) => `Uploaded ${when}`,
     replace: 'Upload a different document',
-    keep: 'Keep the current document',
+    keep: 'Go back without uploading',
     next: 'Next',
     prev: 'Back',
     start: 'Start diagnosis',
@@ -79,7 +85,11 @@ interface Props {
 export function Diagnose({ postingId, onBack, onReport }: Props) {
   const L = useMessages(TEXT)
   const posting = postingOf(postingId)
-  const resume = useResume()
+  const shelf = useResumeShelf()
+  const primary = useResume()
+  /** 이번 진단에 쓸 서류. 고르지 않았거나 지워졌으면 대표 이력서예요. 대표 이력서는 바꾸지 않아요. */
+  const [pickedId, setPickedId] = useState<string | null>(null)
+  const resume = shelf.list.find((item) => item.id === pickedId) ?? primary
   const [step, setStep] = useState<Step>('posting')
   const [replacing, setReplacing] = useState(false)
   const [starting, setStarting] = useState(false)
@@ -105,8 +115,8 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
   async function start() {
     if (!resume || starting) return
     setStarting(true)
-    track('diagnose_start', { posting: posting!.id, skills: resume.skills.length })
-    const report = await createReport(posting!.id)
+    track('diagnose_start', { posting: posting!.id, skills: resume.skills.length, primary: resume.id === shelf.primaryId })
+    const report = await createReport(posting!.id, resume.id)
     setStarting(false)
     if (report) onReport(report.id)
   }
@@ -179,11 +189,17 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
             </div>
           ) : (
             <div className="animate-rise">
-              <StepTitle title={L.resumeTitle} hint={resume ? L.resumeHint : undefined} />
+              <StepTitle title={L.resumeTitle} hint={!resume ? undefined : shelf.list.length > 1 ? L.pickHint : L.resumeHint} />
               <div className="mt-6">
                 {!resume || replacing ? (
                   <>
-                    <ResumeUploader compact primary onDone={() => setReplacing(false)} />
+                    <ResumeUploader
+                      compact
+                      onDone={(next) => {
+                        setReplacing(false)
+                        setPickedId(next.id)
+                      }}
+                    />
                     {resume && (
                       <button type="button" onClick={() => setReplacing(false)} className="mt-3 w-full text-center text-[13px] text-gray-500 transition-colors hover:text-gray-900">
                         {L.keep}
@@ -191,20 +207,50 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
                     )}
                   </>
                 ) : (
-                  <div className="rounded-2xl bg-gray-50 p-5">
-                    <div className="flex items-center gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[14.5px] font-semibold text-gray-900">{resume.name}</p>
-                        <p className="mt-0.5 text-[12.5px] text-gray-400">{L.uploadedAt(formatDateTime(resume.uploadedAt))}</p>
+                  <>
+                    {/* 서류가 둘 이상이면 이번 진단에 쓸 서류를 골라요. 서류마다 이 공고와의 적합도를 같이 보여줘요. */}
+                    {shelf.list.length > 1 && (
+                      <div role="radiogroup" aria-label={L.pickLabel} className="mb-3 flex flex-col gap-1 rounded-2xl bg-gray-50 p-1.5">
+                        {shelf.list.map((item) => {
+                          const checked = item.id === resume.id
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              role="radio"
+                              aria-checked={checked}
+                              onClick={() => setPickedId(item.id)}
+                              className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-colors ${checked ? 'bg-white' : 'hover:bg-gray-100'}`}
+                            >
+                              <span aria-hidden className={`size-4 shrink-0 rounded-full border transition-all ${checked ? 'border-[5px] border-brand' : 'border-gray-300 bg-white'}`} />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-[13.5px] font-semibold text-gray-900">{item.name}</span>
+                                <span className="block truncate text-[12px] text-gray-400">
+                                  {item.id === shelf.primaryId && <span className="font-medium text-brand">{L.primary}, </span>}
+                                  {L.uploadedAt(formatDateTime(item.uploadedAt))}
+                                </span>
+                              </span>
+                              <FitBadge fit={fitOf(posting, item)} compact />
+                            </button>
+                          )
+                        })}
                       </div>
-                      <button type="button" onClick={() => setReplacing(true)} className="shrink-0 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand">
-                        {L.replace}
-                      </button>
+                    )}
+                    <div className="rounded-2xl bg-gray-50 p-5">
+                      <div className="flex items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[14.5px] font-semibold text-gray-900">{resume.name}</p>
+                          <p className="mt-0.5 text-[12.5px] text-gray-400">{L.uploadedAt(formatDateTime(resume.uploadedAt))}</p>
+                        </div>
+                        <button type="button" onClick={() => setReplacing(true)} className="shrink-0 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand">
+                          {L.replace}
+                        </button>
+                      </div>
+                      <div className="mt-5">
+                        <SkillEditor resume={resume} />
+                      </div>
                     </div>
-                    <div className="mt-5">
-                      <SkillEditor resume={resume} />
-                    </div>
-                  </div>
+                  </>
                 )}
               </div>
             </div>

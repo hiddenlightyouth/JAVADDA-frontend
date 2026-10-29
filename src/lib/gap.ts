@@ -850,6 +850,8 @@ export const useResume = () => useStore(shelfStore, primaryOf)
 export const getResume = () => primaryOf(shelfStore.get())
 /** 올려 둔 서류 전부와 대표 서류의 아이디 */
 export const useResumeShelf = () => useStore(shelfStore)
+/** 아이디로 서류를 찾아요. 지웠거나 아이디가 없으면 대표 서류예요. */
+const resumeOf = (id?: string | null) => shelfStore.get().list.find((resume) => resume.id === id) ?? getResume()
 export const useReports = () => useStore(reportsStore)
 export const getReports = () => reportsStore.get()
 export const useBookmarks = () => useStore(bookmarksStore)
@@ -1157,9 +1159,9 @@ function buildParagraphs(skills: ResumeSkill[], hint: 'backend' | 'frontend'): s
 
 /**
  * 이력서나 포트폴리오를 올려요. PDF 파일이나 GitHub, 노션 링크를 받아요. 서버가 파싱한 것처럼 역량 목록과 문단을 돌려줘요.
- * 목록 맨 앞에 더하고, 대표 서류가 없거나 primary를 주면 대표로 삼아요.
+ * 목록 맨 앞에 더하고, 대표 서류가 없으면 대표로 삼아요.
  */
-export async function uploadResume(input: { file?: File; link?: string }, primary = false): Promise<Resume> {
+export async function uploadResume(input: { file?: File; link?: string }): Promise<Resume> {
   await wait(1400)
   const name = input.file?.name ?? input.link?.replace(/^https?:\/\//, '') ?? '이력서'
   const source: Resume['source'] = input.file ? 'pdf' : /notion/i.test(input.link ?? '') ? 'notion' : 'github'
@@ -1175,7 +1177,7 @@ export async function uploadResume(input: { file?: File; link?: string }, primar
     paragraphs: buildParagraphs(skills, hint),
   }
   const shelf = shelfStore.get()
-  saveShelf({ list: [resume, ...shelf.list], primaryId: primary || !primaryOf(shelf) ? resume.id : shelf.primaryId })
+  saveShelf({ list: [resume, ...shelf.list], primaryId: primaryOf(shelf) ? shelf.primaryId : resume.id })
   return resume
 }
 
@@ -1204,10 +1206,13 @@ export function removeResume(id: string) {
 
 // ---------- 리포트 ----------
 
-/** 리포트를 만들기 시작해요. 바로 pending 리포트를 돌려주고, 잠시 뒤에 done으로 바뀌어요. 서버의 POST /reports 202와 같은 흐름이에요. */
-export async function createReport(postingId: string): Promise<Report | null> {
+/**
+ * 리포트를 만들기 시작해요. 바로 pending 리포트를 돌려주고, 잠시 뒤에 done으로 바뀌어요. 서버의 POST /reports 202와 같은 흐름이에요.
+ * resumeId를 주면 그 서류로, 없으면 대표 이력서로 진단해요.
+ */
+export async function createReport(postingId: string, resumeId?: string): Promise<Report | null> {
   const posting = postingOf(postingId)
-  const resume = getResume()
+  const resume = resumeOf(resumeId)
   if (!posting || !resume) return null
   await wait(200)
   const id = `r-${Date.now().toString(36)}`
@@ -1276,7 +1281,7 @@ export async function rerunReport(id: string): Promise<Report | null> {
   const report = reportOf(id)
   if (!report) return null
   deleteReport(id)
-  return createReport(report.postingId)
+  return createReport(report.postingId, report.resumeId)
 }
 
 // ---------- 서류 검증 ----------
@@ -1294,7 +1299,7 @@ export async function fetchReview(reportId: string, docType: DocType): Promise<D
   await wait(1600)
   const report = reportOf(reportId)
   const posting = report ? postingOf(report.postingId) : null
-  const resume = getResume()
+  const resume = resumeOf(report?.resumeId)
   if (!report || !posting || !resume) return null
   const company = companyOf(posting.companyId)
   const missing = report.gaps.filter((gap) => gap.kind === 'missing' && gap.requirement === 'required').map((gap) => gap.skill)
@@ -1350,7 +1355,7 @@ export async function fetchQuestions(reportId: string): Promise<InterviewQuestio
   await wait(1200)
   const report = reportOf(reportId)
   const posting = report ? postingOf(report.postingId) : null
-  const resume = getResume()
+  const resume = resumeOf(report?.resumeId)
   if (!report || !posting || !resume) return []
   const company = companyOf(posting.companyId)
   const random = seeded(reportId)

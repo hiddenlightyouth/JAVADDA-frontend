@@ -114,8 +114,7 @@ const TEXT = messages({
 const LINK = /^https?:\/\/(?:www\.)?(?:github\.com|notion\.so|[\w-]+\.notion\.site)\/\S+/i
 
 /** 서류를 올리는 칸이에요. PDF 끌어다 놓기와 링크 두 가지를 받아요. 올리면 onDone으로 알려줘요. */
-/** primary면 올린 서류를 바로 대표 이력서로 삼아요. 진단 시작 화면에서 서류를 바꿀 때 써요. */
-export function ResumeUploader({ onDone, compact = false, primary = false }: { onDone?: (resume: Resume) => void; compact?: boolean; primary?: boolean }) {
+export function ResumeUploader({ onDone, compact = false }: { onDone?: (resume: Resume) => void; compact?: boolean }) {
   const L = useMessages(TEXT)
   const [working, setWorking] = useState(false)
   const [over, setOver] = useState(false)
@@ -125,7 +124,7 @@ export function ResumeUploader({ onDone, compact = false, primary = false }: { o
 
   async function upload(input: { file?: File; link?: string }) {
     setWorking(true)
-    const resume = await uploadResume(input, primary)
+    const resume = await uploadResume(input)
     setWorking(false)
     track('resume_upload', { source: resume.source, skills: resume.skills.length })
     showToast(pick(TEXT).uploaded)
