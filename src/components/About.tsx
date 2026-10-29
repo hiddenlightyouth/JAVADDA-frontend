@@ -26,15 +26,10 @@ interface FeatureText {
   alt: string
 }
 
-/** 진단 흐름의 묶음이에요. 탭으로 골라 봐요. */
-const FLOW_GROUPS = ['all', 'diagnose', 'find'] as const
-type FlowGroup = (typeof FLOW_GROUPS)[number]
-
 interface FlowText {
-  group: Exclude<FlowGroup, 'all'>
-  /** 왼쪽에 크게 적는 화면 이름 */
+  /** 원 아래에 굵게 적는 단계 이름 */
   name: string
-  title: string
+  /** 이름 아래의 한 줄 설명 */
   body: string
 }
 
@@ -53,7 +48,7 @@ export const ABOUT_TEXT = messages({
     meta: '로그인 없이 바로 진단해요',
     start: '시작하기',
     download: 'macOS 앱 다운로드',
-    featuresTitle: '지원하기 전에 알아야 할 것을 한 리포트로',
+    featuresTitle: '지원하기 전,\n다시 한 번 체크.',
     featuresLead: '공고를 고르고 이력서를 올리면, 아래 여섯 가지를 한 번에 받아요.',
     features: [
       { title: '공고 요구 역량 구조화', body: '공고마다 적힌 말이 달라서 뭘 원하는지 헷갈려요. 필수와 우대 역량으로 나눠 정리하고, 최근 몇 달 사이 요구가 늘고 줄어든 흐름까지 같이 봐요.', alt: '필수와 우대 역량 이름표와 12주 요구 변화 막대' },
@@ -64,14 +59,11 @@ export const ABOUT_TEXT = messages({
       { title: '예상 면접 질문과 연습', body: '면접에서 뭘 물어볼지 막막해요. 내 서류와 갭, 기업 기출을 바탕으로 질문을 만들고, 답을 적으면 점수와 보완할 점, 꼬리 질문까지 돌려줘요.', alt: '확률이 적힌 면접 질문 카드와 답변 포인트' },
     ] as FeatureText[],
     flowTitle: '진단은 이렇게 이어져요',
-    flowTabs: { all: '전체', diagnose: '진단', find: '공고 찾기' } as Record<FlowGroup, string>,
     flow: [
-      { group: 'diagnose', name: '공고 고르기', title: '가고 싶은 기업이나 공고를 검색해요', body: '기업 이름, 공고 제목, 지역, 스킬로 찾아요. 검색창 아래에는 요즘 올라온 공고와 마감이 가까운 공고가 줄지어 있어요.' },
-      { group: 'diagnose', name: '이력서 올리기', title: 'PDF나 GitHub, 노션 링크를 올려요', body: '서류에서 읽은 역량과 숙련도를 이름표로 보여줘요. 빠졌거나 틀린 건 바로 고치고, 한 번 올리면 다음 진단에도 그대로 써요.' },
-      { group: 'diagnose', name: '리포트 받기', title: '적합도와 갭, 보완 방법을 한 화면에서 봐요', body: '부족한 역량을 누르면 판단 근거와 보완 순서, 예상 소요, 강의가 옆에서 열려요. 서류 검증과 예상 질문도 같은 리포트의 탭에 있어요.' },
-      { group: 'diagnose', name: '면접 연습', title: '예상 질문에 글로 답하고 피드백을 받아요', body: '답변 포인트를 얼마나 짚었는지, 숫자와 흐름이 있는지 보고 점수와 보완할 점, 꼬리 질문을 돌려줘요.' },
-      { group: 'find', name: '공고 탐색', title: '직군과 경력으로 공고를 좁혀 봐요', body: '백엔드, 프론트엔드, 모바일, 데이터, DevOps 공고를 기업별로 모아 보고, 원문은 앱을 벗어나지 않고 옆에서 열어요.' },
-      { group: 'find', name: '추천 공고', title: '내 이력서와 가까운 공고부터 보여줘요', body: '올려 둔 이력서의 역량을 기준으로 적합도가 높은 순서로 늘어놓아요. 50%나 70% 이상만 골라 볼 수도 있어요.' },
+      { name: '공고 고르기', body: '가고 싶은 기업이나 공고를 검색해요' },
+      { name: '이력서 올리기', body: 'PDF나 GitHub, 노션 링크를 올려요' },
+      { name: '리포트 받기', body: '적합도와 갭, 보완 방법을 한 번에 봐요' },
+      { name: '면접 연습', body: '예상 질문에 답하고 피드백을 받아요' },
     ] as FlowText[],
     flowMore: '지금 진단해 보기',
     faqTitle: '자주 묻는 질문',
@@ -95,7 +87,7 @@ export const ABOUT_TEXT = messages({
     meta: 'No sign in needed',
     start: 'Get started',
     download: 'Download for macOS',
-    featuresTitle: 'What to know before you apply, in one report',
+    featuresTitle: 'Before you apply,\ncheck once more.',
     featuresLead: 'Pick a posting and upload your resume to get all six at once.',
     features: [
       { title: 'Structured requirements', body: 'Postings describe the same skill ten different ways. We split them into required and preferred skills and show how demand has moved over recent months.', alt: 'Required and preferred skill chips with a 12 week demand trend' },
@@ -106,14 +98,11 @@ export const ABOUT_TEXT = messages({
       { title: 'Interview questions and practice', body: 'Questions are built from your document, your gaps, and real past interviews. Write an answer and get a score, improvements, and the follow-up question.', alt: 'An interview question card with a probability and answer points' },
     ],
     flowTitle: 'How a diagnosis works',
-    flowTabs: { all: 'All', diagnose: 'Diagnose', find: 'Find postings' },
     flow: [
-      { group: 'diagnose', name: 'Pick a posting', title: 'Search for a company or posting', body: 'Search by company, title, location, or skill. Recent postings and ones closing soon are lined up below the search box.' },
-      { group: 'diagnose', name: 'Upload a resume', title: 'Upload a PDF, GitHub, or Notion link', body: 'The skills and levels we read appear as chips. Fix anything that is missing or wrong, and reuse the same resume next time.' },
-      { group: 'diagnose', name: 'Get the report', title: 'Fit, gaps, and how to close them on one screen', body: 'Open any gap to see the evidence, a plan, the expected effort, and courses. Document review and likely questions are tabs in the same report.' },
-      { group: 'diagnose', name: 'Practice', title: 'Answer likely questions and get feedback', body: 'We check whether you hit the answer points and used numbers and a clear flow, then return a score, improvements, and a follow-up question.' },
-      { group: 'find', name: 'Explore', title: 'Narrow postings by role and experience', body: 'Browse backend, frontend, mobile, data, and DevOps postings by company, and open the original side by side without leaving the app.' },
-      { group: 'find', name: 'For you', title: 'Postings closest to your resume first', body: 'Postings are ordered by fit with the skills in your resume. Filter to 50% or 70% and above.' },
+      { name: 'Pick a posting', body: 'Search for a company or posting' },
+      { name: 'Upload a resume', body: 'A PDF, GitHub, or Notion link' },
+      { name: 'Get the report', body: 'Fit, gaps, and how to close them' },
+      { name: 'Practice', body: 'Answer likely questions, get feedback' },
     ],
     flowMore: 'Try a diagnosis',
     faqTitle: 'FAQ',
@@ -476,7 +465,7 @@ function Hero({ onStart }: { onStart: (event: MouseEvent) => void }) {
         <div ref={finalRef} inert={!revealed} className="kv-final absolute inset-0 flex flex-col items-center justify-center px-6 pt-9 text-center">
           {revealed && <LofyScript className="h-[clamp(64px,8vw,104px)] w-auto" />}
           {!revealed && <span className="h-[clamp(64px,8vw,104px)]" aria-hidden />}
-          <h1 className="mt-6 text-balance break-keep text-[clamp(26px,3.6vw,48px)] leading-[1.2] font-bold tracking-[-0.04em]">{text.title}</h1>
+          <h1 className="mt-6 text-balance break-keep text-[clamp(26px,3.6vw,48px)] leading-[1.35] font-bold tracking-[-0.04em]">{text.title}</h1>
           <p className="mt-3 text-[clamp(15px,1.4vw,19px)] font-bold text-white/60">{text.meta}</p>
           <div className="mt-8 flex flex-wrap justify-center gap-2.5">
             <a href="/app" onClick={onStart} className={`${primaryPill} min-w-[clamp(180px,15vw,220px)] text-[18px]`}>
@@ -517,13 +506,13 @@ function FaqItem({ id, q, a }: { id: string; q: string; a: string }) {
           if (!open) track('about_faq_open', { id })
           setOpen(!open)
         }}
-        className="relative w-full py-6 pr-16 pl-7 text-left text-[17px] font-bold text-gray-900"
+        className="relative w-full py-6 pr-16 pl-7 text-left text-[17px] leading-[1.5] font-bold text-gray-900"
       >
         {q}
         <span className="faq-icon absolute top-1/2 right-7 size-3.5 -translate-y-1/2" aria-hidden />
       </button>
       <div id={`${id}-a`} role="region" className="faq-answer grid">
-        <p className="overflow-hidden px-7 text-[15px] leading-relaxed whitespace-pre-line text-gray-500">
+        <p className="overflow-hidden px-7 text-[15px] leading-[1.8] whitespace-pre-line text-gray-500">
           <span className="block pb-6">{a}</span>
         </p>
       </div>
@@ -541,7 +530,6 @@ export function About({ onHome }: Props) {
   const scrollRef = useRef<HTMLElement>(null)
   const lang = useLang()
   const text = useMessages(ABOUT_TEXT)
-  const [group, setGroup] = useState<FlowGroup>('all')
 
   useEffect(() => {
     // 소개 화면은 브라우저의 메인 화면이라 메인 화면의 제목과 미리보기 태그를 써요.
@@ -599,7 +587,6 @@ export function About({ onHome }: Props) {
     onHome()
   }
 
-  const flow = text.flow.filter((row) => group === 'all' || row.group === group)
   const faq = text.faq.filter((item) => !('app' in item && item.app) || MAC_DOWNLOAD_OPEN)
 
   return (
@@ -610,56 +597,37 @@ export function About({ onHome }: Props) {
       <div className="relative z-10 bg-white">
         <section className="mx-auto grid max-w-[1280px] gap-12 px-4 pt-[88px] sm:px-10 md:grid-cols-[minmax(0,1fr)_minmax(0,min(640px,58%))] md:pt-32">
           <div className="md:sticky md:top-[120px] md:self-start" data-reveal>
-            <h2 className="text-balance break-keep text-[clamp(28px,3vw,44px)] leading-[1.2] font-bold tracking-[-0.02em] text-gray-900">{text.featuresTitle}</h2>
-            <p className="mt-4 max-w-sm break-keep text-[17px] leading-relaxed text-gray-500">{text.featuresLead}</p>
+            <h2 className="text-balance break-keep whitespace-pre-line text-[clamp(28px,3vw,44px)] leading-[1.35] font-bold tracking-[-0.02em] text-gray-900">{text.featuresTitle}</h2>
+            <p className="mt-4 max-w-sm break-keep text-[17px] leading-[1.8] text-gray-500">{text.featuresLead}</p>
           </div>
           <div className="space-y-20 md:space-y-28">
             {text.features.map((feature, index) => (
               <article key={PREVIEWS[index]} data-reveal className="min-w-0">
                 <Shot kind={PREVIEWS[index]} alt={feature.alt} />
-                <h3 className="mt-6 break-keep text-[clamp(24px,2.4vw,32px)] leading-[1.3] font-bold tracking-[-0.02em] text-gray-900">{feature.title}</h3>
-                <p className="mt-2 break-keep text-[17px] leading-relaxed text-gray-500">{feature.body}</p>
+                <h3 className="mt-6 break-keep text-[clamp(24px,2.4vw,32px)] leading-[1.45] font-bold tracking-[-0.02em] text-gray-900">{feature.title}</h3>
+                <p className="mt-2 break-keep text-[17px] leading-[1.8] text-gray-500">{feature.body}</p>
               </article>
             ))}
           </div>
         </section>
 
         <section className="mx-auto max-w-[1280px] px-4 pt-[88px] sm:px-10 md:pt-32">
-          <h2 data-reveal className="text-[clamp(28px,3.2vw,40px)] leading-[1.25] font-bold tracking-[-0.02em] text-gray-900">{text.flowTitle}</h2>
-          <div role="group" className="mt-10 flex gap-6 border-b border-gray-200">
-            {FLOW_GROUPS.map((key) => (
-              <button
-                key={key}
-                type="button"
-                aria-pressed={group === key}
-                onClick={() => {
-                  track('about_flow_tab', { group: key })
-                  setGroup(key)
-                }}
-                className={`relative pb-3 text-[17px] font-bold transition-colors duration-150 ${group === key ? 'text-gray-900 after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-gray-900' : 'text-gray-400 hover:text-gray-600'}`}
-              >
-                {text.flowTabs[key]}
-              </button>
+          <h2 data-reveal className="text-[clamp(28px,3.2vw,40px)] leading-[1.4] font-bold tracking-[-0.02em] text-gray-900">{text.flowTitle}</h2>
+          {/* 단계마다 STEP 번호를 적은 원을 두고, 넓은 화면에서는 원 사이를 가는 선으로 이어요. */}
+          <ol data-reveal className="mt-12 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
+            {text.flow.map((row, index) => (
+              <li key={row.name} className="relative flex flex-col items-center text-center">
+                {index > 0 && <span aria-hidden className="absolute top-[52px] right-1/2 hidden h-px w-full bg-gray-200 md:block" />}
+                <span className="relative flex size-[104px] flex-col items-center justify-center rounded-full bg-gray-100">
+                  <span className="text-[12px] font-bold tracking-[0.06em] text-gray-500">STEP</span>
+                  <span className="text-[30px] leading-[1.15] font-bold text-gray-900 tabular-nums">{String(index + 1).padStart(2, '0')}</span>
+                </span>
+                <p className="mt-5 text-[18px] leading-[1.45] font-bold text-gray-900 md:text-[20px]">{row.name}</p>
+                <p className="mt-1.5 break-keep text-[15px] leading-[1.7] text-gray-500">{row.body}</p>
+              </li>
             ))}
-          </div>
-          <ol aria-live="polite">
-            {flow.map((row) => {
-              const step = text.flow.indexOf(row) + 1
-              return (
-                <li key={row.name} className="grid gap-3 border-b border-gray-200 py-11 min-[900px]:grid-cols-[260px_1fr] min-[900px]:gap-10">
-                  <div>
-                    <p className="text-[16px] leading-[1.3] font-bold text-gray-900 min-[900px]:text-[22px]">{row.name}</p>
-                    <p className="mt-1 text-[13px] font-bold tracking-[0.06em] text-gray-500 tabular-nums">STEP {String(step).padStart(2, '0')}</p>
-                  </div>
-                  <div>
-                    <h3 className="break-keep text-[clamp(22px,2.3vw,30px)] leading-[1.35] font-bold tracking-[-0.015em] text-gray-900">{row.title}</h3>
-                    <p className="mt-3 max-w-[52em] break-keep text-[15px] leading-relaxed text-gray-500">{row.body}</p>
-                  </div>
-                </li>
-              )
-            })}
           </ol>
-          <div className="mt-10 flex justify-center">
+          <div className="mt-14 flex justify-center">
             <a href="/app" onClick={start} className={outlinePill}>
               {text.flowMore}
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden>
@@ -670,7 +638,7 @@ export function About({ onHome }: Props) {
         </section>
 
         <section className="mx-auto max-w-[1280px] px-4 pt-[88px] sm:px-10 md:pt-32">
-          <h2 data-reveal className="text-[clamp(28px,3.2vw,40px)] leading-[1.25] font-bold tracking-[-0.02em] text-gray-900">{text.faqTitle}</h2>
+          <h2 data-reveal className="text-[clamp(28px,3.2vw,40px)] leading-[1.4] font-bold tracking-[-0.02em] text-gray-900">{text.faqTitle}</h2>
           <div data-reveal className="mt-10 space-y-2">
             {faq.map((item, index) => (
               <FaqItem key={item.q} id={`faq-${index}`} q={item.q} a={item.a} />
@@ -679,8 +647,8 @@ export function About({ onHome }: Props) {
         </section>
 
         <section data-reveal className="mx-auto flex max-w-[1280px] flex-col items-center px-4 pt-[88px] pb-[88px] text-center sm:px-10 md:pt-32 md:pb-32">
-          <h2 className="text-balance break-keep text-[clamp(24px,2.4vw,32px)] leading-[1.25] font-bold tracking-[-0.02em] text-gray-900">{text.closingTitle}</h2>
-          <p className="mt-3 break-keep text-[17px] text-gray-500">{text.closingLead}</p>
+          <h2 className="text-balance break-keep text-[clamp(24px,2.4vw,32px)] leading-[1.4] font-bold tracking-[-0.02em] text-gray-900">{text.closingTitle}</h2>
+          <p className="mt-3 break-keep text-[17px] leading-[1.8] text-gray-500">{text.closingLead}</p>
           <a href="/app" onClick={start} className={`${primaryPill} mt-8`}>
             {text.start}
           </a>
