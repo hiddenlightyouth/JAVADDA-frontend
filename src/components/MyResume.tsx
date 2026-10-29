@@ -35,26 +35,22 @@ const TEXT = messages({
     reading: '서류를 읽고 있어요. 역량을 뽑는 데 몇 초 걸려요.',
     uploaded: '서류를 읽었어요. 뽑은 역량을 확인해 주세요.',
     sources: { pdf: 'PDF', github: 'GitHub', notion: '노션' } as Record<Resume['source'], string>,
-    uploadedAt: (when: string) => `${when}에 올림`,
-    skills: '서류에서 읽은 역량',
-    skillsHint: '숙련도는 1부터 5까지예요. 이름표를 누르면 숙련도가 한 단계 올라가고, 5에서는 1로 돌아가요. 잘못 읽었으면 X로 빼요.',
+    uploadedAt: (when: string) => `${when}에 업로드 됨`,
+    skills: '내 역량',
     addPlaceholder: '역량 더하기',
     add: '더하기',
     saved: '역량을 저장했어요.',
-    paragraphs: '읽은 문단',
-    paragraphsHint: '서류 검증과 예상 질문에 이 문단을 써요.',
+    paragraphs: '주요 경력',
     replace: '다른 서류 올리기',
     addDoc: '서류 추가',
     addTitle: '서류 추가',
     emptyTitle: '아직 올린 이력서가 없어요',
     emptyBody: '이력서나 포트폴리오를 올려 두면 공고마다 얼마나 맞는지 보여줘요. 여러 개 올리고 하나를 대표로 정할 수 있어요.',
-    count: (count: number) => `서류 ${count}개`,
     close: '닫기',
     primary: '대표 이력서',
     makePrimary: '대표 이력서로 정하기',
     primaryTip: '적합도와 추천, 진단에 이 서류를 써요',
     primaryChanged: (name: string) => `${name}을(를) 대표 이력서로 정했어요.`,
-    skillCount: (count: number) => `역량 ${count}개`,
     remove: '삭제',
     removeTitle: '이 서류를 지울까요?',
     removeBody: '올린 서류와 읽은 역량을 지워요. 리포트는 그대로 남아요.',
@@ -81,25 +77,21 @@ const TEXT = messages({
     uploaded: 'Done. Please check the skills we found.',
     sources: { pdf: 'PDF', github: 'GitHub', notion: 'Notion' },
     uploadedAt: (when: string) => `Uploaded ${when}`,
-    skills: 'Skills found in your document',
-    skillsHint: 'Levels go from 1 to 5. Tap a chip to raise the level by one, and it wraps back to 1 after 5. Remove anything we got wrong with the X.',
+    skills: 'My skills',
     addPlaceholder: 'Add a skill',
     add: 'Add',
     saved: 'Skills saved.',
-    paragraphs: 'Paragraphs we read',
-    paragraphsHint: 'The document check and likely questions use these paragraphs.',
+    paragraphs: 'Key experience',
     replace: 'Upload a different document',
     addDoc: 'Add document',
     addTitle: 'Add a document',
     emptyTitle: 'No resumes yet',
     emptyBody: 'Upload a resume or portfolio to see how well you fit each posting. You can keep several and pick one as your main resume.',
-    count: (count: number) => `${count} ${count === 1 ? 'document' : 'documents'}`,
     close: 'Close',
     primary: 'Main resume',
     makePrimary: 'Make main resume',
     primaryTip: 'Fit, recommendations and diagnoses use this document',
     primaryChanged: (name: string) => `${name} is now your main resume.`,
-    skillCount: (count: number) => `${count} ${count === 1 ? 'skill' : 'skills'}`,
     remove: 'Delete',
     removeTitle: 'Delete this document?',
     removeBody: 'This removes the document and the skills we read. Reports stay.',
@@ -356,7 +348,6 @@ export function SkillEditor({ resume }: { resume: Resume }) {
           {L.add}
         </button>
       </form>
-      <p className="mt-2.5 text-[12px] leading-relaxed text-gray-400">{L.skillsHint}</p>
     </div>
   )
 }
@@ -392,21 +383,18 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
           {shelf.list.length === 0 ? (
             <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={() => setAdding(true)} className="mt-24" />
           ) : (
-            <>
-              <p className="mb-4 text-[13px] text-gray-500 tabular-nums">{L.count(shelf.list.length)}</p>
-              <ul className="grid gap-4 @2xl:grid-cols-2 @5xl:grid-cols-3">
-                {shelf.list.map((resume) => (
-                  <ResumeCard
-                    key={resume.id}
-                    resume={resume}
-                    primary={resume.id === shelf.primaryId}
-                    selected={resume.id === openId}
-                    onSelect={() => setOpenId(resume.id)}
-                    onPrimary={() => makePrimary(resume)}
-                  />
-                ))}
-              </ul>
-            </>
+            <ul className="grid gap-4 @2xl:grid-cols-2 @5xl:grid-cols-3">
+              {shelf.list.map((resume) => (
+                <ResumeCard
+                  key={resume.id}
+                  resume={resume}
+                  primary={resume.id === shelf.primaryId}
+                  selected={resume.id === openId}
+                  onSelect={() => setOpenId(resume.id)}
+                  onPrimary={() => makePrimary(resume)}
+                />
+              ))}
+            </ul>
           )}
         </div>
       </div>
@@ -457,8 +445,9 @@ function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resum
             <h2 id="resume-sheet-title" className="truncate text-[19px] font-semibold text-gray-900">
               {resume.name}
             </h2>
-            <p className="mt-1 text-[12.5px] text-gray-400">
-              {L.sources[resume.source]}, {L.uploadedAt(formatDateTime(resume.uploadedAt))}
+            <p className="mt-1.5 flex items-center gap-2 text-[12.5px] text-gray-400">
+              <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-semibold text-gray-600">{L.sources[resume.source]}</span>
+              {L.uploadedAt(formatDateTime(resume.uploadedAt))}
             </p>
           </div>
           <CloseButton label={L.close} size="md" onClick={onClose} />
@@ -472,7 +461,6 @@ function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resum
           </section>
           <section className="mt-8">
             <h3 className="text-[13.5px] font-semibold text-gray-900">{L.paragraphs}</h3>
-            <p className="mt-1 text-[12px] text-gray-400">{L.paragraphsHint}</p>
             <ol className="mt-3 space-y-3">
               {resume.paragraphs.map((paragraph, index) => (
                 <li key={index} className="flex gap-3 text-[13.5px] leading-relaxed text-gray-700">
@@ -551,7 +539,7 @@ function ResumeCard({ resume, primary, selected, onSelect, onPrimary }: { resume
         {resume.name}
       </button>
       <p className="mt-0.5 text-[12px] text-gray-400">
-        {formatDateTime(resume.uploadedAt)}, {L.skillCount(resume.skills.length)}
+        {formatDateTime(resume.uploadedAt)}
       </p>
       <ul className="mt-4 flex flex-wrap gap-1">
         {resume.skills.slice(0, 4).map((skill) => (
