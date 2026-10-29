@@ -17,7 +17,7 @@ const TEXT = messages({
     descriptionNoResume: '어떤 회사나 직무를 목표로 하고 있나요?',
     label: '기업과 공고 찾기',
     noResult: (query: string) => `"${query}"에 맞는 공고가 없어요.`,
-    rows: { recent: '요즘 올라온 공고', fit: '나와 잘 맞는 공고', closing: '마감이 가까운 공고', again: '다시 볼 공고' },
+    rows: { recent: '따끈따끈 공고', fit: '나와 잘 맞는 공고', closing: '마감이 가까운 공고', again: '다시 볼 공고' },
     companies: '기업으로 둘러보기',
     seeAll: '전체 보기',
     results: (count: number) => `${count}개의 공고`,
