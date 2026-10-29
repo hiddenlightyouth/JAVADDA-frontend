@@ -1,8 +1,8 @@
-import { useRef, useState, type DragEvent, type FormEvent } from 'react'
+import { useMemo, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useDismiss } from '../hooks/useDismiss'
 import { track } from '../lib/analytics'
-import { canonical, removeResume, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type Resume, type ResumeSkill } from '../lib/gap'
+import { axisOf, canonical, removeResume, suggestSkills, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type Resume, type ResumeSkill } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { showToast } from '../lib/toast'
@@ -239,21 +239,49 @@ export function ResumeUploader({ onDone }: { onDone?: (resume: Resume) => void }
 export function SkillEditor({ resume }: { resume: Resume }) {
   const L = useMessages(TEXT)
   const [draft, setDraft] = useState('')
+  /** 친 글자에 맞는 스킬 목록을 펼쳐 둘지. 고르거나 Esc를 누르면 접어요. */
+  const [listing, setListing] = useState(false)
+  /** 방향키로 고른 추천 스킬의 순서. 고른 게 없으면 -1이에요. */
+  const [active, setActive] = useState(-1)
+  const owned = resume.skills.map((skill) => skill.name)
+  const suggestions = useMemo(() => suggestSkills(draft, owned), [draft, owned.join()])
+  const showList = listing && suggestions.length > 0
 
   function save(skills: ResumeSkill[]) {
     saveResumeSkills(skills, resume.id)
     track('resume_skills_edit', { count: skills.length })
   }
 
+  function addSkill(value: string) {
+    const name = canonical(value)
+    setDraft('')
+    setActive(-1)
+    setListing(false)
+    if (!name || resume.skills.some((skill) => skill.name === name)) return
+    save([...resume.skills, { name, level: 3, evidence: '직접 더한 역량이에요.' }])
+  }
+
+  // 방향키로 고른 스킬이 있으면 그걸, 없으면 친 글자 그대로 더해요.
   function add(event: FormEvent) {
     event.preventDefault()
-    const name = canonical(draft)
-    if (!name || resume.skills.some((skill) => skill.name === name)) {
-      setDraft('')
+    addSkill(showList && active >= 0 ? suggestions[active] : draft)
+  }
+
+  /** 추천 스킬이 보일 때 위아래 방향키로 옮겨 다니고, Esc로 접어요. 새 진단 검색창과 같아요. */
+  function moveActive(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.nativeEvent.isComposing) return
+    if (event.key === 'Escape' && showList) {
+      // 바깥의 상세 칸까지 같이 닫히지 않게 여기서 멈춰요.
+      event.nativeEvent.stopImmediatePropagation()
+      setListing(false)
       return
     }
-    save([...resume.skills, { name, level: 3, evidence: '직접 더한 역량이에요.' }])
-    setDraft('')
+    if ((event.key !== 'ArrowDown' && event.key !== 'ArrowUp') || suggestions.length === 0) return
+    event.preventDefault()
+    setListing(true)
+    const last = suggestions.length - 1
+    if (event.key === 'ArrowDown') setActive((index) => (index >= last ? 0 : index + 1))
+    else setActive((index) => (index <= 0 ? last : index - 1))
   }
 
   return (
@@ -281,14 +309,48 @@ export function SkillEditor({ resume }: { resume: Resume }) {
         ))}
       </ul>
       <form onSubmit={add} className="mt-3 flex gap-2">
-        <input
-          type="text"
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder={L.addPlaceholder}
-          aria-label={L.addPlaceholder}
-          className="h-9 w-48 rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-gray-900 outline-none placeholder:text-gray-400 focus:border-brand"
-        />
+        <div className="relative w-56">
+          <input
+            type="text"
+            value={draft}
+            onChange={(event) => {
+              setDraft(event.target.value)
+              setActive(-1)
+              setListing(true)
+            }}
+            onKeyDown={moveActive}
+            onBlur={() => setListing(false)}
+            onFocus={() => setListing(true)}
+            placeholder={L.addPlaceholder}
+            aria-label={L.addPlaceholder}
+            role="combobox"
+            aria-expanded={showList}
+            aria-controls="skill-suggestions"
+            aria-activedescendant={showList && active >= 0 ? `skill-suggestion-${active}` : undefined}
+            autoComplete="off"
+            className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-gray-900 outline-none placeholder:text-gray-400 focus:border-brand"
+          />
+          {showList && (
+            <ul id="skill-suggestions" role="listbox" className="absolute top-full left-0 z-20 mt-1.5 max-h-64 w-full origin-top animate-pop overflow-y-auto rounded-xl border border-gray-200 bg-white p-1">
+              {suggestions.map((name, index) => (
+                <li
+                  key={name}
+                  id={`skill-suggestion-${index}`}
+                  role="option"
+                  aria-selected={index === active}
+                  // 누르는 동안 입력칸의 포커스가 빠져 목록이 먼저 닫히지 않게 막아요.
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => addSkill(name)}
+                  onMouseMove={() => index !== active && setActive(index)}
+                  className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg px-2.5 py-1.5 text-[13px] text-gray-900 ${index === active ? 'bg-gray-100' : ''}`}
+                >
+                  <span className="truncate">{name}</span>
+                  <span className="shrink-0 text-[11.5px] text-gray-400">{axisOf(name)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <button type="submit" disabled={!draft.trim()} className={`${toolButton} disabled:text-gray-400`}>
           <PlusIcon className="size-3.5" />
           {L.add}

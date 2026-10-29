@@ -381,6 +381,37 @@ export function canonical(name: string): string {
   return ALIASES[trimmed.toLowerCase()] ?? trimmed
 }
 
+let knownSkills: string[] | null = null
+
+/** 역량 더하기에서 고를 수 있는 스킬 이름이에요. 축이 정해진 스킬과 공고에 적힌 스킬을 모아요. 처음 쓸 때 한 번만 만들어요. */
+function allSkills(): string[] {
+  knownSkills ??= [...new Set([...Object.keys(AXIS_OF), ...POSTINGS.flatMap((posting) => [...posting.required, ...posting.preferred])])].sort((a, b) => a.localeCompare(b))
+  return knownSkills
+}
+
+/**
+ * 친 글자에 맞는 스킬 이름을 골라요. 이름이나 별칭(스프링, k8s)이 친 글자로 시작하면 앞에, 가운데에 들어 있으면 뒤에 둬요.
+ * 이미 가진 스킬(exclude)은 빼요.
+ */
+export function suggestSkills(query: string, exclude: string[] = [], limit = 8): string[] {
+  const q = query.trim().toLowerCase()
+  if (!q) return []
+  const aliased = new Set(Object.entries(ALIASES).filter(([alias]) => alias.startsWith(q)).map(([, name]) => name))
+  const rank = (name: string) => {
+    const lower = name.toLowerCase()
+    if (lower.startsWith(q) || aliased.has(name)) return 0
+    if (lower.includes(q)) return 1
+    return -1
+  }
+  return allSkills()
+    .filter((name) => !exclude.includes(name))
+    .map((name) => ({ name, rank: rank(name) }))
+    .filter((item) => item.rank >= 0)
+    .sort((a, b) => a.rank - b.rank)
+    .slice(0, limit)
+    .map((item) => item.name)
+}
+
 const FAMILY_NAMES: Record<JobFamily, string> = { backend: '백엔드', frontend: '프론트엔드', mobile: '모바일', data: '데이터', devops: 'DevOps' }
 const FAMILY_NAMES_EN: Record<JobFamily, string> = { backend: 'Backend', frontend: 'Frontend', mobile: 'Mobile', data: 'Data', devops: 'DevOps' }
 
