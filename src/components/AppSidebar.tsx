@@ -12,12 +12,14 @@ import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
 import { PlusIcon } from './Icons'
+import { Tip } from './GapParts'
 
 const TEXT = messages({
   ko: {
     new: '새 진단',
     explore: '공고 탐색',
     recommend: '추천 공고',
+    recommendLocked: '이력서를 먼저 등록하세요',
     resume: '내 이력서',
     resumeNone: '아직 올리지 않았어요',
     me: '내 정보',
@@ -35,6 +37,7 @@ const TEXT = messages({
     new: 'New diagnosis',
     explore: 'Explore jobs',
     recommend: 'Recommended',
+    recommendLocked: 'Upload your resume first',
     resume: 'My resume',
     resumeNone: 'Not uploaded yet',
     me: 'Account',
@@ -161,7 +164,17 @@ function ReportRow({ report, active, menuOpen, onOpen, onToggleMenu, onCloseMenu
   )
 }
 
-function NavLink({ href, active, onClick, icon, label, shortcut }: { href: string; active: boolean; onClick: () => void; icon: React.ReactNode; label: string; shortcut?: string }) {
+function NavLink({ href, active, onClick, icon, label, shortcut, locked }: { href: string; active: boolean; onClick: () => void; icon: React.ReactNode; label: string; shortcut?: string; locked?: string }) {
+  // 아직 쓸 수 없는 메뉴는 흐리게 두고, 마우스를 올리면 왜 쓸 수 없는지 알려줘요.
+  if (locked)
+    return (
+      <Tip text={locked} className="mt-1.5 flex w-full">
+        <span aria-disabled="true" className={`${link} cursor-not-allowed gap-2 text-gray-400`}>
+          {icon}
+          <span className="flex-1">{label}</span>
+        </span>
+      </Tip>
+    )
   return (
     <a
       href={href}
@@ -246,6 +259,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           }}
           label={text.recommend}
           shortcut="R"
+          locked={resume ? undefined : text.recommendLocked}
           icon={
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
               <path d="M8 2.2l1.8 3.7 4 .6-2.9 2.8.7 4L8 11.4l-3.6 1.9.7-4L2.2 6.5l4-.6z" />

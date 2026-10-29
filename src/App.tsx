@@ -18,6 +18,7 @@ import { useShortcuts } from './lib/shortcuts'
 import { messages, pick, useLang } from './lib/i18n'
 import { applyMeta, HOME_META } from './lib/meta'
 import { reportFromPath } from './lib/routes'
+import { useResume } from './lib/gap'
 import { closePlans, refreshUsage, usePlansOpen } from './lib/usage'
 import type { AccountPage } from './components/Account'
 
@@ -52,6 +53,7 @@ export default function App() {
   const { tokens, me } = useAuth()
   const feedback = useFeedback()
   const lang = useLang()
+  const resume = useResume()
 
   // 소개와 아티클, 계정 화면은 스스로 제목과 미리보기 태그를 정하고, 그 밖의 화면은 메인 화면의 값을 언어에 맞춰 써요.
   const ownMeta = page?.kind === 'about' || article || account !== null
@@ -110,7 +112,7 @@ export default function App() {
       KeyN: goHome,
       Slash: () => document.querySelector<HTMLInputElement>('input[data-search-input]')?.focus(),
       KeyT: appShell ? openExplore : undefined,
-      KeyR: appShell ? openRecommend : undefined,
+      KeyR: appShell && resume ? openRecommend : undefined,
       KeyB: appShell ? () => toggleSidebar(!sidebarOpen) : undefined,
     },
     !(isApp && tokens === null) && page?.kind !== 'app-login',

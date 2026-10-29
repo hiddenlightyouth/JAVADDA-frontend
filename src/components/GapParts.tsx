@@ -89,7 +89,7 @@ export function CompanyMark({ company, className = 'size-12 text-[17px]' }: { co
  * 잠깐(0.3초) 머물러야 떠서 훑고 지나갈 때는 거슬리지 않아요. 카드나 스크롤 칸이 넘치는 부분을 잘라도 가려지지 않게,
  * 말풍선은 화면 맨 바깥(body)에 고정 위치로 그려요. 위에 자리가 없으면 아래로 뒤집고, 창 가장자리를 넘지 않게 맞춰요.
  */
-export function Tip({ text, children }: { text: string; children: ReactNode }) {
+export function Tip({ text, children, className = 'inline-flex max-w-full' }: { text: string; children: ReactNode; className?: string }) {
   const ref = useRef<HTMLSpanElement>(null)
   const timer = useRef(0)
   const [anchor, setAnchor] = useState<DOMRect | null>(null)
@@ -109,7 +109,7 @@ export function Tip({ text, children }: { text: string; children: ReactNode }) {
     return () => window.removeEventListener('scroll', hide, true)
   }, [anchor])
   return (
-    <span ref={ref} onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide} className="inline-flex max-w-full">
+    <span ref={ref} onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide} className={className}>
       {children}
       {anchor && createPortal(<TipBubble anchor={anchor} text={text} />, document.body)}
     </span>
