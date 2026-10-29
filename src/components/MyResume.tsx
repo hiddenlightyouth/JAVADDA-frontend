@@ -490,7 +490,6 @@ function ResumeCard({ resume, primary, selected, onSelect, onPrimary }: { resume
         {resume.name}
       </button>
       <p className="mt-0.5 text-[12px] text-gray-400">
-        {primary && <span className="font-medium text-brand">{L.primary}, </span>}
         {formatDateTime(resume.uploadedAt)}, {L.skillCount(resume.skills.length)}
       </p>
       <ul className="mt-4 flex flex-wrap gap-1">
