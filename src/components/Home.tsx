@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
 import { COMPANIES, fitOf, POSTINGS, SEARCH_SUGGESTIONS, sortPostings, SUGGEST_MS, useReports, useResume, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
@@ -85,8 +85,17 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [suggestion, setSuggestion] = useState(0)
+  /** 방향키로 고른 검색 결과의 순서. 고른 게 없으면 -1이에요. */
+  const [active, setActive] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
   const results = useMemo(() => search(query), [query])
+
+  // 방향키로 고른 결과가 목록 밖에 있으면 보이는 곳까지 스크롤해요.
+  useEffect(() => {
+    if (active < 0) return
+    listRef.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: 'nearest' })
+  }, [active])
 
   // 검색 결과가 열려 있을 때 바깥을 누르거나 Esc를 누르면 닫아요.
   useEffect(() => {
@@ -114,7 +123,20 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
       setOpen(true)
       return
     }
-    if (results.length === 1) pick(results[0])
+    if (active >= 0 && results[active]) pick(results[active])
+    else if (results.length === 1) pick(results[0])
+  }
+
+  /** 검색 결과가 보일 때 위아래 방향키로 결과를 하나씩 옮겨 다녀요. 끝에서 누르면 반대쪽 끝으로 돌아가요. */
+  function moveActive(event: ReactKeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+    // 한글을 조합하는 중에는 방향키가 글자를 마무리하는 데 쓰여서 넘겨요.
+    if (event.nativeEvent.isComposing || !query.trim() || results.length === 0) return
+    event.preventDefault()
+    setOpen(true)
+    const last = results.length - 1
+    if (event.key === 'ArrowDown') setActive((index) => (index >= last ? 0 : index + 1))
+    else setActive((index) => (index <= 0 ? last : index - 1))
   }
 
   function pick(posting: JobPosting) {
@@ -169,12 +191,17 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
                 value={query}
                 onChange={(event) => {
                   setQuery(event.target.value)
+                  setActive(-1)
                   setOpen(true)
                 }}
+                onKeyDown={moveActive}
                 onFocus={() => setOpen(true)}
                 data-search-input
                 aria-label={L.label}
+                role="combobox"
+                aria-controls="home-search-results"
                 aria-expanded={open && query.trim().length > 0}
+                aria-activedescendant={open && active >= 0 && results[active] ? `home-result-${results[active].id}` : undefined}
                 // 모바일에서 글자가 16px보다 작으면 입력창을 누를 때 화면이 확대돼서, 모바일에서는 16px로 둬요.
                 className="h-full min-w-0 flex-1 bg-transparent text-base text-gray-900 outline-none placeholder:text-gray-400 sm:text-[14px] [&::-webkit-search-cancel-button]:hidden"
               />
@@ -192,15 +219,25 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
             {open && query.trim() && (
               <>
                 <div aria-hidden className="fixed inset-0 z-0" onClick={() => setOpen(false)} />
-                <ul role="listbox" className="absolute top-full right-0 left-0 z-10 mt-2 max-h-[52dvh] origin-top animate-pop overflow-y-auto rounded-2xl border border-gray-200 bg-white p-1.5">
+                <ul ref={listRef} id="home-search-results" role="listbox" className="absolute top-full right-0 left-0 z-10 mt-2 max-h-[52dvh] origin-top animate-pop overflow-y-auto rounded-2xl border border-gray-200 bg-white p-1.5">
                   {results.length === 0 ? (
                     <li className="px-3 py-3 text-[13px] text-gray-500">{L.noResult(query.trim())}</li>
                   ) : (
-                    results.map((posting) => {
+                    results.map((posting, index) => {
                       const company = companyOf(posting.companyId)
                       return (
                         <li key={posting.id}>
-                          <button type="button" role="option" aria-selected={false} onClick={() => pick(posting)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-gray-50">
+                          {/* 스크롤로 목록이 마우스 아래를 지나갈 때는 고른 줄이 바뀌지 않게, 마우스를 실제로 움직였을 때만 따라가요. */}
+                          <button
+                            type="button"
+                            role="option"
+                            id={`home-result-${posting.id}`}
+                            data-index={index}
+                            aria-selected={index === active}
+                            onClick={() => pick(posting)}
+                            onMouseMove={() => index !== active && setActive(index)}
+                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${index === active ? 'bg-gray-100' : ''}`}
+                          >
                             <CompanyMark company={company} className="size-9 text-[13px]" />
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-[13.5px] font-medium text-gray-900">{posting.title}</span>
