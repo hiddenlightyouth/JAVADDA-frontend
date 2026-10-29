@@ -19,13 +19,18 @@ import { Bone } from './Skeleton'
 const TEXT = messages({
   ko: {
     title: '내 이력서',
-    dropTitle: '이력서나 포트폴리오를 올려 주세요',
-    dropBody: 'PDF 파일을 여기에 끌어다 놓거나, 아래에 GitHub나 노션 링크를 붙여 넣어요.',
+    intro: '이력서를 올려 주세요',
+    introBody: '서류에서 역량을 읽어 두면, 공고마다 얼마나 맞는지 바로 보여줘요. 두 가지 방법 중 편한 쪽으로 올려요.',
+    fileTitle: 'PDF 파일',
+    fileBody: '이력서나 포트폴리오 PDF를 여기로 끌어다 놓거나 눌러서 골라요.',
+    fileDrop: '여기에 놓으면 바로 읽어요',
     choose: 'PDF 고르기',
-    or: '또는',
-    linkPlaceholder: 'https://github.com/... 또는 https://notion.so/...',
+    linkTitle: 'GitHub나 노션 링크',
+    linkBody: '레포나 포트폴리오 페이지의 주소를 붙여 넣어요.',
+    linkPlaceholder: 'https://github.com/...',
     linkLabel: 'GitHub나 노션 링크',
     linkSubmit: '링크로 올리기',
+    steps: ['서류를 올려요', '읽은 역량을 확인해요', '공고와 맞춰 봐요'],
     invalidLink: '올바른 링크가 맞는지 확인해 주세요',
     onlyPdf: 'PDF 파일만 올릴 수 있어요.',
     reading: '서류를 읽고 있어요. 역량을 뽑는 데 몇 초 걸려요.',
@@ -51,13 +56,18 @@ const TEXT = messages({
   },
   en: {
     title: 'My resume',
-    dropTitle: 'Upload your resume or portfolio',
-    dropBody: 'Drop a PDF here, or paste a GitHub or Notion link below.',
+    intro: 'Upload your resume',
+    introBody: 'Once we read the skills in your document, every posting shows how well you fit. Pick whichever way is easier.',
+    fileTitle: 'PDF file',
+    fileBody: 'Drop your resume or portfolio PDF here, or click to choose one.',
+    fileDrop: 'Drop it here and we will read it',
     choose: 'Choose a PDF',
-    or: 'or',
-    linkPlaceholder: 'https://github.com/... or https://notion.so/...',
+    linkTitle: 'GitHub or Notion link',
+    linkBody: 'Paste the address of a repository or portfolio page.',
+    linkPlaceholder: 'https://github.com/...',
     linkLabel: 'GitHub or Notion link',
     linkSubmit: 'Use link',
+    steps: ['Upload a document', 'Check the skills we read', 'Compare with postings'],
     invalidLink: 'Please check that the link is correct',
     onlyPdf: 'Only PDF files are supported.',
     reading: 'Reading your document. Extracting skills takes a few seconds.',
@@ -130,7 +140,7 @@ export function ResumeUploader({ onDone, compact = false }: { onDone?: (resume: 
 
   if (working) {
     return (
-      <div className="rounded-2xl bg-gray-50 p-6" aria-busy="true">
+      <div className={`rounded-2xl bg-gray-50 ${compact ? 'p-6' : 'p-8'}`} aria-busy="true">
         <p className="text-[13.5px] text-gray-500">{L.reading}</p>
         <div className="mt-5 flex flex-wrap gap-2" aria-hidden>
           {['w-20', 'w-28', 'w-16', 'w-24', 'w-20', 'w-32', 'w-16'].map((width, index) => (
@@ -141,51 +151,84 @@ export function ResumeUploader({ onDone, compact = false }: { onDone?: (resume: 
     )
   }
 
+  // 올리는 방법 두 가지를 나란히 놓아요. PDF 칸은 전체가 눌리는 버튼이고, 파일을 이 칸 어디에 끌어 와도 받아요.
   return (
     <div
       onDragOver={(event) => {
         event.preventDefault()
         setOver(true)
       }}
-      onDragLeave={() => setOver(false)}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOver(false)
+      }}
       onDrop={drop}
-      className={`rounded-2xl border border-dashed bg-white transition-colors ${over ? 'border-brand bg-brand-soft' : 'border-gray-300'} ${compact ? 'p-6' : 'p-10'}`}
     >
-      <div className="flex flex-col items-center text-center">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="size-8 text-gray-300" aria-hidden="true">
-          <path d="M7 3.5h7l4 4V19a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5A1.5 1.5 0 0 1 7.5 3.5z" />
-          <path d="M14 3.5v4h4M12 16.5v-6M9.5 13 12 10.5l2.5 2.5" />
-        </svg>
-        <p className="mt-3 text-[15px] font-semibold text-gray-900">{L.dropTitle}</p>
-        <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-gray-500">{L.dropBody}</p>
+      {!compact && (
+        <div className="mb-6">
+          <h2 className="text-[18px] font-semibold text-gray-900">{L.intro}</h2>
+          <p className="mt-1.5 text-[13.5px] leading-relaxed text-gray-500">{L.introBody}</p>
+        </div>
+      )}
+      <div className="grid gap-3 sm:grid-cols-2">
         <input ref={fileRef} type="file" accept="application/pdf,.pdf" hidden onChange={(event) => takeFile(event.target.files?.[0])} />
-        <button type="button" onClick={() => fileRef.current?.click()} className={`${primaryButton} mt-4`}>
-          {L.choose}
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className={`group flex flex-col items-start rounded-2xl border-2 border-dashed text-left transition-colors ${compact ? 'min-h-48 p-[22px]' : 'min-h-60 p-[30px]'} ${
+            over ? 'border-brand bg-brand-soft' : 'border-transparent bg-gray-50 hover:bg-gray-100'
+          }`}
+        >
+          <span className={`flex size-12 items-center justify-center rounded-full bg-white transition-colors ${over ? 'text-brand' : 'text-gray-500 group-hover:text-brand'}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-6" aria-hidden="true">
+              <path d="M12 15.5v-10M8 9.5l4-4 4 4M5 15v2.5A1.5 1.5 0 0 0 6.5 19h11a1.5 1.5 0 0 0 1.5-1.5V15" />
+            </svg>
+          </span>
+          <span className="mt-4 text-[15px] font-semibold text-gray-900">{over ? L.fileDrop : L.fileTitle}</span>
+          <span className="mt-1.5 text-[13px] leading-relaxed text-gray-500">{L.fileBody}</span>
+          <span className="mt-auto w-full pt-5">
+            <span className={`${primaryButton} pointer-events-none flex h-10! w-full items-center justify-center rounded-lg!`}>{L.choose}</span>
+          </span>
         </button>
+
+        <form onSubmit={submitLink} noValidate className={`flex flex-col rounded-2xl bg-gray-50 ${compact ? 'min-h-48 p-6' : 'min-h-60 p-8'}`}>
+          <span className="flex size-12 items-center justify-center rounded-full bg-white text-gray-500">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-6" aria-hidden="true">
+              <path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1" />
+              <path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" />
+            </svg>
+          </span>
+          <span className="mt-4 text-[15px] font-semibold text-gray-900">{L.linkTitle}</span>
+          <span className="mt-1.5 text-[13px] leading-relaxed text-gray-500">{L.linkBody}</span>
+          <div className="mt-auto pt-5">
+            <input
+              type="url"
+              value={link}
+              onChange={(event) => {
+                setLink(event.target.value)
+                setInvalid(false)
+              }}
+              placeholder={L.linkPlaceholder}
+              aria-label={L.linkLabel}
+              aria-invalid={invalid}
+              className={`h-10 w-full rounded-lg border bg-white px-3 text-[13.5px] text-gray-900 outline-none placeholder:text-gray-400 ${invalid ? 'border-red-400' : 'border-gray-200 focus:border-brand'}`}
+            />
+            {invalid && <p className="mt-1.5 text-[12px] text-red-500">{L.invalidLink}</p>}
+            <button type="submit" disabled={!link.trim()} className={`${toolButton} mt-2 h-10! w-full justify-center disabled:text-gray-400`}>
+              {L.linkSubmit}
+            </button>
+          </div>
+        </form>
       </div>
-      <div className="my-5 flex items-center gap-3 text-[12px] text-gray-400">
-        <span className="h-px flex-1 bg-gray-200" />
-        {L.or}
-        <span className="h-px flex-1 bg-gray-200" />
-      </div>
-      <form onSubmit={submitLink} noValidate className="flex gap-2">
-        <input
-          type="url"
-          value={link}
-          onChange={(event) => {
-            setLink(event.target.value)
-            setInvalid(false)
-          }}
-          placeholder={L.linkPlaceholder}
-          aria-label={L.linkLabel}
-          aria-invalid={invalid}
-          className={`h-10 min-w-0 flex-1 rounded-lg border bg-white px-3 text-[13.5px] text-gray-900 outline-none placeholder:text-gray-400 ${invalid ? 'border-red-400' : 'border-gray-200 focus:border-brand'}`}
-        />
-        <button type="submit" disabled={!link.trim()} className={`${toolButton} shrink-0 disabled:text-gray-400`}>
-          {L.linkSubmit}
-        </button>
-      </form>
-      {invalid && <p className="mt-1.5 text-[12px] text-red-500">{L.invalidLink}</p>}
+      {!compact && (
+        <ol className="mt-6 grid grid-cols-3 gap-3">
+          {L.steps.map((step, index) => (
+            <li key={step} className="flex items-center gap-2 text-[12.5px] text-gray-500">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[11px] font-semibold text-gray-600 tabular-nums">{index + 1}</span>
+              {step}
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   )
 }
