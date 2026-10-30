@@ -293,6 +293,16 @@ export function CardTag({ tone, children }: { tone: 'brand' | 'amber' | 'red' | 
 }
 
 /**
+ * 적합도를 높음(70% 이상, 메인 컬러), 중간(50% 이상, 노란색), 낮음(빨간색)으로 나눈 카드 태그예요. 추천 공고와 공고 탐색의 카드, 줄이 같이 써요.
+ * 이력서가 없어 적합도를 모르면(fit이 null) 아무것도 그리지 않아요.
+ */
+export function FitTag({ fit }: { fit: number | null }) {
+  const L = useMessages(TEXT)
+  if (fit === null) return null
+  return <CardTag tone={fit >= 70 ? 'brand' : fit >= 50 ? 'amber' : 'red'}>{L.fitTag(fit)}</CardTag>
+}
+
+/**
  * 이미 진단한 공고에 붙이는 "진단함" 태그예요. 만드는 중이면 "진단 중"이에요. 공고 카드, 공고 탐색의 카드와 줄, 새 진단 화면의 검색 결과가 같이 써요.
  * 로그인한 계정의 리포트에서 찾고(`useDiagnosed`), 진단하지 않은 공고면 아무것도 그리지 않아요.
  */
@@ -435,7 +445,7 @@ export function PostingTile({ posting, resume, fit = fitOf(posting, resume), tag
             ) : tag === 'deadline' ? (
               <CardTag tone="red">{left === null ? L.always : L.dday(left)}</CardTag>
             ) : (
-              fit !== null && <CardTag tone={fit >= 70 ? 'brand' : fit >= 50 ? 'amber' : 'red'}>{L.fitTag(fit)}</CardTag>
+              <FitTag fit={fit} />
             )}
           </span>
           <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-gray-500">
