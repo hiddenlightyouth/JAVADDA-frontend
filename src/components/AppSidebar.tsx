@@ -11,7 +11,7 @@ import { Kbd } from './Shortcuts'
 import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
-import { BookIcon, BugIcon, ChevronUpDownIcon, DocumentIcon, DotsIcon, PersonIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
+import { BookIcon, BugIcon, CheckIcon, ChevronUpDownIcon, DocumentIcon, DotsIcon, PersonIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { Tip } from './GapParts'
 
@@ -22,6 +22,7 @@ const TEXT = messages({
     recommend: '추천 공고',
     recommendLocked: '이력서를 먼저 등록하세요',
     resume: '내 이력서',
+    resumeReady: '이력서 등록됨',
     blogs: '기술 블로그',
     me: '내 정보',
     admin: '관리자',
@@ -40,6 +41,7 @@ const TEXT = messages({
     recommend: 'Recommended',
     recommendLocked: 'Upload your resume first',
     resume: 'My resume',
+    resumeReady: 'Resume added',
     blogs: 'Tech blogs',
     me: 'Account',
     admin: 'Admin',
@@ -289,6 +291,8 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
         >
           <DocumentIcon />
           <span className="flex-1">{text.resume}</span>
+          {/* 대표 이력서가 있으면 오른쪽 끝에 체크를 붙여서, 진단과 추천을 바로 쓸 수 있다는 걸 알려요. 서류 이름은 적지 않아요. */}
+          {resume && <CheckIcon className="size-3.5 shrink-0 text-brand" label={text.resumeReady} />}
         </a>
       </div>
 
