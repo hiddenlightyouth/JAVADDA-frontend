@@ -39,6 +39,8 @@ export interface ServerConfig {
   usage: boolean
   /** 고를 수 있는 AI 모델 */
   ai: AiConfig
+  /** 서버에 닿았는지. false면 나머지 값은 모두 꺼진 기본값이에요. */
+  online: boolean
 }
 
 const NONE: ServerConfig = {
@@ -51,6 +53,7 @@ const NONE: ServerConfig = {
   withdraw: false,
   usage: false,
   ai: { defaultModel: '', models: [] },
+  online: false,
 }
 
 function readAi(value: unknown): AiConfig {
@@ -76,6 +79,7 @@ export async function fetchConfig(): Promise<ServerConfig> {
       withdraw: result.data?.withdraw === true,
       usage: result.data?.usage === true,
       ai: readAi(result.data?.ai),
+      online: true,
     }
   } catch {
     return NONE
@@ -83,6 +87,12 @@ export async function fetchConfig(): Promise<ServerConfig> {
 }
 
 let configOnce: Promise<ServerConfig> | null = null
+
+/** 서버에 다시 물어봐요. 설정 창을 열 때 써서, 앱을 연 뒤에 서버가 켜졌거나 키가 바뀌어도 새 목록을 보여줘요. */
+export function refreshConfig(): Promise<ServerConfig> {
+  configOnce = fetchConfig()
+  return configOnce
+}
 
 /** 서버가 지원하는 기능을 한 번만 물어보고 나눠 써요. 로그인 화면과 내 정보처럼 따로 뜨는 화면에서 써요. */
 export function loadConfig(): Promise<ServerConfig> {
