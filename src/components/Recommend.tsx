@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
-import { fetchPostings, fitOf, sortPostings, useResume, type JobPosting, type PostingSort } from '../lib/gap'
-import { formatDateTime } from '../lib/format'
+import { fetchPostings, fitOf, sortPostings, useResume, useResumeShelf, type JobPosting, type PostingSort } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
-import { cardsGrid, Failed, Notice, PostingCardsSkeleton, PostingTile, SkillChip } from './GapParts'
-import { toolButton } from './ui'
+import { cardsGrid, Failed, Notice, PostingCardsSkeleton, PostingTile } from './GapParts'
 
 /**
  * 추천 공고 화면이에요. 올려 둔 이력서의 역량과 가까운 공고를 적합도 순서로 보여줘요.
+ * 어느 서류로 추천할지는 정렬, 적합도 옆의 기준 메뉴에서 골라요. 처음에는 대표 이력서이고, 여기서 골라도 대표 이력서는 바뀌지 않아요.
  * 이력서가 없으면 먼저 올리라고 안내해요.
  */
 
@@ -18,9 +17,10 @@ const SORTS: PostingSort[] = ['fit', 'recent', 'deadline']
 const TEXT = messages({
   ko: {
     title: '추천 공고',
-    basis: (name: string, when: string) => `${when}에 올린 ${name} 기준이에요.`,
-    basisHint: '이력서를 고치면 추천도 바뀌어요.',
-    change: '이력서 바꾸기',
+    basis: '기준',
+    docs: '추천에 쓸 서류',
+    skillCount: (count: number) => `역량 ${count}개`,
+    manage: '내 이력서에서 고치기',
     sort: '정렬',
     sorts: { fit: '유사도순', recent: '최신순', deadline: '마감 임박순' } as Record<PostingSort, string>,
     threshold: '적합도',
@@ -31,13 +31,13 @@ const TEXT = messages({
     upload: '이력서 올리기',
     none: '이 조건에 맞는 공고가 없어요.',
     noneBody: '적합도 조건을 낮춰 보세요.',
-    skills: '추천에 쓴 역량',
   },
   en: {
     title: 'Recommended',
-    basis: (name: string, when: string) => `Based on ${name}, uploaded ${when}.`,
-    basisHint: 'Edit your resume and the recommendations follow.',
-    change: 'Change resume',
+    basis: 'Based on',
+    docs: 'Document to match',
+    skillCount: (count: number) => `${count} ${count === 1 ? 'skill' : 'skills'}`,
+    manage: 'Edit in My resume',
     sort: 'Sort',
     sorts: { fit: 'Most similar', recent: 'Newest', deadline: 'Closing soon' },
     threshold: 'Fit',
@@ -48,7 +48,6 @@ const TEXT = messages({
     upload: 'Upload a resume',
     none: 'No postings match this filter.',
     noneBody: 'Try lowering the fit threshold.',
-    skills: 'Skills used for matching',
   },
 })
 
@@ -58,14 +57,18 @@ type Loaded = JobPosting[] | 'failed'
 
 export function Recommend({ onPick, onResume }: { onPick: (postingId: string) => void; onResume: () => void }) {
   const L = useMessages(TEXT)
-  const resume = useResume()
+  const shelf = useResumeShelf()
+  const primary = useResume()
+  /** 추천에 쓸 서류. 고르지 않았거나 지워졌으면 대표 이력서예요. */
+  const [pickedId, setPickedId] = useState<string | null>(null)
+  const resume = shelf.list.find((item) => item.id === pickedId) ?? primary
   const [sort, setSort] = useState<PostingSort>('fit')
   const [threshold, setThreshold] = useState(0)
   const [loaded, setLoaded] = useState<Loaded | undefined>(undefined)
   const [attempt, setAttempt] = useState(0)
 
+  // 공고 목록은 서류와 상관없어서, 서류를 바꿔도 다시 받지 않아요.
   useEffect(() => {
-    if (!resume) return
     let stale = false
     setLoaded(undefined)
     void fetchPostings().then(
@@ -79,7 +82,7 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
     return () => {
       stale = true
     }
-  }, [resume, attempt])
+  }, [attempt])
 
   const list = useMemo(
     () => (Array.isArray(loaded) && resume ? sortPostings(loaded, sort, resume).filter((posting) => (fitOf(posting, resume) ?? 0) >= threshold) : loaded),
@@ -94,27 +97,29 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
     )
   }
 
-  const top = [...resume.skills].sort((a, b) => b.level - a.level).slice(0, 8)
-
   return (
     <ScrollPage header={<PageHeader title={L.title} />}>
-      {/* 어떤 이력서를 기준으로 추천하는지 먼저 알려줘요. */}
-      <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl bg-gray-50 p-5">
-        <div className="min-w-0">
-          <p className="text-[13.5px] font-medium text-gray-900">{L.basis(resume.name, formatDateTime(resume.uploadedAt))}</p>
-          <p className="mt-0.5 text-[12.5px] text-gray-500">{L.basisHint}</p>
-          <div className="mt-3 flex flex-wrap gap-1.5" aria-label={L.skills}>
-            {top.map((skill) => (
-              <SkillChip key={skill.name} name={skill.name} hint={`Lv.${skill.level}`} />
-            ))}
-          </div>
-        </div>
-        <button type="button" onClick={onResume} className={`${toolButton} shrink-0`}>
-          {L.change}
-        </button>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      {/* 어떤 서류로 추천하는지는 메뉴 버튼에 늘 보여요. 공고 탐색의 메뉴 줄과 같은 모양이에요. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Dropdown
+          label={L.basis}
+          value={resume.name}
+          groups={[
+            {
+              title: L.docs,
+              items: shelf.list.map((item) => ({
+                label: item.name,
+                hint: L.skillCount(item.skills.length),
+                checked: item.id === resume.id,
+                onSelect: () => {
+                  track('recommend_resume_change', { primary: item.id === shelf.primaryId })
+                  setPickedId(item.id)
+                },
+              })),
+            },
+            { items: [{ label: L.manage, onSelect: onResume }] },
+          ]}
+        />
         <Dropdown
           label={L.sort}
           value={L.sorts[sort]}

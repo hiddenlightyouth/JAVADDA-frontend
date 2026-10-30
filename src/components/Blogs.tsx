@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
-import { BLOG_COMPANIES, COLLECTED_AT, companyNames, fetchBlogDigests, isStale, THEME_NAMES, themeShare, themeTrends, topSkills, type BlogDigest, type BlogPost } from '../lib/blogs'
+import { BLOG_COMPANIES, COLLECTED_AT, fetchBlogDigests, isStale, THEME_NAMES, themeShare, themeTrends, topSkills, type BlogDigest, type BlogPost, type ThemeTrend } from '../lib/blogs'
 import { companyOf, POSTINGS } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { PageHeader } from './AppPage'
 import { CompanyMark, Failed, Meter, Notice, Panel, SkillChip } from './GapParts'
 import { ExternalLinkIcon } from './Icons'
 import { Bone } from './Skeleton'
-import { primaryButton, toolButton } from './ui'
+import { Busy, primaryButton, stagger, toolButton } from './ui'
 
 /**
  * 기술 블로그 화면이에요. 기업마다 기술 블로그의 대표 글을 요약해 두고, 요즘 어떤 고민을 하는지 분석해서 보여줘요.
@@ -24,7 +24,9 @@ const TEXT = messages({
     trendLead: (active: number, count: number, theme: string) => `최근 넉 달 동안 글을 쓴 ${active}곳 중 ${count}곳이 ${theme} 이야기를 했어요.`,
     trendNote: '글에 붙인 주제로 세었어요. 한 글에 주제가 둘이면 둘 다 셌어요.',
     companies: (count: number) => `${count}곳`,
-    cardsTitle: '기업별 요약',
+    of: (active: number) => `/ ${active}곳`,
+    themeLabel: '요즘 고민',
+    pickCompany: (name: string) => `${name} 블로그 보기`,
     posts: (count: number) => `글 ${count}개`,
     latest: '마지막 글',
     paused: '쉬는 중',
@@ -57,7 +59,9 @@ const TEXT = messages({
     trendLead: (active: number, count: number, theme: string) => `Of the ${active} companies that posted in the last four months, ${count} wrote about ${theme}.`,
     trendNote: 'Counted by the topics tagged on each post. A post with two topics counts for both.',
     companies: (count: number) => `${count}`,
-    cardsTitle: 'By company',
+    of: (active: number) => `of ${active}`,
+    themeLabel: 'Trending',
+    pickCompany: (name: string) => `View ${name}`,
     posts: (count: number) => `${count} ${count === 1 ? 'post' : 'posts'}`,
     latest: 'Latest',
     paused: 'Paused',
@@ -219,33 +223,116 @@ export function Blogs({ company, onCompany, onJobs }: {
   )
 }
 
-/** 전체 보기예요. 위에 여러 기업에 걸친 요즘 흐름, 아래에 기업별 요약 카드가 있어요. */
+/** 전체 보기의 칸 수예요. 목록 폭을 보고 정해요. 공고 탐색의 카드 줄과 같은 기준(672px, 1152px)이에요. */
+function useColumns() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [columns, setColumns] = useState(1)
+  useEffect(() => {
+    const element = ref.current
+    if (!element) return
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry.contentRect.width
+      setColumns(width >= 1152 ? 3 : width >= 672 ? 2 : 1)
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+  return { ref, columns }
+}
+
+/**
+ * 높이가 다른 칸을 빈틈없이 쌓는 갤러리예요. 칸을 왼쪽부터 차례로 나눠 담아서, 읽는 순서는 왼쪽 위부터 그대로예요.
+ * 짧은 주제 칸과 긴 블로그 카드가 섞여도 줄마다 높이를 맞추느라 비는 자리가 생기지 않아요.
+ */
+function Gallery({ items }: { items: { key: string; node: ReactNode }[] }) {
+  const { ref, columns } = useColumns()
+  const lanes: (typeof items)[] = Array.from({ length: columns }, () => [])
+  items.forEach((item, index) => lanes[index % columns].push(item))
+  return (
+    <div ref={ref} className="flex items-start gap-4">
+      {lanes.map((lane, index) => (
+        <ul key={index} className="flex min-w-0 flex-1 flex-col gap-4">
+          {lane.map((item) => (
+            <li key={item.key} className="animate-rise">
+              {item.node}
+            </li>
+          ))}
+        </ul>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * 전체 보기예요. 여러 기업에 걸친 요즘 고민(주제마다 작은 칸)과 기업별 블로그 카드를 한 갤러리에 섞어 놓아요.
+ * 주제 칸은 블로그 카드 사이사이에 고르게 끼워서, 따로 큰 칸을 차지하지 않아요.
+ */
 function Overview({ digests, onPick }: { digests: BlogDigest[]; onPick: (company: string) => void }) {
   const L = useMessages(TEXT)
   const { trends, active } = themeTrends(digests)
-  const top = trends[0]
-  return (
-    <div className="flex flex-col gap-8">
-      {top && (
-        <Panel title={L.trendTitle}>
-          <p className="text-[15px] leading-relaxed font-medium text-gray-900">{L.trendLead(active, top.companies.length, THEME_NAMES[top.theme])}</p>
-          <div className="mt-5 flex flex-col gap-3.5">
-            {trends.slice(0, 6).map((trend) => (
-              <Meter key={trend.theme} label={THEME_NAMES[trend.theme]} value={trend.companies.length} max={active} display={L.companies(trend.companies.length)} note={companyNames(trend.companies)} />
-            ))}
-          </div>
-          <p className="mt-5 text-[12px] text-gray-400">{L.trendNote}</p>
-        </Panel>
-      )}
+  const themes = trends.slice(0, 6)
+  const top = themes[0]
 
-      <section>
-        <h2 className="text-[15px] font-semibold text-gray-900">{L.cardsTitle}</h2>
-        <ul className="mt-3 grid gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3">
-          {digests.map((digest, order) => (
-            <DigestCard key={digest.companyId} digest={digest} order={order} onOpen={() => onPick(digest.companyId)} />
-          ))}
-        </ul>
-      </section>
+  // 블로그 카드 사이에 주제 칸을 고르게 끼워요. 첫 줄 둘째 자리부터 들어가요.
+  const items: { key: string; node: ReactNode }[] = []
+  const step = themes.length ? digests.length / themes.length : Infinity
+  let next = 0
+  digests.forEach((digest, index) => {
+    items.push({ key: digest.companyId, node: <DigestCard digest={digest} order={items.length} onOpen={() => onPick(digest.companyId)} /> })
+    while (next < themes.length && index + 1 >= next * step + 1) {
+      const trend = themes[next]
+      items.push({ key: `theme:${trend.theme}`, node: <ThemeCard trend={trend} active={active} order={items.length} onPick={onPick} /> })
+      next += 1
+    }
+  })
+
+  return (
+    <div>
+      {top && (
+        <div className="mb-4 px-1">
+          <h2 className="text-[15px] font-semibold text-gray-900">{L.trendTitle}</h2>
+          <p className="mt-1 text-[13.5px] leading-relaxed text-gray-600">{L.trendLead(active, top.companies.length, THEME_NAMES[top.theme])}</p>
+        </div>
+      )}
+      <Gallery items={items} />
+      {top && <p className="mt-6 text-center text-[12px] text-gray-400">{L.trendNote}</p>}
+    </div>
+  )
+}
+
+/** 요즘 고민 주제 하나의 작은 칸이에요. 몇 곳이 썼는지와 그 기업 로고가 있고, 로고를 누르면 그 기업 블로그로 가요. */
+function ThemeCard({ trend, active, order, onPick }: { trend: ThemeTrend; active: number; order: number; onPick: (company: string) => void }) {
+  const L = useMessages(TEXT)
+  return (
+    <div className="rounded-2xl bg-gray-50 p-5" style={stagger(order)}>
+      <p className="text-[12px] font-medium text-brand">{L.themeLabel}</p>
+      <div className="mt-1.5 flex items-baseline justify-between gap-3">
+        <p className="min-w-0 text-[16px] leading-snug font-semibold text-gray-900">{THEME_NAMES[trend.theme]}</p>
+        <p className="shrink-0 tabular-nums">
+          <span className="text-[16px] font-semibold text-brand">{L.companies(trend.companies.length)}</span>
+          <span className="ml-1 text-[12px] text-gray-400">{L.of(active)}</span>
+        </p>
+      </div>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-200/70" aria-hidden>
+        <div className="h-full origin-left animate-grow rounded-full bg-brand" style={{ width: `${(trend.companies.length / Math.max(1, active)) * 100}%` }} />
+      </div>
+      <div className="mt-4 flex flex-wrap gap-1.5">
+        {trend.companies.map((id) => {
+          const company = companyOf(id)
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-label={L.pickCompany(company.name)}
+              title={company.name}
+              onClick={() => onPick(id)}
+              className="rounded-lg transition-opacity hover:opacity-75"
+            >
+              <CompanyMark company={company} className="size-7 rounded-lg! text-[11px]" />
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -257,12 +344,12 @@ function DigestCard({ digest, order, onOpen }: { digest: BlogDigest; order: numb
   const paused = isStale(digest)
   const latest = digest.posts[0]
   return (
-    <li
+    <div
       onClick={(event) => {
         if (!(event.target as Element).closest('button, a')) onOpen()
       }}
-      className="group flex animate-rise cursor-pointer flex-col rounded-2xl bg-gray-50 p-5 transition-colors hover:bg-gray-100"
-      style={{ animationDelay: `${Math.min(order, 12) * 28}ms` }}
+      className="group flex cursor-pointer flex-col rounded-2xl bg-gray-50 p-5 transition-colors hover:bg-gray-100"
+      style={stagger(order)}
     >
       <div className="flex items-center gap-3">
         <CompanyMark company={company} className="size-10 text-[15px]" />
@@ -279,7 +366,7 @@ function DigestCard({ digest, order, onOpen }: { digest: BlogDigest; order: numb
 
       <p className="mt-4 line-clamp-3 text-[14px] leading-relaxed text-gray-800">{digest.headline}</p>
 
-      <div className="mt-4 flex flex-1 flex-wrap content-start gap-1.5">
+      <div className="mt-4 flex flex-wrap gap-1.5">
         {themeShare(digest)
           .slice(0, 3)
           .map(({ theme }) => (
@@ -302,7 +389,7 @@ function DigestCard({ digest, order, onOpen }: { digest: BlogDigest; order: numb
         </a>
         <span className="shrink-0 text-gray-400 tabular-nums">{L.posts(digest.posts.length)}</span>
       </div>
-    </li>
+    </div>
   )
 }
 
@@ -458,43 +545,45 @@ function PostRow({ post, company }: { post: BlogPost; company: string }) {
   )
 }
 
-/** 전체 보기와 같은 배치의 뼈대예요. */
+/** 전체 보기와 같은 배치의 뼈대예요. 블로그 카드와 짧은 주제 칸이 섞인 갤러리예요. */
 function OverviewSkeleton() {
   return (
-    <div className="flex flex-col gap-8" aria-busy="true">
-      <div aria-hidden className="rounded-2xl bg-gray-50 p-5">
-        <Bone className="h-3.5 w-28" />
-        <Bone className="mt-5 h-4 w-2/3" />
-        <div className="mt-5 flex flex-col gap-4">
-          {Array.from({ length: 5 }, (_, item) => (
-            <div key={item} className="flex items-center gap-3">
-              <Bone className="h-3 w-28 shrink-0" />
-              <Bone className="h-2 flex-1" />
-              <Bone className="h-3 w-8 shrink-0" />
-            </div>
-          ))}
-        </div>
-      </div>
-      <ul className="grid gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3">
-        {Array.from({ length: 6 }, (_, item) => (
-          <li key={item} aria-hidden className="rounded-2xl bg-gray-50 p-5">
-            <div className="flex items-center gap-3">
-              <Bone className="size-10 shrink-0 rounded-xl!" />
-              <div className="min-w-0 flex-1">
-                <Bone className="h-3.5 w-20" />
-                <Bone className="mt-2 h-3 w-32" />
+    <Busy>
+      <Bone className="mx-1 h-4 w-40" />
+      <Bone className="mx-1 mt-2.5 mb-5 h-3.5 w-2/3" />
+      <div className="grid items-start gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3">
+        {Array.from({ length: 6 }, (_, item) =>
+          item % 3 === 1 ? (
+            <div key={item} className="rounded-2xl bg-gray-50 p-5">
+              <Bone className="h-3 w-14" />
+              <Bone className="mt-3 h-4 w-28" />
+              <Bone className="mt-4 h-1.5 w-full" />
+              <div className="mt-4 flex gap-1.5">
+                {[0, 1, 2, 3].map((logo) => (
+                  <Bone key={logo} className="size-7 rounded-lg!" />
+                ))}
               </div>
             </div>
-            <Bone className="mt-5 h-3.5 w-full" />
-            <Bone className="mt-2 h-3.5 w-4/5" />
-            <div className="mt-4 flex gap-1.5">
-              <Bone className="h-7 w-24 rounded-md!" />
-              <Bone className="h-7 w-20 rounded-md!" />
+          ) : (
+            <div key={item} className="rounded-2xl bg-gray-50 p-5">
+              <div className="flex items-center gap-3">
+                <Bone className="size-10 shrink-0 rounded-xl!" />
+                <div className="min-w-0 flex-1">
+                  <Bone className="h-3.5 w-20" />
+                  <Bone className="mt-2 h-3 w-32" />
+                </div>
+              </div>
+              <Bone className="mt-5 h-3.5 w-full" />
+              <Bone className="mt-2 h-3.5 w-4/5" />
+              <div className="mt-4 flex gap-1.5">
+                <Bone className="h-7 w-24 rounded-md!" />
+                <Bone className="h-7 w-20 rounded-md!" />
+              </div>
             </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+          ),
+        )}
+      </div>
+    </Busy>
   )
 }
 
