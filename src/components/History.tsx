@@ -19,7 +19,7 @@ export const REPORT_LIST_TEXT = messages({
     deleted: '리포트를 지웠어요.',
     manage: (title: string) => `${title} 리포트 관리`,
     title: '내 리포트',
-    pending: '진단하는 중',
+    pending: (progress: number) => `진단 중 ${progress}%`,
     failed: '만들지 못했어요',
     none: '아직 진단한 공고가 없어요.',
     start: '첫 진단을 시작해볼까요?',
@@ -35,7 +35,7 @@ export const REPORT_LIST_TEXT = messages({
     deleted: 'Report deleted.',
     manage: (title: string) => `Manage ${title} report`,
     title: 'My reports',
-    pending: 'Analyzing',
+    pending: (progress: number) => `Analyzing ${progress}%`,
     failed: 'Failed',
     none: "You haven't diagnosed any postings yet.",
     start: 'Ready for your first diagnosis?',
@@ -77,7 +77,7 @@ function Row({ report, onOpen, onDelete }: { report: Report; onOpen: () => void;
           <span className="mt-0.5 block truncate text-[12.5px] text-gray-500">{company.name}</span>
         </span>
         <span className="flex shrink-0 flex-col items-end gap-1">
-          {report.status === 'done' ? <FitBadge fit={report.fitScore} compact /> : <span className="text-[12px] text-gray-400">{report.status === 'failed' ? text.failed : text.pending}</span>}
+          {report.status === 'done' ? <FitBadge fit={report.fitScore} compact /> : <span className="text-[12px] text-gray-400 tabular-nums">{report.status === 'failed' ? text.failed : text.pending(report.progress ?? 0)}</span>}
           <span className="text-[12px] text-gray-400">{formatWhen(report.createdAt)}</span>
         </span>
       </button>

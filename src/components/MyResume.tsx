@@ -1,16 +1,15 @@
 import { useMemo, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
 import { useAuth } from '../lib/auth'
-import { axisOf, canonical, removeResume, requestLogin, suggestSkills, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type Resume, type ResumeSkill } from '../lib/gap'
+import { axisOf, canonical, PROGRESS_START, removeResume, requestLogin, suggestSkills, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type ProgressState, type Resume, type ResumeSkill } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { showToast } from '../lib/toast'
 import { canvas, pageFrame, PageHeader } from './AppPage'
 import { ConfirmDialog, Modal, panelBody, SidePanel } from './Dialog'
-import { Notice, SkillChip, Tip } from './GapParts'
+import { AiProgress, Notice, SkillChip, Tip } from './GapParts'
 import { CloseButton, CloseIcon, LinkIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
-import { Bone } from './Skeleton'
-import { Badge, Busy, FormError, menuPanel, NumberedList, primaryButton, textField, textFieldSm, toolButton, toolDangerButton } from './ui'
+import { Badge, FormError, menuPanel, NumberedList, primaryButton, textField, textFieldSm, toolButton, toolDangerButton } from './ui'
 
 /**
  * 내 이력서 화면이에요. PDF나 GitHub, 노션 링크를 올리면 역량을 읽어 이름표로 보여주고, 잘못 읽은 것은 빼거나 더해요.
@@ -31,7 +30,6 @@ const TEXT = messages({
     linkSubmit: '링크로 올리기',
     invalidLink: '올바른 링크가 맞는지 확인해 주세요',
     onlyPdf: 'PDF 파일만 올릴 수 있어요.',
-    reading: '서류를 읽고 있어요. 역량을 뽑는 데 몇 초 걸려요.',
     uploaded: '서류를 읽었어요. 뽑은 역량을 확인해 주세요.',
     sources: { pdf: 'PDF', github: 'GitHub', notion: '노션' } as Record<Resume['source'], string>,
     uploadedAt: (when: string) => `${when}에 업로드 됨`,
@@ -68,7 +66,6 @@ const TEXT = messages({
     linkSubmit: 'Use link',
     invalidLink: 'Please check that the link is correct',
     onlyPdf: 'Only PDF files are supported.',
-    reading: 'Reading your document. Extracting skills takes a few seconds.',
     uploaded: 'Done. Please check the skills we found.',
     sources: { pdf: 'PDF', github: 'GitHub', notion: 'Notion' },
     uploadedAt: (when: string) => `Uploaded ${when}`,
@@ -99,16 +96,18 @@ const LINK = /^https?:\/\/(?:www\.)?(?:github\.com|notion\.so|[\w-]+\.notion\.si
 /** 서류를 올리는 칸이에요. PDF 끌어다 놓기와 링크 두 가지를 받아요. 올리면 onDone으로 알려줘요. */
 export function ResumeUploader({ onDone }: { onDone?: (resume: Resume) => void }) {
   const L = useMessages(TEXT)
-  const [working, setWorking] = useState(false)
+  /** 올리는 동안의 진행 상황과 올리는 것의 이름이에요. 올리지 않을 때는 null이에요. */
+  const [working, setWorking] = useState<(ProgressState & { name: string }) | null>(null)
   const [over, setOver] = useState(false)
   const [link, setLink] = useState('')
   const [invalid, setInvalid] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   async function upload(input: { file?: File; link?: string }) {
-    setWorking(true)
-    const resume = await uploadResume(input)
-    setWorking(false)
+    const name = input.file?.name ?? input.link ?? ''
+    setWorking({ ...PROGRESS_START, name })
+    const resume = await uploadResume(input, (progress) => setWorking({ ...progress, name }))
+    setWorking(null)
     // 로그인하지 않았으면 로그인 화면으로 갔고, 실패했으면 토스트로 알렸어요.
     if (!resume) return
     track('resume_upload', { source: resume.source, skills: resume.skills.length })
@@ -141,17 +140,11 @@ export function ResumeUploader({ onDone }: { onDone?: (resume: Resume) => void }
     void upload({ link: value })
   }
 
+  // 읽는 동안은 서버가 알려 주는 진행 정도를 막대로 보여줘요. 위에 올린 파일 이름이나 링크를 작게 적어요.
   if (working) {
     return (
       <div className="rounded-2xl bg-gray-50 p-6">
-        <p role="status" className="text-[13.5px] text-gray-500">
-          {L.reading}
-        </p>
-        <Busy label="" className="mt-5 flex flex-wrap gap-2">
-          {['w-20', 'w-28', 'w-16', 'w-24', 'w-20', 'w-32', 'w-16'].map((width, index) => (
-            <Bone key={index} className={`h-7 rounded-md! ${width}`} />
-          ))}
-        </Busy>
+        <AiProgress progress={working.progress} stage={working.stage} title={working.name} />
       </div>
     )
   }
@@ -399,7 +392,7 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
         />
       )}
       {adding && (
-        <Modal onClose={() => setAdding(false)} labelledBy="resume-add-title" className="w-full max-w-2xl p-6">
+        <Modal onClose={() => setAdding(false)} labelledBy="resume-add-title" closeOnBackdrop={false} className="w-full max-w-2xl p-6">
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
               <h2 id="resume-add-title" className="text-[17px] font-semibold text-gray-900">

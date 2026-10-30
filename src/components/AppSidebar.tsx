@@ -33,7 +33,7 @@ const TEXT = messages({
     settings: '설정',
     bug: '버그 신고',
     login: '로그인',
-    pending: '진단 중',
+    pending: (progress: number) => `진단 중 ${progress}%`,
   },
   en: {
     new: 'New diagnosis',
@@ -53,7 +53,7 @@ const TEXT = messages({
     settings: 'Settings',
     bug: 'Report a bug',
     login: 'Sign in',
-    pending: 'Analyzing',
+    pending: (progress: number) => `Analyzing ${progress}%`,
   },
 })
 
@@ -135,7 +135,7 @@ function ReportRow({ report, active, menuOpen, onOpen, onToggleMenu, onCloseMenu
         </p>
         <p className="mt-0.5 flex items-center justify-between gap-2 text-xs text-gray-400">
           <span className="min-w-0 truncate">{posting?.title ?? ''}</span>
-          <span className="shrink-0">{report.status === 'pending' ? text.pending : formatWhen(report.createdAt)}</span>
+          <span className="shrink-0 tabular-nums">{report.status === 'pending' ? text.pending(report.progress ?? 0) : formatWhen(report.createdAt)}</span>
         </p>
       </a>
 

@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { track } from '../lib/analytics'
-import { fetchQuestions, type InterviewQuestion, type QuestionCategory } from '../lib/gap'
+import { fetchQuestions, PROGRESS_START, type InterviewQuestion, type ProgressState, type QuestionCategory } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { Dropdown } from './Dropdown'
-import { Failed, Notice } from './GapParts'
-import { Bone } from './Skeleton'
-import { Bullets, Busy, ghostButton, label, primaryButton, stagger, tag, toolButton } from './ui'
+import { AiProgress, Failed, Notice } from './GapParts'
+import { Bullets, ghostButton, label, primaryButton, stagger, tag, toolButton } from './ui'
 
 const CATEGORIES: QuestionCategory[] = ['tech', 'project', 'cs', 'culture']
 
@@ -16,7 +15,6 @@ export const QUESTION_TEXT = messages({
     type: '유형',
     practiceAll: '전체 연습',
     practiceOne: '이 질문 연습',
-    picking: '질문을 고르고 있어요.',
     probability: (value: number) => `나올 확률 ${value}%`,
     source: (label: string) => `출처: ${label}`,
     show: '답변 포인트 보기',
@@ -32,7 +30,6 @@ export const QUESTION_TEXT = messages({
     type: 'Type',
     practiceAll: 'Practice all',
     practiceOne: 'Practice this',
-    picking: 'Picking questions.',
     probability: (value: number) => `${value}% likely`,
     source: (label: string) => `Source: ${label}`,
     show: 'Show answer points',
@@ -43,25 +40,6 @@ export const QUESTION_TEXT = messages({
     count: (count: number) => `${count} ${count === 1 ? 'question' : 'questions'}`,
   },
 })
-
-function QuestionsSkeleton() {
-  const L = useMessages(QUESTION_TEXT)
-  return (
-    <Busy label={L.picking} className="space-y-3">
-      {[0, 1, 2, 3].map((item) => (
-        <div key={item} className="rounded-2xl bg-gray-50 p-5">
-          <div className="flex items-center gap-3">
-            <Bone className="h-3 w-24" />
-            <Bone className="h-6 w-14" />
-            <Bone className="h-3 w-32" />
-          </div>
-          <Bone className="mt-4 h-4 w-4/5" />
-          <Bone className="mt-3 h-3 w-24" />
-        </div>
-      ))}
-    </Busy>
-  )
-}
 
 /** 나올 확률을 짧은 막대와 숫자로 보여줘요. */
 export function Probability({ value }: { value: number }) {
@@ -140,11 +118,18 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
   const L = useMessages(QUESTION_TEXT)
   const [questions, setQuestions] = useState<InterviewQuestion[] | null | undefined>(undefined)
   const [category, setCategory] = useState<QuestionCategory | null>(null)
+  const [progress, setProgress] = useState<ProgressState>(PROGRESS_START)
+  /** 마지막으로 보낸 요청이에요. 앞의 요청이 늦게 끝나도 화면을 덮지 않게 해요. */
+  const latest = useRef(0)
 
   async function load() {
+    const request = ++latest.current
     setQuestions(undefined)
-    const list = await fetchQuestions(reportId)
-    setQuestions(list.length > 0 ? list : null)
+    setProgress(PROGRESS_START)
+    const list = await fetchQuestions(reportId, (next) => {
+      if (request === latest.current) setProgress(next)
+    })
+    if (request === latest.current) setQuestions(list.length > 0 ? list : null)
   }
 
   useEffect(() => {
@@ -188,7 +173,8 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
       </div>
 
       {questions === undefined ? (
-        <QuestionsSkeleton />
+        // AI가 질문을 만드는 동안은 진행 정도를 막대로 보여줘요. 이미 만들어 둔 질문이면 금방 지나가요.
+        <AiProgress progress={progress.progress} stage={progress.stage} className="mx-auto mt-16 w-full max-w-md" />
       ) : questions === null ? (
         <Failed onRetry={() => void load()} className="mt-16" />
       ) : (

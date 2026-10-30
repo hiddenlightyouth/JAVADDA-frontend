@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { track } from '../lib/analytics'
-import { companyOf, fetchQuestions, postingOf, submitAnswer, useReport, type InterviewQuestion, type PracticeFeedback } from '../lib/gap'
+import { companyOf, fetchQuestions, postingOf, PROGRESS_START, submitAnswer, useReport, type InterviewQuestion, type PracticeFeedback, type ProgressState } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { PageHeader, ScrollPage } from './AppPage'
-import { Notice, Panel, ScoreRing } from './GapParts'
+import { AiProgress, Notice, Panel, ScoreRing } from './GapParts'
 import { Probability, QUESTION_TEXT, QuestionDetail } from './ReportQuestions'
 import { Bone } from './Skeleton'
 import { Bullets, Busy, ghostButton, label, primaryButton, tag, textArea, toolButton } from './ui'
@@ -21,7 +21,7 @@ const TEXT = messages({
     placeholder: '면접관 앞에서 말하듯이 적어 보세요. 상황, 내가 한 일, 결과 순서가 좋아요.',
     chars: (count: number) => `${count}자`,
     submit: '답변 제출',
-    reading: '읽고 있어요',
+    grading: '채점 중',
     feedback: 'AI 피드백',
     good: '좋았어요',
     improve: '보완할 점',
@@ -47,7 +47,7 @@ const TEXT = messages({
     placeholder: 'Write it like you would say it. Situation, what you did, then the result.',
     chars: (count: number) => `${count} chars`,
     submit: 'Submit answer',
-    reading: 'Reading',
+    grading: 'Grading',
     feedback: 'AI feedback',
     good: 'What worked',
     improve: 'What to improve',
@@ -79,6 +79,9 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   const [answer, setAnswer] = useState('')
   const [hint, setHint] = useState(false)
   const [sending, setSending] = useState(false)
+  /** 질문을 받는 동안과 답을 채점하는 동안의 진행 상황이에요. */
+  const [loadProgress, setLoadProgress] = useState<ProgressState>(PROGRESS_START)
+  const [gradeProgress, setGradeProgress] = useState<ProgressState>(PROGRESS_START)
   const [feedback, setFeedback] = useState<PracticeFeedback | null>(null)
   /** 지금까지 받은 점수 */
   const [scores, setScores] = useState<number[]>([])
@@ -86,7 +89,10 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
 
   useEffect(() => {
     let stale = false
-    void fetchQuestions(id).then((list) => {
+    setLoadProgress(PROGRESS_START)
+    void fetchQuestions(id, (next) => {
+      if (!stale) setLoadProgress(next)
+    }).then((list) => {
       if (stale) return
       // 질문 하나에서 시작하면 그 질문부터 뒤의 것들만 연습해요.
       const start = startId ? Math.max(0, list.findIndex((item) => item.id === startId)) : 0
@@ -105,7 +111,8 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   async function submit() {
     if (!current || answer.trim().length < MIN_CHARS) return
     setSending(true)
-    const result = await submitAnswer(id, current, answer)
+    setGradeProgress(PROGRESS_START)
+    const result = await submitAnswer(id, current, answer, setGradeProgress)
     setSending(false)
     if (!result) return
     setFeedback(result)
@@ -135,6 +142,9 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
       <div className="mx-auto w-full max-w-[720px]">
         {report === null || questions === null ? (
           <Notice title={L.missing} body={L.missingBody} action={L.back} onAction={onBack} className="mt-16" />
+        ) : report !== undefined && questions === undefined ? (
+          // AI가 질문을 만드는 동안은 진행 정도를 막대로 보여줘요. 이미 만들어 둔 질문이면 금방 지나가요.
+          <AiProgress progress={loadProgress.progress} stage={loadProgress.stage} className="mx-auto mt-16 w-full max-w-md" />
         ) : report === undefined || questions === undefined || !current ? (
           <Busy label={L.loading} className="rounded-2xl bg-gray-50 p-5">
             <Bone className="h-3 w-16" />
@@ -184,10 +194,12 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
                 <span className="text-[12px] text-gray-400 tabular-nums">{L.chars(answer.length)}</span>
                 {!feedback && (
                   <button type="button" disabled={sending || answer.trim().length < MIN_CHARS} onClick={() => void submit()} className={primaryButton}>
-                    {sending ? L.reading : L.submit}
+                    {sending ? L.grading : L.submit}
                   </button>
                 )}
               </div>
+              {/* 채점하는 동안 답을 적는 칸 아래에 진행 정도를 보여줘요. 회색 칸 위라 막대의 빈 부분도 보여요. */}
+              {sending && <AiProgress progress={gradeProgress.progress} stage={gradeProgress.stage} className="mt-4" />}
             </Panel>
 
             {feedback && (

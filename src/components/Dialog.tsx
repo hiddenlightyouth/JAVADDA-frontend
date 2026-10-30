@@ -13,14 +13,17 @@ import { dangerButton, primaryButton, quietButton } from './ui'
 
 /**
  * 화면을 흐리게 덮고 가운데에 뜨는 창이에요. 바깥을 누르거나 Esc를 누르면 닫혀요.
+ * 실수로 닫히면 되돌릴 수 없는 창(서류 올리기 등)은 closeOnBackdrop을 꺼서 바깥을 눌러도 닫히지 않게 해요.
  * 화면 맨 바깥(body)에 그려요. 움직이는 요소 안에 두면 그 요소 크기만큼만 덮여서, 막과 블러가 화면 일부에만 깔려요.
  */
-export function Modal({ onClose, labelledBy, alert = false, className = 'w-full max-w-sm p-5', children }: {
+export function Modal({ onClose, labelledBy, alert = false, closeOnBackdrop = true, className = 'w-full max-w-sm p-5', children }: {
   onClose: () => void
   /** 창 제목의 id예요. 읽기 프로그램이 창 이름으로 읽어요. */
   labelledBy: string
   /** 되돌리기 어려운 작업을 묻는 창이면 켜요. */
   alert?: boolean
+  /** 바깥(막)을 누르면 닫을지. 끄면 닫기 버튼이나 Esc로만 닫혀요. */
+  closeOnBackdrop?: boolean
   className?: string
   children: ReactNode
 }) {
@@ -42,7 +45,7 @@ export function Modal({ onClose, labelledBy, alert = false, className = 'w-full 
     <div
       className="fixed inset-0 z-40 animate-fade flex items-center justify-center bg-gray-900/25 px-5 backdrop-blur-[2px]"
       onPointerDown={(event) => {
-        if (event.target === event.currentTarget) close.current()
+        if (closeOnBackdrop && event.target === event.currentTarget) close.current()
       }}
     >
       <div role={alert ? 'alertdialog' : 'dialog'} aria-modal="true" aria-labelledby={labelledBy} className={`animate-pop rounded-2xl border border-gray-200 bg-white ${className}`}>

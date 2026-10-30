@@ -25,7 +25,7 @@ import { messages, pick, useMessages } from '../lib/i18n'
 import { showToast } from '../lib/toast'
 import { pageFrame, PageHeader } from './AppPage'
 import { panelBody, SidePanel } from './Dialog'
-import { CheckMark, CompanyMark, Delta, FitBadge, KindLabel, Meter, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreHero, ScoreRing, Sparkline, Tip, percent } from './GapParts'
+import { AiProgress, CheckMark, CompanyMark, Delta, FitBadge, KindLabel, Meter, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreHero, ScoreRing, Sparkline, Tip, percent } from './GapParts'
 import { DeleteReportDialog, removeReport } from './History'
 import { AlertIcon, CheckIcon, ChevronRightIcon, ClockIcon, LevelIcon, RefreshIcon, TrashIcon } from './Icons'
 import { ReviewTab } from './ReportReview'
@@ -59,8 +59,6 @@ const TEXT = messages({
     failedBody: '잠시 뒤에 다시 진단해 주세요.',
     failedAction: '다시 진단하기',
     goHome: '새 진단 시작하기',
-    pending: '공고와 서류를 맞춰 보고 있어요.',
-    pendingBody: '보통 1분 안에 끝나요.',
     fitTitle: '적합도',
     verdict: (score: number): string => (score >= 70 ? '잘 맞아요! 바로 지원해 볼 만해요.' : score >= 50 ? '좋아요! 조금만 채우면 돼요.' : '갭이 있어요. 하나씩 채워 봐요.'),
     createdAt: (when: string) => `${when} 진단`,
@@ -122,8 +120,6 @@ const TEXT = messages({
     failedBody: 'Please run the diagnosis again in a moment.',
     failedAction: 'Run again',
     goHome: 'Start a new diagnosis',
-    pending: 'Comparing the posting with your documents.',
-    pendingBody: 'This usually takes under a minute.',
     fitTitle: 'Fit',
     verdict: (score: number) => (score >= 70 ? 'Great fit! Worth applying now.' : score >= 50 ? 'Nice! Just a little more to go.' : 'Some gaps here. Close them one by one.'),
     createdAt: (when: string) => `Diagnosed ${when}`,
@@ -179,9 +175,8 @@ interface Props {
 
 /** 받는 동안 보여주는 뼈대예요. 요약 탭의 배치와 같아요. */
 function ReportSkeleton() {
-  const L = useMessages(TEXT)
   return (
-    <Busy label={L.pending} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <Busy className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-6 rounded-2xl bg-gray-50 p-5">
           <Bone className="size-28 shrink-0" />
@@ -698,12 +693,8 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
         {failed ? (
           <Notice title={L.failedTitle} body={L.failedBody} action={L.failedAction} onAction={() => void rerun()} className="mt-24" />
         ) : !done ? (
-          <>
-            <ReportSkeleton />
-            <p className="mt-6 text-center text-[13px] text-gray-500">
-              {L.pending} {L.pendingBody}
-            </p>
-          </>
+          // 만드는 동안은 서버가 알려 주는 진행 정도를 막대로 보여줘요. 저장소가 1초마다 다시 물어요.
+          <AiProgress progress={report.progress ?? 0} stage={report.stage ?? 'queued'} className="mx-auto mt-24 w-full max-w-md" />
         ) : tab === 'summary' ? (
           <SummaryTab report={report} onOpenGap={(item) => {
             track('gap_open', { kind: item.kind, skill: item.skill })

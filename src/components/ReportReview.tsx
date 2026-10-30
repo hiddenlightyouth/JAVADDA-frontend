@@ -1,12 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { track } from '../lib/analytics'
-import { docName, fetchReview, useResume, type DocType, type DocumentReview, type ParagraphTag, type ReviewParagraph } from '../lib/gap'
+import { docName, fetchReview, PROGRESS_START, useResume, type DocType, type ProgressState, type DocumentReview, type ParagraphTag, type ReviewParagraph } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
-import { Failed, Panel, ScoreHero } from './GapParts'
+import { AiProgress, Failed, Panel, ScoreHero } from './GapParts'
 import { RefreshIcon } from './Icons'
-import { Bone } from './Skeleton'
-import { Badge, Busy, NumberBadge, NumberedList, Segmented, toolButton } from './ui'
+import { Badge, NumberBadge, NumberedList, Segmented, toolButton } from './ui'
 
 const DOCS: DocType[] = ['coverLetter', 'resume', 'portfolio']
 
@@ -14,7 +13,6 @@ const TEXT = messages({
   ko: {
     docs: '서류 종류',
     rerun: '재검증',
-    reading: '서류를 읽고 있어요.',
     fitLabel: '부합도',
     verdict: (score: number): string => (score >= 70 ? '서류가 공고와 잘 이어져요!' : score >= 50 ? '좋아요! 몇 문단만 다듬으면 돼요.' : '공고에 맞춰 다시 써 볼까요?'),
     paragraphs: '원문과 코멘트',
@@ -27,7 +25,6 @@ const TEXT = messages({
   en: {
     docs: 'Document type',
     rerun: 'Review again',
-    reading: 'Reading your document.',
     fitLabel: 'Match',
     verdict: (score: number): string => (score >= 70 ? 'Your document lines up well!' : score >= 50 ? 'Nice! Just polish a few paragraphs.' : 'Try rewriting it for this posting?'),
     paragraphs: 'Document and comments',
@@ -43,37 +40,6 @@ const TEXT = messages({
 const TAG_TONES = { good: 'brand', fix: 'gray', missing: 'muted', interview: 'outline' } as const satisfies Record<ParagraphTag, string>
 
 const chip = 'flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition-colors'
-
-function ReviewSkeleton() {
-  const L = useMessages(TEXT)
-  return (
-    <Busy label={L.reading} className="space-y-6">
-      <div className="flex items-end justify-between gap-12">
-        <div className="flex-1">
-          <Bone className="h-5 w-3/5" />
-          <Bone className="mt-3 h-3.5 w-4/5" />
-        </div>
-        <Bone className="hidden h-14 w-72 sm:block" />
-      </div>
-      <div className="grid gap-12 md:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="space-y-6 rounded-xl border border-gray-200 p-10">
-          {[0, 1, 2].map((item) => (
-            <div key={item}>
-              <Bone className="h-3.5 w-full" />
-              <Bone className="mt-2.5 h-3.5 w-11/12" />
-              <Bone className="mt-2.5 h-3.5 w-2/3" />
-            </div>
-          ))}
-        </div>
-        <div className="hidden space-y-3 md:block">
-          {[0, 1, 2].map((item) => (
-            <Bone key={item} className="h-24 w-full rounded-xl!" />
-          ))}
-        </div>
-      </div>
-    </Busy>
-  )
-}
 
 /** 문단 왼쪽의 세로 막대 색이에요. 좋은 문단은 메인 컬러, 고칠 문단은 짙은 회색, 빠진 내용은 점선이에요. */
 const BARS: Record<ParagraphTag, string> = {
@@ -288,6 +254,9 @@ export function ReviewTab({ reportId }: { reportId: string }) {
   /** 서류 종류마다 받아 둔 결과. null은 실패, undefined는 아직 받지 않은 것이에요. */
   const [reviews, setReviews] = useState<Partial<Record<DocType, DocumentReview | null>>>({})
   const [loading, setLoading] = useState(false)
+  const [progress, setProgress] = useState<ProgressState>(PROGRESS_START)
+  /** 마지막으로 보낸 요청이에요. 서류 종류를 바꿔도 앞의 요청이 진행 막대를 움직이지 않게 해요. */
+  const latest = useRef(0)
   const [filter, setFilter] = useState<ParagraphTag | 'all'>('all')
   const review = reviews[doc]
   const counts = (Object.keys(L.tags) as ParagraphTag[])
@@ -295,10 +264,14 @@ export function ReviewTab({ reportId }: { reportId: string }) {
     .filter((item) => item.count > 0)
 
   async function load(target: DocType) {
+    const request = ++latest.current
     setLoading(true)
-    const result = await fetchReview(reportId, target)
+    setProgress(PROGRESS_START)
+    const result = await fetchReview(reportId, target, (next) => {
+      if (request === latest.current) setProgress(next)
+    })
     setReviews((prev) => ({ ...prev, [target]: result }))
-    setLoading(false)
+    if (request === latest.current) setLoading(false)
   }
 
   useEffect(() => {
@@ -330,7 +303,8 @@ export function ReviewTab({ reportId }: { reportId: string }) {
       </div>
 
       {loading || review === undefined ? (
-        <ReviewSkeleton />
+        // AI가 문단마다 읽는 동안은 진행 정도를 막대로 보여줘요. 이미 읽어 둔 서류면 금방 지나가요.
+        <AiProgress progress={progress.progress} stage={progress.stage} className="mx-auto mt-16 w-full max-w-md" />
       ) : review === null ? (
         <Failed onRetry={() => void load(doc)} className="mt-16" />
       ) : (

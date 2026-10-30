@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { careerName, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, type Company, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
+import { careerName, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, useDiagnosed, type Company, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { Bone } from './Skeleton'
 import { BriefcaseIcon, CheckIcon, CloseIcon, MapPinIcon, PersonIcon, TriangleIcon } from './Icons'
@@ -37,6 +37,26 @@ const TEXT = messages({
     failed: '불러오지 못했어요. 잠시 뒤에 다시 시도해 주세요.',
     retry: '다시 시도하기',
     remove: (name: string) => `${name} 빼기`,
+    stages: {
+      waiting: '시작하고 있어요',
+      queued: '진단 순서를 기다리고 있어요',
+      reading: '서류에서 글자를 꺼내고 있어요',
+      analyzing: 'AI가 서류의 역량을 읽고 있어요',
+      preparing: '필요한 자료를 모으고 있어요',
+      calculating: '적합도를 계산하고 있어요',
+      writing: 'AI가 리포트를 쓰고 있어요',
+      reviewing: 'AI가 서류를 문단마다 읽고 있어요',
+      writingQuestions: 'AI가 예상 질문을 만들고 있어요',
+      grading: 'AI가 답변을 채점하고 있어요',
+      saving: '결과를 저장하고 있어요',
+      done: '다 됐어요',
+    } as Record<string, string>,
+    stageFallback: '처리하고 있어요',
+    progressLabel: '진행 정도',
+    diagnosed: '진단함',
+    diagnosing: '진단 중',
+    diagnosedTip: '이미 진단한 공고예요. 누르면 그 리포트를 열어요.',
+    diagnosingTip: '지금 진단하고 있는 공고예요. 누르면 그 리포트를 열어요.',
   },
   en: {
     fit: (value: number) => `${value}% fit`,
@@ -60,6 +80,26 @@ const TEXT = messages({
     failed: "Couldn't load. Please try again in a moment.",
     retry: 'Try again',
     remove: (name: string) => `Remove ${name}`,
+    stages: {
+      waiting: 'Getting started',
+      queued: 'Waiting for its turn',
+      reading: 'Pulling the text out of your document',
+      analyzing: 'AI is reading the skills in your document',
+      preparing: 'Gathering what we need',
+      calculating: 'Calculating your fit',
+      writing: 'AI is writing your report',
+      reviewing: 'AI is reading your document paragraph by paragraph',
+      writingQuestions: 'AI is writing likely questions',
+      grading: 'AI is grading your answer',
+      saving: 'Saving the results',
+      done: 'All done',
+    },
+    stageFallback: 'Working on it',
+    progressLabel: 'Progress',
+    diagnosed: 'Diagnosed',
+    diagnosing: 'Analyzing',
+    diagnosedTip: 'You already diagnosed this posting. Click to open that report.',
+    diagnosingTip: 'This posting is being diagnosed now. Click to open that report.',
   },
 })
 
@@ -258,6 +298,62 @@ export function CardTag({ tone, children }: { tone: 'brand' | 'red' | 'gray'; ch
 }
 
 /**
+ * 이미 진단한 공고에 붙이는 "진단함" 태그예요. 만드는 중이면 "진단 중"이에요. 공고 카드, 공고 탐색의 카드와 줄, 새 진단 화면의 검색 결과가 같이 써요.
+ * 로그인한 계정의 리포트에서 찾고(`useDiagnosed`), 진단하지 않은 공고면 아무것도 그리지 않아요.
+ */
+export function DiagnosedTag({ postingId }: { postingId: string }) {
+  const L = useMessages(TEXT)
+  const report = useDiagnosed(postingId)
+  if (!report) return null
+  const pending = report.status === 'pending'
+  return (
+    <Tip text={pending ? L.diagnosingTip : L.diagnosedTip} className="inline-flex shrink-0">
+      <Badge tone="brand" strong>
+        {pending ? L.diagnosing : L.diagnosed}
+      </Badge>
+    </Tip>
+  )
+}
+
+/** 진행 단계 이름을 화면에 보여줄 문장으로 바꿔요. 모르는 단계면 "처리하고 있어요"예요. */
+export function useStageText(stage: string): string {
+  const L = useMessages(TEXT)
+  return L.stages[stage] ?? L.stageFallback
+}
+
+/**
+ * AI를 기다리는 동안 보여주는 진행 막대예요. 왼쪽에 지금 단계의 문장, 오른쪽에 퍼센트, 그 아래에 가는 막대가 있어요.
+ * 이력서 올리기, 리포트 만들기, 서류 검증, 예상 질문, 답변 채점이 같이 써요. 회색 칸 위와 흰 바탕 어디에나 놓여요.
+ * title을 주면 단계 문장 위에 작게 적어요(올리는 파일 이름 등).
+ */
+export function AiProgress({ progress, stage, title, className = '' }: { progress: number; stage: string; title?: string; className?: string }) {
+  const L = useMessages(TEXT)
+  const text = useStageText(stage)
+  const value = Math.min(100, Math.max(0, Math.round(progress)))
+  return (
+    <div className={`animate-fade ${className}`}>
+      {title && <p className="mb-1 truncate text-[12.5px] text-gray-400">{title}</p>}
+      <div className="flex items-baseline justify-between gap-4">
+        <p role="status" className="min-w-0 truncate text-[13.5px] text-gray-700">
+          {text}
+        </p>
+        <span className="shrink-0 text-[13px] font-semibold text-gray-900 tabular-nums">{value}%</span>
+      </div>
+      <div
+        role="progressbar"
+        aria-label={`${L.progressLabel}, ${text}`}
+        aria-valuenow={value}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-gray-200/70"
+      >
+        <div className="h-full rounded-full bg-brand transition-[width] duration-400 ease-out" style={{ width: `${value}%` }} />
+      </div>
+    </div>
+  )
+}
+
+/**
  * 공고의 직군, 경력, 지역을 작은 선 아이콘과 함께 한 줄에 늘어놓아요. 공고 카드(`PostingTile`), 공고 탐색의 카드와 줄이 같이 써요.
  * 줄이 좁을 때 경력이나 지역을 숨기려면 careerClass, locationClass에 `hidden @xl:flex` 같은 것을 넘겨요. 앞에 기업 이름 같은 것을 붙이려면 children으로 넘겨요.
  */
@@ -354,17 +450,22 @@ export function PostingTile({ posting, resume, fit = fitOf(posting, resume), tag
   const company = companyOf(posting.companyId)
   const since = daysSince(posting)
   const left = daysLeft(posting)
+  const diagnosed = useDiagnosed(posting.id)
   return (
     <li className="min-h-0 animate-rise" style={stagger(order)}>
       <button type="button" onClick={() => onOpen(posting)} className={`group flex h-[196px] w-full flex-col rounded-2xl p-5 text-left transition-colors ${onGray ? 'bg-white hover:bg-gray-100' : 'bg-gray-50 hover:bg-gray-100'}`}>
         <span className="flex items-center justify-between gap-2">
-          {tag === 'posted' ? (
-            <CardTag tone={since <= NEW_DAYS ? 'brand' : 'gray'}>{L.posted(since)}</CardTag>
-          ) : tag === 'deadline' ? (
-            <CardTag tone="red">{left === null ? L.always : L.dday(left)}</CardTag>
-          ) : (
-            fit !== null && <CardTag tone={fit >= 70 ? 'brand' : 'gray'}>{L.fitTag(fit)}</CardTag>
-          )}
+          {/* 진단한 공고는 진단함 태그를 맨 앞에 둬요. 적합도는 아래에 이미 보여서, 얼마나 맞는지 태그는 그때 빼요. */}
+          <span className="flex shrink-0 items-center gap-1.5">
+            <DiagnosedTag postingId={posting.id} />
+            {tag === 'posted' ? (
+              <CardTag tone={since <= NEW_DAYS ? 'brand' : 'gray'}>{L.posted(since)}</CardTag>
+            ) : tag === 'deadline' ? (
+              <CardTag tone="red">{left === null ? L.always : L.dday(left)}</CardTag>
+            ) : (
+              fit !== null && !diagnosed && <CardTag tone={fit >= 70 ? 'brand' : 'gray'}>{L.fitTag(fit)}</CardTag>
+            )}
+          </span>
           <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-gray-500">
             <CompanyMark company={company} className="size-5 rounded-md text-[9px]" />
             <span className="truncate">{company.name}</span>

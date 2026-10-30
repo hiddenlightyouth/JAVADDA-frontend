@@ -143,6 +143,10 @@ export interface Report {
   companyId: string
   resumeId: string
   status: 'pending' | 'done' | 'failed'
+  /** 만드는 정도(0에서 100). 다 됐으면 100이에요. */
+  progress?: number
+  /** 지금 하고 있는 단계(queued, reading, analyzing, preparing, calculating, writing, saving, done) */
+  stage?: string
   createdAt: string
   fitScore: number
   summary: string
@@ -809,10 +813,13 @@ function fail(result: ApiResult<unknown>) {
   showToast(text[key])
 }
 
-/** 로그인한 계정으로 서버를 불러요. ai면 설정 창에서 고른 AI 모델을 헤더로 붙여요. 서버에 닿지 못하면 status 0이에요. */
-async function call<T>(path: string, init: RequestInit = {}, ai = false): Promise<ApiResult<T>> {
+/**
+ * 로그인한 계정으로 서버를 불러요. ai면 설정 창에서 고른 AI 모델을 헤더로 붙여요. extra는 더 붙일 헤더예요(진행 아이디 등).
+ * 서버에 닿지 못하면 status 0이에요.
+ */
+async function call<T>(path: string, init: RequestInit = {}, ai = false, extra: Record<string, string> = {}): Promise<ApiResult<T>> {
   try {
-    const headers: Record<string, string> = { ...(init.headers as Record<string, string> | undefined), ...(ai ? await aiModelHeaders() : {}) }
+    const headers: Record<string, string> = { ...(init.headers as Record<string, string> | undefined), ...(ai ? await aiModelHeaders() : {}), ...extra }
     if (typeof init.body === 'string') headers['Content-Type'] = 'application/json'
     return await authFetch<T>(path, { ...init, headers })
   } catch {
@@ -821,6 +828,73 @@ async function call<T>(path: string, init: RequestInit = {}, ai = false): Promis
 }
 
 const send = (method: string, body?: unknown): RequestInit => ({ method, body: body === undefined ? undefined : JSON.stringify(body) })
+
+// ---------- AI 진행 상황 ----------
+
+/** AI가 일하는 동안의 진행 상황이에요. progress는 0에서 100, stage는 서버가 알려 주는 단계 이름이에요(reading, analyzing 등). */
+export interface ProgressState {
+  progress: number
+  stage: string
+}
+
+export type OnProgress = (progress: ProgressState) => void
+
+/** 처음 보여줄 진행 상황이에요. 서버가 일을 시작하기 전과 같아요. */
+export const PROGRESS_START: ProgressState = { progress: 0, stage: 'waiting' }
+
+/** 진행 상황을 다시 묻는 간격(ms)이에요. */
+const PROGRESS_POLL_MS = 500
+/** 다 되면 100%를 이만큼(ms) 보여준 뒤에 결과로 바꿔요. */
+const PROGRESS_HOLD_MS = 250
+
+/** 진행 상황을 물을 때 쓰는 아이디예요. 서버는 [A-Za-z0-9-]로 된 8자에서 64자를 받아요. */
+function newProgressId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  let id = 'p-'
+  for (let index = 0; index < 30; index += 1) id += chars[Math.floor(Math.random() * chars.length)]
+  return id
+}
+
+/**
+ * AI 요청을 보내면서 진행 상황을 0.5초마다 물어요(GET /progress/{id}). 요청에는 X-Progress-Id 헤더로 같은 아이디를 붙여요.
+ * 요청이 끝나면 묻기를 멈추고, 성공했으면 100%를 잠깐 보여준 뒤에 돌려줘요. 묻다가 실패한 것은 넘겨요.
+ * 화면의 숫자가 뒤로 가지 않게 지금까지 본 값 중 가장 큰 값만 알려요. onProgress가 없으면 그냥 요청만 보내요.
+ */
+async function withProgress<T>(onProgress: OnProgress | undefined, run: (headers: Record<string, string>) => Promise<ApiResult<T>>): Promise<ApiResult<T>> {
+  if (!onProgress) return run({})
+  const id = newProgressId()
+  let settled = false
+  let polled = false
+  let best = 0
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const report = (next: ProgressState) => {
+    if (settled) return
+    best = Math.max(best, Math.min(100, Math.max(0, Math.round(next.progress))))
+    onProgress({ progress: best, stage: next.stage || 'waiting' })
+  }
+  const poll = () => {
+    timer = setTimeout(() => {
+      polled = true
+      void call<ProgressState & { status?: string }>(`/progress/${id}`).then((result) => {
+        if (settled) return
+        if (result.ok && result.data && typeof result.data.progress === 'number') report(result.data)
+        poll()
+      })
+    }, PROGRESS_POLL_MS)
+  }
+  report(PROGRESS_START)
+  poll()
+  const result = await run({ 'X-Progress-Id': id })
+  clearTimeout(timer)
+  settled = true
+  if (result.ok) {
+    onProgress({ progress: 100, stage: 'done' })
+    // 금방 끝난 요청(이미 만들어 둔 결과)은 기다리지 않고 바로 돌려줘요.
+    if (polled) await new Promise((resolve) => setTimeout(resolve, PROGRESS_HOLD_MS))
+  }
+  return result
+}
 
 let loginHandler: (() => void) | null = null
 
@@ -1024,6 +1098,19 @@ export const useReports = () => useStore(reportsStore)
 export const useNotes = () => useStore(notesStore)
 export const usePlans = () => useStore(plansStore)
 
+/** 이 공고를 진단한 리포트 중 가장 최근 것이에요. 만들지 못한(failed) 리포트는 빼요. 없으면 null이에요. */
+function diagnosedOf(reports: Report[], postingId: string): Report | null {
+  let latest: Report | null = null
+  for (const report of reports) {
+    if (report.postingId !== postingId || report.status === 'failed') continue
+    if (!latest || report.createdAt > latest.createdAt) latest = report
+  }
+  return latest
+}
+
+/** 이 공고를 이미 진단했는지예요. 공고 카드와 줄이 "진단함" 표시를 붙일 때 써요. 로그인한 계정의 리포트에서 찾아요. */
+export const useDiagnosed = (postingId: string) => useStore(reportsStore, (reports) => diagnosedOf(reports, postingId))
+
 /** 로그아웃하면 늘어나요. 로그아웃 전에 보낸 요청의 응답이 비운 저장소를 다시 채우지 않게 해요. */
 let generation = 0
 
@@ -1171,19 +1258,19 @@ async function loadShelf() {
 
 /**
  * 이력서나 포트폴리오를 올려요. PDF 파일(POST /resumes)이나 GitHub, 노션 링크(POST /resumes/link)를 받아요.
- * 서버가 AI로 읽느라 1분 가까이 걸릴 수 있어요. 다 읽으면 목록을 다시 받아요. 대표는 서버가 정해요(대표가 없을 때만 새 서류가 대표예요).
+ * 서버가 AI로 읽느라 1분 가까이 걸릴 수 있어요. onProgress를 주면 그동안의 진행 상황을 알려줘요(`withProgress`). 다 읽으면 목록을 다시 받아요. 대표는 서버가 정해요(대표가 없을 때만 새 서류가 대표예요).
  * 로그인하지 않았으면 로그인 화면으로 보내고, 실패하면 토스트로 알리고 null이에요.
  */
-export async function uploadResume(input: { file?: File; link?: string }): Promise<Resume | null> {
+export async function uploadResume(input: { file?: File; link?: string }, onProgress?: OnProgress): Promise<Resume | null> {
   if (!requireLogin()) return null
-  let result: ApiResult<ServerResume>
-  if (input.file) {
-    const form = new FormData()
-    form.append('file', input.file)
-    result = await call<ServerResume>('/resumes', { method: 'POST', body: form }, true)
-  } else {
-    result = await call<ServerResume>('/resumes/link', send('POST', { link: input.link }), true)
-  }
+  const result = await withProgress(onProgress, (headers) => {
+    if (input.file) {
+      const form = new FormData()
+      form.append('file', input.file)
+      return call<ServerResume>('/resumes', { method: 'POST', body: form }, true, headers)
+    }
+    return call<ServerResume>('/resumes/link', send('POST', { link: input.link }), true, headers)
+  })
   if (!result.ok || !result.data) {
     fail(result)
     return null
@@ -1245,6 +1332,8 @@ const toReport = (item: ServerReport): Report => ({
   companyId: item.companyId,
   resumeId: item.resumeId === null || item.resumeId === undefined ? '' : String(item.resumeId),
   status: item.status,
+  progress: item.progress ?? (item.status === 'done' ? 100 : 0),
+  stage: item.stage ?? (item.status === 'done' ? 'done' : 'queued'),
   createdAt: item.createdAt,
   fitScore: item.fitScore ?? 0,
   summary: item.summary ?? '',
@@ -1260,17 +1349,19 @@ const toReport = (item: ServerReport): Report => ({
 /** 상세(GET /reports/{id})까지 받아 둔 리포트의 아이디예요. 목록(GET /reports)에는 요약만 있어요. */
 const full = new Set<string>()
 
-/** 리포트가 만들어지는 동안 상태를 다시 묻는 간격(ms)이에요. */
-const POLL_MS = 1500
+/** 리포트가 만들어지는 동안 상태를 다시 묻는 간격(ms)이에요. 진행 막대가 부드럽게 움직이게 1초마다 물어요. */
+const POLL_MS = 1000
 
 function setReports(next: Report[]) {
   reportsStore.set(next)
 }
 
-/** 리포트를 목록에 넣어요. 이미 있으면 그 자리에서 바꾸고, 없으면 맨 앞에 더해요. */
+/** 리포트를 목록에 넣어요. 이미 있으면 그 자리에서 바꾸고, 없으면 맨 앞에 더해요. 만드는 중이면 진행 숫자가 뒤로 가지 않게 해요. */
 function upsertReport(report: Report) {
   const reports = reportsStore.get()
-  setReports(reports.some((item) => item.id === report.id) ? reports.map((item) => (item.id === report.id ? report : item)) : [report, ...reports])
+  const before = reports.find((item) => item.id === report.id)
+  const next = before && report.status === 'pending' && (before.progress ?? 0) > (report.progress ?? 0) ? { ...report, progress: before.progress } : report
+  setReports(before ? reports.map((item) => (item.id === next.id ? next : item)) : [next, ...reports])
 }
 
 /** 내 리포트 목록을 받아요. 상세까지 받아 둔 리포트는 그대로 둬요. */
@@ -1306,7 +1397,7 @@ async function loadReport(id: string): Promise<Report | 'missing' | 'error'> {
 
 let pollTimer: ReturnType<typeof setTimeout> | null = null
 
-/** 만드는 중인 리포트가 있으면 다 될 때까지 1.5초마다 상태를 물어요. 화면을 옮겨도 사이드바의 "진단 중"이 끝까지 바뀌어요. */
+/** 만드는 중인 리포트가 있으면 다 될 때까지 1초마다 상태와 진행 정도를 물어요. 화면을 옮겨도 사이드바의 "진단 중 42%"가 끝까지 바뀌어요. */
 function schedulePoll() {
   if (pollTimer || typeof window === 'undefined') return
   if (!reportsStore.get().some((report) => report.status === 'pending')) return
@@ -1438,10 +1529,10 @@ export const docName = (doc: DocType) => DOC_NAMES[doc][getLang()]
 
 /**
  * 서류를 공고에 맞춰 문단마다 읽어요(GET /reports/{id}/reviews/{docType}). 태그는 좋아요(good), 고쳐요(fix), 빠졌어요(missing), 면접 예상(interview)이에요.
- * AI가 읽어서 1분 가까이 걸릴 수 있어요. 실패하면 토스트로 알리고 null이에요. 리포트를 아직 만드는 중이면 서버가 C4092로 답해요.
+ * AI가 읽어서 1분 가까이 걸릴 수 있어요. onProgress를 주면 진행 상황을 알려줘요. 실패하면 토스트로 알리고 null이에요. 리포트를 아직 만드는 중이면 서버가 C4092로 답해요.
  */
-export async function fetchReview(reportId: string, docType: DocType): Promise<DocumentReview | null> {
-  const result = await call<DocumentReview>(`/reports/${Number(currentId(reportId))}/reviews/${docType}`, {}, true)
+export async function fetchReview(reportId: string, docType: DocType, onProgress?: OnProgress): Promise<DocumentReview | null> {
+  const result = await withProgress(onProgress, (headers) => call<DocumentReview>(`/reports/${Number(currentId(reportId))}/reviews/${docType}`, {}, true, headers))
   if (!result.ok || !result.data) {
     fail(result)
     return null
@@ -1451,9 +1542,9 @@ export async function fetchReview(reportId: string, docType: DocType): Promise<D
 
 // ---------- 예상 면접 질문 ----------
 
-/** 예상 면접 질문이에요(GET /reports/{id}/questions). 나올 확률 순서예요. 실패하면 토스트로 알리고 빈 목록이에요. */
-export async function fetchQuestions(reportId: string): Promise<InterviewQuestion[]> {
-  const result = await call<InterviewQuestion[]>(`/reports/${Number(currentId(reportId))}/questions`, {}, true)
+/** 예상 면접 질문이에요(GET /reports/{id}/questions). 나올 확률 순서예요. onProgress를 주면 진행 상황을 알려줘요. 실패하면 토스트로 알리고 빈 목록이에요. */
+export async function fetchQuestions(reportId: string, onProgress?: OnProgress): Promise<InterviewQuestion[]> {
+  const result = await withProgress(onProgress, (headers) => call<InterviewQuestion[]>(`/reports/${Number(currentId(reportId))}/questions`, {}, true, headers))
   if (!result.ok || !Array.isArray(result.data)) {
     fail(result)
     return []
@@ -1463,12 +1554,10 @@ export async function fetchQuestions(reportId: string): Promise<InterviewQuestio
 
 // ---------- 면접 연습 ----------
 
-/** 답변을 보내고 피드백을 받아요(POST /reports/{id}/questions/{질문}/answers). 실패하면 토스트로 알리고 null이에요. */
-export async function submitAnswer(reportId: string, question: InterviewQuestion, answer: string): Promise<PracticeFeedback | null> {
-  const result = await call<PracticeFeedback>(
-    `/reports/${Number(currentId(reportId))}/questions/${encodeURIComponent(question.id)}/answers`,
-    send('POST', { answer }),
-    true,
+/** 답변을 보내고 피드백을 받아요(POST /reports/{id}/questions/{질문}/answers). onProgress를 주면 채점 진행 상황을 알려줘요. 실패하면 토스트로 알리고 null이에요. */
+export async function submitAnswer(reportId: string, question: InterviewQuestion, answer: string, onProgress?: OnProgress): Promise<PracticeFeedback | null> {
+  const result = await withProgress(onProgress, (headers) =>
+    call<PracticeFeedback>(`/reports/${Number(currentId(reportId))}/questions/${encodeURIComponent(question.id)}/answers`, send('POST', { answer }), true, headers),
   )
   if (!result.ok || !result.data) {
     fail(result)
