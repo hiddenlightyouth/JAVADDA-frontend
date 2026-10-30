@@ -1,4 +1,4 @@
-import { COMPANIES, companyOf, type Company } from './gap'
+import { COMPANIES, type Company } from './gap'
 
 /**
  * 기업 기술 블로그 요약이에요. 기업마다 대표 글과 한 줄 요약, 요즘 고민 분석, 면접에서 쓸 점을 모아 둬요.
@@ -387,13 +387,6 @@ const daysBetween = (from: string, to: string) => Math.round((new Date(to).getTi
 /** 마지막 글이 오래되어 멈춘 블로그인지예요. */
 export const isStale = (digest: BlogDigest) => daysBetween(digest.posts[0].date, COLLECTED_AT) > STALE_DAYS
 
-/** 기업 안에서 주제마다 글 수예요. 많은 순서로 돌려줘요. */
-export function themeShare(digest: BlogDigest): { theme: BlogTheme; count: number }[] {
-  const counts = new Map<BlogTheme, number>()
-  for (const item of digest.posts) for (const theme of item.themes) counts.set(theme, (counts.get(theme) ?? 0) + 1)
-  return [...counts].map(([theme, count]) => ({ theme, count })).sort((a, b) => b.count - a.count)
-}
-
 /** 기업의 글에 자주 나온 기술이에요. */
 export function topSkills(digest: BlogDigest, limit = 8): string[] {
   const counts = new Map<string, number>()
@@ -427,9 +420,6 @@ export function themeTrends(digests: BlogDigest[]): { trends: ThemeTrend[]; acti
   const trends = [...map.values()].sort((a, b) => b.companies.length - a.companies.length || b.posts - a.posts)
   return { trends, active }
 }
-
-/** 기업 이름을 쉼표로 이어요. */
-export const companyNames = (ids: string[]) => ids.map((id) => companyOf(id).name).join(', ')
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 

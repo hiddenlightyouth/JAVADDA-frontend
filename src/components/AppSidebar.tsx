@@ -23,7 +23,6 @@ const TEXT = messages({
     recommendLocked: '이력서를 먼저 등록하세요',
     resume: '내 이력서',
     blogs: '기술 블로그',
-    resumeNone: '아직 올리지 않았어요',
     me: '내 정보',
     admin: '관리자',
     signOut: '로그아웃',
@@ -42,7 +41,6 @@ const TEXT = messages({
     recommendLocked: 'Upload your resume first',
     resume: 'My resume',
     blogs: 'Tech blogs',
-    resumeNone: 'Not uploaded yet',
     me: 'Account',
     admin: 'Admin',
     signOut: 'Sign out',
@@ -287,14 +285,10 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
             track('resume_open', { from: 'sidebar' })
             onResume()
           }}
-          className={`${link} mt-1.5 h-auto gap-2 py-2 ${tone(page === 'resume')}`}
+          className={`${link} mt-1.5 gap-2 ${tone(page === 'resume')}`}
         >
           <DocumentIcon />
-          <span className="min-w-0 flex-1">
-            <span className="block">{text.resume}</span>
-            {/* 올려 둔 서류의 이름을 옅게 같이 적어서, 어떤 서류 기준으로 진단하는지 보여줘요. */}
-            <span className="block truncate text-[11.5px] font-normal text-gray-400">{resume ? resume.name : text.resumeNone}</span>
-          </span>
+          <span className="flex-1">{text.resume}</span>
         </a>
       </div>
 

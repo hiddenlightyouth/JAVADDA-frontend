@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
-import { fetchPostings, fitOf, sortPostings, useResume, useResumeShelf, type JobPosting, type PostingSort } from '../lib/gap'
+import { fetchPostings, fitOf, sortPostings, useResume, type JobPosting, type PostingSort } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
@@ -8,7 +8,7 @@ import { cardsGrid, Failed, Notice, PostingCardsSkeleton, PostingTile } from './
 
 /**
  * 추천 공고 화면이에요. 올려 둔 이력서의 역량과 가까운 공고를 적합도 순서로 보여줘요.
- * 어느 서류로 추천할지는 정렬, 적합도 옆의 기준 메뉴에서 골라요. 처음에는 대표 이력서이고, 여기서 골라도 대표 이력서는 바뀌지 않아요.
+ * 추천은 늘 대표 이력서(별을 누른 서류)로 해요. 대표를 바꾸는 것은 내 이력서 화면이 맡아요.
  * 이력서가 없으면 먼저 올리라고 안내해요.
  */
 
@@ -17,10 +17,6 @@ const SORTS: PostingSort[] = ['fit', 'recent', 'deadline']
 const TEXT = messages({
   ko: {
     title: '추천 공고',
-    basis: '기준',
-    docs: '추천에 쓸 서류',
-    skillCount: (count: number) => `역량 ${count}개`,
-    manage: '내 이력서에서 고치기',
     sort: '정렬',
     sorts: { fit: '유사도순', recent: '최신순', deadline: '마감 임박순' } as Record<PostingSort, string>,
     threshold: '적합도',
@@ -34,10 +30,6 @@ const TEXT = messages({
   },
   en: {
     title: 'Recommended',
-    basis: 'Based on',
-    docs: 'Document to match',
-    skillCount: (count: number) => `${count} ${count === 1 ? 'skill' : 'skills'}`,
-    manage: 'Edit in My resume',
     sort: 'Sort',
     sorts: { fit: 'Most similar', recent: 'Newest', deadline: 'Closing soon' },
     threshold: 'Fit',
@@ -57,11 +49,7 @@ type Loaded = JobPosting[] | 'failed'
 
 export function Recommend({ onPick, onResume }: { onPick: (postingId: string) => void; onResume: () => void }) {
   const L = useMessages(TEXT)
-  const shelf = useResumeShelf()
-  const primary = useResume()
-  /** 추천에 쓸 서류. 고르지 않았거나 지워졌으면 대표 이력서예요. */
-  const [pickedId, setPickedId] = useState<string | null>(null)
-  const resume = shelf.list.find((item) => item.id === pickedId) ?? primary
+  const resume = useResume()
   const [sort, setSort] = useState<PostingSort>('fit')
   const [threshold, setThreshold] = useState(0)
   const [loaded, setLoaded] = useState<Loaded | undefined>(undefined)
@@ -99,27 +87,7 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
 
   return (
     <ScrollPage header={<PageHeader title={L.title} />}>
-      {/* 어떤 서류로 추천하는지는 메뉴 버튼에 늘 보여요. 공고 탐색의 메뉴 줄과 같은 모양이에요. */}
       <div className="flex flex-wrap items-center gap-2">
-        <Dropdown
-          label={L.basis}
-          value={resume.name}
-          groups={[
-            {
-              title: L.docs,
-              items: shelf.list.map((item) => ({
-                label: item.name,
-                hint: L.skillCount(item.skills.length),
-                checked: item.id === resume.id,
-                onSelect: () => {
-                  track('recommend_resume_change', { primary: item.id === shelf.primaryId })
-                  setPickedId(item.id)
-                },
-              })),
-            },
-            { items: [{ label: L.manage, onSelect: onResume }] },
-          ]}
-        />
         <Dropdown
           label={L.sort}
           value={L.sorts[sort]}

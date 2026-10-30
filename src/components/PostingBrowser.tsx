@@ -27,6 +27,8 @@ const TEXT = messages({
     companyBlocked: '이 기업 사이트는 다른 서비스 안에서 열 수 없게 막아 두었어요.',
     companyBlockedBody: '기업 정보와 열려 있는 공고를 아래에 정리해 두었어요. 사이트를 꼭 봐야 할 때만 새 탭으로 열어 주세요.',
     openings: (count: number) => `열려 있는 공고 ${count}개`,
+    pageBlocked: '이 블로그는 다른 서비스 안에서 열 수 없게 막아 두었어요.',
+    pageBlockedBody: '글의 요약을 아래에 정리해 두었어요. 전문은 새 탭으로 열어 주세요.',
     required: '필수 역량',
     preferred: '우대 역량',
     loading: '원문을 불러오고 있어요.',
@@ -43,6 +45,8 @@ const TEXT = messages({
     companyBlocked: "This company's site doesn't allow being shown inside other services.",
     companyBlockedBody: "We've summarized the company and its open postings below. Open the site in a new tab only if you need it.",
     openings: (count: number) => `${count} open ${count === 1 ? 'posting' : 'postings'}`,
+    pageBlocked: "This blog doesn't allow being shown inside other services.",
+    pageBlockedBody: "We've summarized the post below. Open it in a new tab for the full text.",
     required: 'Required',
     preferred: 'Preferred',
     loading: 'Loading the original.',
@@ -72,12 +76,29 @@ export function SplitView({ children, side }: { children: ReactNode; side: React
 
 const toolbarButton = iconButton.md
 
-/** 공고(`posting`)나 기업(`company`) 하나를 받아요. 기업 사이트가 막혀 있으면 대신 보여주는 공고를 눌러 그 공고로 바꿔요(`onPosting`). */
-export function PostingBrowser({ posting, company: about, onClose, onPosting }: { posting?: JobPosting; company?: Company; onClose: () => void; onPosting?: (posting: JobPosting) => void }) {
+/** 공고나 기업이 아닌 글 하나예요. 기술 블로그의 글과 블로그 첫 화면을 열 때 써요. */
+export interface BrowserPage {
+  url: string
+  title: string
+  companyId: string
+  /** 사이트가 막혀 있을 때 대신 보여줄 요약 */
+  summary?: string
+}
+
+/**
+ * 공고(`posting`), 기업(`company`), 글(`page`) 중 하나를 받아요. 기업 사이트가 막혀 있으면 대신 보여주는 공고를 눌러 그 공고로 바꿔요(`onPosting`).
+ */
+export function PostingBrowser({ posting, company: about, page, onClose, onPosting }: {
+  posting?: JobPosting
+  company?: Company
+  page?: BrowserPage
+  onClose: () => void
+  onPosting?: (posting: JobPosting) => void
+}) {
   const L = useMessages(TEXT)
-  const company = posting ? companyOf(posting.companyId) : about!
-  const url = posting ? posting.url : company.site
-  const title = posting ? L.title(company.name) : L.companyTitle(company.name)
+  const company = posting ? companyOf(posting.companyId) : page ? companyOf(page.companyId) : about!
+  const url = posting ? posting.url : page ? page.url : company.site
+  const title = posting ? L.title(company.name) : page ? page.title : L.companyTitle(company.name)
   const embeddable = canEmbed(url)
   const [loaded, setLoaded] = useState(false)
   const [version, setVersion] = useState(0)
@@ -131,8 +152,9 @@ export function PostingBrowser({ posting, company: about, onClose, onPosting }: 
 
   useEffect(() => {
     if (posting) track('posting_browser_open', { posting: posting.id, embedded: embeddable })
+    else if (page) track('blog_browser_open', { company: company.id, embedded: embeddable })
     else track('company_browser_open', { company: company.id, embedded: embeddable })
-  }, [posting, company.id, embeddable])
+  }, [posting, page, company.id, embeddable])
 
   // 다른 창이나 메뉴가 열려 있으면 그쪽이 먼저 Esc를 받아요.
   useEffect(() => {
@@ -228,10 +250,19 @@ export function PostingBrowser({ posting, company: about, onClose, onPosting }: 
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 md:px-10">
           <div className="mx-auto max-w-[560px]">
-            <p className="text-[15px] font-semibold text-gray-900">{posting ? L.blocked : L.companyBlocked}</p>
-            <p className="mt-1.5 text-[13.5px] leading-relaxed text-gray-500">{posting ? L.blockedBody : L.companyBlockedBody}</p>
+            <p className="text-[15px] font-semibold text-gray-900">{posting ? L.blocked : page ? L.pageBlocked : L.companyBlocked}</p>
+            <p className="mt-1.5 text-[13.5px] leading-relaxed text-gray-500">{posting ? L.blockedBody : page ? L.pageBlockedBody : L.companyBlockedBody}</p>
 
-            {posting ? (
+            {page ? (
+              <section className="mt-6 rounded-2xl bg-gray-50 p-5">
+                <div className="flex items-center gap-3">
+                  <CompanyMark company={company} className="size-10 text-[15px]" />
+                  <p className="min-w-0 truncate text-[13.5px] font-medium text-gray-900">{company.name}</p>
+                </div>
+                <h2 className="mt-4 text-[18px] leading-snug font-semibold text-gray-900">{page.title}</h2>
+                {page.summary && <p className="mt-2 text-[13.5px] leading-relaxed text-gray-600">{page.summary}</p>}
+              </section>
+            ) : posting ? (
               <section className="mt-6 rounded-2xl bg-gray-50 p-5">
                 <div className="flex items-center gap-3">
                   <CompanyMark company={company} className="size-10 text-[15px]" />

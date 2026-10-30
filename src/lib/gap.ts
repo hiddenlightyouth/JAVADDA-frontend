@@ -1128,6 +1128,11 @@ const FRAME_BLOCKED = [
   'www.aboutcoupang.com',
   'www.wanted.co.kr',
   'www.wantedlab.com',
+  // 기술 블로그예요. 2026년 10월 30일에 헤더를 확인했어요.
+  'd2.naver.com',
+  'tech.kakao.com',
+  'medium.com',
+  'techblog.musinsa.com',
 ]
 
 /** 공고 원문이나 기업 사이트를 앱 안에 띄울 수 있는지예요. */

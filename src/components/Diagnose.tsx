@@ -1,19 +1,17 @@
 import { useState } from 'react'
 import { track } from '../lib/analytics'
-import { careerName, companyOf, createReport, daysLeft, familyName, fitOf, postingOf, useResume, useResumeShelf } from '../lib/gap'
-import { formatDateTime } from '../lib/format'
+import { careerName, companyOf, createReport, daysLeft, familyName, fitOf, postingOf, useResume } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { pageFrame, PageHeader, StepLayout } from './AppPage'
 import { CompanyMark, FitBadge, Notice, SkillChip, skillTone } from './GapParts'
-import { PlusIcon } from './Icons'
 import { ResumeUploader } from './MyResume'
 import { PostingBrowser, SplitView } from './PostingBrowser'
 import { label, primaryButton, toolButton } from './ui'
 
 /**
- * 진단 시작 화면이에요. 한 화면에서 공고의 요구 역량을 훑고, 진단할 서류를 골라 바로 시작해요.
- * 요구 역량 이름표는 고른 서류 기준으로 칠해서, 시작하기 전에 무엇이 비는지 보여요.
- * 역량을 고치는 것은 내 이력서 화면이 맡아요. 서류가 없으면 올리는 칸이 그 자리에 나와요.
+ * 진단 시작 화면이에요. 공고의 요구 역량을 훑고 바로 시작해요. 진단은 늘 대표 이력서(별을 누른 서류)로 해서 고르는 칸이 없어요.
+ * 요구 역량 이름표는 대표 이력서 기준으로 칠해서, 시작하기 전에 무엇이 비는지 보여요.
+ * 대표를 바꾸거나 역량을 고치는 것은 내 이력서 화면이 맡아요. 서류가 없으면 올리는 칸이 그 자리에 나와요.
  */
 
 const TEXT = messages({
@@ -24,12 +22,9 @@ const TEXT = messages({
     preferred: '우대 역량',
     deadline: (days: number) => (days === 0 ? '오늘 마감' : `마감 ${days}일 전`),
     always: '상시 채용',
+    upload: '이력서를 올리면 진단할 수 있어요',
+    basis: (name: string) => `${name}으로 진단해요`,
     openPosting: '원문 보기',
-    docs: '진단할 서류',
-    uploadedAt: (when: string) => `${when}에 올림`,
-    skills: (count: number) => `역량 ${count}개`,
-    replace: '다른 서류 올리기',
-    keep: '올리지 않고 돌아가기',
     start: '진단 시작',
     starting: '시작하는 중',
     missing: '이 공고를 찾을 수 없어요.',
@@ -43,12 +38,9 @@ const TEXT = messages({
     preferred: 'Preferred',
     deadline: (days: number) => (days === 0 ? 'Closes today' : `Closes in ${days} ${days === 1 ? 'day' : 'days'}`),
     always: 'Rolling',
+    upload: 'Upload a resume to start',
+    basis: (name: string) => `Using ${name}`,
     openPosting: 'Original',
-    docs: 'Document to diagnose',
-    uploadedAt: (when: string) => `Uploaded ${when}`,
-    skills: (count: number) => `${count} ${count === 1 ? 'skill' : 'skills'}`,
-    replace: 'Upload a different document',
-    keep: 'Go back without uploading',
     start: 'Start diagnosis',
     starting: 'Starting',
     missing: "Couldn't find this posting.",
@@ -67,12 +59,7 @@ interface Props {
 export function Diagnose({ postingId, onBack, onReport }: Props) {
   const L = useMessages(TEXT)
   const posting = postingOf(postingId)
-  const shelf = useResumeShelf()
-  const primary = useResume()
-  /** 이번 진단에 쓸 서류. 고르지 않았거나 지워졌으면 대표 이력서예요. 대표 이력서는 바꾸지 않아요. */
-  const [pickedId, setPickedId] = useState<string | null>(null)
-  const resume = shelf.list.find((item) => item.id === pickedId) ?? primary
-  const [uploading, setUploading] = useState(false)
+  const resume = useResume()
   const [starting, setStarting] = useState(false)
   const [viewing, setViewing] = useState(false)
 
@@ -87,18 +74,17 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
 
   const company = companyOf(posting.companyId)
   const left = daysLeft(posting)
-  const showUploader = !resume || uploading
 
   async function start() {
     if (!resume || starting) return
     setStarting(true)
-    track('diagnose_start', { posting: posting!.id, skills: resume.skills.length, primary: resume.id === shelf.primaryId })
+    track('diagnose_start', { posting: posting!.id, skills: resume.skills.length })
     const report = await createReport(posting!.id, resume.id)
     setStarting(false)
     if (report) onReport(report.id)
   }
 
-  const canStart = resume !== null && resume.skills.length > 0 && !uploading
+  const canStart = resume !== null && resume.skills.length > 0
 
   return (
     <SplitView side={viewing && <PostingBrowser posting={posting} onClose={() => setViewing(false)} />}>
@@ -117,6 +103,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
           }
         />
         <StepLayout
+          note={resume ? L.basis(resume.name) : undefined}
           buttons={
             <button type="button" disabled={!canStart || starting} onClick={() => void start()} className={primaryButton}>
               {starting ? L.starting : L.start}
@@ -126,9 +113,12 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
           <div className="animate-rise space-y-8">
             {/* 공고에서 볼 것만 짧게 적어요. 이름표는 고른 서류 기준으로 칠해요. */}
             <section className="rounded-2xl bg-gray-50 p-5">
-              <p className="text-[13px] text-gray-500">
-                {posting.location}, {familyName(posting.family)}, {careerName(posting.career)}, {left !== null ? L.deadline(left) : L.always}
-              </p>
+              <div className="flex items-start justify-between gap-4">
+                <p className="text-[13px] text-gray-500">
+                  {posting.location}, {familyName(posting.family)}, {careerName(posting.career)}, {left !== null ? L.deadline(left) : L.always}
+                </p>
+                <FitBadge fit={fitOf(posting, resume)} compact />
+              </div>
               <p className="mt-2 text-[13.5px] leading-relaxed text-gray-700">{posting.summary}</p>
               <div className="mt-5 space-y-4">
                 {(['required', 'preferred'] as const).map((kind) => (
@@ -144,62 +134,15 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
               </div>
             </section>
 
-            <section>
-              <h2 className="text-[15px] font-semibold text-gray-900">{L.docs}</h2>
-              <div className="mt-3">
-                {showUploader ? (
-                  <>
-                    <ResumeUploader
-                      onDone={(next) => {
-                        setUploading(false)
-                        setPickedId(next.id)
-                      }}
-                    />
-                    {resume && (
-                      <button type="button" onClick={() => setUploading(false)} className="mt-3 w-full text-center text-[13px] text-gray-500 transition-colors hover:text-gray-900">
-                        {L.keep}
-                      </button>
-                    )}
-                  </>
-                ) : (
-                  // 처음에는 대표 이력서가 골라져 있어요. 여기서 골라도 대표 이력서는 바뀌지 않아요. 서류마다 이 공고와의 적합도를 같이 보여줘요.
-                  <div className="flex flex-col gap-1 rounded-2xl bg-gray-50 p-1.5">
-                    <div role="radiogroup" aria-label={L.docs} className="flex flex-col gap-1">
-                      {shelf.list.map((item) => {
-                        const checked = item.id === resume.id
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            role="radio"
-                            aria-checked={checked}
-                            onClick={() => setPickedId(item.id)}
-                            className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-colors ${checked ? 'bg-white' : 'hover:bg-gray-100'}`}
-                          >
-                            <span aria-hidden className={`size-4 shrink-0 rounded-full border transition-all ${checked ? 'border-[5px] border-brand' : 'border-gray-300 bg-white'}`} />
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[13.5px] font-semibold text-gray-900">{item.name}</span>
-                              <span className="block truncate text-[12px] text-gray-500">
-                                {L.uploadedAt(formatDateTime(item.uploadedAt))}, {L.skills(item.skills.length)}
-                              </span>
-                            </span>
-                            <FitBadge fit={fitOf(posting, item)} compact />
-                          </button>
-                        )
-                      })}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setUploading(true)}
-                      className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-[13px] font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
-                    >
-                      <PlusIcon className="size-4 shrink-0" />
-                      {L.replace}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </section>
+            {/* 서류가 없을 때만 올리는 칸이 나와요. 올리면 그 서류가 대표가 되어 바로 진단할 수 있어요. */}
+            {!resume && (
+              <section>
+                <h2 className="text-[15px] font-semibold text-gray-900">{L.upload}</h2>
+                <div className="mt-3">
+                  <ResumeUploader />
+                </div>
+              </section>
+            )}
           </div>
         </StepLayout>
       </main>
