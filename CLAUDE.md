@@ -55,7 +55,7 @@
 - 스타일: Tailwind CSS v4 (`@tailwindcss/vite`)
 
 - 서버: 회원, 피드백, 관리자, 사용량, 진단(기업, 공고, 이력서, 리포트, 서류 검증, 면접 질문과 연습, 보완 계획, 면접 노트, 기술 블로그)을 모두 백엔드(Spring Boot)가 맡아요. 주소는 `VITE_API_BASE_URL`이고, 응답은 늘 `{ data, error: { code, message } }` 모양이에요(`readResult`).
-- 배포: Cloudflare Workers (정적 파일 assets만)
+- 배포: Cloudflare Workers. 화면과 파일은 assets가 바로 내보내고, Worker 코드(`worker/`)는 음성 경로 `/tts`만 받아요
 - 분석 도구: Google Analytics 4 (`VITE_GA_MEASUREMENT_ID`가 있을 때만 켜짐)
 - 아티클: 마크다운 파일을 `marked`로 변환해서 보여줘요.
 
@@ -82,7 +82,10 @@ scripts/prerender.mjs 빌드 마지막에 소개 화면(메인 주소 `index.htm
 .env.production       배포용 빌드에 들어가는 공개 값 (백엔드 서버 주소, GA 측정 ID)
 articles/             아티클 원문 (마크다운 파일, 글 하나에 파일 하나). 레포 분석 시절의 글이라 내용을 바꿔야 해요.
 articles/en/          영어 아티클. 한국어 글과 같은 파일 이름이에요.
-wrangler.toml         Cloudflare Workers 설정 (정적 파일 폴더, 없는 주소는 index.html로)
+wrangler.toml         Cloudflare Workers 설정 (Worker 코드, 정적 파일 폴더, 없는 주소는 index.html로, /tts만 Worker가 받기, 음성 횟수 제한)
+.dev.vars.example     ElevenLabs 키를 넣는 .dev.vars의 보기. .dev.vars는 커밋하지 않아요
+worker/tts.ts         면접 질문을 사람 목소리로 만드는 POST /tts(handleTts). 개발 서버(`vite.config.ts`)와 Worker가 같이 불러요
+worker/index.ts       배포용 Worker. /tts에 음성 캐시와 주소별 횟수 제한을 붙여요
 src/
   lib/shell.ts        앱 화면(macOS 앱, 웹의 /app)으로 보여줄지 정하기(appShell, isWebApp), 예전 주소를 /app 주소로 옮기기, /app 붙이고 떼기. 다른 모듈을 불러오지 않아서 가장 먼저 읽혀요
   main.tsx            처음 그리기. 앱 화면이면 기업과 공고를 받는 동안 화면 가운데에 받은 정도(퍼센트)를 보여주고 받은 뒤에 그리고(loadCatalog), 계정 자료 받기를 켜요(startAccountSync)
@@ -91,7 +94,7 @@ src/
   index.css           Tailwind 테마 토큰, 자간, 애니메이션
   lib/blogs.ts        기업 기술 블로그 요약. 서버에서 받기(fetchBlogDigests, GET /blogs), 요약이 있는 기업(blogCompaniesOf), 자주 나온 기술(topSkills), 여러 기업에 걸친 흐름(themeTrends), 서버에 닿지 못할 때 보여줄 기업 열한 곳의 글(DIGESTS)
   lib/gap.ts          진단의 자료와 API. 타입(기업, 공고, 이력서, 리포트, 갭, 서류 검증, 면접 질문, 연습 피드백), 기업과 공고 받기(loadCatalog, COMPANIES, POSTINGS, 서버에 닿지 못할 때의 목록), 서버 API(fetchPostings, uploadResume, saveResumeSkills, setPrimaryResume, removeResume, startDiagnosis, rerunReport, deleteReport, fetchReview, fetchQuestions, submitAnswer, togglePlan, saveNote), AI 진행 상황 묻기(withProgress, ProgressState, PROGRESS_START), 계정 자료 받기와 비우기(startAccountSync), 저장소(useResume는 대표 이력서, useResumeShelf는 올린 서류 전부, useReports, useReport, usePlans, useNotes, 공고를 진단한 최근 리포트 useDiagnosed), 로그인 화면 열기(setLoginHandler, requestLogin), 적합도 계산(fitOf, levelOf), 스킬 이름 정규화(canonical)
-  lib/speech.ts       면접 연습의 음성 기능. 말을 글자로 바꾸기(useDictation), 글자를 소리로 읽기(useSpeak), 지원 여부(canDictate, canSpeak)
+  lib/speech.ts       면접 연습의 음성 기능. 말을 글자로 바꾸기(useDictation), 사람 목소리로 읽고 안 되면 브라우저 음성으로 읽기(useSpeak), 지원 여부(canDictate, canSpeak)
   lib/i18n.ts         화면 언어(한국어, 영어) 정하기와 저장, 언어별 주소(/en), 문구 묶음(messages, useMessages, pick)
   lib/meta.ts         탭 제목과 링크 미리보기 태그를 화면과 언어에 맞게 바꾸기, 언어별 메인 화면 값(HOME_META)
   lib/http.ts         API 기본 주소, 응답의 data와 오류 코드 꺼내기(readResult), 본문을 조금씩 읽으며 받은 바이트 알리기(readJsonWithProgress, readWithLoad, OnLoad), 브라우저 소유자 키
@@ -158,6 +161,8 @@ src/
 ## 환경 변수
 
 `.env.example`에 정리되어 있어요. `.env`는 절대 커밋하지 않아요. `.env.production`은 브라우저에 공개되는 값만 담아서 저장소에 포함해요.
+
+ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사, 커밋하지 않아요)에 넣고, 배포에는 `npx wrangler secret put ELEVENLABS_API_KEY`로 넣어요.
 
 - 로컬 개발(`npm run dev`)은 로컬 백엔드를 써요. `.env.development`의 `VITE_API_BASE_URL`이 비어 있어서 요청이 `/api/v1`로 가고, `vite.config.ts`의 proxy가 `http://localhost:8080`(JAVADDA-server를 `./gradlew bootRun`으로 띄운 곳)으로 넘겨요. 같은 주소라 CORS 설정이 필요 없어요. 다른 서버를 보려면 커밋하지 않는 `.env.development.local`에 주소를 적어요.
 - 운영은 대기 중이에요. `.env.production`은 아직 예전 서버(api.whoisloafing.hidly.dev)를 가리켜서 진단 기능이 동작하지 않아요. 새 백엔드의 운영 주소가 정해지면 이 값과 백엔드의 `CORS_ALLOWED_ORIGINS`를 같이 바꾸고 배포해요. 그 전까지 운영 배포(`npm run build` 뒤 Workers 배포)는 하지 않아요. `npm run preview`와 `npm run worker:dev`도 운영 값으로 빌드해서 예전 서버를 봐요.
@@ -284,7 +289,8 @@ src/
 
 - 위에 "3 / 8" 진행 표시와 가는 막대가 있고, 질문 카드에 유형, 나올 확률, 출처, 질문, "힌트 보기"(의도와 답변 포인트), 답을 적는 칸(글자 수를 아래에 적어요), "답변 제출" 버튼이 있어요. 열 글자 아래면 보낼 수 없어요. 채점하는 동안 버튼이 "채점 중"으로 바뀌고, 답 칸 아래에 진행 막대(`AiProgress`)가 보여요. 질문을 받는 동안(처음이면 AI가 만들어요)도 진행 막대예요.
 - 피드백은 아래에 회색 칸으로 붙어요. 점수 고리, 좋았어요, 보완할 점, 이렇게 말해 보세요, 꼬리 질문이 있고, "다시 답하기"와 "다음 질문"(마지막이면 "연습 마치기") 버튼이 있어요. 마치면 평균 점수와 답한 수, 리포트로 돌아가는 버튼이 나와요. 기획서의 10이에요.
-- 음성 연습: 질문 아래의 "질문 듣기"는 질문을 소리로 읽어 주고(`speechSynthesis`), 답변 칸 아래의 "말로 답하기"는 말을 글자로 바꿔 답변 칸에 채워요(`SpeechRecognition`, `src/lib/speech.ts`). 듣는 동안 칸은 읽기 전용이고 아직 확정되지 않은 글자까지 보여줘요. 멈추면 글자를 고쳐서 낼 수 있어요. 말하는 중에 답변 제출을 누르면 듣기를 멈추고 칸에 보이던 글자 그대로 내요. 채점은 글로 쓴 답과 같아서 서버 변경이 없어요. 마이크 권한이 없거나 마이크를 못 찾으면 토스트로 알려요. 지원하지 않는 환경(macOS 앱의 웹뷰, Firefox)에서는 버튼을 숨기고 글로만 답해요.
+- 음성 연습: 질문 아래의 "질문 듣기"는 질문을 사람 목소리로 읽어 주고(ElevenLabs, `/tts`), 답변 칸 아래의 "말로 답하기"는 말을 글자로 바꿔 답변 칸에 채워요(`SpeechRecognition`, `src/lib/speech.ts`). 듣는 동안 칸은 읽기 전용이고 아직 확정되지 않은 글자까지 보여줘요. 멈추면 글자를 고쳐서 낼 수 있어요. 말하는 중에 답변 제출을 누르면 듣기를 멈추고 칸에 보이던 글자 그대로 내요. 채점은 글로 쓴 답과 같아서 백엔드 변경이 없어요. 마이크 권한이 없거나 마이크를 못 찾으면 토스트로 알려요. 말로 답하기를 지원하지 않는 환경(macOS 앱의 웹뷰, Firefox)에서는 그 버튼을 숨기고 글로만 답해요.
+- 사람 목소리(`worker/tts.ts`): API 키는 브라우저 코드에 넣지 않고 서버 쪽에서만 써요(`VITE_` 값으로 넣으면 공개돼요). 화면은 `/tts`에 글을 보내고 mp3를 받아 재생해요. 모델은 한국어를 지원하는 `eleven_multilingual_v2`이고, 최신 v4는 이 API로 쓸 수 없어요. 목소리와 모델은 `ELEVENLABS_VOICE_ID`, `ELEVENLABS_MODEL_ID`로 바꿔요. 글은 300자까지, 같은 사이트의 요청만 받아요. Worker는 만든 음성을 30일 캐시하고 새로 만드는 것은 주소 하나당 1분에 20번까지예요. 화면도 이번 접속에서 받은 음성을 기억해요. 키가 없거나 실패하면 브라우저 음성(`speechSynthesis`)으로 읽어요.
 
 내 리포트
 
@@ -415,6 +421,7 @@ src/
 | `practice_start` | 면접 연습을 시작했을 때 | `from`(all, question) |
 | `practice_submit`, `practice_next`, `practice_finish` | 답을 보내고, 다음 질문으로 가고, 연습을 마쳤을 때 | `score`, `voice`(말로 답했는지), `average`, `count` |
 | `practice_voice_start`, `practice_voice_error`, `practice_question_listen` | 말로 답하기를 시작하거나 실패했을 때, 질문 듣기를 눌렀을 때 | `code` |
+| `practice_tts_fallback` | 사람 목소리를 받지 못해 브라우저 음성으로 읽었을 때 | `status` |
 | `history_report_open` | 사이드바에서 리포트를 눌렀을 때 | `from`(sidebar) |
 | `admin_tab_view`, `admin_period_change`, `admin_user_open`, `admin_user_action`, `admin_call_open`, `admin_call_copy`, `admin_chat_action` | 관리자 화면 | 전과 같아요 |
 | `language_change` | 헤더나 앱의 설정 창에서 언어를 바꿨을 때 | `lang`(ko, en), `from`(header, settings) |

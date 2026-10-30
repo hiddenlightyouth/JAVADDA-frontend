@@ -180,7 +180,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   function toggleListen(question: string) {
     if (voice.speaking) return voice.stop()
     track('practice_question_listen')
-    voice.speak(question)
+    void voice.speak(question)
   }
 
   function next() {

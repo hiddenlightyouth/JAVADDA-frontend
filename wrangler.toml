@@ -1,6 +1,18 @@
 name = "whoisloafing"
 compatibility_date = "2026-09-01"
+main = "worker/index.ts"
 
 [assets]
 directory = "./dist"
 not_found_handling = "single-page-application"
+# 음성 경로만 Worker가 받고, 나머지는 정적 파일이 바로 응답해요.
+run_worker_first = ["/tts"]
+
+# 음성을 새로 만드는 횟수는 주소 하나당 1분에 20번까지예요.
+[[ratelimits]]
+name = "TTS_LIMIT"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 20
+  period = 60

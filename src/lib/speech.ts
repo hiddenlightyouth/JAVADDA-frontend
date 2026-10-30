@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { track } from './analytics'
 
 /**
- * 면접 연습의 음성 기능이에요. 브라우저에 있는 음성 인식과 음성 합성을 써서 서버가 따로 필요 없어요.
+ * 면접 연습의 음성 기능이에요. 말로 답하기는 브라우저의 음성 인식을, 질문 듣기는 사람 목소리(ElevenLabs)를 먼저 쓰고 안 되면 브라우저 음성을 써요.
  * 말한 내용은 글자로 바뀌어 답변 칸에 들어가고, 채점은 글로 쓴 답과 똑같이 받아요.
  * Safari와 Chrome처럼 지원하는 브라우저에서만 켜지고, 나머지(macOS 앱의 웹뷰, Firefox)에서는 버튼을 숨겨요.
  */
@@ -39,7 +40,7 @@ const recognitionClass = (): RecognitionClass | null => {
 export const canDictate = () => recognitionClass() !== null
 
 /** 질문을 소리로 읽어 줄 수 있는 브라우저인지예요. */
-export const canSpeak = () => typeof window !== 'undefined' && 'speechSynthesis' in window
+export const canSpeak = () => typeof window !== 'undefined' && ('Audio' in window || 'speechSynthesis' in window)
 
 /** 글 뒤에 띄어쓰기 하나를 두고 이어 붙여요. */
 export const joinSpeech = (text: string, more: string) => (text && more ? `${text.trimEnd()} ${more}` : text || more)
@@ -137,26 +138,85 @@ export function useDictation(lang: string, onText: (text: string) => void, onErr
   return { listening, interim, start, finish }
 }
 
-/** 글자를 소리로 읽어 줘요. 다른 글을 읽으면 앞의 것은 멈춰요. */
+/** 서버가 만든 음성을 이번 접속 동안 기억해요. 같은 질문을 다시 들어도 사용량을 쓰지 않아요. */
+const voices = new Map<string, string>()
+/** 서버에 키가 없으면 다시 묻지 않고 바로 브라우저 음성으로 읽어요. */
+let remoteOff = false
+
+/** 사람 목소리 음성의 주소를 받아요. 못 받으면 null이에요. */
+async function fetchVoice(text: string, signal: AbortSignal): Promise<string | null> {
+  const known = voices.get(text)
+  if (known) return known
+  if (remoteOff) return null
+  try {
+    const response = await fetch('/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }), signal })
+    if (!response.ok) {
+      if (response.status === 503 || response.status === 404 || response.status === 405) remoteOff = true
+      else track('practice_tts_fallback', { status: response.status })
+      return null
+    }
+    const url = URL.createObjectURL(await response.blob())
+    voices.set(text, url)
+    return url
+  } catch {
+    return null
+  }
+}
+
+/**
+ * 글자를 사람 목소리로 읽어 줘요(`worker/tts.ts`의 ElevenLabs). 키가 없거나 실패하면 브라우저 음성으로 읽어요.
+ * 다른 글을 읽으면 앞의 것은 멈춰요.
+ */
 export function useSpeak() {
   const [speaking, setSpeaking] = useState(false)
+  /** 가장 최근의 읽기예요. 음성을 받는 동안 멈추면 늦게 온 음성을 틀지 않아요. */
+  const turn = useRef(0)
+  const request = useRef<AbortController | null>(null)
+  const audio = useRef<HTMLAudioElement | null>(null)
 
   const stop = useCallback(() => {
-    if (canSpeak()) window.speechSynthesis.cancel()
+    turn.current += 1
+    request.current?.abort()
+    request.current = null
+    audio.current?.pause()
+    audio.current = null
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel()
     setSpeaking(false)
   }, [])
 
-  const speak = useCallback((text: string) => {
-    if (!canSpeak()) return
-    window.speechSynthesis.cancel()
+  const speakInBrowser = useCallback((text: string) => {
+    if (!('speechSynthesis' in window)) return setSpeaking(false)
     const utterance = new SpeechSynthesisUtterance(text)
     // 질문 자료는 화면 언어와 달리 한국어일 수 있어서, 글자를 보고 읽을 언어를 정해요.
     utterance.lang = /[가-힣]/.test(text) ? 'ko-KR' : 'en-US'
     utterance.onend = () => setSpeaking(false)
     utterance.onerror = () => setSpeaking(false)
-    setSpeaking(true)
     window.speechSynthesis.speak(utterance)
   }, [])
+
+  const speak = useCallback(
+    async (text: string) => {
+      stop()
+      const mine = turn.current
+      const controller = new AbortController()
+      request.current = controller
+      setSpeaking(true)
+      const url = await fetchVoice(text, controller.signal)
+      if (mine !== turn.current) return
+      if (!url) return speakInBrowser(text)
+      const player = new Audio(url)
+      audio.current = player
+      player.onended = () => setSpeaking(false)
+      player.onerror = () => {
+        if (mine === turn.current) speakInBrowser(text)
+      }
+      // 음성을 받는 사이에 브라우저가 재생을 막으면 브라우저 음성으로 넘어가요.
+      await player.play().catch(() => {
+        if (mine === turn.current) speakInBrowser(text)
+      })
+    },
+    [speakInBrowser, stop],
+  )
 
   useEffect(() => stop, [stop])
 
