@@ -9,11 +9,13 @@ export const TTS_PATH = '/tts'
 /** 질문 하나의 길이를 넉넉히 잡았어요. 다른 글을 읽히는 데 쓰이지 않게 막아요. */
 const MAX_CHARS = 300
 const DEFAULT_BASE_URL = 'https://api.elevenlabs.io'
-/** 기본 목소리예요. `ELEVENLABS_VOICE_ID`로 바꿔요. */
-const DEFAULT_VOICE_ID = 'JBFqnCBsd6RMkjVDRZzb'
+/** 기본 목소리예요. 면접관처럼 차분한 한국어 대화체 Harry Kim이고, `ELEVENLABS_VOICE_ID`로 바꿔요. */
+const DEFAULT_VOICE_ID = 'pb3lVZVjdFWbkhPKlelB'
 /** 한국어를 지원하는 모델 중 가장 자연스러워요. 최신 v4는 이 API로 쓸 수 없어요. */
 const DEFAULT_MODEL_ID = 'eleven_multilingual_v2'
 const OUTPUT_FORMAT = 'mp3_44100_128'
+/** 사람처럼 들리게 억양의 폭을 조금 넓혔어요. 더 낮추면 말투가 불안정해져요. style은 0이어야 또렷하고 빨라요. */
+const VOICE_SETTINGS = { stability: 0.45, similarity_boost: 0.75, style: 0, use_speaker_boost: true }
 
 export interface TtsEnv {
   ELEVENLABS_API_KEY?: string
@@ -63,7 +65,8 @@ export async function handleTts(request: Request, env: TtsEnv, options: TtsOptio
   const upstream = await fetch(`${base}/v1/text-to-speech/${encodeURIComponent(voice)}?output_format=${OUTPUT_FORMAT}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'xi-api-key': env.ELEVENLABS_API_KEY },
-    body: JSON.stringify({ text, model_id: model }),
+    // v3는 설정의 허용 범위가 달라서 목소리에 저장된 값을 그대로 써요.
+    body: JSON.stringify({ text, model_id: model, ...(model.startsWith('eleven_v3') ? {} : { voice_settings: VOICE_SETTINGS }) }),
   }).catch(() => null)
   if (!upstream?.ok) {
     console.error('ElevenLabs request failed', upstream?.status ?? 'network')
