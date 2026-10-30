@@ -321,6 +321,26 @@ export function BookIcon({ className = 'size-4', strokeWidth = 1.4, label }: Ico
   )
 }
 
+/** 말로 답하기의 마이크예요. */
+export function MicIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <rect x="5.75" y="1.75" width="4.5" height="8" rx="2.25" />
+      <path d="M3.25 7.5a4.75 4.75 0 0 0 9.5 0M8 12.25v2" />
+    </Icon>
+  )
+}
+
+/** 질문 듣기의 스피커예요. */
+export function SpeakerIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M2.5 6.25v3.5h2.25L8 12.5v-9L4.75 6.25z" />
+      <path d="M10.5 5.75a3.2 3.2 0 0 1 0 4.5M12.25 4a5.7 5.7 0 0 1 0 8" />
+    </Icon>
+  )
+}
+
 /** 알려 줄 것이 있다는 동그라미 느낌표예요. */
 export function AlertIcon({ className = 'size-4 shrink-0', strokeWidth = 1.6, label }: IconProps) {
   return (
