@@ -134,6 +134,7 @@ src/
   components/ui.tsx          기본 모양을 한 곳에서 정해요. 버튼(primaryButton, primaryButtonMd, primaryButtonLg, quietButton, dangerButton, softButton, softDangerButton, toolButton, toolDangerButton, ghostButton, ghostDangerButton, iconButton), 메뉴(menuPanel, menuItem, menuDangerItem), 입력칸(fieldBase, textField, textFieldSm, textArea, 좁은 화면에서는 16px), 작은 제목(label), 이름표(tag), 테두리 없는 작은 이름표(Badge, gray, muted, brand, outline, red, white), 오류 문구(FormError), 고르는 칸(Segmented, sm과 md), 밑줄 탭(Tabs), 점 목록(Bullets), 번호(NumberBadge, NumberedList), 뼈대 감싸기(Busy), 카드 떠오르는 순서(stagger). 새 화면은 같은 모양을 다시 적지 않고 여기 것을 써요
   components/Dropdown.tsx    버튼을 누르면 펼쳐지는 고르기 메뉴(Dropdown). 공고 탐색, 추천 공고, 예상 질문, 설정 창의 AI 모델이 써요. 오른쪽 끝에 놓인 버튼은 `align="right"`로 메뉴를 오른쪽에 맞춰요
   components/Settings.tsx    앱의 설정 창. 화면 모드, 언어, 단축키 항상 표시, AI 모델, 화면 녹화 감지 시 가리기, 버전
+  components/AiModelSetting.tsx  AI 모델 고르기(useAiModelSetting). 이름, 설명, 드롭다운을 돌려줘서 설정 창과 내 정보 화면이 각자의 줄 모양에 넣어요
   components/AppLogin.tsx    앱이 브라우저로 열어 주는 앱 로그인 화면 (/app-login)
   components/CaptureShield.tsx  앱에서 화면 공유나 녹화가 감지되면 화면 전체를 가리는 막
   components/Admin.tsx       앱의 관리자 화면 (/admin). 관리자 계정만 보고, 탭으로 나눠요
@@ -291,7 +292,7 @@ src/
 - 배치는 macOS 앱과 같아요. 사이드바 맨 위에는 사이드바 버튼과 로고가 있고, 로고를 누르면 새 진단 화면으로 가요. 창 버튼과 창 옮기기, 화면 녹화 가리기, 앱 버전과 업데이트 확인, 단축키 안내(`ShortcutTip`)는 macOS 앱에서만 써요.
 - 공고 탐색과 기술 블로그는 로그인하지 않아도 써요. 이력서, 리포트, 서류 검증, 예상 질문, 면접 연습, 보완 계획, 면접 노트는 로그인해야 하고(서버가 401로 답해요), 로그인하지 않았으면 내 이력서와 내 리포트가 비어 있어요. 로그인하지 않았으면 사이드바의 계정 버튼 자리에 로그인 버튼을 보여줘요. 리포트를 보다가 로그인하러 가면 로그인한 뒤에 그 리포트로 돌아오고, 로그인하지 않고 리포트 주소로 들어오면 로그인 안내를 보여줘요. 진단하거나 서류를 올리려다 로그인하러 가면 하던 화면으로 돌아와요. 그 밖에는 로그인하면 새 진단 화면으로 가요.
 - 떠나기 확인 창은 두지 않아요. 리포트는 서버가 만들고 계정에 저장해서, 만드는 중에 화면을 옮겨도 끝까지 만들어져요.
-- 설정 창에서 화면 모드, 언어, 단축키 항상 표시, AI 모델을 바꿔요. 다크 모드도 `/app`에서는 켜져요. AI 모델 줄은 늘 보여요. 설정 창을 열 때마다 `/config`를 다시 물어서(`refreshConfig`) 서버를 나중에 켰거나 키를 바꿔도 바로 맞춰요. 드롭다운 맨 위는 "서버 기본 (모델 이름)"이고, 그 아래로 공급자(OpenAI, Claude)마다 묶어 `ai.models`(서버에 키가 있는 모델만)를 늘어놓아요. 고른 것은 localStorage의 `whoisloafing:ai-model`에 두고, 서버 기본을 고르면 지워요(헤더를 보내지 않아요). 고른 모델이 목록에서 빠졌으면 서버 기본이 체크되어 보여요. 받는 동안은 불러오는 드롭다운, 서버에 닿지 못하면 연결하지 못했다는 설명, 키가 없어서 목록이 비면 "고를 수 있는 모델이 없어요"와 규칙으로 분석한다는 설명을 보여줘요.
+- 설정 창에서 화면 모드, 언어, 단축키 항상 표시, AI 모델을 바꿔요. 다크 모드도 `/app`에서는 켜져요. AI 모델 줄은 설정 창(사이드바 맨 아래 톱니바퀴)과 내 정보 화면(`/app/me`, 계정 칸 아래 AI 칸) 두 곳에 있고 늘 보여요. 설정 창을 열 때마다 `/config`를 다시 물어서(`refreshConfig`) 서버를 나중에 켰거나 키를 바꿔도 바로 맞춰요. 드롭다운 맨 위는 "서버 기본 (모델 이름)"이고, 그 아래로 공급자(OpenAI, Claude)마다 묶어 `ai.models`(서버에 키가 있는 모델만)를 늘어놓아요. 고른 것은 localStorage의 `whoisloafing:ai-model`에 두고, 서버 기본을 고르면 지워요(헤더를 보내지 않아요). 고른 모델이 목록에서 빠졌으면 서버 기본이 체크되어 보여요. 받는 동안은 불러오는 드롭다운, 서버에 닿지 못하면 연결하지 못했다는 설명, 키가 없어서 목록이 비면 "고를 수 있는 모델이 없어요"와 규칙으로 분석한다는 설명을 보여줘요.
 - 좁은 화면(768px 미만)에서는 사이드바를 숨겨 두고, 왼쪽 위 버튼을 누르면 왼쪽에서 서랍으로 미끄러져 나와요(`animate-slide-in-left`). 화면을 고르면 서랍이 닫히고, 바깥의 어두운 부분이나 Esc를 눌러도 닫혀요.
 - `index.html`에는 소개 화면을 미리 그려 둬요. 이 파일은 없는 주소(`/app/...`)에도 대신 가서, 메인 주소가 아니거나 macOS 앱이면 `<head>`의 짧은 스크립트가 미리 그린 화면을 숨기고 `src/main.tsx`가 비운 뒤에 그려요.
 

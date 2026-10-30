@@ -1,7 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { track } from '../lib/analytics'
-import { refreshConfig, setAiModel, useAiModel, type AiConfig, type AiModel } from '../lib/api'
-import { Dropdown } from './Dropdown'
+import { useAiModelSetting } from './AiModelSetting'
 import { Modal } from './Dialog'
 import { appAtLeast, appVersion, postToApp, type AppTheme } from '../lib/app'
 import { setShortcutHintsPinned, useShortcutHintsPinned } from '../lib/shortcuts'
@@ -27,15 +26,6 @@ const TEXT = messages({
     shield: '화면 녹화 감지 시 가리기',
     shieldNote: 'macOS에서 화면 녹화가 감지되면 해제 시까지 화면을 가립니다.',
     ai: 'AI',
-    aiModel: 'AI 모델',
-    aiModelNote: '진단, 서류 검증, 예상 질문, 면접 연습에 사용할 모델입니다.',
-    aiDefault: (name: string) => `서버 기본 (${name})`,
-    aiDefaultShort: '서버 기본',
-    aiLoading: '불러오고 있어요',
-    aiNone: '고를 수 있는 모델이 없어요',
-    aiNoneNote: '서버에 OpenAI나 Claude 키가 없어서 AI 없이 규칙으로 분석해요.',
-    aiOffline: '서버에 연결하지 못해서 모델 목록을 받지 못했어요.',
-    providers: { openai: 'OpenAI', claude: 'Claude' } as Record<AiModel['provider'], string>,
     app: '앱',
     version: '버전',
     update: '업데이트 확인',
@@ -53,15 +43,6 @@ const TEXT = messages({
     shield: 'Hide screen while recording',
     shieldNote: 'When screen recording is detected on macOS, the screen stays hidden until you reveal it.',
     ai: 'AI',
-    aiModel: 'AI model',
-    aiModelNote: 'The model used for diagnosis, document review, interview questions, and practice.',
-    aiDefault: (name: string) => `Server default (${name})`,
-    aiDefaultShort: 'Server default',
-    aiLoading: 'Loading',
-    aiNone: 'No models available',
-    aiNoneNote: 'The server has no OpenAI or Claude key, so analysis runs on rules without AI.',
-    aiOffline: "Couldn't reach the server to load the model list.",
-    providers: { openai: 'OpenAI', claude: 'Claude' },
     app: 'App',
     version: 'Version',
     update: 'Check for updates',
@@ -116,27 +97,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
   const hints = useShortcutHintsPinned()
   const lang = useLang()
   const text = useMessages(TEXT)
-  // null은 아직 받는 중, 'offline'은 서버에 닿지 못했을 때예요.
-  const [ai, setAi] = useState<AiConfig | 'offline' | null>(null)
-  const chosen = useAiModel()
-
-  // 열 때마다 서버에 다시 물어봐요. 앱을 연 뒤에 서버를 켰거나 키를 넣었어도 바로 보여요.
-  useEffect(() => {
-    let stale = false
-    void refreshConfig().then((config) => {
-      if (stale) return
-      setAi(config.online ? config.ai : 'offline')
-    })
-    return () => {
-      stale = true
-    }
-  }, [])
-
-  const models = ai && ai !== 'offline' ? ai.models : []
-  const serverDefault = ai && ai !== 'offline' ? models.find((model) => model.id === ai.defaultModel) ?? models[0] : undefined
-  // 고른 모델이 서버 목록에 없으면(키를 뺐으면) 서버 기본을 쓰고 있는 것으로 보여줘요.
-  const picked = models.find((model) => model.id === chosen)
-  const providers = [...new Set(models.map((model) => model.provider))]
+  const aiModel = useAiModelSetting('right')
 
   return (
     <Modal onClose={onClose} labelledBy="settings-title" className="flex max-h-[85dvh] w-full max-w-lg flex-col">
@@ -187,47 +148,8 @@ export function Settings({ onClose }: { onClose: () => void }) {
 
       {/* 고를 모델이 없어도 칸은 늘 보여주고, 왜 고를 수 없는지 알려요. */}
       <Section title={text.ai}>
-        <Row
-          label={text.aiModel}
-          note={ai === 'offline' ? text.aiOffline : ai && models.length === 0 ? text.aiNoneNote : text.aiModelNote}
-        >
-          {ai === null ? (
-            <Dropdown align="right" value={text.aiLoading} groups={[{ items: [], loading: true }]} />
-          ) : models.length === 0 ? (
-            <span className="text-[13px] text-gray-400">{text.aiNone}</span>
-          ) : (
-            <Dropdown
-              align="right"
-              value={picked ? picked.label : text.aiDefaultShort}
-              groups={[
-                {
-                  items: [
-                    {
-                      label: serverDefault ? text.aiDefault(serverDefault.label) : text.aiDefaultShort,
-                      checked: !picked,
-                      onSelect: () => {
-                        track('app_ai_model_change', { model: 'default' })
-                        setAiModel(null)
-                      },
-                    },
-                  ],
-                },
-                ...providers.map((provider) => ({
-                  title: text.providers[provider],
-                  items: models
-                    .filter((model) => model.provider === provider)
-                    .map((model) => ({
-                      label: model.label,
-                      checked: picked?.id === model.id,
-                      onSelect: () => {
-                        track('app_ai_model_change', { model: model.id })
-                        setAiModel(model.id)
-                      },
-                    })),
-                })),
-              ]}
-            />
-          )}
+        <Row label={aiModel.label} note={aiModel.note}>
+          {aiModel.control}
         </Row>
       </Section>
 

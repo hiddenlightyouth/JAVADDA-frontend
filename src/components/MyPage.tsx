@@ -21,6 +21,7 @@ import { ConfirmDialog } from './Dialog'
 import { isApp } from '../lib/app'
 import { SOCIAL_LABELS, type SocialProvider } from '../lib/social'
 import { IpPlace } from './IpPlace'
+import { useAiModelSetting } from './AiModelSetting'
 import { SocialButtons, useSocialClients } from './Social'
 import { Bone } from './Skeleton'
 import { messages, pick, useMessages } from '../lib/i18n'
@@ -51,6 +52,7 @@ const TEXT = messages({
     name: '이름',
     email: '이메일',
     joined: '가입한 날',
+    ai: 'AI',
     devices: '로그인한 기기',
     history: '로그인 기록',
     withdraw: '회원탈퇴',
@@ -82,6 +84,7 @@ const TEXT = messages({
     name: 'Name',
     email: 'Email',
     joined: 'Joined',
+    ai: 'AI',
     devices: 'Signed-in devices',
     history: 'Sign-in history',
     withdraw: 'Delete account',
@@ -385,6 +388,7 @@ export function MyPage({ onSignedOut }: Props) {
   }
 
   const registered = parseServerTime(me?.registeredAt)
+  const aiModel = useAiModelSetting('right')
 
   return (
     <main className={pageFrame}>
@@ -417,6 +421,19 @@ export function MyPage({ onSignedOut }: Props) {
               {text.signOut}
             </button>
           </div>
+        </Section>
+
+        {/* 설정 창(사이드바 아래 톱니바퀴)과 같은 AI 모델 고르기예요. */}
+        <Section title={text.ai}>
+          <dl className="divide-y divide-gray-100 border-y border-gray-100 text-[14px]">
+            <div className="flex items-center justify-between gap-6 py-3.5">
+              <dt className="min-w-0">
+                <span className="block text-gray-900">{aiModel.label}</span>
+                <span className="mt-0.5 block text-[12.5px] leading-relaxed break-keep text-gray-500">{aiModel.note}</span>
+              </dt>
+              <dd className="shrink-0">{aiModel.control}</dd>
+            </div>
+          </dl>
         </Section>
 
         <Connections />
