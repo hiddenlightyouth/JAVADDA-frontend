@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useDismiss } from '../hooks/useDismiss'
 import { Kbd } from './Shortcuts'
 import { CheckIcon, ChevronDownIcon } from './Icons'
@@ -23,9 +24,36 @@ interface MenuGroup {
   progress?: number
 }
 
+/** 메뉴와 버튼 사이, 메뉴와 화면 끝 사이의 틈이에요. */
+const GAP = 8
+/** 아래 남은 자리가 이보다 좁고 위가 더 넓으면 위로 펼쳐요. */
+const MIN_BELOW = 240
+
+interface Place {
+  left?: number
+  right?: number
+  top?: number
+  bottom?: number
+  maxHeight: number
+  up: boolean
+}
+
+/** 버튼의 자리를 보고 메뉴를 놓을 곳을 구해요. 아래가 좁으면 위로 펼치고, 남은 자리만큼만 키워요. */
+function placeOf(button: HTMLElement, align: 'left' | 'right'): Place {
+  const rect = button.getBoundingClientRect()
+  const below = window.innerHeight - rect.bottom - GAP * 2
+  const above = rect.top - GAP * 2
+  const up = below < MIN_BELOW && above > below
+  const horizontal = align === 'right' ? { right: window.innerWidth - rect.right } : { left: rect.left }
+  const vertical = up ? { bottom: window.innerHeight - rect.top + GAP } : { top: rect.bottom + GAP }
+  return { ...horizontal, ...vertical, maxHeight: Math.max(120, up ? above : below), up }
+}
+
 /**
  * 버튼을 누르면 아래로 펼쳐지는 메뉴예요. 공고 탐색의 직군, 경력, 정렬과 예상 질문의 유형 고르기에 같이 써요.
  * 고른 항목에는 체크 표시가 붙고, 바깥을 누르거나 Esc를 누르면 닫혀요.
+ * 메뉴는 화면 맨 바깥(body)에 그려요. 설정 창처럼 스크롤되는 칸 안에 두면 칸 끝에서 잘리거나 칸이 같이 늘어나서 어색했어요.
+ * 아래 자리가 모자라면 위로 펼치고, 스크롤하거나 창 크기가 바뀌면 버튼을 따라가요.
  */
 export function Dropdown({ label, value, active = false, groups, onOpen, align = 'left', className = '' }: {
   /** 버튼에 적는 이름. 고른 값만 보여줘도 뜻이 통하면 넘기지 않아요. */
@@ -43,13 +71,37 @@ export function Dropdown({ label, value, active = false, groups, onOpen, align =
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [place, setPlace] = useState<Place | null>(null)
 
   // 메뉴 줄의 누름이 바깥으로 흘러나오기 전에(캡처 단계에서) 먼저 받아야, 옆의 다른 메뉴를 눌렀을 때도 이 메뉴가 닫혀요.
-  useDismiss(open, ref, () => setOpen(false), { capture: true })
+  // 메뉴는 body에 그려져서 ref 바깥에 있으니, 메뉴 안을 누른 것도 바깥으로 치지 않게 따로 알려 줘요.
+  useDismiss(open, ref, () => setOpen(false), { capture: true, ignore: (target) => !!menuRef.current?.contains(target) })
+
+  // 열려 있는 동안 버튼 자리를 따라가요. 메뉴 안을 스크롤할 때는 버튼이 움직이지 않으니 그대로 둬요.
+  useLayoutEffect(() => {
+    if (!open) {
+      setPlace(null)
+      return
+    }
+    const update = () => buttonRef.current && setPlace(placeOf(buttonRef.current, align))
+    const onScroll = (event: Event) => {
+      if (!menuRef.current?.contains(event.target as Node)) update()
+    }
+    update()
+    window.addEventListener('resize', update)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', onScroll, true)
+    }
+  }, [open, align])
 
   return (
     <div ref={ref} className="relative">
       <button
+        ref={buttonRef}
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -64,8 +116,13 @@ export function Dropdown({ label, value, active = false, groups, onOpen, align =
         <ChevronDownIcon className={`size-3 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
-      {open && (
-        <div role="menu" className={`absolute top-full z-10 mt-2 max-h-[60dvh] w-64 overflow-y-auto ${align === 'right' ? 'right-0 origin-top-right' : 'left-0 origin-top-left'} ${menuPanel}`}>
+      {open && place && createPortal(
+        <div
+          ref={menuRef}
+          role="menu"
+          style={{ left: place.left, right: place.right, top: place.top, bottom: place.bottom, maxHeight: place.maxHeight }}
+          className={`fixed z-50 w-64 overflow-y-auto ${place.up ? (align === 'right' ? 'origin-bottom-right' : 'origin-bottom-left') : align === 'right' ? 'origin-top-right' : 'origin-top-left'} ${menuPanel}`}
+        >
           {groups.map((group, index) => (
             <div key={group.title ?? index} className={index > 0 ? 'mt-1 border-t border-gray-100 pt-1' : ''}>
               {group.title && <p className={`px-2.5 pt-2 pb-1 ${labelText}`}>{group.title}</p>}
@@ -91,7 +148,8 @@ export function Dropdown({ label, value, active = false, groups, onOpen, align =
               ))}
             </div>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
