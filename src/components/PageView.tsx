@@ -12,6 +12,7 @@ const Jobs = lazy(() => import('./Jobs').then((module) => ({ default: module.Job
 const Recommend = lazy(() => import('./Recommend').then((module) => ({ default: module.Recommend })))
 const Blogs = lazy(() => import('./Blogs').then((module) => ({ default: module.Blogs })))
 const MyResume = lazy(() => import('./MyResume').then((module) => ({ default: module.MyResume })))
+const Company = lazy(() => import('./Company').then((module) => ({ default: module.Company })))
 const Diagnose = lazy(() => import('./Diagnose').then((module) => ({ default: module.Diagnose })))
 const Report = lazy(() => import('./Report').then((module) => ({ default: module.Report })))
 const Practice = lazy(() => import('./Practice').then((module) => ({ default: module.Practice })))
@@ -69,6 +70,8 @@ export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExp
         <MyResume onExplore={onExplore} />
       ) : page.kind === 'blogs' ? (
         <Blogs company={page.company ?? null} onCompany={onBlogs} onJobs={onCompany} />
+      ) : page.kind === 'company' ? (
+        <Company key={page.id} id={page.id} onBack={onHome} onPick={onDiagnose} onPostings={onCompany} onBlogs={onBlogs} />
       ) : page.kind === 'diagnose' ? (
         <Diagnose postingId={page.postingId} onBack={onHome} onReport={(id) => onReport(id, 'summary', true)} />
       ) : page.kind === 'report' ? (

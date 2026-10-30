@@ -96,6 +96,7 @@ export default function App() {
   const openExplore = useCallback(() => open({ kind: 'explore' }), [open])
   const openRecommend = useCallback(() => open({ kind: 'recommend' }), [open])
   const openCompany = useCallback((company: string) => open({ kind: 'explore', company }), [open])
+  const openCompanyPage = useCallback((id: string) => open({ kind: 'company', id }), [open])
   const openResume = useCallback(() => open({ kind: 'resume' }), [open])
   const openBlogs = useCallback((company: string | null = null) => open({ kind: 'blogs', company: company ?? undefined }), [open])
   const openAdmin = useCallback((tab: AdminTab = 'overview') => open({ kind: 'admin', tab }), [open])
@@ -202,7 +203,7 @@ export default function App() {
         />
       ) : (
         <Suspense fallback={<main className="flex-1" />}>
-          <Home onPick={openDiagnose} onExplore={openExplore} onRecommend={openRecommend} onResume={openResume} onCompany={openCompany} />
+          <Home onPick={openDiagnose} onExplore={openExplore} onRecommend={openRecommend} onResume={openResume} onCompany={openCompanyPage} />
         </Suspense>
       )}
       {feedback.bugOpen && (
