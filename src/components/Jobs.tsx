@@ -7,7 +7,7 @@ import { readItem, writeItem } from '../lib/storage'
 import { showToast } from '../lib/toast'
 import { copyText, PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
-import { CardTag, CompanyFilter, CompanyMark, Failed, FitBadge, Notice, PostingMeta, SkillChip, skillTone } from './GapParts'
+import { CardTag, CompanyFilter, CompanyMark, DiagnosedTag, Failed, FitBadge, Notice, PostingMeta, SkillChip, skillTone } from './GapParts'
 import { GridIcon, ListIcon, SearchIcon } from './Icons'
 import { PostingBrowser, SplitView } from './PostingBrowser'
 import { Bone } from './Skeleton'
@@ -330,8 +330,9 @@ function JobCard({ posting, resume, fit, order, onOpen, onView, onCompany }: Job
             <span className="block truncate text-[12px] text-gray-400">{company.industry}</span>
           </span>
         </button>
-        {/* 마감이 사흘 안으로 남으면 메인 컬러로 알려요. */}
-        <span className="ml-auto">
+        {/* 진단한 공고는 진단함 태그를 앞에 붙여요. 마감이 사흘 안으로 남으면 메인 컬러로 알려요. */}
+        <span className="ml-auto flex shrink-0 items-center gap-1.5">
+          <DiagnosedTag postingId={posting.id} />
           <DeadlineTag left={left} />
         </span>
       </div>
@@ -420,6 +421,7 @@ function JobRow({ posting, resume, fit, order, onOpen, onView, onCompany }: JobI
           <SkillChip key={skill} name={skill} tone={skillTone(skill, resume)} />
         ))}
       </div>
+      <DiagnosedTag postingId={posting.id} />
       <DeadlineTag left={left} />
       <span className="hidden shrink-0 @lg:inline-flex">
         <FitBadge fit={fit} compact />

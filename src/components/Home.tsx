@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEven
 import { track } from '../lib/analytics'
 import { COMPANIES, companyOf, fitOf, POSTINGS, postingOf, SEARCH_SUGGESTIONS, sortPostings, SUGGEST_MS, useReports, useResume, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
-import { cardsRow, CompanyMark, FitBadge, PostingTile } from './GapParts'
+import { cardsRow, CompanyMark, DiagnosedTag, FitBadge, PostingTile } from './GapParts'
 import { ChevronRightIcon, SearchIcon } from './Icons'
 import { stagger } from './ui'
 import { LofyScript } from './LofyScript'
@@ -248,6 +248,7 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
                                 {company.name}, {posting.location}
                               </span>
                             </span>
+                            <DiagnosedTag postingId={posting.id} />
                             <FitBadge fit={fitOf(posting, resume)} compact />
                           </button>
                         </li>
