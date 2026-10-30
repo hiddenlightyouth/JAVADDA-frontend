@@ -5,8 +5,10 @@ import { companyOf, deleteReport, postingOf, useReports, type Report } from '../
 import { formatWhen } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { pageFrame, PageHeader } from './AppPage'
-import { ConfirmDialog, primaryButton } from './Dialog'
-import { CompanyMark, FitBadge } from './GapParts'
+import { ConfirmDialog } from './Dialog'
+import { CompanyMark, FitBadge, Notice } from './GapParts'
+import { DotsIcon } from './Icons'
+import { menuDangerItem, menuPanel } from './ui'
 import { messages, pick, useMessages } from '../lib/i18n'
 
 export const REPORT_LIST_TEXT = messages({
@@ -83,14 +85,12 @@ function Row({ report, onOpen, onDelete }: { report: Report; onOpen: () => void;
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((open) => !open)}
-        className="flex size-8 shrink-0 items-center justify-center gap-[3px] rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+        className="flex size-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
       >
-        <span className="size-[3px] rounded-full bg-current" />
-        <span className="size-[3px] rounded-full bg-current" />
-        <span className="size-[3px] rounded-full bg-current" />
+        <DotsIcon />
       </button>
       {menuOpen && (
-        <div role="menu" className="absolute top-full right-3 z-10 -mt-2 w-36 origin-top-right animate-pop rounded-2xl border border-gray-200 bg-white p-1.5">
+        <div role="menu" className={`absolute top-full right-3 z-10 -mt-2 w-36 origin-top-right ${menuPanel}`}>
           <button
             type="button"
             role="menuitem"
@@ -98,7 +98,7 @@ function Row({ report, onOpen, onDelete }: { report: Report; onOpen: () => void;
               setMenuOpen(false)
               onDelete()
             }}
-            className="block w-full rounded-xl px-3 py-2 text-left text-[13px] font-medium text-red-500 transition-colors hover:bg-gray-50"
+            className={menuDangerItem}
           >
             {text.delete}
           </button>
@@ -119,15 +119,7 @@ export function History({ onOpenReport, onHome }: { onOpenReport: (id: string) =
       <PageHeader title={text.title} />
       <div className="min-h-0 flex-1 overflow-y-auto pb-10">
         {reports.length === 0 ? (
-          <div className="mt-16 flex flex-col items-center gap-4 text-center">
-            <div>
-              <p className="text-[15px] font-semibold text-gray-900">{text.none}</p>
-              <p className="mt-1 text-[13.5px] text-gray-500">{text.start}</p>
-            </div>
-            <button type="button" onClick={onHome} className={primaryButton}>
-              {text.diagnose}
-            </button>
-          </div>
+          <Notice title={text.none} body={text.start} action={text.diagnose} onAction={onHome} className="mt-16" />
         ) : (
           <ul className="mx-auto w-full max-w-2xl divide-y divide-gray-100">
             {reports.map((report) => (

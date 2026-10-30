@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import { useDismiss } from '../hooks/useDismiss'
+import { useEffect, useState } from 'react'
 import { track } from '../lib/analytics'
 import {
   companyOf,
@@ -23,15 +22,14 @@ import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { showToast } from '../lib/toast'
 import { pageFrame, PageHeader } from './AppPage'
-import { primaryButton } from './Dialog'
-import { toolButton } from './DeepParts'
+import { panelBody, SidePanel } from './Dialog'
 import { CheckMark, CompanyMark, Delta, FitBadge, KindLabel, Meter, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreHero, ScoreRing, Sparkline, Tip, percent } from './GapParts'
 import { DeleteReportDialog, removeReport } from './History'
-import { CheckIcon, ChevronRightIcon, ClockIcon, CloseButton, LevelIcon, RefreshIcon, TrashIcon } from './Icons'
+import { CheckIcon, ChevronRightIcon, ClockIcon, LevelIcon, RefreshIcon, TrashIcon } from './Icons'
 import { ReviewTab } from './ReportReview'
 import { QuestionsTab } from './ReportQuestions'
-import { Kbd } from './Shortcuts'
 import { Bone } from './Skeleton'
+import { Bullets, Busy, label, NumberedList, primaryButton, Tabs, textArea, toolButton, toolDangerButton } from './ui'
 
 /** 리포트의 탭이에요. 요약, 적합도 설명, 서류 검증, 예상 면접 질문 순서예요. */
 export type ReportTab = 'summary' | 'fit' | 'review' | 'questions'
@@ -164,12 +162,11 @@ interface Props {
 }
 
 /** 받는 동안 보여주는 뼈대예요. 요약 탭의 배치와 같아요. */
-function Loading() {
+function ReportSkeleton() {
   const L = useMessages(TEXT)
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]" aria-busy="true">
-      <span className="sr-only">{L.pending}</span>
-      <div aria-hidden className="flex flex-col gap-4">
+    <Busy label={L.pending} className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="flex flex-col gap-4">
         <div className="flex items-center gap-6 rounded-2xl bg-gray-50 p-5">
           <Bone className="size-28 shrink-0" />
           <div className="min-w-0 flex-1">
@@ -193,11 +190,11 @@ function Loading() {
           </div>
         </div>
       </div>
-      <div aria-hidden className="rounded-2xl bg-gray-50 p-5">
+      <div className="rounded-2xl bg-gray-50 p-5">
         <Bone className="h-3.5 w-24" />
         <Bone className="mx-auto mt-6 size-56 rounded-full!" />
       </div>
-    </div>
+    </Busy>
   )
 }
 
@@ -303,22 +300,23 @@ function TrendList({ report }: { report: ReportData }) {
 /** 갭 상세 칸이에요. 오른쪽에서 미끄러져 들어오고, 부족과 보완은 보완 방법을, 강점은 어필 포인트와 면접 노트를 보여줘요. */
 function GapPanel({ gap, trend, onClose }: { gap: SkillGap; trend: number[] | undefined; onClose: () => void }) {
   const L = useMessages(TEXT)
-  const ref = useRef<HTMLElement>(null)
   const plans = usePlans()
   const notes = useNotes()
   const saved = notes.find((note) => note.skill === gap.skill)
   const [note, setNote] = useState(saved?.text ?? '')
   const inPlan = plans.includes(gap.skill)
-  useDismiss(true, ref, onClose)
 
   useEffect(() => {
     setNote(saved?.text ?? '')
   }, [saved?.text, gap.skill])
 
   return (
-    <aside ref={ref} role="dialog" aria-labelledby="gap-panel-title" className="fixed inset-y-0 right-0 z-30 flex w-full max-w-[440px] animate-slide-in flex-col border-l border-gray-200 bg-white">
-      <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-4">
-        <div className="min-w-0">
+    <SidePanel
+      onClose={onClose}
+      closeLabel={L.close}
+      labelledBy="gap-panel-title"
+      header={
+        <>
           <div className="flex items-center gap-2">
             <KindLabel kind={gap.kind} />
             <RequirementLabel requirement={gap.requirement} />
@@ -326,19 +324,18 @@ function GapPanel({ gap, trend, onClose }: { gap: SkillGap; trend: number[] | un
           <h2 id="gap-panel-title" className="mt-2 text-[20px] font-semibold text-gray-900">
             {gap.skill}
           </h2>
-        </div>
-        <CloseButton label={L.close} size="md" onClick={onClose} />
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
+        </>
+      }
+    >
+      <div className={panelBody}>
         {/* 공고 안의 비중과 시장 요구 변화 */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-gray-200 p-3.5">
-            <p className="text-[11.5px] text-gray-400">{L.share(percent(gap.share))}</p>
+          <div className="rounded-xl bg-gray-50 p-3.5">
+            <p className="text-[11.5px] text-gray-500">{L.share(percent(gap.share))}</p>
             <p className="mt-1 text-[20px] font-semibold text-gray-900 tabular-nums">{percent(gap.share)}</p>
           </div>
-          <div className="rounded-xl border border-gray-200 p-3.5">
-            <p className="text-[11.5px] text-gray-400">{L.change}</p>
+          <div className="rounded-xl bg-gray-50 p-3.5">
+            <p className="text-[11.5px] text-gray-500">{L.change}</p>
             <p className="mt-1 text-[20px] font-semibold text-gray-900 tabular-nums">
               <Delta value={gap.marketChange} unit="%p" />
             </p>
@@ -347,27 +344,20 @@ function GapPanel({ gap, trend, onClose }: { gap: SkillGap; trend: number[] | un
         {trend && <Sparkline series={trend} className="mt-3 h-12" />}
 
         <section className="mt-6">
-          <h3 className="text-[12.5px] font-medium text-gray-400">{L.reason}</h3>
+          <h3 className={label}>{L.reason}</h3>
           <p className="mt-1.5 text-[13.5px] leading-relaxed text-gray-700">{gap.reason}</p>
         </section>
 
         {gap.kind !== 'strength' ? (
           <>
             <section className="mt-6">
-              <h3 className="text-[12.5px] font-medium text-gray-400">{L.plan}</h3>
-              <ol className="mt-2 space-y-2">
-                {gap.actionPlan.map((step, index) => (
-                  <li key={step} className="flex gap-3 text-[13.5px] leading-relaxed text-gray-700">
-                    <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-gray-600 tabular-nums">{index + 1}</span>
-                    {step}
-                  </li>
-                ))}
-              </ol>
+              <h3 className={label}>{L.plan}</h3>
+              <NumberedList items={gap.actionPlan} className="mt-2" />
               <p className="mt-3 text-[12.5px] text-gray-500">{L.estimate(gap.estimatedWeeks, gap.scoreGain)}</p>
             </section>
             {gap.courses.length > 0 && (
               <section className="mt-6">
-                <h3 className="text-[12.5px] font-medium text-gray-400">{L.courses}</h3>
+                <h3 className={label}>{L.courses}</h3>
                 <ul className="-mx-3 mt-1">
                   {gap.courses.map((course) => (
                     <CourseRow key={course.id} course={course} />
@@ -391,41 +381,33 @@ function GapPanel({ gap, trend, onClose }: { gap: SkillGap; trend: number[] | un
         ) : (
           <>
             <section className="mt-6">
-              <h3 className="text-[12.5px] font-medium text-gray-400">{L.appeal}</h3>
-              <ul className="mt-1.5 list-disc space-y-1 pl-5 text-[13.5px] leading-relaxed text-gray-700 marker:text-gray-300">
-                {gap.appealPoints.map((point) => (
-                  <li key={point}>{point}</li>
-                ))}
-              </ul>
+              <h3 className={label}>{L.appeal}</h3>
+              <Bullets items={gap.appealPoints} brand className="mt-1.5" />
             </section>
             <section className="mt-6">
-              <h3 className="text-[12.5px] font-medium text-gray-400">{L.questions}</h3>
+              <h3 className={label}>{L.questions}</h3>
               <ul className="mt-2 space-y-3">
                 {gap.expectedQuestions.map((item) => (
-                  <li key={item.question} className="rounded-xl border border-gray-200 p-3.5">
+                  <li key={item.question} className="rounded-xl bg-gray-50 p-3.5">
                     <p className="text-[13.5px] font-medium text-gray-900">{item.question}</p>
-                    <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-[12.5px] leading-relaxed text-gray-600 marker:text-gray-300">
-                      {item.points.map((point) => (
-                        <li key={point}>{point}</li>
-                      ))}
-                    </ul>
+                    <Bullets items={item.points} className="mt-1.5" />
                   </li>
                 ))}
               </ul>
             </section>
             {gap.caution && (
               <section className="mt-6">
-                <h3 className="text-[12.5px] font-medium text-gray-400">{L.caution}</h3>
+                <h3 className={label}>{L.caution}</h3>
                 <p className="mt-1.5 text-[13.5px] leading-relaxed text-gray-700">{gap.caution}</p>
               </section>
             )}
             <section className="mt-6">
-              <h3 className="text-[12.5px] font-medium text-gray-400">{L.note}</h3>
+              <h3 className={label}>{L.note}</h3>
               <textarea
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
                 placeholder={L.notePlaceholder}
-                className="mt-2 h-28 w-full resize-none rounded-xl border border-gray-200 bg-white p-3 text-[13.5px] leading-relaxed text-gray-900 outline-none placeholder:text-gray-400 focus:border-brand"
+                className={`mt-2 h-28 ${textArea}`}
               />
               <div className="mt-2 flex items-center justify-between gap-3">
                 <span className="text-[12px] text-gray-400 tabular-nums">{saved ? formatDateTime(saved.savedAt) : ''}</span>
@@ -446,14 +428,26 @@ function GapPanel({ gap, trend, onClose }: { gap: SkillGap; trend: number[] | un
           </>
         )}
       </div>
-    </aside>
+    </SidePanel>
+  )
+}
+
+/** 더 잘 맞는 다른 공고 카드 줄이에요. 회색 칸 안에 놓여서 카드는 흰 바탕이에요. */
+function Alternatives({ ids, onPick }: { ids: string[]; onPick: (postingId: string) => void }) {
+  const resume = useResume()
+  return (
+    <ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
+      {ids.map((id, order) => {
+        const alternative = postingOf(id)
+        return alternative ? <PostingTile key={id} posting={alternative} resume={resume} tag="fit" onGray order={order} onOpen={() => onPick(id)} /> : null
+      })}
+    </ul>
   )
 }
 
 function SummaryTab({ report, onOpenGap, onPick }: { report: ReportData; onOpenGap: (gap: SkillGap) => void; onPick: (postingId: string) => void }) {
   const L = useMessages(TEXT)
   const plans = usePlans()
-  const resume = useResume()
   const groups: SkillGap['kind'][] = ['missing', 'partial', 'strength']
   return (
     <div className="space-y-10">
@@ -489,12 +483,7 @@ function SummaryTab({ report, onOpenGap, onPick }: { report: ReportData; onOpenG
 
           {report.alternatives.length > 0 && (
             <Panel title={L.alternatives}>
-              <ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
-                {report.alternatives.map((id, order) => {
-                  const alternative = postingOf(id)
-                  return alternative ? <PostingTile key={id} posting={alternative} resume={resume} tag="fit" onGray order={order} onOpen={() => onPick(id)} /> : null
-                })}
-              </ul>
+              <Alternatives ids={report.alternatives} onPick={onPick} />
             </Panel>
           )}
         </div>
@@ -520,7 +509,6 @@ function SummaryTab({ report, onOpenGap, onPick }: { report: ReportData; onOpenG
 
 function FitTab({ report, onPick }: { report: ReportData; onPick: (postingId: string) => void }) {
   const L = useMessages(TEXT)
-  const resume = useResume()
   const groups: RequirementCheck['requirement'][] = ['required', 'preferred']
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -541,12 +529,7 @@ function FitTab({ report, onPick }: { report: ReportData; onPick: (postingId: st
           {report.alternatives.length === 0 ? (
             <p className="text-[13.5px] text-gray-500">{L.noAlternatives}</p>
           ) : (
-            <ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
-              {report.alternatives.map((id, order) => {
-                const alternative = postingOf(id)
-                return alternative ? <PostingTile key={id} posting={alternative} resume={resume} tag="fit" onGray order={order} onOpen={() => onPick(id)} /> : null
-              })}
-            </ul>
+            <Alternatives ids={report.alternatives} onPick={onPick} />
           )}
         </Panel>
       </div>
@@ -555,7 +538,7 @@ function FitTab({ report, onPick }: { report: ReportData; onPick: (postingId: st
         <div className="space-y-5">
           {groups.map((requirement) => (
             <section key={requirement}>
-              <h3 className="text-[12.5px] font-medium text-gray-400">{requirement === 'required' ? L.items.required : L.items.preferred}</h3>
+              <h3 className={label}>{requirement === 'required' ? L.items.required : L.items.preferred}</h3>
               <ul className="mt-2 divide-y divide-gray-200">
                 {report.checks
                   .filter((check) => check.requirement === requirement)
@@ -635,7 +618,7 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
               <RefreshIcon className={`size-4 ${rerunning ? 'motion-safe:animate-spin' : ''}`} />
               {L.rerun}
             </button>
-            <button type="button" onClick={() => setDeleting(true)} className={`${toolButton} text-red-500! hover:border-red-200!`}>
+            <button type="button" onClick={() => setDeleting(true)} className={toolDangerButton}>
               <TrashIcon className="size-4" />
               {L.delete}
             </button>
@@ -646,34 +629,27 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
         }
       />
 
-      <div role="tablist" aria-label={L.tabList} className="flex shrink-0 gap-1 border-b border-gray-200">
-        {TABS.map((item, index) => (
-          <button
-            key={item}
-            type="button"
-            role="tab"
-            aria-selected={item === tab}
-            onClick={() => {
-              track('report_tab_view', { tab: item })
-              onTab(item)
-            }}
-            className={`relative -mb-px h-10 border-b-2 px-2 text-[13.5px] font-medium whitespace-nowrap transition-colors sm:px-3 ${item === tab ? 'border-brand text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-900'}`}
-          >
-            {L.tabs[item]}
-            <Kbd corner>{String(index + 1)}</Kbd>
-          </button>
-        ))}
-        {done && (
-          <div className="mb-1.5 ml-auto hidden items-center self-end sm:flex">
-            <FitBadge fit={report.fitScore} />
-          </div>
-        )}
-      </div>
+      <Tabs
+        label={L.tabList}
+        items={TABS.map((item, index) => ({ key: item, label: L.tabs[item], shortcut: String(index + 1) }))}
+        current={tab}
+        onSelect={(item) => {
+          track('report_tab_view', { tab: item })
+          onTab(item)
+        }}
+        trailing={
+          done && (
+            <span className="hidden sm:inline-flex">
+              <FitBadge fit={report.fitScore} />
+            </span>
+          )
+        }
+      />
 
       <div role="tabpanel" className="-mx-6 -mb-6 flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-5 md:-mx-10 md:px-10">
         {!done ? (
           <>
-            <Loading />
+            <ReportSkeleton />
             <p className="mt-6 text-center text-[13px] text-gray-500">
               {L.pending} {L.pendingBody}
             </p>

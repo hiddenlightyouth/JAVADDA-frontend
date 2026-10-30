@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react'
 import { track } from '../lib/analytics'
 import { companyOf, fetchQuestions, postingOf, submitAnswer, useReport, type InterviewQuestion, type PracticeFeedback } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
-import { ghostButton, PageHeader } from './AppPage'
-import { primaryButton } from './Dialog'
-import { tag, toolButton } from './DeepParts'
+import { PageHeader, ScrollPage } from './AppPage'
 import { Notice, Panel, ScoreRing } from './GapParts'
-import { Probability, QUESTION_TEXT } from './ReportQuestions'
+import { Probability, QUESTION_TEXT, QuestionDetail } from './ReportQuestions'
 import { Bone } from './Skeleton'
+import { Bullets, Busy, ghostButton, label, primaryButton, tag, textArea, toolButton } from './ui'
 
 const TEXT = messages({
   ko: {
@@ -19,8 +18,6 @@ const TEXT = messages({
     progress: (current: number, total: number) => `${current} / ${total}`,
     hint: '힌트 보기',
     hideHint: '힌트 접기',
-    intent: '의도',
-    points: '답변 포인트',
     placeholder: '면접관 앞에서 말하듯이 적어 보세요. 상황, 내가 한 일, 결과 순서가 좋아요.',
     chars: (count: number) => `${count}자`,
     submit: '답변 제출',
@@ -47,8 +44,6 @@ const TEXT = messages({
     progress: (current: number, total: number) => `${current} / ${total}`,
     hint: 'Show hint',
     hideHint: 'Hide hint',
-    intent: 'What they look for',
-    points: 'Answer points',
     placeholder: 'Write it like you would say it. Situation, what you did, then the result.',
     chars: (count: number) => `${count} chars`,
     submit: 'Submit answer',
@@ -70,19 +65,6 @@ const TEXT = messages({
 
 /** 답이 이보다 짧으면 제출할 수 없어요. */
 const MIN_CHARS = 10
-
-function Bullets({ items, tone }: { items: string[]; tone: 'brand' | 'gray' }) {
-  return (
-    <ul className="space-y-1">
-      {items.map((item) => (
-        <li key={item} className="flex gap-2 text-[13.5px] leading-relaxed text-gray-700">
-          <span aria-hidden className={`mt-[9px] size-1 shrink-0 rounded-full ${tone === 'brand' ? 'bg-brand' : 'bg-gray-400'}`} />
-          {item}
-        </li>
-      ))}
-    </ul>
-  )
-}
 
 /**
  * 면접 연습 화면이에요. 예상 질문에 글로 답하면 점수와 좋았던 점, 보완할 점, 다시 말해 볼 문장, 꼬리 질문을 돌려줘요.
@@ -148,133 +130,108 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   const average = Math.round(scores.reduce((sum, score) => sum + score, 0) / Math.max(1, scores.length))
 
   return (
-    <main className="flex min-h-0 flex-1 flex-col">
-      <div className="shrink-0 px-6 pt-14 md:px-10 md:pt-9">
-        <PageHeader title={L.title} owner={posting && company ? `${company.name} ${posting.title}` : undefined} onBack={onBack} />
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 md:px-10">
-        <div className="mx-auto w-full max-w-[720px]">
-          {!report || questions === null ? (
-            <Notice title={L.missing} body={L.missingBody} action={L.back} onAction={onBack} className="mt-16" />
-          ) : questions === undefined || !current ? (
-            <div aria-busy="true" className="rounded-2xl bg-gray-50 p-6">
-              <span className="sr-only">{L.loading}</span>
-              <Bone className="h-3 w-16" />
-              <Bone className="mt-5 h-5 w-4/5" />
-              <Bone className="mt-6 h-40 w-full rounded-xl!" />
-            </div>
-          ) : finished ? (
-            <Panel className="flex flex-col items-center py-10 text-center animate-rise">
-              <ScoreRing score={average} />
-              <p className="mt-2 text-[12.5px] text-gray-500">{L.average}</p>
-              <h2 className="mt-5 text-[19px] font-semibold text-gray-900">{L.doneTitle}</h2>
-              <p className="mt-1.5 max-w-sm text-[13.5px] leading-relaxed text-gray-500">{L.doneBody(scores.length)}</p>
-              <button type="button" onClick={onBack} className={`${primaryButton} mt-6`}>
-                {L.toReport}
-              </button>
-            </Panel>
-          ) : (
-            <div className="space-y-4">
-              {/* 진행 상황 */}
-              <div className="flex items-center gap-3">
-                <span className="text-[12.5px] font-medium text-gray-500 tabular-nums">{L.progress(index + 1, questions.length)}</span>
-                <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-gray-200" aria-hidden>
-                  <div className="h-full rounded-full bg-brand transition-[width] duration-500 ease-out" style={{ width: `${((index + (feedback ? 1 : 0)) / questions.length) * 100}%` }} />
-                </div>
+    <ScrollPage header={<PageHeader title={L.title} owner={posting && company ? `${company.name} ${posting.title}` : undefined} onBack={onBack} />}>
+      <div className="mx-auto w-full max-w-[720px]">
+        {!report || questions === null ? (
+          <Notice title={L.missing} body={L.missingBody} action={L.back} onAction={onBack} className="mt-16" />
+        ) : questions === undefined || !current ? (
+          <Busy label={L.loading} className="rounded-2xl bg-gray-50 p-5">
+            <Bone className="h-3 w-16" />
+            <Bone className="mt-5 h-5 w-4/5" />
+            <Bone className="mt-6 h-40 w-full rounded-xl!" />
+          </Busy>
+        ) : finished ? (
+          <Panel className="flex flex-col items-center py-10 text-center animate-rise">
+            <ScoreRing score={average} />
+            <p className="mt-2 text-[12.5px] text-gray-500">{L.average}</p>
+            <h2 className="mt-5 text-[19px] font-semibold text-gray-900">{L.doneTitle}</h2>
+            <p className="mt-1.5 max-w-sm text-[13.5px] leading-relaxed text-gray-500">{L.doneBody(scores.length)}</p>
+            <button type="button" onClick={onBack} className={`${primaryButton} mt-6`}>
+              {L.toReport}
+            </button>
+          </Panel>
+        ) : (
+          <div className="space-y-4">
+            {/* 진행 상황 */}
+            <div className="flex items-center gap-3">
+              <span className={`${label} tabular-nums`}>{L.progress(index + 1, questions.length)}</span>
+              <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-gray-200/70" aria-hidden>
+                <div className="h-full rounded-full bg-brand transition-[width] duration-500 ease-out" style={{ width: `${((index + (feedback ? 1 : 0)) / questions.length) * 100}%` }} />
               </div>
+            </div>
 
-              <Panel key={current.id} className="animate-rise">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                  <span className={tag}>{Q.categories[current.category]}</span>
-                  <Probability value={current.probability} />
-                  <span className="text-[12px] text-gray-400">{Q.source(current.source.label)}</span>
-                </div>
-                <h2 className="mt-3 text-[18px] leading-snug font-semibold text-gray-900">{current.question}</h2>
-                <button type="button" aria-expanded={hint} onClick={() => setHint((value) => !value)} className={`${ghostButton} -ml-2 mt-2`}>
-                  {hint ? L.hideHint : L.hint}
-                </button>
-                {hint && (
-                  <div className="mt-2 animate-rise space-y-3 rounded-xl bg-white p-4">
-                    <div>
-                      <h3 className="text-[12px] font-medium text-gray-500">{L.intent}</h3>
-                      <p className="mt-1 text-[13.5px] leading-relaxed text-gray-700">{current.intent}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-[12px] font-medium text-gray-500">{L.points}</h3>
-                      <div className="mt-1">
-                        <Bullets items={current.answerPoints} tone="brand" />
-                      </div>
-                    </div>
-                  </div>
+            <Panel key={current.id} className="animate-rise">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <span className={tag}>{Q.categories[current.category]}</span>
+                <Probability value={current.probability} />
+                <span className="text-[12px] text-gray-400">{Q.source(current.source.label)}</span>
+              </div>
+              <h2 className="mt-3 text-[18px] leading-snug font-semibold text-gray-900">{current.question}</h2>
+              <button type="button" aria-expanded={hint} onClick={() => setHint((value) => !value)} className={`${ghostButton} -ml-2 mt-2`}>
+                {hint ? L.hideHint : L.hint}
+              </button>
+              {hint && <QuestionDetail question={current} followUp={false} className="mt-2" />}
+
+              <textarea
+                value={answer}
+                readOnly={feedback !== null || sending}
+                onChange={(event) => setAnswer(event.target.value)}
+                placeholder={L.placeholder}
+                className={`mt-5 min-h-40 resize-y! read-only:bg-gray-50 ${textArea}`}
+              />
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <span className="text-[12px] text-gray-400 tabular-nums">{L.chars(answer.length)}</span>
+                {!feedback && (
+                  <button type="button" disabled={sending || answer.trim().length < MIN_CHARS} onClick={() => void submit()} className={primaryButton}>
+                    {sending ? L.reading : L.submit}
+                  </button>
                 )}
+              </div>
+            </Panel>
 
-                <textarea
-                  value={answer}
-                  readOnly={feedback !== null || sending}
-                  onChange={(event) => setAnswer(event.target.value)}
-                  placeholder={L.placeholder}
-                  className="mt-5 min-h-40 w-full resize-y rounded-xl border border-gray-200 bg-white p-4 text-[14px] leading-relaxed text-gray-900 outline-none placeholder:text-gray-400 focus:border-brand read-only:bg-gray-50"
-                />
-                <div className="mt-2 flex items-center justify-between gap-3">
-                  <span className="text-[12px] text-gray-400 tabular-nums">{L.chars(answer.length)}</span>
-                  {!feedback && (
-                    <button type="button" disabled={sending || answer.trim().length < MIN_CHARS} onClick={() => void submit()} className={primaryButton}>
-                      {sending ? L.reading : L.submit}
-                    </button>
-                  )}
+            {feedback && (
+              <Panel title={L.feedback} className="animate-rise">
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+                  <ScoreRing score={feedback.score} size={88} />
+                  <div className="min-w-0 flex-1 space-y-4">
+                    <section>
+                      <h3 className={label}>{L.good}</h3>
+                      <Bullets items={feedback.good} brand className="mt-1" />
+                    </section>
+                    <section>
+                      <h3 className={label}>{L.improve}</h3>
+                      <Bullets items={feedback.improve} className="mt-1" />
+                    </section>
+                    <section>
+                      <h3 className={label}>{L.rephrase}</h3>
+                      <Bullets items={feedback.rephrase} className="mt-1" />
+                    </section>
+                    <section>
+                      <h3 className={label}>{L.followUp}</h3>
+                      <p className="mt-1 rounded-xl bg-white px-3.5 py-3 text-[13.5px] leading-relaxed text-gray-700">{feedback.followUp}</p>
+                    </section>
+                  </div>
+                </div>
+                <div className="mt-5 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFeedback(null)
+                      setScores((prev) => prev.slice(0, -1))
+                    }}
+                    className={toolButton}
+                  >
+                    {L.again}
+                  </button>
+                  <button type="button" onClick={next} className={primaryButton}>
+                    {index + 1 >= questions.length ? L.finish : L.next}
+                  </button>
                 </div>
               </Panel>
-
-              {feedback && (
-                <Panel title={L.feedback} className="animate-rise">
-                  <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-                    <ScoreRing score={feedback.score} size={88} />
-                    <div className="min-w-0 flex-1 space-y-4">
-                      <section>
-                        <h3 className="text-[12.5px] font-medium text-gray-500">{L.good}</h3>
-                        <div className="mt-1">
-                          <Bullets items={feedback.good} tone="brand" />
-                        </div>
-                      </section>
-                      <section>
-                        <h3 className="text-[12.5px] font-medium text-gray-500">{L.improve}</h3>
-                        <div className="mt-1">
-                          <Bullets items={feedback.improve} tone="gray" />
-                        </div>
-                      </section>
-                      <section>
-                        <h3 className="text-[12.5px] font-medium text-gray-500">{L.rephrase}</h3>
-                        <div className="mt-1">
-                          <Bullets items={feedback.rephrase} tone="gray" />
-                        </div>
-                      </section>
-                      <section>
-                        <h3 className="text-[12.5px] font-medium text-gray-500">{L.followUp}</h3>
-                        <p className="mt-1 rounded-xl bg-white px-3.5 py-3 text-[13.5px] leading-relaxed text-gray-700">{feedback.followUp}</p>
-                      </section>
-                    </div>
-                  </div>
-                  <div className="mt-5 flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFeedback(null)
-                        setScores((prev) => prev.slice(0, -1))
-                      }}
-                      className={toolButton}
-                    >
-                      {L.again}
-                    </button>
-                    <button type="button" onClick={next} className={primaryButton}>
-                      {index + 1 >= questions.length ? L.finish : L.next}
-                    </button>
-                  </div>
-                </Panel>
-              )}
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
-    </main>
+    </ScrollPage>
   )
 }

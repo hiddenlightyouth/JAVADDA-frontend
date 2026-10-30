@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { deviceLabels, fetchAdminFeedback, fetchFeedbackSummary, type AdminFeedback as Item, type FeedbackSummary } from '../lib/admin'
 import { formatDateTime } from '../lib/format'
-import { tag } from './DeepParts'
-import { Empty, Failed, full, MoreButton, rowButton, RowsSkeleton, Segmented, share, Stat, StatsSkeleton, tableWrap, td, th, usePaged } from './AdminParts'
+import { Empty, Failed, full, MoreButton, TableSkeleton, share, Stat, StatsSkeleton, tableWrap, td, th, usePaged } from './AdminParts'
+import { Segmented, ghostButton, tag } from './ui'
 import { messages, useMessages } from '../lib/i18n'
 
 type Filter = 'ALL' | 'RATING' | 'BUG'
@@ -97,7 +97,7 @@ export function AdminFeedback({ onOpenChat }: { onOpenChat: (id: string) => void
         list.error ? (
           <Failed message={list.error} onRetry={list.retry} />
         ) : (
-          <RowsSkeleton rows={6} />
+          <TableSkeleton rows={6} />
         )
       ) : list.items.length === 0 ? (
         <Empty>{L.empty}</Empty>
@@ -140,7 +140,7 @@ export function AdminFeedback({ onOpenChat }: { onOpenChat: (id: string) => void
                       </p>
                       {/* 공유되지 않은 채팅은 관리자도 열 수 없어서, 열리지 않으면 열 수 없다는 화면이 나와요. */}
                       {item.chatId && (
-                        <button type="button" onClick={() => onOpenChat(item.chatId!)} className={`${rowButton} -ml-2 mt-0.5`}>
+                        <button type="button" onClick={() => onOpenChat(item.chatId!)} className={`${ghostButton} -ml-2 mt-0.5`}>
                           {L.openChat}
                         </button>
                       )}

@@ -1,17 +1,15 @@
 import { useMemo, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
-import { createPortal } from 'react-dom'
-import { useDismiss } from '../hooks/useDismiss'
 import { track } from '../lib/analytics'
 import { axisOf, canonical, removeResume, suggestSkills, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type Resume, type ResumeSkill } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { showToast } from '../lib/toast'
 import { canvas, pageFrame, PageHeader } from './AppPage'
-import { ConfirmDialog, Modal, primaryButton } from './Dialog'
-import { toolButton } from './DeepParts'
+import { ConfirmDialog, Modal, panelBody, SidePanel } from './Dialog'
 import { Notice, SkillChip, Tip } from './GapParts'
-import { CloseButton, PlusIcon, StarIcon, TrashIcon } from './Icons'
+import { CloseButton, CloseIcon, LinkIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
 import { Bone } from './Skeleton'
+import { Busy, FormError, menuPanel, NumberedList, primaryButton, textField, textFieldSm, toolButton, toolDangerButton } from './ui'
 
 /**
  * 내 이력서 화면이에요. PDF나 GitHub, 노션 링크를 올리면 역량을 읽어 이름표로 보여주고, 잘못 읽은 것은 빼거나 더해요.
@@ -150,13 +148,15 @@ export function ResumeUploader({ onDone }: { onDone?: (resume: Resume) => void }
 
   if (working) {
     return (
-      <div className="rounded-2xl bg-gray-50 p-6" aria-busy="true">
-        <p className="text-[13.5px] text-gray-500">{L.reading}</p>
-        <div className="mt-5 flex flex-wrap gap-2" aria-hidden>
+      <div className="rounded-2xl bg-gray-50 p-6">
+        <p role="status" className="text-[13.5px] text-gray-500">
+          {L.reading}
+        </p>
+        <Busy label="" className="mt-5 flex flex-wrap gap-2">
           {['w-20', 'w-28', 'w-16', 'w-24', 'w-20', 'w-32', 'w-16'].map((width, index) => (
             <Bone key={index} className={`h-7 rounded-md! ${width}`} />
           ))}
-        </div>
+        </Busy>
       </div>
     )
   }
@@ -183,23 +183,18 @@ export function ResumeUploader({ onDone }: { onDone?: (resume: Resume) => void }
           }`}
         >
           <span className={`flex size-12 items-center justify-center rounded-full bg-white transition-colors ${over ? 'text-brand' : 'text-gray-500 group-hover:text-brand'}`}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-6" aria-hidden="true">
-              <path d="M12 15.5v-10M8 9.5l4-4 4 4M5 15v2.5A1.5 1.5 0 0 0 6.5 19h11a1.5 1.5 0 0 0 1.5-1.5V15" />
-            </svg>
+            <UploadIcon className="size-6" strokeWidth={1} />
           </span>
           <span className="mt-4 text-[15px] font-semibold text-gray-900">{over ? L.fileDrop : L.fileTitle}</span>
           <span className="mt-1.5 text-[13px] leading-relaxed text-gray-500">{L.fileBody}</span>
           <span className="mt-auto w-full pt-5">
-            <span className={`${primaryButton} pointer-events-none flex h-10! w-full items-center justify-center rounded-lg!`}>{L.choose}</span>
+            <span className={`${primaryButton} pointer-events-none flex h-10! w-full items-center justify-center`}>{L.choose}</span>
           </span>
         </button>
 
-        <form onSubmit={submitLink} noValidate className={`flex flex-col rounded-2xl bg-gray-50 min-h-48 p-6`}>
+        <form onSubmit={submitLink} noValidate className="flex min-h-48 flex-col rounded-2xl bg-gray-50 p-6">
           <span className="flex size-12 items-center justify-center rounded-full bg-white text-gray-500">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-6" aria-hidden="true">
-              <path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1" />
-              <path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" />
-            </svg>
+            <LinkIcon className="size-6" strokeWidth={1} />
           </span>
           <span className="mt-4 text-[15px] font-semibold text-gray-900">{L.linkTitle}</span>
           <span className="mt-1.5 text-[13px] leading-relaxed text-gray-500">{L.linkBody}</span>
@@ -214,10 +209,10 @@ export function ResumeUploader({ onDone }: { onDone?: (resume: Resume) => void }
               placeholder={L.linkPlaceholder}
               aria-label={L.linkLabel}
               aria-invalid={invalid}
-              className={`h-10 w-full rounded-lg border bg-white px-3 text-[13.5px] text-gray-900 outline-none placeholder:text-gray-400 ${invalid ? 'border-red-400' : 'border-gray-200 focus:border-brand'}`}
+              className={`${textField} ${invalid ? 'border-red-400! focus:border-red-400!' : ''}`}
             />
-            {invalid && <p className="mt-1.5 text-[12px] text-red-500">{L.invalidLink}</p>}
-            <button type="submit" disabled={!link.trim()} className={`${toolButton} mt-2 h-10! w-full justify-center disabled:text-gray-400`}>
+            {invalid && <FormError className="mt-1.5">{L.invalidLink}</FormError>}
+            <button type="submit" disabled={!link.trim()} className={`${toolButton} mt-2 h-10! w-full justify-center rounded-full! disabled:text-gray-400`}>
               {L.linkSubmit}
             </button>
           </div>
@@ -293,9 +288,7 @@ export function SkillEditor({ resume }: { resume: Resume }) {
               onClick={() => save(resume.skills.filter((item) => item.name !== skill.name))}
               className="absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400 transition-colors hover:text-gray-900"
             >
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className="size-2" aria-hidden="true">
-                <path d="M4 4l8 8M12 4l-8 8" />
-              </svg>
+              <CloseIcon className="size-2" strokeWidth={1.8} />
             </button>
           </li>
         ))}
@@ -320,10 +313,10 @@ export function SkillEditor({ resume }: { resume: Resume }) {
             aria-controls="skill-suggestions"
             aria-activedescendant={showList && active >= 0 ? `skill-suggestion-${active}` : undefined}
             autoComplete="off"
-            className="h-9 w-full rounded-lg border border-gray-200 bg-white px-3 text-[13px] text-gray-900 outline-none placeholder:text-gray-400 focus:border-brand"
+            className={textFieldSm}
           />
           {showList && (
-            <ul id="skill-suggestions" role="listbox" className="absolute top-full left-0 z-20 mt-1.5 max-h-64 w-full origin-top animate-pop overflow-y-auto rounded-xl border border-gray-200 bg-white p-1">
+            <ul id="skill-suggestions" role="listbox" className={`absolute top-full left-0 z-20 mt-1.5 max-h-64 w-full origin-top overflow-y-auto ${menuPanel}`}>
               {suggestions.map((name, index) => (
                 <li
                   key={name}
@@ -432,27 +425,30 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
 /** 서류 하나를 오른쪽에서 열어 보는 칸이에요. 역량을 고치고 읽은 문단을 보고, 대표로 정하거나 지워요. 갭 상세 칸과 같은 모양이에요. */
 function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resume: Resume; primary: boolean; onPrimary: () => void; onExplore: () => void; onClose: () => void }) {
   const L = useMessages(TEXT)
-  const ref = useRef<HTMLElement>(null)
   const [removing, setRemoving] = useState(false)
-  // 지울지 묻는 창이 떠 있는 동안에는 그 창이 먼저라 칸을 닫지 않아요.
-  useDismiss(!removing, ref, onClose)
 
-  return createPortal(
+  return (
     <>
-      <aside ref={ref} role="dialog" aria-labelledby="resume-sheet-title" className="fixed inset-y-0 right-0 z-30 flex w-full max-w-[480px] animate-slide-in flex-col border-l border-gray-200 bg-white">
-        <div className="flex items-start justify-between gap-3 px-6 pt-6 pb-4">
-          <div className="min-w-0">
-            <h2 id="resume-sheet-title" className="truncate text-[19px] font-semibold text-gray-900">
+      {/* 지울지 묻는 창이 떠 있는 동안에는 그 창이 먼저라 칸을 닫지 않아요. */}
+      <SidePanel
+        onClose={onClose}
+        closeLabel={L.close}
+        labelledBy="resume-sheet-title"
+        dismissable={!removing}
+        className="max-w-[480px]"
+        header={
+          <>
+            <h2 id="resume-sheet-title" className="truncate text-[20px] font-semibold text-gray-900">
               {resume.name}
             </h2>
-            <p className="mt-1.5 flex items-center gap-2 text-[12.5px] text-gray-400">
+            <p className="mt-1.5 flex items-center gap-2 text-[12.5px] text-gray-500">
               <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-semibold text-gray-600">{L.sources[resume.source]}</span>
               {L.uploadedAt(formatDateTime(resume.uploadedAt))}
             </p>
-          </div>
-          <CloseButton label={L.close} size="md" onClick={onClose} />
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
+          </>
+        }
+      >
+        <div className={panelBody}>
           <section>
             <h3 className="text-[13.5px] font-semibold text-gray-900">{L.skills}</h3>
             <div className="mt-3">
@@ -461,18 +457,11 @@ function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resum
           </section>
           <section className="mt-8">
             <h3 className="text-[13.5px] font-semibold text-gray-900">{L.paragraphs}</h3>
-            <ol className="mt-3 space-y-3">
-              {resume.paragraphs.map((paragraph, index) => (
-                <li key={index} className="flex gap-3 text-[13.5px] leading-relaxed text-gray-700">
-                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[11px] font-semibold text-gray-600 tabular-nums">{index + 1}</span>
-                  {paragraph}
-                </li>
-              ))}
-            </ol>
+            <NumberedList items={resume.paragraphs} className="mt-3" />
           </section>
         </div>
         <div className="flex items-center gap-2 border-t border-gray-200 px-6 py-4">
-          <button type="button" onClick={() => setRemoving(true)} className={`${toolButton} text-red-500! hover:border-red-200!`}>
+          <button type="button" onClick={() => setRemoving(true)} className={toolDangerButton}>
             <TrashIcon className="size-4" />
             {L.remove}
           </button>
@@ -487,7 +476,7 @@ function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resum
             </button>
           )}
         </div>
-      </aside>
+      </SidePanel>
       {removing && (
         <ConfirmDialog
           title={L.removeTitle}
@@ -503,8 +492,7 @@ function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resum
           }}
         />
       )}
-    </>,
-    document.body,
+    </>
   )
 }
 

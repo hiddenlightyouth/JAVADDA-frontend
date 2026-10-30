@@ -3,9 +3,9 @@ import { track } from '../lib/analytics'
 import { deleteAdminChat, fetchAdminChats, unshareAdminChat, type AdminChat, type AdminChatFilter } from '../lib/admin'
 import { formatWhen } from '../lib/format'
 import { showToast } from '../lib/toast'
-import { tag } from './DeepParts'
 import { ConfirmDialog } from './Dialog'
-import { Empty, Failed, full, MoreButton, rowButton, RowsSkeleton, SearchBox, Segmented, tableWrap, td, th, useDebounced, usePaged } from './AdminParts'
+import { Empty, Failed, full, MoreButton, TableSkeleton, SearchBox, tableWrap, td, th, useDebounced, usePaged } from './AdminParts'
+import { Segmented, ghostButton, ghostDangerButton, tag } from './ui'
 import { messages, pick, useMessages } from '../lib/i18n'
 
 const TEXT = messages({
@@ -99,7 +99,7 @@ export function AdminChats({ onOpenChat }: { onOpenChat: (id: string) => void })
         list.error ? (
           <Failed message={list.error} onRetry={list.retry} />
         ) : (
-          <RowsSkeleton />
+          <TableSkeleton />
         )
       ) : list.items.length === 0 ? (
         <Empty>{L.empty}</Empty>
@@ -145,15 +145,15 @@ export function AdminChats({ onOpenChat }: { onOpenChat: (id: string) => void })
                       <span className="flex justify-end gap-0.5">
                         {chat.shared && (
                           <>
-                            <button type="button" onClick={() => onOpenChat(chat.id)} className={rowButton}>
+                            <button type="button" onClick={() => onOpenChat(chat.id)} className={ghostButton}>
                               {L.open}
                             </button>
-                            <button type="button" onClick={() => setAsking({ chat, action: 'unshare' })} className={rowButton}>
+                            <button type="button" onClick={() => setAsking({ chat, action: 'unshare' })} className={ghostButton}>
                               {L.unshare}
                             </button>
                           </>
                         )}
-                        <button type="button" onClick={() => setAsking({ chat, action: 'delete' })} className={`${rowButton} text-red-500 hover:text-red-600`}>
+                        <button type="button" onClick={() => setAsking({ chat, action: 'delete' })} className={`${ghostDangerButton}`}>
                           {L.remove}
                         </button>
                       </span>

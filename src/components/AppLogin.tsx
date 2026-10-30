@@ -6,6 +6,8 @@ import { AuthForm } from './AuthForm'
 import { ScriptMark } from './LofyScript'
 import { messages, pick, useLang, useMessages } from '../lib/i18n'
 import { HOME_META, SITE_TITLE } from '../lib/meta'
+import { FormError, primaryButtonLg } from './ui'
+import { CheckIcon } from './Icons'
 
 const CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43}$/
 const STATE_PATTERN = /^[A-Za-z0-9_-]{1,100}$/
@@ -134,9 +136,7 @@ export function AppLogin({ onCancel }: { onCancel: () => void }) {
               <ul className="mt-5 space-y-2.5">
                 {text.PERMISSIONS.map((permission) => (
                   <li key={permission} className="flex items-start gap-2.5 text-[14px] leading-snug text-gray-700">
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden="true">
-                      <path d="M3.5 8.5l3 3 6-6.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    <CheckIcon className="mt-0.5 size-4 shrink-0 text-brand" />
                     <span className="break-keep">{permission}</span>
                   </li>
                 ))}
@@ -145,9 +145,7 @@ export function AppLogin({ onCancel }: { onCancel: () => void }) {
           )}
 
           {error && (
-            <p role="alert" className="mt-4 animate-rise text-[13px] leading-relaxed text-red-500">
-              {error}
-            </p>
+            <FormError className="mt-4">{error}</FormError>
           )}
 
           <button
@@ -157,7 +155,7 @@ export function AppLogin({ onCancel }: { onCancel: () => void }) {
             className={
               sent
                 ? 'mt-5 h-10 w-full rounded-full text-[13px] font-medium text-gray-600 transition-colors hover:text-gray-900 disabled:text-gray-400'
-                : 'mt-7 h-12 w-full rounded-full bg-brand text-[15px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-gray-200 disabled:text-gray-400'
+                : `mt-7 ${primaryButtonLg}`
             }
           >
             {working ? text.working : sent ? text.reopen : text.proceed}

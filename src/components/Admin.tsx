@@ -7,7 +7,7 @@ import { AdminOverview } from './AdminOverview'
 import { AdminUsage } from './AdminUsage'
 import { AdminUsers } from './AdminUsers'
 import { pageFrame, PageHeader } from './AppPage'
-import { Kbd } from './Shortcuts'
+import { Tabs } from './ui'
 import { messages, useMessages } from '../lib/i18n'
 
 export type AdminTab = 'overview' | 'users' | 'chats' | 'feedback' | 'ai'
@@ -67,23 +67,7 @@ export function Admin({ tab, onTab, full, feedback, onOpenChat }: Props) {
       <PageHeader title={L.title} />
 
       {tabs.length > 1 && (
-        <div role="tablist" aria-label={L.title} className="flex shrink-0 gap-1 border-b border-gray-200">
-          {tabs.map((item, index) => (
-            <button
-              key={item}
-              type="button"
-              role="tab"
-              aria-selected={item === current}
-              onClick={() => select(item)}
-              className={`relative -mb-px h-10 border-b-2 px-3 text-[13.5px] font-medium transition-colors ${
-                item === current ? 'border-brand text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-900'
-              }`}
-            >
-              {L.tabs[item]}
-              <Kbd corner>{String(index + 1)}</Kbd>
-            </button>
-          ))}
-        </div>
+        <Tabs label={L.title} items={tabs.map((item, index) => ({ key: item, label: L.tabs[item], shortcut: String(index + 1) }))} current={current} onSelect={select} />
       )}
 
       <div role="tabpanel" className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-10 md:-mx-10 md:px-10">

@@ -6,6 +6,7 @@ import { fetchSocialLinkTarget, type SocialLinkTarget } from '../lib/auth'
 import { appLinkFromLocation, finishAppLink, finishSocial, SOCIAL_LABELS, startSocial, startSocialFromApp, type SocialMode, type SocialProvider, type SocialResult } from '../lib/social'
 import { showToast } from '../lib/toast'
 import { messages, pick, useMessages } from '../lib/i18n'
+import { primaryButtonMd } from './ui'
 
 const TEXT = messages({
   ko: {
@@ -140,7 +141,7 @@ export function SocialButtons({ mode, returnTo, only, label: customLabel }: Butt
 let finishing: Promise<SocialResult> | null = null
 
 const shell = 'flex h-dvh items-center justify-center bg-white px-5'
-const primary = 'h-11 rounded-full bg-brand px-6 text-[14px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-gray-200 disabled:text-gray-400'
+const primary = primaryButtonMd
 
 /**
  * 앱에서 시작한 계정 연결을 브라우저에서 마무리하는 화면이에요. 어느 계정에 연결하는지 보여주고, 버튼을 눌러야 연결해요.
@@ -271,7 +272,7 @@ function BrowserCallback({ provider }: { provider: SocialProvider }) {
         <button
           type="button"
           onClick={() => window.location.replace(back)}
-          className="mt-7 h-11 rounded-full bg-brand px-6 text-[14px] font-semibold text-white transition-colors hover:bg-brand-hover"
+          className={`mt-7 ${primary}`}
         >
           {failed.mode === 'link' ? text.backToMe : text.backToLogin}
         </button>

@@ -3,10 +3,10 @@ import { track } from '../lib/analytics'
 import { docName, fetchReview, useResume, type DocType, type DocumentReview, type ParagraphTag, type ReviewParagraph } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
-import { toolButton } from './DeepParts'
 import { Failed, Panel, ScoreHero } from './GapParts'
 import { RefreshIcon } from './Icons'
 import { Bone } from './Skeleton'
+import { Busy, NumberBadge, NumberedList, Segmented, toolButton } from './ui'
 
 const DOCS: DocType[] = ['coverLetter', 'resume', 'portfolio']
 
@@ -46,23 +46,20 @@ const TAG_TONES: Record<ParagraphTag, string> = {
   interview: 'border border-brand text-brand',
 }
 
-/** 위의 서류 고르기는 회색 바탕 안에서 고른 것만 흰 칸으로 떠오르는 탭 모양이에요. */
-const segment = 'flex h-8 items-center rounded-lg px-3.5 text-[13px] transition-colors'
 const chip = 'flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition-colors'
 
-function Loading() {
+function ReviewSkeleton() {
   const L = useMessages(TEXT)
   return (
-    <div aria-busy="true" className="space-y-10">
-      <span className="sr-only">{L.reading}</span>
-      <div aria-hidden className="flex items-end justify-between gap-12">
+    <Busy label={L.reading} className="space-y-10">
+      <div className="flex items-end justify-between gap-12">
         <div className="flex-1">
           <Bone className="h-5 w-3/5" />
           <Bone className="mt-3 h-3.5 w-4/5" />
         </div>
         <Bone className="hidden h-14 w-72 sm:block" />
       </div>
-      <div aria-hidden className="grid gap-12 md:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-12 md:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6 rounded-xl border border-gray-200 p-10">
           {[0, 1, 2].map((item) => (
             <div key={item}>
@@ -78,7 +75,7 @@ function Loading() {
           ))}
         </div>
       </div>
-    </div>
+    </Busy>
   )
 }
 
@@ -111,11 +108,7 @@ function Tags({ tags }: { tags: ParagraphTag[] }) {
 }
 
 function Badge({ value, on }: { value: number; on: boolean }) {
-  return (
-    <span className={`flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums transition-colors ${on ? 'bg-brand text-white' : 'bg-gray-200/70 text-gray-600'}`}>
-      {value}
-    </span>
-  )
+  return <NumberBadge n={value} tone={on ? 'brand' : 'muted'} className="transition-colors" />
 }
 
 function Comment({ paragraph, index, on }: { paragraph: ReviewParagraph; index: number; on: boolean }) {
@@ -321,20 +314,7 @@ export function ReviewTab({ reportId }: { reportId: string }) {
   return (
     <div className="space-y-10">
       <div className="flex flex-wrap items-center gap-3">
-        <div role="radiogroup" aria-label={L.docs} className="flex rounded-xl bg-gray-100 p-1">
-          {DOCS.map((item) => (
-            <button
-              key={item}
-              type="button"
-              role="radio"
-              aria-checked={doc === item}
-              onClick={() => setDoc(item)}
-              className={`${segment} ${doc === item ? 'bg-white font-semibold text-gray-900' : 'font-medium text-gray-500 hover:text-gray-900'}`}
-            >
-              {docName(item)}
-            </button>
-          ))}
-        </div>
+        <Segmented size="md" label={L.docs} options={DOCS.map((item) => [item, docName(item)] as const)} value={doc} onChange={setDoc} />
         <div className="ml-auto flex items-center gap-3">
           {review && <span className="text-[12.5px] text-gray-400 tabular-nums">{L.reviewedAt(formatDateTime(review.reviewedAt))}</span>}
           <button
@@ -353,7 +333,7 @@ export function ReviewTab({ reportId }: { reportId: string }) {
       </div>
 
       {loading || review === undefined ? (
-        <Loading />
+        <ReviewSkeleton />
       ) : review === null ? (
         <Failed onRetry={() => void load(doc)} className="mt-16" />
       ) : (
@@ -383,14 +363,7 @@ export function ReviewTab({ reportId }: { reportId: string }) {
           </section>
 
           <Panel title={L.appeal} className="animate-rise [animation-delay:120ms]">
-            <ol className="space-y-2.5">
-              {review.appealMore.map((item, index) => (
-                <li key={item} className="flex gap-3 text-[13.5px] leading-relaxed text-gray-700">
-                  <span className="mt-px flex size-5 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-gray-600 tabular-nums">{index + 1}</span>
-                  {item}
-                </li>
-              ))}
-            </ol>
+            <NumberedList items={review.appealMore} onGray />
           </Panel>
         </>
       )}

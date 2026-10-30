@@ -4,6 +4,7 @@ import { signIn, signUp } from '../lib/auth'
 import { SocialButtons, useSocialClients } from './Social'
 import { currentPath, localizePath, messages, useMessages } from '../lib/i18n'
 import { appShell } from '../lib/app'
+import { FormError, primaryButtonLg } from './ui'
 
 const TEXT = messages({
   ko: {
@@ -170,15 +171,13 @@ export function AuthForm({ mode, notice, onSwitch, returnTo }: Props) {
           )}
 
           {error && (
-            <p role="alert" className="animate-rise text-[13px] leading-relaxed text-red-500">
-              {error}
-            </p>
+            <FormError>{error}</FormError>
           )}
 
           <button
             type="submit"
             disabled={working}
-            className="mt-2 h-12 w-full rounded-full bg-brand text-[15px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-gray-200 disabled:text-gray-400"
+            className={`mt-2 ${primaryButtonLg}`}
           >
             {working ? text.working : signup ? text.submitSignup : text.login}
           </button>

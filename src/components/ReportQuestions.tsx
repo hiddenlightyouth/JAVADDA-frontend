@@ -2,11 +2,10 @@ import { useEffect, useState } from 'react'
 import { track } from '../lib/analytics'
 import { fetchQuestions, type InterviewQuestion, type QuestionCategory } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
-import { ghostButton } from './AppPage'
-import { primaryButton } from './Dialog'
-import { MapMenu, tag, toolButton } from './DeepParts'
-import { Failed, Panel } from './GapParts'
+import { Dropdown } from './Dropdown'
+import { Failed, Notice } from './GapParts'
 import { Bone } from './Skeleton'
+import { Bullets, Busy, ghostButton, label, primaryButton, stagger, tag, toolButton } from './ui'
 
 const CATEGORIES: QuestionCategory[] = ['tech', 'project', 'cs', 'culture']
 
@@ -45,13 +44,12 @@ export const QUESTION_TEXT = messages({
   },
 })
 
-function Loading() {
+function QuestionsSkeleton() {
   const L = useMessages(QUESTION_TEXT)
   return (
-    <ul aria-busy="true" className="space-y-3">
-      <li className="sr-only">{L.picking}</li>
+    <Busy label={L.picking} className="space-y-3">
       {[0, 1, 2, 3].map((item) => (
-        <li key={item} aria-hidden className="rounded-2xl bg-gray-50 p-5">
+        <div key={item} className="rounded-2xl bg-gray-50 p-5">
           <div className="flex items-center gap-3">
             <Bone className="h-3 w-24" />
             <Bone className="h-6 w-14" />
@@ -59,9 +57,9 @@ function Loading() {
           </div>
           <Bone className="mt-4 h-4 w-4/5" />
           <Bone className="mt-3 h-3 w-24" />
-        </li>
+        </div>
       ))}
-    </ul>
+    </Busy>
   )
 }
 
@@ -79,40 +77,41 @@ export function Probability({ value }: { value: number }) {
   )
 }
 
+/** 질문의 의도와 답변 포인트, 꼬리 질문이에요. 회색 카드 안의 흰 칸으로 펼쳐져요. 면접 연습의 힌트도 같은 칸이에요. */
+export function QuestionDetail({ question, followUp = true, className = '' }: { question: InterviewQuestion; followUp?: boolean; className?: string }) {
+  const L = useMessages(QUESTION_TEXT)
+  return (
+    <div className={`animate-rise space-y-3 rounded-xl bg-white p-4 ${className}`}>
+      <div>
+        <h3 className={label}>{L.intent}</h3>
+        <p className="mt-1 text-[13.5px] leading-relaxed text-gray-700">{question.intent}</p>
+      </div>
+      <div>
+        <h3 className={label}>{L.points}</h3>
+        <Bullets items={question.answerPoints} brand className="mt-1" />
+      </div>
+      {followUp && (
+        <div>
+          <h3 className={label}>{L.followUp}</h3>
+          <p className="mt-1 text-[13.5px] leading-relaxed text-gray-700">{question.followUp}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Card({ question, order, onPractice }: { question: InterviewQuestion; order: number; onPractice: () => void }) {
   const L = useMessages(QUESTION_TEXT)
   const [open, setOpen] = useState(false)
   return (
-    <li className="animate-rise rounded-2xl bg-gray-50 p-5" style={{ animationDelay: `${Math.min(order, 10) * 30}ms` }}>
+    <li className="animate-rise rounded-2xl bg-gray-50 p-5" style={stagger(order)}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <Probability value={question.probability} />
         <span className={tag}>{L.categories[question.category]}</span>
         <span className="text-[12px] text-gray-400">{L.source(question.source.label)}</span>
       </div>
       <p className="mt-3 text-[15px] leading-relaxed font-semibold text-gray-900">{question.question}</p>
-      {open && (
-        <div className="mt-4 animate-rise space-y-3 rounded-xl bg-white p-4">
-          <div>
-            <h3 className="text-[12px] font-medium text-gray-500">{L.intent}</h3>
-            <p className="mt-1 text-[13.5px] leading-relaxed text-gray-700">{question.intent}</p>
-          </div>
-          <div>
-            <h3 className="text-[12px] font-medium text-gray-500">{L.points}</h3>
-            <ul className="mt-1 space-y-1">
-              {question.answerPoints.map((point) => (
-                <li key={point} className="flex gap-2 text-[13.5px] leading-relaxed text-gray-700">
-                  <span aria-hidden className="mt-[9px] size-1 shrink-0 rounded-full bg-brand" />
-                  {point}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-[12px] font-medium text-gray-500">{L.followUp}</h3>
-            <p className="mt-1 text-[13.5px] leading-relaxed text-gray-700">{question.followUp}</p>
-          </div>
-        </div>
-      )}
+      {open && <QuestionDetail question={question} className="mt-4" />}
       <div className="mt-3 flex items-center justify-between gap-2">
         <button
           type="button"
@@ -158,7 +157,7 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <MapMenu
+        <Dropdown
           label={L.type}
           value={category ? L.categories[category] : L.all}
           groups={[
@@ -189,7 +188,7 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
       </div>
 
       {questions === undefined ? (
-        <Loading />
+        <QuestionsSkeleton />
       ) : questions === null ? (
         <Failed onRetry={() => void load()} className="mt-16" />
       ) : (
@@ -207,11 +206,7 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
           ))}
         </ul>
       )}
-      {questions && list.length === 0 && (
-        <Panel>
-          <p className="py-4 text-center text-[13.5px] text-gray-500">{L.count(0)}</p>
-        </Panel>
-      )}
+      {questions && list.length === 0 && <Notice title={L.count(0)} className="mt-16" />}
     </div>
   )
 }

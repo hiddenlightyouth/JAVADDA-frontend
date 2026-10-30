@@ -3,6 +3,7 @@ import { track } from '../lib/analytics'
 import { useAppCaptured } from '../lib/app'
 import { useAppSettings } from '../lib/theme'
 import { messages, useMessages } from '../lib/i18n'
+import { primaryButtonMd } from './ui'
 
 const TEXT = messages({
   ko: { title: '화면 녹화가 감지 됨', body: '녹화가 감지되어 화면을 일시적으로 가렸어요.', note: '이 옵션은 설정에서 끄거나 켤 수 있습니다.', reveal: '가림 해제' },
@@ -52,7 +53,7 @@ export function CaptureShield() {
             track('capture_shield_allow')
             setAllowed(true)
           }}
-          className="mt-6 h-10 rounded-full bg-brand px-6 text-[14px] font-semibold text-white transition-colors hover:bg-brand-hover"
+          className={`mt-6 ${primaryButtonMd}`}
         >
           {text.reveal}
         </button>

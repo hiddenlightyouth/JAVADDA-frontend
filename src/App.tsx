@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import type { AdminTab } from './components/Admin'
 import type { ReportTab } from './components/Report'
 import { AppFrame, AppSignedOut, useSidebarOpen } from './components/AppFrame'
@@ -44,6 +44,17 @@ export default function App() {
 
   const config = useServerConfig()
   const { page, loginReturn, open, goHome, openArticle, openAbout, openAccount } = useScreen()
+
+  // 화면을 옮기면(탭을 바꾸는 것도) 스크롤을 맨 위로 올려요. 화면마다 스크롤 칸이 안쪽에 따로 있어서,
+  // 같은 화면 코드가 그대로 남는 경우(리포트의 탭, 다른 리포트, 다음 질문)에는 브라우저가 알아서 올려 주지 않아요.
+  // 사이드바는 화면 바깥이라 그대로 둬요.
+  const pageKey = JSON.stringify(page)
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0)
+    document.querySelectorAll('[data-screen], [data-screen] *').forEach((element) => {
+      if (element.scrollTop > 0) element.scrollTop = 0
+    })
+  }, [pageKey])
   const account = page?.kind === 'account' ? page.page : null
   const article = page?.kind === 'article'
 
@@ -134,7 +145,7 @@ export default function App() {
   const navFrom = account ?? (article ? 'articles' : page?.kind ?? 'home')
 
   const screen = (
-    <div className={appShell ? 'relative flex min-w-0 flex-1 flex-col bg-white' : 'relative flex h-dvh flex-col bg-white'}>
+    <div data-screen className={appShell ? 'relative flex min-w-0 flex-1 flex-col bg-white' : 'relative flex h-dvh flex-col bg-white'}>
       <Header
         app={appShell}
         // 브라우저의 메인 주소는 소개 화면이라, 로고를 누르면 소개 화면으로 가요.

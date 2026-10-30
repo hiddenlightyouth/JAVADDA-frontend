@@ -1,16 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
 import { careerName, COMPANIES, companyOf, type Company, daysLeft, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, type Resume, SEARCH_SUGGESTIONS, SUGGEST_MS } from '../lib/gap'
 import { getLang, localizePath, messages, pick, useMessages } from '../lib/i18n'
 import { pathOf } from '../lib/routes'
 import { readItem, writeItem } from '../lib/storage'
 import { showToast } from '../lib/toast'
-import { copyText, PageHeader } from './AppPage'
-import { MapMenu } from './DeepParts'
-import { CompanyMark, Failed, FitBadge, Notice, SkillChip, skillTone } from './GapParts'
-import { BriefcaseIcon, GridIcon, ListIcon, MapPinIcon, PersonIcon } from './Icons'
+import { copyText, PageHeader, ScrollPage } from './AppPage'
+import { Dropdown } from './Dropdown'
+import { CardTag, CompanyMark, Failed, FitBadge, Notice, SkillChip, skillTone } from './GapParts'
+import { BriefcaseIcon, GridIcon, ListIcon, MapPinIcon, PersonIcon, SearchIcon } from './Icons'
 import { PostingBrowser, SplitView } from './PostingBrowser'
 import { Bone } from './Skeleton'
+import { Busy, Segmented, stagger } from './ui'
 
 /**
  * 공고 탐색 화면이에요. 공고를 화면 가득 펼쳐 놓고 직군과 경력으로 걸러 보다가, 눌러서 진단을 시작해요.
@@ -137,7 +138,10 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   }, [query, family, career, attempt])
 
   // 기업은 받아 온 공고에서 바로 걸러요. 기업마다 공고가 몇 개뿐이라 서버에 다시 묻지 않아요.
-  const list = Array.isArray(loaded) ? sortPostings(company ? loaded.filter((posting) => posting.companyId === company) : loaded, sort, resume) : loaded
+  const list = useMemo(
+    () => (Array.isArray(loaded) ? sortPostings(company ? loaded.filter((posting) => posting.companyId === company) : loaded, sort, resume) : loaded),
+    [loaded, company, sort, resume],
+  )
 
   return (
     <SplitView
@@ -150,181 +154,158 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
         ))
       }
     >
-      <main className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 px-6 pt-14 md:px-10 md:pt-9">
-          <PageHeader title={L.title} />
-        </div>
-
-        <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
-          {/* 검색창 옆에 직군, 경력, 정렬을 드롭다운으로 나란히 둬요. 좁으면 검색창이 한 줄을 다 쓰고 메뉴는 아래로 내려가요. */}
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="relative flex h-11 min-w-0 flex-1 basis-full items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-4 focus-within:border-brand @2xl:basis-0">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-4 shrink-0 text-gray-400" aria-hidden="true">
-                <circle cx="7" cy="7" r="4.5" />
-                <path d="m10.5 10.5 3 3" />
-              </svg>
-              <input
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                onKeyDown={(event) => {
-                  // 비어 있을 때 Enter를 누르면 지금 보이는 추천 검색어로 찾아요.
-                  if (event.key === 'Enter' && !query && !event.nativeEvent.isComposing) {
-                    track('jobs_suggestion_use', { query: SEARCH_SUGGESTIONS[suggestion] })
-                    setQuery(SEARCH_SUGGESTIONS[suggestion])
-                  }
-                }}
-                aria-label={L.label}
-                data-search-input
-                className="min-w-0 flex-1 bg-transparent text-[14px] text-gray-900 outline-none [&::-webkit-search-cancel-button]:hidden"
-              />
-              {/* 추천 검색어는 자리표시 글자처럼 옅게 보여서, 이런 걸 쳐 볼 수 있다는 것만 슬쩍 알려요. */}
-              {!query && (
-                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-[42px] right-4 flex items-center overflow-hidden text-[14px] whitespace-nowrap text-gray-400">
-                  <span key={suggestion} className="animate-rise">
-                    {SEARCH_SUGGESTIONS[suggestion]}
-                  </span>
+      <ScrollPage header={<PageHeader title={L.title} />} className="@container">
+        {/* 검색창 옆에 직군, 경력, 정렬을 드롭다운으로 나란히 둬요. 좁으면 검색창이 한 줄을 다 쓰고 메뉴는 아래로 내려가요. */}
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="relative flex h-11 min-w-0 flex-1 basis-full items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-4 transition-colors focus-within:border-brand @2xl:basis-0">
+            <SearchIcon />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                // 비어 있을 때 Enter를 누르면 지금 보이는 추천 검색어로 찾아요.
+                if (event.key === 'Enter' && !query && !event.nativeEvent.isComposing) {
+                  track('jobs_suggestion_use', { query: SEARCH_SUGGESTIONS[suggestion] })
+                  setQuery(SEARCH_SUGGESTIONS[suggestion])
+                }
+              }}
+              aria-label={L.label}
+              data-search-input
+              className="min-w-0 flex-1 bg-transparent text-[14px] text-gray-900 outline-none [&::-webkit-search-cancel-button]:hidden"
+            />
+            {/* 추천 검색어는 자리표시 글자처럼 옅게 보여서, 이런 걸 쳐 볼 수 있다는 것만 슬쩍 알려요. */}
+            {!query && (
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 left-[42px] right-4 flex items-center overflow-hidden text-[14px] whitespace-nowrap text-gray-400">
+                <span key={suggestion} className="animate-rise">
+                  {SEARCH_SUGGESTIONS[suggestion]}
                 </span>
-              )}
-            </label>
-            <MapMenu
-              className="h-11! rounded-xl! px-4!"
-              label={L.family}
-              value={family ? familyName(family) : L.all}
-              groups={[
-                {
-                  items: [null, ...FAMILIES].map((value) => ({
-                    label: value ? familyName(value) : L.all,
-                    checked: family === value,
-                    onSelect: () => {
-                      track('jobs_family_select', { family: value ?? 'all' })
-                      setFamily(value)
-                    },
-                  })),
-                },
-              ]}
-            />
-            <MapMenu
-              className="h-11! rounded-xl! px-4!"
-              label={L.career}
-              value={career ? careerName(career) : L.all}
-              groups={[
-                {
-                  items: [null, ...CAREERS].map((value) => ({
-                    label: value ? careerName(value) : L.all,
-                    checked: career === value,
-                    onSelect: () => {
-                      track('jobs_career_select', { career: value ?? 'all' })
-                      setCareer(value)
-                    },
-                  })),
-                },
-              ]}
-            />
-            <MapMenu
-              className="h-11! rounded-xl! px-4!"
-              label={L.sort}
-              value={L.sorts[sort]}
-              groups={[
-                {
-                  items: SORTS.filter((value) => value !== 'fit' || resume).map((value) => ({
-                    label: L.sorts[value],
-                    checked: sort === value,
-                    onSelect: () => {
-                      track('jobs_sort_change', { sort: value })
-                      setSort(value)
-                    },
-                  })),
-                },
-              ]}
-            />
-          </div>
-
-          {/* 기업도 로고를 보고 한 번에 골라요. 다시 누르면 풀려요. */}
-          <div role="radiogroup" aria-label={L.company} className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
-            {COMPANIES.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                role="radio"
-                aria-checked={company === item.id}
-                onClick={() => {
-                  const next = company === item.id ? null : item.id
-                  track('jobs_company_select', { company: next ?? 'all' })
-                  setCompany(next)
-                }}
-                className={`flex h-9 shrink-0 items-center gap-2 rounded-full border py-1 pr-3.5 pl-1.5 text-[13px] font-medium transition-colors ${
-                  company === item.id ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
-                }`}
-              >
-                <CompanyMark company={item} className="size-6 rounded-full! text-[10px]" />
-                {item.name}
-              </button>
-            ))}
-          </div>
-
-          <div className="mt-5 flex h-8 items-center justify-between gap-3">
-            <p className="text-[13px] text-gray-500 tabular-nums">{Array.isArray(list) ? L.items(list.length) : ''}</p>
-            <div role="radiogroup" aria-label={L.layout} className="flex items-center gap-0.5 rounded-lg bg-gray-100 p-0.5">
-              {LAYOUTS.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="radio"
-                  aria-checked={layout === value}
-                  aria-label={L.layouts[value]}
-                  title={L.layouts[value]}
-                  onClick={() => {
-                    track('jobs_layout_change', { layout: value })
-                    setLayout(value)
-                    writeItem(LAYOUT_KEY, value)
-                  }}
-                  className={`flex size-7 items-center justify-center rounded-md transition-colors ${layout === value ? 'bg-white text-gray-900' : 'text-gray-400 hover:text-gray-700'}`}
-                >
-                  {value === 'gallery' ? <GridIcon /> : <ListIcon />}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-3">
-            {list === undefined ? (
-              layout === 'gallery' ? <JobCardsSkeleton /> : <JobRowsSkeleton />
-            ) : list === 'failed' ? (
-              <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
-            ) : list.length === 0 ? (
-              <Notice title={L.none} body={L.noneBody} className="mt-16" />
-            ) : (
-              <ul className={layout === 'gallery' ? jobsGrid : 'flex flex-col gap-2'}>
-                {list.map((posting, order) => (
-                  <JobItem
-                    key={`${layout}:${sort}:${posting.id}`}
-                    layout={layout}
-                    posting={posting}
-                    resume={resume}
-                    onView={() => setViewing({ posting })}
-                    onCompany={() => setViewing({ company: companyOf(posting.companyId) })}
-                    fit={fitOf(posting, resume)}
-                    order={order}
-                    onOpen={() => {
-                      track('posting_select', { posting: posting.id, from: 'explore' })
-                      onPick(posting.id)
-                    }}
-                  />
-                ))}
-              </ul>
+              </span>
             )}
-          </div>
-          <p className="mt-10 text-center text-[12px] text-gray-400">{L.sources}</p>
+          </label>
+          <Dropdown
+            className="h-11! rounded-xl! px-4!"
+            label={L.family}
+            value={family ? familyName(family) : L.all}
+            groups={[
+              {
+                items: [null, ...FAMILIES].map((value) => ({
+                  label: value ? familyName(value) : L.all,
+                  checked: family === value,
+                  onSelect: () => {
+                    track('jobs_family_select', { family: value ?? 'all' })
+                    setFamily(value)
+                  },
+                })),
+              },
+            ]}
+          />
+          <Dropdown
+            className="h-11! rounded-xl! px-4!"
+            label={L.career}
+            value={career ? careerName(career) : L.all}
+            groups={[
+              {
+                items: [null, ...CAREERS].map((value) => ({
+                  label: value ? careerName(value) : L.all,
+                  checked: career === value,
+                  onSelect: () => {
+                    track('jobs_career_select', { career: value ?? 'all' })
+                    setCareer(value)
+                  },
+                })),
+              },
+            ]}
+          />
+          <Dropdown
+            className="h-11! rounded-xl! px-4!"
+            label={L.sort}
+            value={L.sorts[sort]}
+            groups={[
+              {
+                items: SORTS.filter((value) => value !== 'fit' || resume).map((value) => ({
+                  label: L.sorts[value],
+                  checked: sort === value,
+                  onSelect: () => {
+                    track('jobs_sort_change', { sort: value })
+                    setSort(value)
+                  },
+                })),
+              },
+            ]}
+          />
         </div>
-      </main>
+
+        {/* 기업도 로고를 보고 한 번에 골라요. 다시 누르면 풀려요. */}
+        <div role="radiogroup" aria-label={L.company} className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
+          {COMPANIES.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="radio"
+              aria-checked={company === item.id}
+              onClick={() => {
+                const next = company === item.id ? null : item.id
+                track('jobs_company_select', { company: next ?? 'all' })
+                setCompany(next)
+              }}
+              className={`flex h-9 shrink-0 items-center gap-2 rounded-full border py-1 pr-3.5 pl-1.5 text-[13px] font-medium transition-colors ${
+                company === item.id ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
+              }`}
+            >
+              <CompanyMark company={item} className="size-6 rounded-full! text-[10px]" />
+              {item.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-5 flex h-8 items-center justify-between gap-3">
+          <p className="text-[13px] text-gray-500 tabular-nums">{Array.isArray(list) ? L.items(list.length) : ''}</p>
+          <Segmented
+            label={L.layout}
+            value={layout}
+            options={LAYOUTS.map((value) => [value, L.layouts[value], value === 'gallery' ? <GridIcon /> : <ListIcon />] as const)}
+            onChange={(value) => {
+              track('jobs_layout_change', { layout: value })
+              setLayout(value)
+              writeItem(LAYOUT_KEY, value)
+            }}
+          />
+        </div>
+
+        <div className="mt-3">
+          {list === undefined ? (
+            layout === 'gallery' ? <JobCardsSkeleton /> : <JobRowsSkeleton />
+          ) : list === 'failed' ? (
+            <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
+          ) : list.length === 0 ? (
+            <Notice title={L.none} body={L.noneBody} className="mt-16" />
+          ) : (
+            <ul className={layout === 'gallery' ? jobsGrid : 'flex flex-col gap-2'}>
+              {list.map((posting, order) => (
+                <JobItem
+                  key={`${layout}:${sort}:${posting.id}`}
+                  layout={layout}
+                  posting={posting}
+                  resume={resume}
+                  onView={() => setViewing({ posting })}
+                  onCompany={() => setViewing({ company: companyOf(posting.companyId) })}
+                  fit={fitOf(posting, resume)}
+                  order={order}
+                  onOpen={() => {
+                    track('posting_select', { posting: posting.id, from: 'explore' })
+                    onPick(posting.id)
+                  }}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+        <p className="mt-10 text-center text-[12px] text-gray-400">{L.sources}</p>
+      </ScrollPage>
     </SplitView>
   )
 }
-
-/** 카드는 앞에서부터 조금씩 늦게 떠올라요. 뒤쪽 카드는 더 늦추지 않아요. */
-const STAGGER_MS = 28
-const STAGGER_MAX = 14
 
 /** 10.28 처럼 달과 날만 적어요. */
 const shortDate = (iso: string) => {
@@ -353,7 +334,7 @@ function JobCard({ posting, resume, fit, order, onOpen, onView, onCompany }: Job
         if (!(event.target as Element).closest('button, a')) onOpen()
       }}
       className="group relative flex animate-rise cursor-pointer flex-col rounded-2xl bg-gray-50 p-5 transition-colors hover:bg-gray-100"
-      style={{ animationDelay: `${Math.min(order, STAGGER_MAX) * STAGGER_MS}ms` }}
+      style={stagger(order)}
     >
       <div className="flex items-center gap-3">
         {/* 로고와 기업 이름을 누르면 기업 소개를 미니 브라우저로 열어요. */}
@@ -365,12 +346,8 @@ function JobCard({ posting, resume, fit, order, onOpen, onView, onCompany }: Job
           </span>
         </button>
         {/* 마감이 사흘 안으로 남으면 메인 컬러로 알려요. */}
-        <span
-          className={`ml-auto shrink-0 rounded-md px-2 py-1 text-[12px] font-semibold tabular-nums ${
-            left !== null && left <= 3 ? 'bg-brand-soft text-brand-hover' : 'bg-gray-200/70 text-gray-500'
-          }`}
-        >
-          {left === null ? L.always : L.dday(left)}
+        <span className="ml-auto">
+          <DeadlineTag left={left} />
         </span>
       </div>
 
@@ -420,6 +397,16 @@ function JobCard({ posting, resume, fit, order, onOpen, onView, onCompany }: Job
   )
 }
 
+/** 마감까지 남은 날이에요. 사흘 안으로 남으면 메인 컬러로 알려요. */
+function DeadlineTag({ left }: { left: number | null }) {
+  const L = useMessages(TEXT)
+  return (
+    <CardTag tone={left !== null && left <= 3 ? 'brand' : 'gray'}>
+      <span className="tabular-nums">{left === null ? L.always : L.dday(left)}</span>
+    </CardTag>
+  )
+}
+
 type JobItemProps = { posting: JobPosting; resume: Resume | null; fit: number | null; order: number; onOpen: () => void; onView: () => void; onCompany: () => void }
 
 /** 고른 보기 방식에 맞춰 카드나 줄로 그려요. */
@@ -441,7 +428,7 @@ function JobRow({ posting, resume, fit, order, onOpen, onView, onCompany }: JobI
         if (!(event.target as Element).closest('button, a')) onOpen()
       }}
       className="group flex animate-rise cursor-pointer items-center gap-4 rounded-2xl bg-gray-50 px-4 py-3.5 transition-colors hover:bg-gray-100"
-      style={{ animationDelay: `${Math.min(order, STAGGER_MAX) * STAGGER_MS}ms` }}
+      style={stagger(order)}
     >
       <button type="button" onClick={onCompany} aria-label={L.companyInfo(company.name)} className="shrink-0 rounded-xl transition-opacity hover:opacity-80">
         <CompanyMark company={company} className="size-10 text-[15px]" />
@@ -473,9 +460,7 @@ function JobRow({ posting, resume, fit, order, onOpen, onView, onCompany }: JobI
           <SkillChip key={skill} name={skill} tone={skillTone(skill, resume)} />
         ))}
       </div>
-      <span className={`shrink-0 rounded-md px-2 py-1 text-[12px] font-semibold tabular-nums ${left !== null && left <= 3 ? 'bg-brand-soft text-brand-hover' : 'bg-gray-200/70 text-gray-500'}`}>
-        {left === null ? L.always : L.dday(left)}
-      </span>
+      <DeadlineTag left={left} />
       <span className="hidden shrink-0 @lg:inline-flex">
         <FitBadge fit={fit} compact />
       </span>
@@ -489,27 +474,27 @@ function JobRow({ posting, resume, fit, order, onOpen, onView, onCompany }: JobI
 /** 리스트형 줄과 같은 배치의 뼈대예요. */
 function JobRowsSkeleton() {
   return (
-    <ul className="flex flex-col gap-2" aria-busy="true">
+    <Busy className="flex flex-col gap-2">
       {Array.from({ length: 8 }, (_, item) => (
-        <li key={item} aria-hidden className="flex items-center gap-4 rounded-2xl bg-gray-50 px-4 py-3.5">
+        <div key={item} className="flex items-center gap-4 rounded-2xl bg-gray-50 px-4 py-3.5">
           <Bone className="size-10 shrink-0 rounded-xl!" />
           <div className="min-w-0 flex-1">
             <Bone className="h-4 w-1/2" />
             <Bone className="mt-2 h-3 w-1/3" />
           </div>
           <Bone className="h-6 w-12 shrink-0 rounded-md!" />
-        </li>
+        </div>
       ))}
-    </ul>
+    </Busy>
   )
 }
 
 /** 공고 카드와 같은 배치의 뼈대예요. */
 function JobCardsSkeleton() {
   return (
-    <ul className={jobsGrid} aria-busy="true">
+    <Busy className={jobsGrid}>
       {Array.from({ length: 6 }, (_, item) => (
-        <li key={item} aria-hidden className="rounded-2xl bg-gray-50 p-5">
+        <div key={item} className="rounded-2xl bg-gray-50 p-5">
           <div className="flex items-center gap-3">
             <Bone className="size-10 shrink-0 rounded-xl!" />
             <div className="min-w-0 flex-1">
@@ -529,8 +514,8 @@ function JobCardsSkeleton() {
             <Bone className="h-3 w-24" />
             <Bone className="h-3 w-28" />
           </div>
-        </li>
+        </div>
       ))}
-    </ul>
+    </Busy>
   )
 }

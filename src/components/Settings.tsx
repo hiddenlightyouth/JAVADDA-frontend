@@ -6,6 +6,7 @@ import { setShortcutHintsPinned, useShortcutHintsPinned } from '../lib/shortcuts
 import { setAppShield, setAppTheme, useAppSettings } from '../lib/theme'
 import { LANG_NAMES, LANGS, messages, setLang, useLang, useMessages } from '../lib/i18n'
 import { CloseButton } from './Icons'
+import { label, Segmented, softButton } from './ui'
 
 const THEMES: AppTheme[] = ['system', 'light', 'dark']
 
@@ -45,30 +46,10 @@ const TEXT = messages({
   },
 })
 
-/** 오른쪽의 고르는 칸이에요. 고른 값은 흰 바탕으로 보여줘요. */
-function Segmented<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (next: T) => void }) {
-  return (
-    <div role="radiogroup" aria-label={label} className="inline-flex rounded-full bg-gray-100 p-1">
-      {options.map(([option, name]) => (
-        <button
-          key={option}
-          type="button"
-          role="radio"
-          aria-checked={value === option}
-          onClick={() => onChange(option)}
-          className={`h-8 rounded-full px-3.5 text-[13px] font-medium transition-colors ${value === option ? 'bg-white text-gray-900' : 'text-gray-500 hover:text-gray-900'}`}
-        >
-          {name}
-        </button>
-      ))}
-    </div>
-  )
-}
-
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-7 first:mt-0">
-      <h3 className="text-[12.5px] font-medium text-gray-400">{title}</h3>
+      <h3 className={label}>{title}</h3>
       <dl className="mt-2 divide-y divide-gray-100 border-y border-gray-100 text-[14px]">{children}</dl>
     </section>
   )
@@ -127,6 +108,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
       <Section title={text.display}>
         <Row label={text.theme}>
           <Segmented
+            size="md"
             label={text.theme}
             value={theme}
             options={THEMES.map((value) => [value, text.themes[value]])}
@@ -138,6 +120,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
         </Row>
         <Row label={text.language}>
           <Segmented
+            size="md"
             label={text.language}
             value={lang}
             options={LANGS.map((value) => [value, LANG_NAMES[value]])}
@@ -189,7 +172,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
                   track('app_update_check')
                   postToApp({ type: 'update' })
                 }}
-                className="h-8 rounded-full bg-gray-100 px-3.5 text-[13px] font-medium text-gray-700 transition-colors hover:text-brand"
+                className={softButton}
               >
                 {text.update}
               </button>

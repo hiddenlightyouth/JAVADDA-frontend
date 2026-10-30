@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Result } from '../lib/admin'
 import type { Slice } from '../lib/auth'
-import { tag } from './DeepParts'
-import { primaryButton } from './Dialog'
+import { Failed as Notice } from './GapParts'
+import { SearchIcon } from './Icons'
 import { Bone } from './Skeleton'
+import { Busy, fieldBase, softButton, tag } from './ui'
 import { getLang, messages, pick, useMessages } from '../lib/i18n'
 
 
@@ -14,8 +15,6 @@ const TEXT = messages({
     app: '앱',
     mobile: '모바일',
     working: '처리 중',
-    retry: '다시 시도하기',
-    loading: '불러오고 있어요.',
     more: '더 보기',
   },
   en: {
@@ -24,16 +23,13 @@ const TEXT = messages({
     app: 'App',
     mobile: 'Mobile',
     working: 'Working',
-    retry: 'Try again',
-    loading: 'Loading.',
     more: 'Show more',
   },
 })
 
-export const card = 'rounded-2xl border border-gray-200 bg-white p-4'
+/** 숫자와 그래프를 담는 회색 칸이에요. 앱의 다른 칸(`Panel`)처럼 테두리 없이 옅은 회색이에요. */
+export const card = 'rounded-2xl bg-gray-50 p-4'
 export const sectionTitle = 'text-[15px] font-semibold text-gray-900'
-/** 표의 줄 안에 두는 작은 글자 버튼이에요. */
-export const rowButton = 'h-7 shrink-0 rounded-md px-2 text-[12.5px] font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:text-gray-300'
 
 const LOCALES = { ko: 'ko-KR', en: 'en-US' } as const
 export const full = (value: number) => value.toLocaleString(LOCALES[getLang()])
@@ -43,35 +39,6 @@ const compactFormats = {
 }
 export const compact = (value: number) => compactFormats[getLang()].format(value)
 export const share = (part: number, total: number) => pick(TEXT).share(total > 0 ? ((part / total) * 100).toFixed(1) : '0')
-
-/** 여러 값 중 하나를 고르는 칸이에요. 기간, 그래프에 보여줄 값, 목록의 필터에 같이 써요. */
-export function Segmented<T extends string | number>({ label, options, value, onChange }: {
-  label: string
-  options: readonly (readonly [T, string])[]
-  value: T
-  onChange: (value: T) => void
-}) {
-  return (
-    <div role="radiogroup" aria-label={label} className="inline-flex shrink-0 rounded-lg bg-gray-100 p-0.5">
-      {options.map(([option, text]) => (
-        <button
-          key={option}
-          type="button"
-          role="radio"
-          aria-checked={value === option}
-          onClick={() => {
-            if (value !== option) onChange(option)
-          }}
-          className={`h-7 rounded-md px-2.5 text-[12.5px] font-medium whitespace-nowrap transition-colors ${
-            value === option ? 'bg-white text-gray-900' : 'text-gray-500 hover:text-gray-900'
-          }`}
-        >
-          {text}
-        </button>
-      ))}
-    </div>
-  )
-}
 
 export function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
@@ -139,11 +106,8 @@ export function DeviceTags({ app, mobile, desktop }: { app: boolean; mobile: boo
 
 export function SearchBox({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) {
   return (
-    <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 transition-colors focus-within:border-brand sm:max-w-xs">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-3.5 shrink-0 text-gray-400" aria-hidden="true">
-        <circle cx="7" cy="7" r="4.5" />
-        <path d="M10.5 10.5L14 14" strokeLinecap="round" />
-      </svg>
+    <label className={`flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg px-3 focus-within:border-brand sm:max-w-xs ${fieldBase}`}>
+      <SearchIcon className="size-3.5 shrink-0 text-gray-400" />
       <input
         type="search"
         value={value}
@@ -230,29 +194,19 @@ export function usePaged<T>(load: (page: number) => Promise<Result<Slice<T>>>, k
 }
 
 export function Failed({ message, onRetry }: { message: string; onRetry: () => void }) {
-  const L = useMessages(TEXT)
-  return (
-    <div className="mt-16 flex flex-col items-center gap-4 text-center">
-      <p className="text-[14px] leading-relaxed text-gray-600">{message}</p>
-      <button type="button" onClick={onRetry} className={primaryButton}>
-        {L.retry}
-      </button>
-    </div>
-  )
+  return <Notice message={message} onRetry={onRetry} className="mt-16" />
 }
 
 export function Empty({ children }: { children: ReactNode }) {
-  return <p className="mt-16 text-center text-[14px] leading-relaxed text-gray-600">{children}</p>
+  return <p className="mt-16 text-center text-[13.5px] leading-relaxed text-gray-500">{children}</p>
 }
 
 /** 표와 같은 자리에 두는 스켈레톤이에요. */
-export function RowsSkeleton({ rows = 8 }: { rows?: number }) {
-  const L = useMessages(TEXT)
+export function TableSkeleton({ rows = 8 }: { rows?: number }) {
   return (
-    <div aria-busy="true" className="mt-3 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-      <span className="sr-only">{L.loading}</span>
+    <Busy className="mt-3 overflow-hidden rounded-2xl border border-gray-200 bg-white">
       {Array.from({ length: rows }, (_, row) => (
-        <div key={row} aria-hidden className="flex h-[57px] items-center gap-6 border-t border-gray-100 px-4 first:border-t-0">
+        <div key={row} className="flex h-[57px] items-center gap-6 border-t border-gray-100 px-4 first:border-t-0">
           <div className="min-w-0 flex-1">
             <Bone className={`h-3.5 ${row % 2 ? 'w-32' : 'w-24'}`} />
             <Bone className="mt-2 h-3 w-44" />
@@ -262,24 +216,19 @@ export function RowsSkeleton({ rows = 8 }: { rows?: number }) {
           <Bone className="h-3 w-20" />
         </div>
       ))}
-    </div>
+    </Busy>
   )
 }
 
 export function MoreButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
   const L = useMessages(TEXT)
   return (
-    <button
-      type="button"
-      disabled={loading}
-      onClick={onClick}
-      className="mt-4 h-9 rounded-full bg-gray-100 px-4 text-[13px] font-medium text-gray-700 transition-colors hover:text-brand disabled:text-gray-400"
-    >
+    <button type="button" disabled={loading} onClick={onClick} className={`mt-4 ${softButton}`}>
       {loading ? L.working : L.more}
     </button>
   )
 }
 
 export const tableWrap = 'mt-3 overflow-x-auto rounded-2xl border border-gray-200 bg-white'
-export const th = 'px-4 py-2.5 text-left text-[12px] font-medium whitespace-nowrap text-gray-400'
+export const th = 'px-4 py-2.5 text-left text-[12px] font-medium whitespace-nowrap text-gray-500'
 export const td = 'px-4 py-2.5 align-middle'

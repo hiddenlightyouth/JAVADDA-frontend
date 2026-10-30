@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
-import { COMPANIES, fitOf, POSTINGS, SEARCH_SUGGESTIONS, sortPostings, SUGGEST_MS, useReports, useResume, type JobPosting } from '../lib/gap'
+import { COMPANIES, companyOf, fitOf, POSTINGS, postingOf, SEARCH_SUGGESTIONS, sortPostings, SUGGEST_MS, useReports, useResume, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { cardsRow, CompanyMark, FitBadge, PostingTile } from './GapParts'
-import { companyOf } from '../lib/gap'
+import { ChevronRightIcon, SearchIcon } from './Icons'
+import { stagger } from './ui'
 import { LofyScript } from './LofyScript'
 
 /**
@@ -145,15 +146,20 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
     onPick(posting.id)
   }
 
-  const recent = sortPostings(POSTINGS, 'recent', resume).slice(0, ROW_SIZE)
-  const closing = sortPostings(POSTINGS.filter((posting) => posting.deadline), 'deadline', resume).slice(0, ROW_SIZE)
-  const fit = resume ? sortPostings(POSTINGS, 'fit', resume).slice(0, ROW_SIZE) : []
+  // 올라온 순서와 마감 순서는 이력서와 상관없어서 처음 한 번만 정해요.
+  const recent = useMemo(() => sortPostings(POSTINGS, 'recent', null).slice(0, ROW_SIZE), [])
+  const closing = useMemo(() => sortPostings(POSTINGS.filter((posting) => posting.deadline), 'deadline', null).slice(0, ROW_SIZE), [])
+  const fit = useMemo(() => (resume ? sortPostings(POSTINGS, 'fit', resume).slice(0, ROW_SIZE) : []), [resume])
   /** 진단해 둔 공고 중 적합도가 낮았던 것. 보완한 뒤에 다시 보라고 보여줘요. */
-  const again = reports
-    .filter((report) => report.status === 'done' && report.fitScore < 70)
-    .map((report) => POSTINGS.find((posting) => posting.id === report.postingId))
-    .filter((posting): posting is JobPosting => posting !== undefined)
-    .slice(0, ROW_SIZE)
+  const again = useMemo(
+    () =>
+      reports
+        .filter((report) => report.status === 'done' && report.fitScore < 70)
+        .map((report) => postingOf(report.postingId))
+        .filter((posting): posting is JobPosting => !!posting)
+        .slice(0, ROW_SIZE),
+    [reports],
+  )
 
   const rows: { key: keyof typeof L.rows | 'companies'; list: JobPosting[]; more?: () => void }[] = [
     ...(fit.length > 0 ? [{ key: 'fit' as const, list: fit, more: onRecommend }] : []),
@@ -179,10 +185,7 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
               role="search"
               className="relative flex h-[52px] w-full items-center rounded-full border border-gray-200/90 bg-white/55 pr-5 pl-5 backdrop-blur-md"
             >
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mr-2.5 size-4 shrink-0 text-gray-400" aria-hidden="true">
-                <circle cx="7" cy="7" r="4.5" />
-                <path d="m10.5 10.5 3 3" />
-              </svg>
+              <SearchIcon className="mr-2.5 size-4 shrink-0 text-gray-400" />
               <input
                 ref={inputRef}
                 type="search"
@@ -274,9 +277,7 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
                     className="inline-flex h-8 items-center gap-1 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand"
                   >
                     {L.seeAll}
-                    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="size-3.5" aria-hidden="true">
-                      <path d="M6 3.5 10.5 8 6 12.5" />
-                    </svg>
+                    <ChevronRightIcon className="size-3.5" />
                   </button>
                 )}
               </div>
@@ -285,7 +286,7 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
                 // 테두리 없이 로고와 이름만 늘어놓아서, 공고 카드 사이에서 가볍게 보여요.
                 <ul className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-1">
                   {BROWSE_COMPANIES.map((company, order) => (
-                    <li key={company.id} className="animate-rise" style={{ animationDelay: `${Math.min(order, 8) * 30}ms` }}>
+                    <li key={company.id} className="animate-rise" style={stagger(order)}>
                       <button
                         type="button"
                         onClick={() => {

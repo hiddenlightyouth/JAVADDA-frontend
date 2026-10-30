@@ -3,40 +3,33 @@ import { track } from '../lib/analytics'
 import { careerName, companyOf, createReport, daysLeft, familyName, fitOf, postingOf, useResume, useResumeShelf } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
-import { pageFrame, PageHeader, StepLayout, Steps, StepTitle } from './AppPage'
-import { primaryButton, quietButton } from './Dialog'
-import { CompanyMark, FitBadge, Notice, SkillChip, type ChipTone } from './GapParts'
-import { ResumeUploader, SkillEditor } from './MyResume'
+import { pageFrame, PageHeader, StepLayout } from './AppPage'
+import { CompanyMark, FitBadge, Notice, SkillChip, skillTone } from './GapParts'
+import { PlusIcon } from './Icons'
+import { ResumeUploader } from './MyResume'
 import { PostingBrowser, SplitView } from './PostingBrowser'
+import { label, primaryButton, toolButton } from './ui'
 
 /**
- * 진단 시작 화면이에요. 공고를 확인하고, 이력서를 올리거나 확인한 뒤에 진단을 시작해요.
- * 포트폴리오 만들기와 같은 단계 화면 틀(Steps, StepLayout)을 써요.
+ * 진단 시작 화면이에요. 한 화면에서 공고의 요구 역량을 훑고, 진단할 서류를 골라 바로 시작해요.
+ * 요구 역량 이름표는 고른 서류 기준으로 칠해서, 시작하기 전에 무엇이 비는지 보여요.
+ * 역량을 고치는 것은 내 이력서 화면이 맡아요. 서류가 없으면 올리는 칸이 그 자리에 나와요.
  */
-
-type Step = 'posting' | 'resume'
 
 const TEXT = messages({
   ko: {
     title: '진단 시작',
     back: '새 진단 화면으로 돌아가기',
-    steps: { posting: '공고 확인', resume: '이력서' } as Record<Step, string>,
-    postingTitle: '해당 채용 공고와 나는 얼마나 일치할까요?',
-    postingHint: '공고에 적힌 필수와 우대 역량을 확인해 보세요.',
     required: '필수 역량',
     preferred: '우대 역량',
     deadline: (days: number) => (days === 0 ? '오늘 마감' : `마감 ${days}일 전`),
     always: '상시 채용',
     openPosting: '원문 보기',
-    resumeTitle: '이력서 업로드',
-    resumeHint: '올려 둔 서류로 진단해요. 잘못 읽은 역량이 있으면 여기서 고쳐요.',
-    pickHint: '진단할 서류를 골라요. 처음에는 대표 이력서가 골라져 있어요. 잘못 읽은 역량이 있으면 여기서 고쳐요.',
-    pickLabel: '진단할 서류',
+    docs: '진단할 서류',
     uploadedAt: (when: string) => `${when}에 올림`,
+    skills: (count: number) => `역량 ${count}개`,
     replace: '다른 서류 올리기',
     keep: '올리지 않고 돌아가기',
-    next: '다음',
-    prev: '이전',
     start: '진단 시작',
     starting: '시작하는 중',
     missing: '이 공고를 찾을 수 없어요.',
@@ -46,23 +39,16 @@ const TEXT = messages({
   en: {
     title: 'Start a diagnosis',
     back: 'Back to new diagnosis',
-    steps: { posting: 'Posting', resume: 'Resume' },
-    postingTitle: 'How well do you match this posting?',
-    postingHint: 'Check the required and preferred skills in the posting.',
     required: 'Required',
     preferred: 'Preferred',
     deadline: (days: number) => (days === 0 ? 'Closes today' : `Closes in ${days} ${days === 1 ? 'day' : 'days'}`),
     always: 'Rolling',
-    openPosting: 'Open original',
-    resumeTitle: 'Upload your resume',
-    resumeHint: "We'll use your uploaded document. Fix any skills we misread here.",
-    pickHint: 'Choose the document to diagnose with. Your main resume is selected to start. Fix any skills we misread here.',
-    pickLabel: 'Document to diagnose',
+    openPosting: 'Original',
+    docs: 'Document to diagnose',
     uploadedAt: (when: string) => `Uploaded ${when}`,
+    skills: (count: number) => `${count} ${count === 1 ? 'skill' : 'skills'}`,
     replace: 'Upload a different document',
     keep: 'Go back without uploading',
-    next: 'Next',
-    prev: 'Back',
     start: 'Start diagnosis',
     starting: 'Starting',
     missing: "Couldn't find this posting.",
@@ -70,8 +56,6 @@ const TEXT = messages({
     goHome: 'Pick another posting',
   },
 })
-
-const STEPS: Step[] = ['posting', 'resume']
 
 interface Props {
   postingId: string
@@ -88,8 +72,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
   /** 이번 진단에 쓸 서류. 고르지 않았거나 지워졌으면 대표 이력서예요. 대표 이력서는 바꾸지 않아요. */
   const [pickedId, setPickedId] = useState<string | null>(null)
   const resume = shelf.list.find((item) => item.id === pickedId) ?? primary
-  const [step, setStep] = useState<Step>('posting')
-  const [replacing, setReplacing] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [starting, setStarting] = useState(false)
   const [viewing, setViewing] = useState(false)
 
@@ -104,11 +87,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
 
   const company = companyOf(posting.companyId)
   const left = daysLeft(posting)
-  const fit = fitOf(posting, resume)
-  const tone = (skill: string): ChipTone => {
-    const level = resume?.skills.find((item) => item.name === skill)?.level ?? 0
-    return !resume ? 'plain' : level >= 3 ? 'met' : level > 0 ? 'partial' : 'missing'
-  }
+  const showUploader = !resume || uploading
 
   async function start() {
     if (!resume || starting) return
@@ -119,138 +98,109 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
     if (report) onReport(report.id)
   }
 
-  const canStart = resume !== null && resume.skills.length > 0 && !replacing
+  const canStart = resume !== null && resume.skills.length > 0 && !uploading
 
   return (
     <SplitView side={viewing && <PostingBrowser posting={posting} onClose={() => setViewing(false)} />}>
       <main className={pageFrame}>
-        <PageHeader title={L.title} owner={company.name} mark={<CompanyMark company={company} className="size-11 text-[15px]" />} onBack={onBack} backLabel={L.back} />
+        <PageHeader
+          title={posting.title}
+          owner={company.name}
+          mark={<CompanyMark company={company} className="size-11 text-[15px]" />}
+          onBack={onBack}
+          backLabel={L.back}
+          actions={
+            // 원문은 새 탭 대신 앱 안의 미니 브라우저로 열어요.
+            <button type="button" aria-expanded={viewing} onClick={() => setViewing(true)} className={toolButton}>
+              {L.openPosting}
+            </button>
+          }
+        />
         <StepLayout
-          top={<Steps steps={STEPS.map((key) => ({ key, label: L.steps[key] }))} current={step} onSelect={setStep} />}
           buttons={
-            step === 'posting' ? (
-              <button type="button" onClick={() => setStep('resume')} className={primaryButton}>
-                {L.next}
-              </button>
-            ) : (
-              <>
-                <button type="button" onClick={() => setStep('posting')} className={quietButton}>
-                  {L.prev}
-                </button>
-                <button type="button" disabled={!canStart || starting} onClick={() => void start()} className={primaryButton}>
-                  {starting ? L.starting : L.start}
-                </button>
-              </>
-            )
+            <button type="button" disabled={!canStart || starting} onClick={() => void start()} className={primaryButton}>
+              {starting ? L.starting : L.start}
+            </button>
           }
         >
-          {step === 'posting' ? (
-            <div className="animate-rise">
-              <StepTitle title={L.postingTitle} hint={L.postingHint} />
-              <div className="mt-6 rounded-2xl bg-gray-50 p-5">
-                <div className="flex items-start gap-4">
-                  <CompanyMark company={company} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[16px] font-semibold text-gray-900">{posting.title}</p>
-                    <p className="mt-0.5 text-[13px] text-gray-500">
-                      {company.name}, {posting.location}, {familyName(posting.family)}, {careerName(posting.career)}
-                    </p>
-                    <p className="mt-0.5 text-[12.5px] text-gray-400">{left !== null ? L.deadline(left) : L.always}</p>
+          <div className="animate-rise space-y-8">
+            {/* 공고에서 볼 것만 짧게 적어요. 이름표는 고른 서류 기준으로 칠해요. */}
+            <section className="rounded-2xl bg-gray-50 p-5">
+              <p className="text-[13px] text-gray-500">
+                {posting.location}, {familyName(posting.family)}, {careerName(posting.career)}, {left !== null ? L.deadline(left) : L.always}
+              </p>
+              <p className="mt-2 text-[13.5px] leading-relaxed text-gray-700">{posting.summary}</p>
+              <div className="mt-5 space-y-4">
+                {(['required', 'preferred'] as const).map((kind) => (
+                  <div key={kind}>
+                    <h3 className={label}>{L[kind]}</h3>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {posting[kind].map((skill) => (
+                        <SkillChip key={skill} name={skill} tone={skillTone(skill, resume)} />
+                      ))}
+                    </div>
                   </div>
-                  <FitBadge fit={fit} compact />
-                </div>
-                <p className="mt-4 text-[13.5px] leading-relaxed text-gray-700">{posting.summary}</p>
-                <div className="mt-5">
-                  <h3 className="text-[12.5px] font-medium text-gray-400">{L.required}</h3>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {posting.required.map((skill) => (
-                      <SkillChip key={skill} name={skill} tone={tone(skill)} />
-                    ))}
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <h3 className="text-[12.5px] font-medium text-gray-400">{L.preferred}</h3>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {posting.preferred.map((skill) => (
-                      <SkillChip key={skill} name={skill} tone={tone(skill)} />
-                    ))}
-                  </div>
-                </div>
-                {/* 원문은 새 탭 대신 앱 안의 미니 브라우저로 열어요. */}
-                <button type="button" onClick={() => setViewing(true)} className="mt-5 inline-flex items-center gap-1 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand">
-                  {L.openPosting}
-                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-3.5" aria-hidden="true">
-                    <path d="M6 3.5 10.5 8 6 12.5" />
-                  </svg>
-                </button>
+                ))}
               </div>
-            </div>
-          ) : (
-            <div className="animate-rise">
-              <StepTitle title={L.resumeTitle} hint={!resume ? undefined : shelf.list.length > 1 ? L.pickHint : L.resumeHint} />
-              <div className="mt-6">
-                {!resume || replacing ? (
+            </section>
+
+            <section>
+              <h2 className="text-[15px] font-semibold text-gray-900">{L.docs}</h2>
+              <div className="mt-3">
+                {showUploader ? (
                   <>
                     <ResumeUploader
                       onDone={(next) => {
-                        setReplacing(false)
+                        setUploading(false)
                         setPickedId(next.id)
                       }}
                     />
                     {resume && (
-                      <button type="button" onClick={() => setReplacing(false)} className="mt-3 w-full text-center text-[13px] text-gray-500 transition-colors hover:text-gray-900">
+                      <button type="button" onClick={() => setUploading(false)} className="mt-3 w-full text-center text-[13px] text-gray-500 transition-colors hover:text-gray-900">
                         {L.keep}
                       </button>
                     )}
                   </>
                 ) : (
-                  <>
-                    {/* 서류가 둘 이상이면 이번 진단에 쓸 서류를 골라요. 서류마다 이 공고와의 적합도를 같이 보여줘요. */}
-                    {shelf.list.length > 1 && (
-                      <div role="radiogroup" aria-label={L.pickLabel} className="mb-3 flex flex-col gap-1 rounded-2xl bg-gray-50 p-1.5">
-                        {shelf.list.map((item) => {
-                          const checked = item.id === resume.id
-                          return (
-                            <button
-                              key={item.id}
-                              type="button"
-                              role="radio"
-                              aria-checked={checked}
-                              onClick={() => setPickedId(item.id)}
-                              className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-colors ${checked ? 'bg-white' : 'hover:bg-gray-100'}`}
-                            >
-                              <span aria-hidden className={`size-4 shrink-0 rounded-full border transition-all ${checked ? 'border-[5px] border-brand' : 'border-gray-300 bg-white'}`} />
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate text-[13.5px] font-semibold text-gray-900">{item.name}</span>
-                                <span className="block truncate text-[12px] text-gray-400">
-                                  {L.uploadedAt(formatDateTime(item.uploadedAt))}
-                                </span>
+                  // 처음에는 대표 이력서가 골라져 있어요. 여기서 골라도 대표 이력서는 바뀌지 않아요. 서류마다 이 공고와의 적합도를 같이 보여줘요.
+                  <div className="flex flex-col gap-1 rounded-2xl bg-gray-50 p-1.5">
+                    <div role="radiogroup" aria-label={L.docs} className="flex flex-col gap-1">
+                      {shelf.list.map((item) => {
+                        const checked = item.id === resume.id
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={checked}
+                            onClick={() => setPickedId(item.id)}
+                            className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-left transition-colors ${checked ? 'bg-white' : 'hover:bg-gray-100'}`}
+                          >
+                            <span aria-hidden className={`size-4 shrink-0 rounded-full border transition-all ${checked ? 'border-[5px] border-brand' : 'border-gray-300 bg-white'}`} />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[13.5px] font-semibold text-gray-900">{item.name}</span>
+                              <span className="block truncate text-[12px] text-gray-500">
+                                {L.uploadedAt(formatDateTime(item.uploadedAt))}, {L.skills(item.skills.length)}
                               </span>
-                              <FitBadge fit={fitOf(posting, item)} compact />
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
-                    <div className="rounded-2xl bg-gray-50 p-5">
-                      <div className="flex items-center gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[14.5px] font-semibold text-gray-900">{resume.name}</p>
-                          <p className="mt-0.5 text-[12.5px] text-gray-400">{L.uploadedAt(formatDateTime(resume.uploadedAt))}</p>
-                        </div>
-                        <button type="button" onClick={() => setReplacing(true)} className="shrink-0 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand">
-                          {L.replace}
-                        </button>
-                      </div>
-                      <div className="mt-5">
-                        <SkillEditor resume={resume} />
-                      </div>
+                            </span>
+                            <FitBadge fit={fitOf(posting, item)} compact />
+                          </button>
+                        )
+                      })}
                     </div>
-                  </>
+                    <button
+                      type="button"
+                      onClick={() => setUploading(true)}
+                      className="flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-[13px] font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                    >
+                      <PlusIcon className="size-4 shrink-0" />
+                      {L.replace}
+                    </button>
+                  </div>
                 )}
               </div>
-            </div>
-          )}
+            </section>
+          </div>
         </StepLayout>
       </main>
     </SplitView>

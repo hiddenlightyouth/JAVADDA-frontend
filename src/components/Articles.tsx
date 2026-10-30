@@ -3,6 +3,7 @@ import { articlesFor, findArticle, type Article } from '../lib/articles'
 import { track } from '../lib/analytics'
 import { localizePath, messages, useLang, useMessages } from '../lib/i18n'
 import { applyMeta, HOME_META, SITE_TITLE } from '../lib/meta'
+import { primaryButtonMd } from './ui'
 
 interface Props {
   /** 보고 있는 아티클. null이면 목록을 보여줘요. */
@@ -133,7 +134,7 @@ function ArticleView({ article, onOpen, onHome }: { article: Article } & Pick<Pr
             track('article_cta_click', { slug: article.slug })
             onHome()
           }}
-          className="mt-5 inline-flex h-10 items-center rounded-full bg-brand px-5 text-[14px] font-semibold text-white transition-colors hover:bg-brand-hover"
+          className={`mt-5 ${primaryButtonMd}`}
         >
           {text.cta}
         </InnerLink>
@@ -189,7 +190,7 @@ export function Articles({ slug, onOpen, onHome }: Props) {
             <InnerLink
               href="/articles"
               onNavigate={() => onOpen(null)}
-              className="mt-4 inline-flex h-10 items-center rounded-full bg-brand px-5 text-[14px] font-semibold text-white transition-colors hover:bg-brand-hover"
+              className={`mt-4 ${primaryButtonMd}`}
             >
               {text.backToList}
             </InnerLink>

@@ -25,6 +25,7 @@ import { SocialButtons, useSocialClients } from './Social'
 import { Bone } from './Skeleton'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { CheckIcon } from './Icons'
+import { FormError, softButton, softDangerButton } from './ui'
 
 const TEXT = messages({
   ko: {
@@ -94,8 +95,6 @@ interface Props {
   onSignedOut: () => void
 }
 
-const quiet = 'h-8 shrink-0 rounded-full px-3 text-[13px] font-medium transition-colors'
-
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="mt-12 first:mt-4">
@@ -106,7 +105,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Message({ children }: { children: React.ReactNode }) {
-  return <p className="border-y border-gray-100 py-6 text-center text-[14px] text-gray-400">{children}</p>
+  return <p className="border-y border-gray-100 py-6 text-center text-[13.5px] text-gray-500">{children}</p>
 }
 
 function SkeletonRows({ count, action }: { count: number; action?: boolean }) {
@@ -187,7 +186,7 @@ function Connections() {
                 <CheckIcon className="size-3.5 text-brand" />
                 {text.linked}
                 {canUnlink(provider) && (
-                  <button type="button" onClick={() => setUnlinking(provider)} className={`${quiet} ml-1.5 bg-gray-100 text-gray-700 hover:text-red-500`}>
+                  <button type="button" onClick={() => setUnlinking(provider)} className={`${softDangerButton} ml-1.5`}>
                     {text.unlink}
                   </button>
                 )}
@@ -261,7 +260,7 @@ function Sessions() {
                 type="button"
                 disabled={revoking === session.sessionId}
                 onClick={() => void revoke(session.sessionId)}
-                className={`${quiet} bg-gray-100 text-gray-700 hover:text-red-500 disabled:text-gray-400`}
+                className={softDangerButton}
               >
                 {text.signOut}
               </button>
@@ -269,7 +268,7 @@ function Sessions() {
           </li>
         ))}
       </ul>
-      {error && <p className="mt-3 text-[13px] text-red-500">{error}</p>}
+      <FormError className="mt-3">{error}</FormError>
     </>
   )
 }
@@ -327,7 +326,7 @@ function LoginHistory() {
           </li>
         ))}
       </ul>
-      {error && <p className="mt-3 text-[13px] text-red-500">{error}</p>}
+      <FormError className="mt-3">{error}</FormError>
       {(hasNext || shown < records.length) && (
         <div className="mt-4 text-center">
           <button
@@ -339,7 +338,7 @@ function LoginHistory() {
               setShown(next)
               if (next > records.length && hasNext) void load(page + 1)
             }}
-            className={`${quiet} bg-gray-100 text-gray-700 hover:text-brand disabled:text-gray-400`}
+            className={softButton}
           >
             {loading ? text.working : text.more}
           </button>
@@ -413,7 +412,7 @@ export function MyPage({ onSignedOut }: Props) {
               type="button"
               disabled={leaving}
               onClick={() => void handleSignOut()}
-              className={`${quiet} bg-gray-100 text-gray-700 hover:text-gray-900 disabled:text-gray-400`}
+              className={softButton}
             >
               {text.signOut}
             </button>

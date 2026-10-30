@@ -19,13 +19,12 @@ import {
 import { describeDevice, useAuth } from '../lib/auth'
 import { formatDateTime, formatWhen } from '../lib/format'
 import { showToast } from '../lib/toast'
-import { tag, toolButton } from './DeepParts'
-import { ConfirmDialog } from './Dialog'
-import { DeviceTags, Empty, Failed, full, MoreButton, rowButton, RowsSkeleton, SearchBox, Segmented, tableWrap, td, th, useDebounced, usePaged } from './AdminParts'
+import { ConfirmDialog, SidePanel } from './Dialog'
+import { DeviceTags, Empty, Failed, full, MoreButton, TableSkeleton, SearchBox, tableWrap, td, th, useDebounced, usePaged } from './AdminParts'
+import { Busy, ghostButton, Segmented, tag, toolButton, toolDangerButton } from './ui'
 import { IpPlace } from './IpPlace'
 import { Bone } from './Skeleton'
 import { messages, pick, useMessages } from '../lib/i18n'
-import { CloseButton } from './Icons'
 
 
 function StatusTags({ user, self }: { user: AdminUser; self: boolean }) {
@@ -61,7 +60,7 @@ export function AdminUsers({ onOpenChat }: { onOpenChat: (id: string) => void })
         list.error ? (
           <Failed message={list.error} onRetry={list.retry} />
         ) : (
-          <RowsSkeleton />
+          <TableSkeleton />
         )
       ) : list.items.length === 0 ? (
         <Empty>{L.empty}</Empty>
@@ -367,14 +366,7 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
     }
   }, [id, version])
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
-
+  // 바깥을 누르거나 Esc를 누르면 닫는 것은 SidePanel이 맡아요.
   const cancel = useCallback(() => setAsking(null), [])
 
   async function run(action: Action) {
@@ -417,24 +409,19 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
 
   return (
     <>
-      <div className="fixed inset-0 z-20" onPointerDown={onClose} aria-hidden />
-      <aside aria-label={L.panel} className="fixed inset-y-0 right-0 z-30 flex w-full max-w-[440px] animate-slide-in flex-col border-l border-gray-200 bg-white">
-        <div className="flex h-14 shrink-0 items-center justify-end px-4">
-          <CloseButton label={L.close} onClick={onClose} size="md" />
-        </div>
+      <SidePanel label={L.panel} closeLabel={L.close} onClose={onClose} dismissable={!asking} className="max-w-[440px]">
 
         {!detail || !user ? (
           error ? (
             <Failed message={error} onRetry={() => setVersion((value) => value + 1)} />
           ) : (
-            <div aria-busy="true" className="px-6">
-              <span className="sr-only">{L.loading}</span>
+            <Busy label={L.loading} className="px-6">
               <Bone className="h-5 w-32" />
               <Bone className="mt-2.5 h-3.5 w-48" />
               <Bone className="mt-8 h-3 w-full" />
               <Bone className="mt-3 h-3 w-4/5" />
               <Bone className="mt-3 h-3 w-3/5" />
-            </div>
+            </Busy>
           )
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8">
@@ -484,7 +471,7 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
                 <button type="button" disabled={detail.sessions.length === 0} onClick={() => setAsking('logout')} className={`${toolButton} disabled:text-gray-300 disabled:hover:border-gray-200`}>
                   {L.logoutAll}
                 </button>
-                <button type="button" onClick={() => setAsking('delete')} className={`${toolButton} text-red-500 hover:text-red-600`}>
+                <button type="button" onClick={() => setAsking('delete')} className={`${toolDangerButton}`}>
                   {L.actions.delete.confirm}
                 </button>
               </div>
@@ -503,7 +490,7 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
                       <span className="block text-[12px] text-gray-400">{L.lastUsed(formatDateTime(session.lastUsedAt))}</span>
                     </span>
                     {!self && (
-                      <button type="button" onClick={() => void logoutDevice(session.sessionId)} className={rowButton}>
+                      <button type="button" onClick={() => void logoutDevice(session.sessionId)} className={ghostButton}>
                         {L.logout}
                       </button>
                     )}
@@ -544,7 +531,7 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
                       </span>
                     </span>
                     {chat.shared && (
-                      <button type="button" onClick={() => onOpenChat(chat.id)} className={rowButton}>
+                      <button type="button" onClick={() => onOpenChat(chat.id)} className={ghostButton}>
                         {L.open}
                       </button>
                     )}
@@ -554,7 +541,7 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
             )}
           </div>
         )}
-      </aside>
+      </SidePanel>
 
       {asking && user && (
         <ConfirmDialog

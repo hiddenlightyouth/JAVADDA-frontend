@@ -1,0 +1,230 @@
+import type { CSSProperties, ReactNode } from 'react'
+import { messages, useMessages } from '../lib/i18n'
+import { Kbd } from './Shortcuts'
+
+/**
+ * 여러 화면이 같이 쓰는 기본 모양이에요. 버튼, 입력칸, 작은 제목, 고르는 칸, 탭, 목록, 오류 문구를 한 곳에서 정해요.
+ * 새 화면은 여기 것을 쓰고 같은 모양을 다시 적지 않아요. 크기가 다르면 여기에 단계를 더해요.
+ */
+
+const TEXT = messages({
+  ko: { loading: '불러오고 있어요.' },
+  en: { loading: 'Loading.' },
+})
+
+// ── 버튼 ───────────────────────────────────────────────
+
+const brandFill = 'bg-brand font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-gray-200 disabled:text-gray-400'
+
+/** 메인 컬러의 알약 버튼이에요. 창과 줄 안의 기본 크기(36px)예요. */
+export const primaryButton = `h-9 rounded-full px-4 text-[13px] ${brandFill}`
+/** 안내 화면 가운데에 두는 한 단계 큰 메인 버튼(40px)이에요. */
+export const primaryButtonMd = `inline-flex h-10 items-center justify-center rounded-full px-5 text-[14px] ${brandFill}`
+/** 로그인처럼 폭을 다 채우는 큰 메인 버튼(48px)이에요. */
+export const primaryButtonLg = `h-12 w-full rounded-full text-[15px] ${brandFill}`
+/** 취소처럼 바탕 없이 글자만 있는 버튼이에요. */
+export const quietButton = 'h-9 rounded-full px-3.5 text-[13px] font-medium text-gray-600 transition-colors hover:text-gray-900'
+/** 지우기처럼 되돌리기 어려운 작업의 확인 버튼이에요. */
+export const dangerButton =
+  'h-9 rounded-full bg-red-500 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:bg-gray-200 disabled:text-gray-400'
+/** 더 보기, 연결 끊기처럼 옅은 회색 알약 버튼이에요. */
+export const softButton =
+  'h-9 shrink-0 rounded-full bg-gray-100 px-4 text-[13px] font-medium text-gray-700 transition-colors hover:text-brand disabled:text-gray-400 disabled:hover:text-gray-400'
+/** 연결 끊기, 기기 로그아웃처럼 지우는 쪽의 회색 알약 버튼이에요. 마우스를 올리면 빨개져요. */
+export const softDangerButton =
+  'h-9 shrink-0 rounded-full bg-gray-100 px-4 text-[13px] font-medium text-gray-700 transition-colors hover:text-red-500 disabled:text-gray-400 disabled:hover:text-gray-400'
+/** 테두리를 두른 흰 도구 버튼이에요. 드롭다운, 재진단, 복사 같은 보조 작업에 써요. */
+export const toolButton =
+  'flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-gray-800 transition-colors hover:border-gray-300 hover:text-gray-950'
+/** 도구 버튼의 빨간 모양이에요. 삭제에 써요. */
+export const toolDangerButton =
+  'flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-red-500 transition-colors hover:border-red-200 hover:text-red-600'
+/** 줄과 표 안에 두는 작은 글자 버튼이에요. */
+export const ghostButton =
+  'h-8 shrink-0 rounded-md px-2 text-[12.5px] font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:text-gray-300 disabled:hover:bg-transparent'
+/** 작은 글자 버튼의 빨간 모양이에요. */
+export const ghostDangerButton =
+  'h-8 shrink-0 rounded-md px-2 text-[12.5px] font-medium text-red-500 transition-colors hover:bg-red-50 hover:text-red-600 disabled:text-gray-300 disabled:hover:bg-transparent'
+
+/** 아이콘만 있는 버튼이에요. sm은 떠 있는 작은 카드, md는 창과 칸의 도구 줄이에요. */
+export const iconButton = {
+  sm: 'flex size-7 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700',
+  md: 'flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:text-gray-300 disabled:hover:bg-transparent',
+}
+
+// ── 메뉴 ───────────────────────────────────────────────
+
+/** 버튼을 누르면 펼쳐지는 메뉴 칸이에요. 자리(위치, 폭, 펼쳐지는 방향)는 덧붙여서 정해요. */
+export const menuPanel = 'animate-pop rounded-xl border border-gray-200 bg-white p-1.5'
+/** 메뉴의 한 줄이에요. */
+export const menuItem = 'flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13.5px] text-gray-800 transition-colors hover:bg-gray-100 disabled:text-gray-400'
+/** 지우기처럼 빨간 메뉴 줄이에요. */
+export const menuDangerItem = 'flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13.5px] font-medium text-red-500 transition-colors hover:bg-red-50'
+
+// ── 입력칸 ─────────────────────────────────────────────
+
+/** 입력칸의 공통 모양이에요. 흰 바탕에 테두리, 포커스가 가면 메인 컬러 테두리예요. */
+export const fieldBase = 'border border-gray-200 bg-white text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand'
+// 모바일에서 글자가 16px보다 작으면 입력칸을 누를 때 화면이 확대돼서, 좁은 화면에서는 16px로 둬요.
+/** 한 줄 입력칸(40px)이에요. */
+export const textField = `h-10 w-full rounded-lg px-3 text-base sm:text-[13.5px] ${fieldBase}`
+/** 줄 안에 두는 작은 한 줄 입력칸(36px)이에요. 도구 버튼과 높이가 같아요. */
+export const textFieldSm = `h-9 w-full rounded-lg px-3 text-base sm:text-[13px] ${fieldBase}`
+/** 여러 줄 입력칸이에요. 높이는 덧붙여서 정해요. */
+export const textArea = `w-full resize-none rounded-xl p-4 text-base leading-relaxed sm:text-[14px] ${fieldBase}`
+
+// ── 글자 ───────────────────────────────────────────────
+
+/** 칸 안의 작은 제목(판단 근거, 보완 방법 등)이에요. */
+export const label = 'text-[12.5px] font-medium text-gray-500'
+/** 작은 이름표의 모양이에요. 테두리를 두른 흰 칸이에요. */
+export const tag = 'inline-flex h-7 max-w-full items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 text-[12.5px] text-gray-700'
+
+/** 입력 아래나 버튼 줄에 빨갛게 띄우는 오류 문구예요. */
+export function FormError({ children, className = '' }: { children: ReactNode; className?: string }) {
+  if (!children) return null
+  return (
+    <p role="alert" className={`animate-rise text-[13px] leading-relaxed text-red-500 ${className}`}>
+      {children}
+    </p>
+  )
+}
+
+// ── 고르는 칸과 탭 ─────────────────────────────────────
+
+const SEGMENTED = {
+  sm: { box: 'rounded-lg p-0.5', item: 'h-7 rounded-md px-2.5 text-[12.5px]', icon: 'size-7 rounded-md' },
+  md: { box: 'rounded-xl p-1', item: 'h-8 rounded-lg px-3.5 text-[13px]', icon: 'size-8 rounded-lg' },
+}
+
+/**
+ * 여러 값 중 하나를 고르는 칸이에요. 회색 바탕에 고른 것만 흰 칸으로 떠요.
+ * 글자 대신 아이콘을 넣으면(icon) 정사각형 칸이 되고, 이름은 읽기 프로그램과 말풍선으로만 알려요.
+ */
+export function Segmented<T extends string | number>({ label: name, options, value, onChange, size = 'sm', className = '' }: {
+  label: string
+  options: readonly (readonly [T, string] | readonly [T, string, ReactNode])[]
+  value: T
+  onChange: (value: T) => void
+  size?: keyof typeof SEGMENTED
+  className?: string
+}) {
+  const shape = SEGMENTED[size]
+  return (
+    <div role="radiogroup" aria-label={name} className={`inline-flex shrink-0 gap-0.5 bg-gray-100 ${shape.box} ${className}`}>
+      {options.map(([option, text, icon]) => (
+        <button
+          key={option}
+          type="button"
+          role="radio"
+          aria-checked={value === option}
+          aria-label={icon ? text : undefined}
+          title={icon ? text : undefined}
+          onClick={() => {
+            if (value !== option) onChange(option)
+          }}
+          className={`flex items-center justify-center font-medium whitespace-nowrap transition-colors ${icon ? shape.icon : shape.item} ${
+            value === option ? 'bg-white text-gray-900' : 'text-gray-500 hover:text-gray-900'
+          }`}
+        >
+          {icon ?? text}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** 제목 줄 아래의 밑줄 탭이에요. 고른 탭에 메인 컬러 밑줄이 붙고, 단축키가 있으면 모서리에 자판 모양으로 보여줘요. */
+export function Tabs<K extends string>({ label: name, items, current, onSelect, trailing, className = '' }: {
+  label: string
+  items: readonly { key: K; label: string; shortcut?: string }[]
+  current: K
+  onSelect: (key: K) => void
+  /** 탭 줄 오른쪽 끝에 두는 것 */
+  trailing?: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={`flex shrink-0 items-center gap-1 border-b border-gray-200 ${className}`}>
+      {/* 단축키 모양이 탭 모서리 밖으로 나와서, 넘치는 부분을 자르지 않아요. */}
+      <div role="tablist" aria-label={name} className="flex min-w-0 gap-1">
+        {items.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            role="tab"
+            aria-selected={current === item.key}
+            onClick={() => onSelect(item.key)}
+            className={`relative -mb-px h-10 shrink-0 border-b-2 px-2 text-[13.5px] font-medium whitespace-nowrap transition-colors sm:px-3 ${
+              current === item.key ? 'border-brand text-gray-900' : 'border-transparent text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            {item.label}
+            {item.shortcut && <Kbd corner>{item.shortcut}</Kbd>}
+          </button>
+        ))}
+      </div>
+      {trailing && <div className="ml-auto flex shrink-0 items-center">{trailing}</div>}
+    </div>
+  )
+}
+
+// ── 목록 ───────────────────────────────────────────────
+
+/** 점을 붙인 목록이에요. brand면 점이 메인 컬러예요. */
+export function Bullets({ items, brand = false, className = '' }: { items: readonly ReactNode[]; brand?: boolean; className?: string }) {
+  return (
+    <ul className={`space-y-1 ${className}`}>
+      {items.map((item, index) => (
+        <li key={index} className="flex gap-2 text-[13.5px] leading-relaxed text-gray-700">
+          <span aria-hidden className={`mt-[9px] size-1 shrink-0 rounded-full ${brand ? 'bg-brand' : 'bg-gray-400'}`} />
+          <span className="min-w-0">{item}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/** 동그라미 안의 번호예요. 회색 칸 위에서는 흰 바탕(onGray), 아직 닿지 않은 단계는 한 단계 짙은 회색(muted), 강조할 때는 메인 컬러(brand)예요. */
+export function NumberBadge({ n, tone = 'plain', className = '' }: { n: number; tone?: 'plain' | 'onGray' | 'muted' | 'brand'; className?: string }) {
+  const colors = { plain: 'bg-gray-100 text-gray-600', onGray: 'bg-white text-gray-600', muted: 'bg-gray-200/70 text-gray-600', brand: 'bg-brand text-white' }[tone]
+  return (
+    <span aria-hidden className={`flex size-5 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums ${colors} ${className}`}>
+      {n}
+    </span>
+  )
+}
+
+/** 번호를 붙인 목록이에요. 보완 방법, 더 어필할 점, 주요 경력에 써요. */
+export function NumberedList({ items, onGray = false, className = '' }: { items: readonly ReactNode[]; onGray?: boolean; className?: string }) {
+  return (
+    <ol className={`space-y-2.5 ${className}`}>
+      {items.map((item, index) => (
+        <li key={index} className="flex gap-2.5 text-[13.5px] leading-relaxed text-gray-700">
+          <NumberBadge n={index + 1} tone={onGray ? 'onGray' : 'plain'} className="mt-px" />
+          <span className="min-w-0">{item}</span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+// ── 불러오는 중 ────────────────────────────────────────
+
+/** 뼈대를 감싸는 칸이에요. 읽기 프로그램에는 불러오는 중이라고 한 번만 알리고, 안쪽 뼈대는 건너뛰게 해요. 옆에 안내 문구가 따로 있으면 label을 빈 글자로 넘겨요. */
+export function Busy({ label: text, className = '', style, children }: { label?: string; className?: string; style?: CSSProperties; children: ReactNode }) {
+  const L = useMessages(TEXT)
+  return (
+    <div aria-busy="true" className={className} style={style}>
+      {text !== '' && <span className="sr-only">{text ?? L.loading}</span>}
+      <div aria-hidden className="contents">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// ── 카드 ───────────────────────────────────────────────
+
+/** 카드는 앞에서부터 조금씩 늦게 떠올라요. 뒤쪽 카드는 더 늦추지 않아요. */
+export const stagger = (order: number): CSSProperties => ({ animationDelay: `${Math.min(order, 14) * 28}ms` })

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { track } from '../lib/analytics'
 import { dayLabel, fetchOverview, type AdminOverview as Overview } from '../lib/admin'
-import { BarChart, card, Empty, Failed, full, sectionTitle, Segmented, share, Stat, StatsSkeleton } from './AdminParts'
+import { BarChart, card, Empty, Failed, full, sectionTitle, share, Stat, StatsSkeleton } from './AdminParts'
+import { Segmented } from './ui'
 import { messages, useMessages } from '../lib/i18n'
 
 type Metric = 'chats' | 'signups'

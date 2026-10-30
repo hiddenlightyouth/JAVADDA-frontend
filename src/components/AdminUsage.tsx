@@ -3,11 +3,11 @@ import { track } from '../lib/analytics'
 import { addDays, dayLabel, daysBetween, fetchAiCall, fetchAiCalls, fetchAiUsage, monthLabel, seoulToday, type AiCall, type AiCallDetail, type AiUsageRow } from '../lib/admin'
 import { formatDateTime } from '../lib/format'
 import { showToast } from '../lib/toast'
-import { tag } from './DeepParts'
-import { BarChart, card, compact, Empty, Failed, full, MoreButton, rowButton, RowsSkeleton, sectionTitle, Segmented, share, Stat, StatsSkeleton, tableWrap, td, th, usePaged, type Bar } from './AdminParts'
+import { BarChart, card, compact, Empty, Failed, full, MoreButton, TableSkeleton, sectionTitle, share, Stat, StatsSkeleton, tableWrap, td, th, usePaged, type Bar } from './AdminParts'
+import { Busy, ghostButton, Segmented, tag } from './ui'
 import { Bone } from './Skeleton'
 import { messages, pick, useMessages } from '../lib/i18n'
-import { CloseButton } from './Icons'
+import { SidePanel } from './Dialog'
 
 type Period = 7 | 30 | 90 | 365 | 'all'
 
@@ -337,7 +337,7 @@ function Calls() {
         list.error ? (
           <Failed message={list.error} onRetry={list.retry} />
         ) : (
-          <RowsSkeleton rows={6} />
+          <TableSkeleton rows={6} />
         )
       ) : list.items.length === 0 ? (
         <Empty>{filter === 'failed' ? L.noFailed : L.noCalls}</Empty>
@@ -440,7 +440,7 @@ function Passage({ title, note, text, empty }: { title: string; note?: string; t
           {note && <span className="truncate text-[12px] font-normal text-gray-400 tabular-nums">{note}</span>}
         </h3>
         {text && (
-          <button type="button" onClick={() => void copy()} className={rowButton}>
+          <button type="button" onClick={() => void copy()} className={ghostButton}>
             {copied ? L.copied : L.copy}
           </button>
         )}
@@ -475,33 +475,20 @@ function CallPanel({ id, onClose }: { id: number; onClose: () => void }) {
     }
   }, [id, attempt])
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
-
+  // 바깥을 누르거나 Esc를 누르면 닫는 것은 SidePanel이 맡아요.
   return (
     <>
-      <div className="fixed inset-0 z-20" onPointerDown={onClose} aria-hidden />
-      <aside aria-label={L.panel} className="fixed inset-y-0 right-0 z-30 flex w-full max-w-[640px] animate-slide-in flex-col border-l border-gray-200 bg-white">
-        <div className="flex h-14 shrink-0 items-center justify-end px-4">
-          <CloseButton label={L.close} onClick={onClose} size="md" />
-        </div>
-
+      <SidePanel label={L.panel} closeLabel={L.close} onClose={onClose} className="max-w-[640px]">
         {!call ? (
           error ? (
             <Failed message={error} onRetry={() => setAttempt((value) => value + 1)} />
           ) : (
-            <div aria-busy="true" className="px-6">
-              <span className="sr-only">{L.loading}</span>
+            <Busy label={L.loading} className="px-6">
               <Bone className="h-5 w-40" />
               <Bone className="mt-2.5 h-3.5 w-56" />
-              <div aria-hidden className="mt-8 h-32 rounded-lg bg-gray-100 motion-safe:animate-pulse" />
-              <div aria-hidden className="mt-6 h-48 rounded-lg bg-gray-100 motion-safe:animate-pulse" />
-            </div>
+              <Bone className="mt-8 h-32 w-full rounded-lg!" />
+              <Bone className="mt-6 h-48 w-full rounded-lg!" />
+            </Busy>
           )
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8">
@@ -543,7 +530,7 @@ function CallPanel({ id, onClose }: { id: number; onClose: () => void }) {
             />
           </div>
         )}
-      </aside>
+      </SidePanel>
     </>
   )
 }

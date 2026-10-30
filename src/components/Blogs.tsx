@@ -4,10 +4,10 @@ import { BLOG_COMPANIES, COLLECTED_AT, companyNames, fetchBlogDigests, isStale, 
 import { companyOf, POSTINGS } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { PageHeader } from './AppPage'
-import { toolButton } from './DeepParts'
-import { primaryButton } from './Dialog'
 import { CompanyMark, Failed, Meter, Notice, Panel, SkillChip } from './GapParts'
+import { ExternalLinkIcon } from './Icons'
 import { Bone } from './Skeleton'
+import { primaryButton, toolButton } from './ui'
 
 /**
  * 기술 블로그 화면이에요. 기업마다 기술 블로그의 대표 글을 요약해 두고, 요즘 어떤 고민을 하는지 분석해서 보여줘요.
@@ -97,11 +97,7 @@ function dayLabel(iso: string) {
 
 /** 새 탭으로 여는 링크에 붙이는 작은 표시예요. */
 function ExternalMark({ className = 'size-3.5' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 ${className}`} aria-hidden="true">
-      <path d="M6.5 3.5h-3v9h9v-3M9.5 2.5h4v4M13.5 2.5 7.5 8.5" />
-    </svg>
-  )
+  return <ExternalLinkIcon className={`shrink-0 ${className}`} strokeWidth={1.5} />
 }
 
 export function Blogs({ company, onCompany, onJobs }: {

@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { careerName, companyOf, daysLeft, daysSince, familyName, fitOf, type Company, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
+import { careerName, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, type Company, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
-import { primaryButton } from './Dialog'
 import { Bone } from './Skeleton'
-import { BriefcaseIcon, CheckIcon, CloseIcon, MapPinIcon, PersonIcon } from './Icons'
+import { BriefcaseIcon, CheckIcon, CloseIcon, MapPinIcon, PersonIcon, TriangleIcon } from './Icons'
+import { primaryButton, stagger } from './ui'
 
 /**
  * 취업 갭 진단의 화면들이 같이 쓰는 작은 부품이에요. 기업 머리글자, 적합도 표시, 스킬 이름표, 공고 카드, 흰 칸, 레이더와 막대 그래프가 있어요.
@@ -245,18 +245,10 @@ export function CheckMark({ status }: { status: RequirementCheck['status'] }) {
   const L = useMessages(TEXT)
   if (status === 'met') return <CheckIcon className="size-4 shrink-0 text-brand" label={L.checks.met} />
   if (status === 'partial') {
-    return (
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" className="size-4 shrink-0 text-gray-400" role="img" aria-label={L.checks.partial}>
-        <path d="M8 3l5.5 9.5h-11z" />
-      </svg>
-    )
+    return <TriangleIcon label={L.checks.partial} />
   }
   return <CloseIcon className="size-4 shrink-0 text-red-500" strokeWidth={1.8} label={L.checks.missing} />
 }
-
-/** 카드는 앞에서부터 조금씩 늦게 떠올라요. 뒤쪽 카드는 더 늦추지 않아요. */
-const STAGGER_MS = 28
-const STAGGER_MAX = 14
 
 export const cardsGrid = 'grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4'
 /** 한 줄만 보여주는 카드 줄. 둘째 줄부터는 높이를 0으로 두고 잘라서, 화면 폭에 들어가는 만큼만 보여요. */
@@ -264,8 +256,8 @@ export const cardsRow = 'grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] au
 
 const CARD_TAG_TONES = { brand: 'bg-brand-soft text-brand-hover', red: 'bg-red-50 text-red-600', gray: 'bg-gray-200/70 text-gray-700' }
 
-/** 카드 왼쪽 위에 붙는 작은 태그예요. 신규는 메인 컬러, 마감까지 남은 날은 빨간색, 나머지는 회색이에요. */
-function CardTag({ tone, children }: { tone: keyof typeof CARD_TAG_TONES; children: ReactNode }) {
+/** 카드 위에 붙는 작은 태그예요. 신규와 잘 맞아요는 메인 컬러, 마감까지 남은 날은 빨간색, 나머지는 회색이에요. 공고 탐색의 마감 태그도 같은 모양이에요. */
+export function CardTag({ tone, children }: { tone: keyof typeof CARD_TAG_TONES; children: ReactNode }) {
   return (
     <span className={`inline-flex h-6 shrink-0 items-center rounded-md px-2 text-[12px] font-medium whitespace-nowrap ${CARD_TAG_TONES[tone]}`}>
       {children}
@@ -276,7 +268,7 @@ function CardTag({ tone, children }: { tone: keyof typeof CARD_TAG_TONES; childr
 /** 이력서 기준으로 스킬 이름표의 색을 정해요. 진단 시작 화면과 같은 기준이에요. */
 export function skillTone(skill: string, resume: Resume | null): ChipTone {
   if (!resume) return 'plain'
-  const level = resume.skills.find((item) => item.name === skill)?.level ?? 0
+  const level = levelOf(resume, skill)
   return level >= 3 ? 'met' : level > 0 ? 'partial' : 'missing'
 }
 
@@ -286,9 +278,11 @@ export function skillTone(skill: string, resume: Resume | null): ChipTone {
  * 아이콘을 붙인 직군과 경력과 지역, 필수 역량을 놓아요. 테두리 없이 옅은 회색 바탕으로 구분해요.
  * 공고 카드와 크기가 같아서 같은 줄 규칙(cardsRow)에 들어가요.
  */
-export function PostingTile({ posting, resume, tag, onGray = false, order = 0, onOpen }: {
+export function PostingTile({ posting, resume, fit = fitOf(posting, resume), tag, onGray = false, order = 0, onOpen }: {
   posting: JobPosting
   resume: Resume | null
+  /** 부모가 정렬하며 이미 구한 적합도예요. 없으면 여기서 구해요. */
+  fit?: number | null
   tag: 'posted' | 'deadline' | 'fit'
   /** 회색 칸(`Panel`) 안에 놓일 때예요. 회색 위에서도 보이게 흰 바탕으로 그려요. */
   onGray?: boolean
@@ -299,9 +293,8 @@ export function PostingTile({ posting, resume, tag, onGray = false, order = 0, o
   const company = companyOf(posting.companyId)
   const since = daysSince(posting)
   const left = daysLeft(posting)
-  const fit = fitOf(posting, resume)
   return (
-    <li className="min-h-0 animate-rise" style={{ animationDelay: `${Math.min(order, STAGGER_MAX) * STAGGER_MS}ms` }}>
+    <li className="min-h-0 animate-rise" style={stagger(order)}>
       <button type="button" onClick={() => onOpen(posting)} className={`group flex h-[196px] w-full flex-col rounded-2xl p-5 text-left transition-colors ${onGray ? 'bg-white hover:bg-gray-100' : 'bg-gray-50 hover:bg-gray-100'}`}>
         <span className="flex items-center justify-between gap-2">
           {tag === 'posted' ? (
@@ -412,9 +405,10 @@ export function Notice({ title, body, action, onAction, className = '' }: { titl
   )
 }
 
-export function Failed({ onRetry, className = '' }: { onRetry: () => void; className?: string }) {
+/** 불러오지 못했을 때의 안내와 다시 시도 버튼이에요. 서버가 이유를 알려 주면 그 말을 아래에 적어요. */
+export function Failed({ message, onRetry, className = '' }: { message?: string; onRetry: () => void; className?: string }) {
   const L = useMessages(TEXT)
-  return <Notice title={L.failed} action={L.retry} onAction={onRetry} className={className} />
+  return <Notice title={L.failed} body={message} action={L.retry} onAction={onRetry} className={className} />
 }
 
 /** 가로 막대 하나예요. 이름, 막대, 값이 한 줄이에요. */
@@ -441,7 +435,7 @@ export function ScoreRing({ score, size = 112 }: { score: number; size?: number 
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg viewBox={`0 0 ${size} ${size}`} className="size-full -rotate-90" aria-hidden>
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-gray-100" />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-gray-200/70" />
         <circle
           cx={size / 2}
           cy={size / 2}

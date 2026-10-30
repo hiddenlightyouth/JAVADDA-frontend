@@ -930,17 +930,40 @@ function seeded(seed: string): () => number {
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
+/** 서류마다 스킬 이름과 숙련도를 한 번만 표로 만들어 둬요. 서류는 고칠 때마다 새 객체라 예전 표는 저절로 버려져요. */
+const levelTables = new WeakMap<Resume, Map<string, number>>()
+
 /** 서류에서 이 스킬을 몇으로 보는지. 없으면 0이에요. */
-const levelOf = (resume: Resume | null, skill: string) => resume?.skills.find((item) => item.name === skill)?.level ?? 0
+export function levelOf(resume: Resume | null, skill: string): number {
+  if (!resume) return 0
+  let table = levelTables.get(resume)
+  if (!table) {
+    table = new Map(resume.skills.map((item) => [item.name, item.level]))
+    levelTables.set(resume, table)
+  }
+  return table.get(skill) ?? 0
+}
+
+/** 서류마다 공고별 적합도를 기억해요. 정렬과 카드가 같은 값을 여러 번 물어서, 한 번만 계산해요. */
+const fitTables = new WeakMap<Resume, Map<string, number>>()
 
 /** 이 공고와 이력서의 적합도(0에서 100)예요. 필수 역량을 더 무겁게 봐요. 이력서가 없으면 null이에요. */
 export function fitOf(posting: JobPosting, resume: Resume | null): number | null {
   if (!resume || resume.skills.length === 0) return null
+  let table = fitTables.get(resume)
+  if (!table) {
+    table = new Map()
+    fitTables.set(resume, table)
+  }
+  const cached = table.get(posting.id)
+  if (cached !== undefined) return cached
   const score = (skills: string[]) => (skills.length === 0 ? 1 : skills.reduce((sum, skill) => sum + Math.min(1, levelOf(resume, skill) / 3), 0) / skills.length)
   const required = score(posting.required)
   const preferred = score(posting.preferred)
   const breadth = Math.min(1, resume.skills.length / 10)
-  return Math.round((required * 0.6 + preferred * 0.25 + breadth * 0.15) * 100)
+  const fit = Math.round((required * 0.6 + preferred * 0.25 + breadth * 0.15) * 100)
+  table.set(posting.id, fit)
+  return fit
 }
 
 function buildGaps(posting: JobPosting, resume: Resume): SkillGap[] {

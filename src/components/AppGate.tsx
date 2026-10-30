@@ -4,6 +4,7 @@ import { APP_LOGIN_EVENT, postToApp, type AppLoginDetail } from '../lib/app'
 import { signInWithAppCode } from '../lib/auth'
 import { LofyScript } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
+import { FormError, primaryButtonLg } from './ui'
 
 const TEXT = messages({
   ko: { waiting: '브라우저 로그인 완료를 기다리는 중', working: '처리 중', reopen: '로그인 페이지가 열리지 않았나요?', login: '브라우저로 로그인' },
@@ -52,16 +53,14 @@ export function AppGate() {
             type="button"
             disabled={working}
             onClick={openBrowser}
-            className="mt-8 h-12 w-full rounded-full bg-brand text-[15px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-gray-200 disabled:text-gray-400"
+            className={`mt-8 ${primaryButtonLg}`}
           >
             {working ? text.working : waiting ? text.reopen : text.login}
           </button>
         </div>
 
         {error && (
-          <p role="alert" className="mt-3 animate-rise text-[13px] leading-relaxed text-red-500">
-            {error}
-          </p>
+          <FormError className="mt-3">{error}</FormError>
         )}
       </div>
     </main>

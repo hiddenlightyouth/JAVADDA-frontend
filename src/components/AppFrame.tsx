@@ -4,6 +4,7 @@ import { track } from '../lib/analytics'
 import { isWebApp } from '../lib/app'
 import { messages, useMessages } from '../lib/i18n'
 import { readFlag, writeFlag } from '../lib/storage'
+import { SidebarIcon } from './Icons'
 
 // 앱에서만 쓰는 화면은 필요할 때만 받아요.
 const AppGate = lazy(() => import('./AppGate').then((module) => ({ default: module.AppGate })))
@@ -128,10 +129,7 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
         onClick={toggle}
         className={`absolute z-[31] flex size-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-200/70 hover:text-gray-900 ${isWebApp ? 'top-3.5 left-3' : 'top-0.5 left-[78px]'}`}
       >
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" className="size-4" aria-hidden="true">
-          <rect x="2" y="3" width="12" height="10" rx="2.5" />
-          <path d="M6.5 3v10" />
-        </svg>
+        <SidebarIcon />
       </button>
       {open &&
         (narrow ? (

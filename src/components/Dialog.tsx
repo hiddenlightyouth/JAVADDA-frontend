@@ -1,17 +1,15 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { useDismiss } from '../hooks/useDismiss'
 import { messages, useMessages } from '../lib/i18n'
+import { CloseButton } from './Icons'
 
 const TEXT = messages({
   ko: { cancel: '취소', working: '처리 중' },
   en: { cancel: 'Cancel', working: 'Working' },
 })
 
-export const quietButton = 'h-9 rounded-full px-3.5 text-[13px] font-medium text-gray-600 transition-colors hover:text-gray-900'
-export const primaryButton =
-  'h-9 rounded-full bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-gray-200 disabled:text-gray-400'
-const dangerButton =
-  'h-9 rounded-full bg-red-500 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:bg-gray-200 disabled:text-gray-400'
+import { dangerButton, primaryButton, quietButton } from './ui'
 
 /**
  * 화면을 흐리게 덮고 가운데에 뜨는 창이에요. 바깥을 누르거나 Esc를 누르면 닫혀요.
@@ -51,6 +49,52 @@ export function Modal({ onClose, labelledBy, alert = false, className = 'w-full 
         {children}
       </div>
     </div>,
+    document.body,
+  )
+}
+
+/** 오른쪽에서 여는 칸의 내용 자리예요. 넘치면 이 안에서 스크롤해요. */
+export const panelBody = 'min-h-0 flex-1 overflow-y-auto px-6 pb-6'
+
+/**
+ * 오른쪽에서 미끄러져 들어오는 칸이에요. 갭 상세, 서류 상세, 관리자의 회원과 호출 상세가 같이 써요.
+ * 바깥을 누르거나 Esc를 누르면 닫혀요. 안에서 확인 창을 띄우는 동안에는 dismissable을 꺼서 칸이 먼저 닫히지 않게 해요.
+ * `Modal`처럼 화면 맨 바깥(body)에 그려요. header가 있으면 그 오른쪽에, 없으면 맨 위 줄에 닫기 버튼만 둬요.
+ */
+export function SidePanel({ onClose, closeLabel, labelledBy, label, header, dismissable = true, className = 'max-w-[440px]', children }: {
+  onClose: () => void
+  closeLabel: string
+  /** 칸 제목의 id예요. 제목이 없으면 label을 넘겨요. */
+  labelledBy?: string
+  label?: string
+  header?: ReactNode
+  dismissable?: boolean
+  /** 폭을 정해요. */
+  className?: string
+  children: ReactNode
+}) {
+  const ref = useRef<HTMLElement>(null)
+  useDismiss(dismissable, ref, onClose)
+  return createPortal(
+    <aside
+      ref={ref}
+      role="dialog"
+      aria-labelledby={labelledBy}
+      aria-label={labelledBy ? undefined : label}
+      className={`fixed inset-y-0 right-0 z-30 flex w-full animate-slide-in flex-col border-l border-gray-200 bg-white ${className}`}
+    >
+      {header ? (
+        <div className="flex shrink-0 items-start justify-between gap-3 px-6 pt-6 pb-4">
+          <div className="min-w-0">{header}</div>
+          <CloseButton label={closeLabel} size="md" onClick={onClose} />
+        </div>
+      ) : (
+        <div className="flex h-14 shrink-0 items-center justify-end px-4">
+          <CloseButton label={closeLabel} size="md" onClick={onClose} />
+        </div>
+      )}
+      {children}
+    </aside>,
     document.body,
   )
 }

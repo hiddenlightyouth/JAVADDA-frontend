@@ -3,10 +3,10 @@ import { track } from '../lib/analytics'
 import { canEmbed, careerName, companyOf, familyName, POSTINGS, type Company, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { readItem, writeItem } from '../lib/storage'
-import { primaryButton } from './Dialog'
 import { CompanyMark, SkillChip } from './GapParts'
-import { CloseButton, RefreshIcon } from './Icons'
+import { CloseButton, ExternalLinkIcon, RefreshIcon } from './Icons'
 import { Bone } from './Skeleton'
+import { Busy, iconButton, label, primaryButton } from './ui'
 
 /**
  * 공고 원문이나 기업 소개 사이트를 새 탭 대신 앱 안에서 보는 미니 브라우저예요. 화면을 가리지 않고 오른쪽에 나란히 붙어서, 공고 목록을 보면서 원문을 같이 봐요.
@@ -70,7 +70,7 @@ export function SplitView({ children, side }: { children: ReactNode; side: React
   )
 }
 
-const toolbarButton = 'flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900'
+const toolbarButton = iconButton.md
 
 /** 공고(`posting`)나 기업(`company`) 하나를 받아요. 기업 사이트가 막혀 있으면 대신 보여주는 공고를 눌러 그 공고로 바꿔요(`onPosting`). */
 export function PostingBrowser({ posting, company: about, onClose, onPosting }: { posting?: JobPosting; company?: Company; onClose: () => void; onPosting?: (posting: JobPosting) => void }) {
@@ -200,23 +200,20 @@ export function PostingBrowser({ posting, company: about, onClose, onPosting }: 
           </button>
         )}
         <a href={url} target="_blank" rel="noopener noreferrer" aria-label={L.external} title={L.external} className={toolbarButton}>
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
-            <path d="M9 2.5h4.5V7M13.5 2.5 7.5 8.5M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3" />
-          </svg>
+          <ExternalLinkIcon strokeWidth={1.5} />
         </a>
       </div>
 
       {embeddable ? (
         <div className="relative min-h-0 flex-1">
           {!loaded && (
-            <div aria-busy="true" className="absolute inset-0 p-8">
-              <span className="sr-only">{L.loading}</span>
+            <Busy label={L.loading} className="absolute inset-0 p-8">
               <Bone className="h-6 w-1/2" />
               <Bone className="mt-6 h-3.5 w-full" />
               <Bone className="mt-3 h-3.5 w-5/6" />
               <Bone className="mt-3 h-3.5 w-2/3" />
               <Bone className="mt-8 h-40 w-full rounded-xl!" />
-            </div>
+            </Busy>
           )}
           <iframe
             key={version}
@@ -235,7 +232,7 @@ export function PostingBrowser({ posting, company: about, onClose, onPosting }: 
             <p className="mt-1.5 text-[13.5px] leading-relaxed text-gray-500">{posting ? L.blockedBody : L.companyBlockedBody}</p>
 
             {posting ? (
-              <section className="mt-6 rounded-2xl bg-gray-50 p-6">
+              <section className="mt-6 rounded-2xl bg-gray-50 p-5">
                 <div className="flex items-center gap-3">
                   <CompanyMark company={company} className="size-10 text-[15px]" />
                   <div className="min-w-0">
@@ -245,13 +242,13 @@ export function PostingBrowser({ posting, company: about, onClose, onPosting }: 
                 </div>
                 <h2 className="mt-4 text-[18px] leading-snug font-semibold text-gray-900">{posting.title}</h2>
                 <p className="mt-2 text-[13.5px] leading-relaxed text-gray-600">{posting.summary}</p>
-                <h3 className="mt-5 text-[12.5px] font-medium text-gray-400">{L.required}</h3>
+                <h3 className={`mt-5 ${label}`}>{L.required}</h3>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {posting.required.map((skill) => (
                     <SkillChip key={skill} name={skill} />
                   ))}
                 </div>
-                <h3 className="mt-4 text-[12.5px] font-medium text-gray-400">{L.preferred}</h3>
+                <h3 className={`mt-4 ${label}`}>{L.preferred}</h3>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {posting.preferred.map((skill) => (
                     <SkillChip key={skill} name={skill} />
@@ -276,7 +273,7 @@ export function PostingBrowser({ posting, company: about, onClose, onPosting }: 
 function CompanySummary({ company, postings, onPosting }: { company: Company; postings: JobPosting[]; onPosting?: (posting: JobPosting) => void }) {
   const L = useMessages(TEXT)
   return (
-    <section className="mt-6 rounded-2xl bg-gray-50 p-6">
+    <section className="mt-6 rounded-2xl bg-gray-50 p-5">
       <div className="flex items-center gap-3">
         <CompanyMark company={company} className="size-10 text-[15px]" />
         <div className="min-w-0">
@@ -284,7 +281,7 @@ function CompanySummary({ company, postings, onPosting }: { company: Company; po
           <p className="truncate text-[12.5px] text-gray-400">{company.industry}</p>
         </div>
       </div>
-      <h3 className="mt-5 text-[12.5px] font-medium text-gray-400">{L.openings(postings.length)}</h3>
+      <h3 className={`mt-5 ${label}`}>{L.openings(postings.length)}</h3>
       <ul className="mt-2 space-y-1.5">
         {postings.map((item) => (
           <li key={item.id}>

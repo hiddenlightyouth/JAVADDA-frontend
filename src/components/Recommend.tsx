@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
 import { fetchPostings, fitOf, sortPostings, useResume, type JobPosting, type PostingSort } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
-import { PageHeader } from './AppPage'
-import { MapMenu } from './DeepParts'
+import { PageHeader, ScrollPage } from './AppPage'
+import { Dropdown } from './Dropdown'
 import { cardsGrid, Failed, Notice, PostingCardsSkeleton, PostingTile, SkillChip } from './GapParts'
+import { toolButton } from './ui'
 
 /**
  * 추천 공고 화면이에요. 올려 둔 이력서의 역량과 가까운 공고를 적합도 순서로 보여줘요.
@@ -80,107 +81,100 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
     }
   }, [resume, attempt])
 
+  const list = useMemo(
+    () => (Array.isArray(loaded) && resume ? sortPostings(loaded, sort, resume).filter((posting) => (fitOf(posting, resume) ?? 0) >= threshold) : loaded),
+    [loaded, sort, resume, threshold],
+  )
+
   if (!resume) {
     return (
-      <main className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 px-6 pt-14 md:px-10 md:pt-9">
-          <PageHeader title={L.title} />
-                  </div>
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6">
-          <Notice title={L.noResume} body={L.noResumeBody} action={L.upload} onAction={onResume} />
-        </div>
-      </main>
+      <ScrollPage header={<PageHeader title={L.title} />} className="flex flex-col items-center justify-center">
+        <Notice title={L.noResume} body={L.noResumeBody} action={L.upload} onAction={onResume} />
+      </ScrollPage>
     )
   }
 
-  const list = Array.isArray(loaded) ? sortPostings(loaded, sort, resume).filter((posting) => (fitOf(posting, resume) ?? 0) >= threshold) : loaded
   const top = [...resume.skills].sort((a, b) => b.level - a.level).slice(0, 8)
 
   return (
-    <main className="flex min-h-0 flex-1 flex-col">
-      <div className="shrink-0 px-6 pt-14 md:px-10 md:pt-9">
-        <PageHeader title={L.title} />
-              </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
-        {/* 어떤 이력서를 기준으로 추천하는지 먼저 알려줘요. */}
-        <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl bg-gray-50 p-4">
-          <div className="min-w-0">
-            <p className="text-[13.5px] font-medium text-gray-900">{L.basis(resume.name, formatDateTime(resume.uploadedAt))}</p>
-            <p className="mt-0.5 text-[12.5px] text-gray-500">{L.basisHint}</p>
-            <div className="mt-3 flex flex-wrap gap-1.5" aria-label={L.skills}>
-              {top.map((skill) => (
-                <SkillChip key={skill.name} name={skill.name} hint={`Lv.${skill.level}`} />
-              ))}
-            </div>
+    <ScrollPage header={<PageHeader title={L.title} />}>
+      {/* 어떤 이력서를 기준으로 추천하는지 먼저 알려줘요. */}
+      <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl bg-gray-50 p-5">
+        <div className="min-w-0">
+          <p className="text-[13.5px] font-medium text-gray-900">{L.basis(resume.name, formatDateTime(resume.uploadedAt))}</p>
+          <p className="mt-0.5 text-[12.5px] text-gray-500">{L.basisHint}</p>
+          <div className="mt-3 flex flex-wrap gap-1.5" aria-label={L.skills}>
+            {top.map((skill) => (
+              <SkillChip key={skill.name} name={skill.name} hint={`Lv.${skill.level}`} />
+            ))}
           </div>
-          <button type="button" onClick={onResume} className="h-9 shrink-0 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-gray-800 transition-colors hover:border-gray-300 hover:text-gray-950">
-            {L.change}
-          </button>
         </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <MapMenu
-            label={L.sort}
-            value={L.sorts[sort]}
-            groups={[
-              {
-                items: SORTS.map((value) => ({
-                  label: L.sorts[value],
-                  checked: sort === value,
-                  onSelect: () => {
-                    track('recommend_sort_change', { sort: value })
-                    setSort(value)
-                  },
-                })),
-              },
-            ]}
-          />
-          <MapMenu
-            label={L.threshold}
-            value={L.thresholds[threshold]}
-            groups={[
-              {
-                items: THRESHOLDS.map((value) => ({
-                  label: L.thresholds[value],
-                  checked: threshold === value,
-                  onSelect: () => {
-                    track('recommend_threshold_change', { threshold: value })
-                    setThreshold(value)
-                  },
-                })),
-              },
-            ]}
-          />
-          {Array.isArray(list) && <p className="ml-auto text-[13px] text-gray-500 tabular-nums">{L.items(list.length)}</p>}
-        </div>
-
-        <div className="mt-4">
-          {list === undefined ? (
-            <PostingCardsSkeleton />
-          ) : list === 'failed' ? (
-            <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
-          ) : list.length === 0 ? (
-            <Notice title={L.none} body={L.noneBody} className="mt-16" />
-          ) : (
-            <ul className={cardsGrid}>
-              {list.map((posting, order) => (
-                <PostingTile
-                  key={`${sort}:${threshold}:${posting.id}`}
-                  posting={posting}
-                  resume={resume}
-                  tag="fit"
-                  order={order}
-                  onOpen={() => {
-                    track('posting_select', { posting: posting.id, from: 'recommend' })
-                    onPick(posting.id)
-                  }}
-                />
-              ))}
-            </ul>
-          )}
-        </div>
+        <button type="button" onClick={onResume} className={`${toolButton} shrink-0`}>
+          {L.change}
+        </button>
       </div>
-    </main>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <Dropdown
+          label={L.sort}
+          value={L.sorts[sort]}
+          groups={[
+            {
+              items: SORTS.map((value) => ({
+                label: L.sorts[value],
+                checked: sort === value,
+                onSelect: () => {
+                  track('recommend_sort_change', { sort: value })
+                  setSort(value)
+                },
+              })),
+            },
+          ]}
+        />
+        <Dropdown
+          label={L.threshold}
+          value={L.thresholds[threshold]}
+          groups={[
+            {
+              items: THRESHOLDS.map((value) => ({
+                label: L.thresholds[value],
+                checked: threshold === value,
+                onSelect: () => {
+                  track('recommend_threshold_change', { threshold: value })
+                  setThreshold(value)
+                },
+              })),
+            },
+          ]}
+        />
+        {Array.isArray(list) && <p className="ml-auto text-[13px] text-gray-500 tabular-nums">{L.items(list.length)}</p>}
+      </div>
+
+      <div className="mt-4">
+        {list === undefined ? (
+          <PostingCardsSkeleton />
+        ) : list === 'failed' ? (
+          <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
+        ) : list.length === 0 ? (
+          <Notice title={L.none} body={L.noneBody} className="mt-16" />
+        ) : (
+          <ul className={cardsGrid}>
+            {list.map((posting, order) => (
+              <PostingTile
+                key={`${sort}:${threshold}:${posting.id}`}
+                posting={posting}
+                resume={resume}
+                tag="fit"
+                order={order}
+                onOpen={() => {
+                  track('posting_select', { posting: posting.id, from: 'recommend' })
+                  onPick(posting.id)
+                }}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
+    </ScrollPage>
   )
 }

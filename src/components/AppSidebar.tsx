@@ -11,7 +11,8 @@ import { Kbd } from './Shortcuts'
 import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
-import { PlusIcon } from './Icons'
+import { BookIcon, BugIcon, ChevronUpDownIcon, DocumentIcon, DotsIcon, PersonIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
+import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { Tip } from './GapParts'
 
 const TEXT = messages({
@@ -64,7 +65,7 @@ function resetLeft(value: string): { days: number; hours: number } | null {
   return { days: hours >= 24 ? Math.ceil(ms / 86_400_000) : 0, hours }
 }
 
-export type SidebarPage = 'explore' | 'recommend' | 'resume' | 'blogs' | 'articles' | 'me' | 'admin' | null
+type SidebarPage = 'explore' | 'recommend' | 'resume' | 'blogs' | 'articles' | 'me' | 'admin' | null
 
 interface Props {
   /** 지금 열려 있는 리포트. 목록에서 강조해요. */
@@ -94,7 +95,8 @@ interface Props {
 
 const link = 'relative flex h-9 w-full items-center rounded-xl px-3 text-left text-[13px] font-medium transition-colors'
 const tone = (active: boolean) => (active ? 'bg-gray-200/70 text-gray-900' : 'text-gray-600 hover:bg-gray-200/50 hover:text-gray-900')
-const menuItem = 'block w-full rounded-xl px-3 py-2 text-left text-[13px] font-medium transition-colors hover:bg-gray-50 disabled:text-gray-400'
+/** 사이드바 아래의 아이콘 버튼이에요. 회색 사이드바 위라 한 단계 짙은 회색으로 깔려요. */
+const sideIconButton = 'flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-gray-200/50 hover:text-gray-700'
 
 const plain = (event: MouseEvent) => !(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)
 
@@ -149,17 +151,15 @@ function ReportRow({ report, active, menuOpen, onOpen, onToggleMenu, onCloseMenu
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           onClick={onToggleMenu}
-          className="flex size-7 shrink-0 items-center justify-center gap-[3px] rounded-full text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700"
         >
-          <span className="size-[3px] rounded-full bg-current" />
-          <span className="size-[3px] rounded-full bg-current" />
-          <span className="size-[3px] rounded-full bg-current" />
+          <DotsIcon />
         </button>
       </div>
 
       {menuOpen && (
-        <div role="menu" className="absolute top-full right-1 z-10 -mt-1 w-36 origin-top-right animate-pop rounded-2xl border border-gray-200 bg-white p-1.5">
-          <button type="button" role="menuitem" onClick={onDelete} className={`${menuItem} text-red-500`}>
+        <div role="menu" className={`absolute top-full right-1 z-10 -mt-1 w-36 origin-top-right ${menuPanel}`}>
+          <button type="button" role="menuitem" onClick={onDelete} className={menuDangerItem}>
             {list.delete}
           </button>
         </div>
@@ -248,10 +248,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           label={text.explore}
           shortcut="T"
           icon={
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
-              <circle cx="7" cy="7" r="4.5" />
-              <path d="m10.5 10.5 3 3" />
-            </svg>
+<SearchIcon className="size-4 shrink-0" strokeWidth={1.4} />
           }
         />
         <NavLink
@@ -265,9 +262,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           shortcut="R"
           locked={resume ? undefined : text.recommendLocked}
           icon={
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
-              <path d="M8 2.2l1.8 3.7 4 .6-2.9 2.8.7 4L8 11.4l-3.6 1.9.7-4L2.2 6.5l4-.6z" />
-            </svg>
+<StarIcon className="size-4 shrink-0" />
           }
         />
         <NavLink
@@ -280,11 +275,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           label={text.blogs}
           shortcut="G"
           icon={
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
-              <path d="M2.5 3.5h6a2 2 0 0 1 2 2v8a1.5 1.5 0 0 0-1.5-1.5h-6.5z" />
-              <path d="M13.5 3.5h-1a2 2 0 0 0-2 2" />
-              <path d="M10.5 13.5V6M13.5 3.5V12h-3" />
-            </svg>
+<BookIcon className="size-4 shrink-0" />
           }
         />
         <a
@@ -298,10 +289,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           }}
           className={`${link} mt-1.5 h-auto gap-2 py-2 ${tone(page === 'resume')}`}
         >
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round" className="size-4 shrink-0" aria-hidden="true">
-            <path d="M4 1.75h5.5L12.5 4.75v9a.75.75 0 0 1-.75.75h-7.5a.75.75 0 0 1-.75-.75V2.5a.75.75 0 0 1 .75-.75Z" />
-            <path d="M6 7.5h4.5M6 10h4.5M6 5h2" />
-          </svg>
+          <DocumentIcon />
           <span className="min-w-0 flex-1">
             <span className="block">{text.resume}</span>
             {/* 올려 둔 서류의 이름을 옅게 같이 적어서, 어떤 서류 기준으로 진단하는지 보여줘요. */}
@@ -353,7 +341,6 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
   )
 }
 
-const menuRow = 'flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-left text-[13.5px] text-gray-800 transition-colors hover:bg-gray-100'
 const menuIcon = 'size-4 shrink-0 text-gray-500'
 
 const PLAN_NAMES: Record<PlanId, string> = { FREE: 'Free', LITE: 'Lite', PRO: 'Pro' }
@@ -394,7 +381,7 @@ function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onLogi
   return (
     <div ref={ref} className="relative flex shrink-0 items-center gap-1 border-t border-gray-200 p-2">
       {open && (
-        <div role="menu" className="absolute bottom-full left-2 mb-1 w-[272px] origin-bottom-left animate-pop rounded-2xl border border-gray-200 bg-white p-1.5">
+        <div role="menu" className={`absolute bottom-full left-2 mb-1 w-[272px] origin-bottom-left ${menuPanel}`}>
           {me?.email && <p className="truncate px-2.5 pt-1.5 pb-2 text-[12.5px] text-gray-500">{me.email}</p>}
           {usage && (
             <div className="px-2.5 pb-2.5">
@@ -412,17 +399,12 @@ function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onLogi
           )}
 
           <button type="button" role="menuitem" onClick={go(onMe)} className={menuRow}>
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" className={menuIcon} aria-hidden="true">
-              <circle cx="8" cy="5.5" r="2.5" />
-              <path d="M3 13.5c.6-2.2 2.6-3.5 5-3.5s4.4 1.3 5 3.5" strokeLinecap="round" />
-            </svg>
+            <PersonIcon className={menuIcon} />
             {text.me}
           </button>
           {onAdmin && (
             <button type="button" role="menuitem" onClick={go(onAdmin)} className={menuRow}>
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" className={menuIcon} aria-hidden="true">
-                <path d="M8 2l4.5 1.7v3.6c0 2.9-1.8 5.3-4.5 6.4-2.7-1.1-4.5-3.5-4.5-6.4V3.7z" />
-              </svg>
+              <ShieldIcon className={menuIcon} />
               {text.admin}
             </button>
           )}
@@ -438,9 +420,7 @@ function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onLogi
             })}
             className={menuRow}
           >
-            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className={menuIcon} aria-hidden="true">
-              <path d="M6.5 2.5h-2a1.5 1.5 0 0 0-1.5 1.5v8a1.5 1.5 0 0 0 1.5 1.5h2M10 5l3 3-3 3M13 8H6.5" />
-            </svg>
+            <SignOutIcon className={menuIcon} />
             {text.signOut}
           </button>
         </div>
@@ -453,7 +433,7 @@ function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onLogi
             track('account_nav_click', { page: 'login', from: 'sidebar' })
             onLogin()
           }}
-          className="flex h-10 min-w-0 flex-1 items-center justify-center rounded-xl bg-brand px-3 text-[13.5px] font-semibold text-white transition-colors hover:bg-brand-hover"
+          className={`${primaryButtonMd} min-w-0 flex-1`}
         >
           {text.login}
         </button>
@@ -476,9 +456,7 @@ function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onLogi
             <span className="block truncate text-[13.5px] font-semibold text-gray-900">{name}</span>
             {usage?.plan && <span className="block truncate text-[12px] text-gray-500">{PLAN_NAMES[usage.plan]}</span>}
           </span>
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="size-4 shrink-0 text-gray-400" aria-hidden="true">
-            <path d="M5 6.5L8 3.5l3 3M5 9.5l3 3 3-3" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <ChevronUpDownIcon />
         </button>
       )}
       <button
@@ -488,12 +466,9 @@ function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onLogi
         aria-haspopup="dialog"
         aria-expanded={settingsOpen}
         onClick={onSettings}
-        className={`flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-gray-200/50 hover:text-gray-700 ${settingsOpen ? 'bg-gray-200/70 text-gray-900' : 'text-gray-400'}`}
+        className={`${sideIconButton} ${settingsOpen ? 'bg-gray-200/70 text-gray-900' : 'text-gray-400'}`}
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
-          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
+        <SettingsIcon />
       </button>
       {canReport && (
         <button
@@ -501,11 +476,9 @@ function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onLogi
           aria-label={text.bug}
           title={text.bug}
           onClick={openBugReport}
-          className="flex size-9 shrink-0 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-gray-200/50 hover:text-gray-700"
+          className={`${sideIconButton} text-gray-400`}
         >
-          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
-            <path d="M5.5 5.5a2.5 2.5 0 0 1 5 0M5 6.5h6a1 1 0 0 1 1 1v2a4 4 0 0 1-8 0v-2a1 1 0 0 1 1-1zM8 8v5.5M4 9H2M14 9h-2M4.5 12L3 13.5M11.5 12l1.5 1.5M4.3 6.8L3 5.5M11.7 6.8L13 5.5" />
-          </svg>
+          <BugIcon />
         </button>
       )}
     </div>
