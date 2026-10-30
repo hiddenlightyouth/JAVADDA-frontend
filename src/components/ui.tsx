@@ -1,7 +1,10 @@
-import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { messages, useMessages } from '../lib/i18n'
 import { LOAD_SHOW_AFTER_MS } from '../lib/load'
 import { Kbd } from './Shortcuts'
+
+/** 기다리는 동안만 보이는 로봇 애니메이션이라, 플레이어와 엔진은 그때 따로 받아요. */
+const AiLoader = lazy(() => import('./AiLoader'))
 
 /**
  * 여러 화면이 같이 쓰는 기본 모양이에요. 버튼, 입력칸, 작은 제목, 고르는 칸, 탭, 목록, 오류 문구를 한 곳에서 정해요.
@@ -287,7 +290,58 @@ export function ProgressBar({ value, text, title, compact = false, className = '
 }
 
 /**
- * 자료를 받는 동안 그 자리에 두는 진행 막대예요. 퍼센트는 받은 바이트로 셈해요(`useLoadProgress`, `src/lib/load.ts`).
+ * 기다리는 화면의 큰 모양이에요. 위에 움직이는 로봇(`AiLoader`), 그 아래 동그란 진행 고리 안에 큰 퍼센트, 맨 아래에 지금 하는 일의 문장이 있어요.
+ * AI를 기다리는 칸(`AiProgress`, `GapParts`)과 자료를 받는 칸(`LoadProgress`)이 같이 써요. 메뉴나 표처럼 좁은 자리는 `ProgressBar`의 compact를 써요.
+ * 로봇은 처음 쓸 때 따로 받아 와서, 받는 동안은 같은 크기의 빈자리만 둬요. 고리는 넘겨받은 퍼센트를 그대로 그려요.
+ * title을 주면 문장 위에 작게 적어요(올리는 파일 이름 등).
+ */
+export function ProgressRing({ value, text, title, className = '' }: { value: number; text: string; title?: string; className?: string }) {
+  const L = useMessages(TEXT)
+  const percent = Math.min(100, Math.max(0, Math.round(value)))
+  return (
+    <div className={`flex flex-col items-center text-center ${className}`}>
+      <Suspense fallback={<span aria-hidden className="block size-20" />}>
+        <AiLoader className="size-20" />
+      </Suspense>
+      <div
+        role="progressbar"
+        aria-label={`${L.progress}, ${text}`}
+        aria-valuenow={percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        className="relative mt-2 size-32"
+      >
+        <svg viewBox="0 0 120 120" className="size-full -rotate-90" aria-hidden>
+          <circle cx="60" cy="60" r="52" fill="none" strokeWidth="10" className="stroke-gray-200/70" />
+          <circle
+            cx="60"
+            cy="60"
+            r="52"
+            fill="none"
+            strokeWidth="10"
+            strokeLinecap="round"
+            pathLength={100}
+            strokeDasharray="100"
+            strokeDashoffset={100 - percent}
+            className="stroke-brand transition-[stroke-dashoffset] duration-500 ease-out"
+          />
+        </svg>
+        <span className="absolute inset-0 flex items-center justify-center text-[34px] leading-none font-bold tracking-tight text-gray-900 tabular-nums">
+          {percent}
+          <span className="mt-2 ml-0.5 text-[16px] font-semibold text-gray-400">%</span>
+        </span>
+      </div>
+      {title && <p className="mt-4 max-w-full truncate text-[12.5px] text-gray-400">{title}</p>}
+      <p role="status" className={`${title ? 'mt-1' : 'mt-4'} max-w-full truncate text-[13.5px] text-gray-600`}>
+        {text}
+      </p>
+    </div>
+  )
+}
+
+/**
+ * 자료를 받는 동안 그 자리에 두는 진행 칸이에요. 퍼센트는 받은 바이트로 셈해요(`useLoadProgress`, `src/lib/load.ts`).
+ * 화면을 채우는 자리에서는 로봇과 진행 고리(`ProgressRing`)를, compact(메뉴, 표 안)에서는 한 줄 막대를 보여줘요.
  * 금방 끝나는 받기에서 깜빡이지 않게 0.15초 뒤에 나타나요. 그동안은 자리만 차지해요. 문장을 주지 않으면 "불러오고 있어요"예요.
  * 화면 가운데에 둘 때는 `loadCenter`를 className으로 넘겨요.
  */
@@ -300,7 +354,7 @@ export function LoadProgress({ percent, text, compact = false, className = '' }:
   }, [])
   return (
     <div aria-busy="true" className={`${visible ? 'animate-fade' : 'invisible'} ${className}`}>
-      <ProgressBar value={percent} text={text ?? L.loading} compact={compact} />
+      {compact ? <ProgressBar value={percent} text={text ?? L.loading} compact /> : <ProgressRing value={percent} text={text ?? L.loading} />}
     </div>
   )
 }

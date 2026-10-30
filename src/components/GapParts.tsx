@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { careerName, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, useDiagnosed, type Company, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { BriefcaseIcon, CheckIcon, CloseIcon, MapPinIcon, PersonIcon, TriangleIcon } from './Icons'
-import { Badge, primaryButton, ProgressBar, stagger } from './ui'
+import { Badge, primaryButton, ProgressRing, stagger } from './ui'
 
 /**
  * 취업 갭 진단의 화면들이 같이 쓰는 작은 부품이에요. 기업 머리글자, 적합도 표시, 스킬 이름표, 공고 카드, 흰 칸, 레이더와 막대 그래프가 있어요.
@@ -36,7 +36,7 @@ const TEXT = messages({
     retry: '다시 시도하기',
     remove: (name: string) => `${name} 빼기`,
     stages: {
-      waiting: '시작하고 있어요',
+      waiting: '시작하는 중',
       queued: '진단 순서를 기다리고 있어요',
       reading: '서류에서 글자를 꺼내고 있어요',
       analyzing: 'AI가 서류의 역량을 읽고 있어요',
@@ -317,13 +317,13 @@ export function useStageText(stage: string): string {
 }
 
 /**
- * AI를 기다리는 동안 보여주는 진행 막대예요. 왼쪽에 지금 단계의 문장, 오른쪽에 퍼센트, 그 아래에 가는 막대가 있어요.
+ * AI를 기다리는 동안 보여주는 진행 칸이에요. 모양은 다른 기다리는 화면과 같은 로봇과 진행 고리(`ProgressRing`)이고, 문장만 서버가 알려 주는 단계로 바꿔요.
  * 이력서 올리기, 리포트 만들기, 서류 검증, 예상 질문, 답변 채점이 같이 써요. 회색 칸 위와 흰 바탕 어디에나 놓여요.
  * title을 주면 단계 문장 위에 작게 적어요(올리는 파일 이름 등).
  */
 export function AiProgress({ progress, stage, title, className = '' }: { progress: number; stage: string; title?: string; className?: string }) {
   const text = useStageText(stage)
-  return <ProgressBar value={progress} text={text} title={title} className={`animate-fade ${className}`} />
+  return <ProgressRing value={progress} text={text} title={title} className={`animate-fade ${className}`} />
 }
 
 /**
