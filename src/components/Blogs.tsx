@@ -39,7 +39,6 @@ const TEXT = messages({
     interviewTitle: '면접에서 이렇게 써 보세요',
     jobs: (count: number) => `공고 ${count}개 보기`,
     openBlog: '블로그 열기',
-    collected: (date: string) => `각 블로그에서 ${date}까지 올라온 글을 모아 요약했어요.`,
     none: '이 조건에 맞는 글이 없어요.',
     noneAction: '주제 풀기',
     missing: '이 기업의 기술 블로그 요약은 아직 없어요.',
@@ -60,7 +59,6 @@ const TEXT = messages({
     interviewTitle: 'Use it in your interview',
     jobs: (count: number) => `View ${count} ${count === 1 ? 'posting' : 'postings'}`,
     openBlog: 'Open blog',
-    collected: (date: string) => `Summarized from posts published up to ${date}.`,
     none: 'No posts match.',
     noneAction: 'Clear topic',
     missing: "We don't have a summary for this company's blog yet.",
@@ -253,7 +251,6 @@ export function Blogs({ company, onCompany, onJobs }: {
             />
           )}
         </div>
-        <p className="mt-10 text-center text-[12px] text-gray-400">{L.collected(dayLabel(COLLECTED_AT))}</p>
       </ScrollPage>
     </SplitView>
   )

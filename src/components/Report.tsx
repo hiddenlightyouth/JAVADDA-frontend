@@ -63,7 +63,6 @@ const TEXT = messages({
     duration: '강의 시간',
     groups: { missing: '서류에서 찾지 못한 역량', partial: '서류에 있지만 찾지 못함', strength: '강점' } as Record<SkillGap['kind'], string>,
     trends: '시장 요구 변화',
-    trendsHint: '같은 직군 공고에서 지난 12주 동안 이 스킬을 적은 수예요.',
     trendColumns: { skill: '역량', weeks: '최근 12주', share: '공고 비중', change: '6개월 변화' },
     changeTip: '지난 6개월 사이 이 역량을 적은 공고 비율이 얼마나 바뀌었는지예요.',
     courses: '추천 강의',
@@ -119,7 +118,6 @@ const TEXT = messages({
     duration: 'Length',
     groups: { missing: 'Not in your documents', partial: 'Listed but not shown', strength: 'Strengths' },
     trends: 'Market demand',
-    trendsHint: 'How many postings in this job family listed each skill over the last 12 weeks.',
     trendColumns: { skill: 'Skill', weeks: 'Last 12 weeks', share: 'Share', change: '6-month change' },
     changeTip: 'How much the share of postings listing this skill moved over the last 6 months.',
     courses: 'Suggested courses',
@@ -477,7 +475,7 @@ function SummaryTab({ report, onOpenGap, onPick }: { report: ReportData; onOpenG
             </div>
           </Panel>
 
-          <Panel title={L.trends} action={<span className="text-[12px] text-gray-400">{L.trendsHint}</span>}>
+          <Panel title={L.trends}>
             <TrendList report={report} />
           </Panel>
 

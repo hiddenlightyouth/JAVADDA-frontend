@@ -38,7 +38,6 @@ const TEXT = messages({
     items: (count: number) => `${count}개의 공고`,
     none: '맞는 공고가 없어요.',
     noneBody: '검색어나 걸러 둔 조건을 바꿔 보세요.',
-    sources: '워크넷과 기업 채용 페이지에서 하루 한 번 모아요.',
     location: '지역',
     company: '기업',
     always: '상시 채용',
@@ -64,7 +63,6 @@ const TEXT = messages({
     items: (count: number) => `${count} ${count === 1 ? 'posting' : 'postings'}`,
     none: 'No postings match.',
     noneBody: 'Try a different search or filter.',
-    sources: 'Collected once a day from Worknet and company career pages.',
     location: 'Location',
     company: 'Company',
     always: 'Rolling',
@@ -301,7 +299,6 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
             </ul>
           )}
         </div>
-        <p className="mt-10 text-center text-[12px] text-gray-400">{L.sources}</p>
       </ScrollPage>
     </SplitView>
   )
