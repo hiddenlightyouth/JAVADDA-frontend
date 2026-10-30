@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
 import { BLOG_COMPANIES, COLLECTED_AT, fetchBlogDigests, isStale, THEME_NAMES, themeTrends, topSkills, type BlogDigest, type BlogPost, type BlogTheme, type ThemeTrend } from '../lib/blogs'
-import { companyOf, POSTINGS } from '../lib/gap'
+import { canEmbed, companyOf, POSTINGS } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
@@ -14,8 +14,14 @@ import { Bullets, Busy, label, primaryButton, stagger, toolButton } from './ui'
  * 기술 블로그 화면이에요. 여러 기업 기술 블로그의 글을 최신 순서로 한데 늘어놓고, 기업과 주제로 걸러 봐요.
  * 기업은 공고 탐색처럼 로고 버튼으로 고르고, 주소(`/blogs/기업아이디`)에 남아서 뒤로 가기로 돌아가요. 주제는 메뉴나 주제 칸을 눌러 골라요.
  * 기업을 고르면 글 앞에 그 기업이 요즘 어떤 고민을 하는지 요약한 칸이 와요. 아무것도 고르지 않았으면 많이 다룬 주제 칸이 글 사이에 섞여요.
- * 글을 누르면 공고 원문처럼 앱 안의 미니 브라우저로 열어요. Cmd나 가운데 버튼으로 누르면 새 탭으로 열려요.
+ * 글을 누르면 공고 원문처럼 앱 안의 미니 브라우저로 열어요. 앱 안에 띄울 수 없게 막아 둔 블로그와, Cmd나 가운데 버튼으로 누른 것은 새 탭으로 열려요.
  */
+
+/** 끝 글자가 한글이고 받침이 있는지예요. 영어나 숫자로 끝나면 받침이 없는 것으로 봐요. */
+const hasBatchim = (word: string) => {
+  const code = word.charCodeAt(word.length - 1) - 0xac00
+  return code >= 0 && code <= 11171 && code % 28 !== 0
+}
 
 const TEXT = messages({
   ko: {
@@ -25,6 +31,8 @@ const TEXT = messages({
     theme: '주제',
     count: (count: number) => `${count}개의 글`,
     pickTheme: (name: string) => `${name} 글만 보기`,
+    // 주제 이름 뒤에 붙는 말이에요. 끝 글자에 받침이 있으면 '을', 없으면 '를'이에요.
+    themeAsk: (name: string) => `${hasBatchim(name) ? '을' : '를'} 고민하고 있는 조직은?`,
     paused: '쉬는 중',
     stale: (date: string) => `마지막 글이 ${date}에 올라왔어요. 지금의 고민과는 다를 수 있어요.`,
     skillsTitle: '자주 나온 기술',
@@ -45,6 +53,7 @@ const TEXT = messages({
     theme: 'Topic',
     count: (count: number) => `${count} ${count === 1 ? 'post' : 'posts'}`,
     pickTheme: (name: string) => `Show ${name} posts`,
+    themeAsk: () => '',
     paused: 'Paused',
     stale: (date: string) => `The latest post is from ${date}. Their focus may have changed since.`,
     skillsTitle: 'Frequent tech',
@@ -74,8 +83,15 @@ function dayLabel(iso: string) {
 /** 기업을 붙인 글 하나예요. 여러 기업의 글을 한 목록에 섞을 때 써요. */
 type Entry = BlogPost & { companyId: string }
 
-/** 원문 링크의 누름이에요. 그냥 누르면 미니 브라우저로 열고, Cmd, Ctrl, Shift, 가운데 버튼이면 브라우저가 알아서 새 탭으로 열게 둬요. */
+/**
+ * 원문 링크의 누름이에요. 그냥 누르면 미니 브라우저로 열고, Cmd, Ctrl, Shift, 가운데 버튼이면 브라우저가 알아서 새 탭으로 열게 둬요.
+ * 다른 서비스 안에 띄우는 것을 막아 둔 블로그(`canEmbed`)는 미니 브라우저에 요약만 보여주는 대신 바로 새 탭으로 열어요.
+ */
 const openIn = (read: (page: BrowserPage) => void, page: BrowserPage) => (event: MouseEvent) => {
+  if (!canEmbed(page.url)) {
+    track('blog_post_open', { company: page.companyId, from: 'tab' })
+    return
+  }
   if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
   event.preventDefault()
   read(page)
@@ -158,7 +174,7 @@ export function Blogs({ company, onCompany, onJobs }: {
                   href={digest.blog}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={openIn(read, { url: digest.blog, title: digest.platform, companyId: digest.companyId, summary: digest.headline })}
+                  onClick={openIn(read, { url: digest.blog, title: digest.platform, companyId: digest.companyId })}
                   className={toolButton}
                 >
                   {L.openBlog}
@@ -317,7 +333,7 @@ function PostCard({ entry, order, read }: { entry: Entry; order: number; read: (
       href={entry.url}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={openIn(read, { url: entry.url, title: entry.title, companyId: entry.companyId, summary: entry.summary })}
+      onClick={openIn(read, { url: entry.url, title: entry.title, companyId: entry.companyId })}
       className="group block rounded-2xl bg-gray-50 p-5 transition-colors hover:bg-gray-100"
       style={stagger(order)}
     >
@@ -345,7 +361,19 @@ function ThemeCard({ trend, order, onPick }: { trend: ThemeTrend; order: number;
   const name = THEME_NAMES[trend.theme]
   return (
     <button type="button" aria-label={L.pickTheme(name)} onClick={() => onPick(trend.theme)} className="group block w-full rounded-2xl bg-brand-soft p-5 text-left transition-colors hover:bg-brand-soft/70" style={stagger(order)}>
-      <span className="block text-[16px] leading-snug font-semibold text-brand-hover">{name}</span>
+      {/* 이름만 두면 뭘 말하는지 모르니, 한국어에서는 질문으로 적어요. 영어는 "Who's working on AI agents?"예요. */}
+      <span className="block text-[16px] leading-snug font-semibold text-gray-900">
+        {getLang() === 'en' ? (
+          <>
+            Who's working on <span className="text-brand-hover">{name}</span>?
+          </>
+        ) : (
+          <>
+            <span className="text-brand-hover">{name}</span>
+            {L.themeAsk(name)}
+          </>
+        )}
+      </span>
       <span className="mt-3 flex flex-wrap gap-1.5" aria-hidden>
         {trend.companies.map((id) => (
           <CompanyMark key={id} company={companyOf(id)} className="size-7 rounded-lg! text-[11px]" />

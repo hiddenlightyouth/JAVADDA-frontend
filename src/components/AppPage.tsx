@@ -1,11 +1,10 @@
 import type { ReactNode } from 'react'
 import { messages, useMessages } from '../lib/i18n'
 import { BackIcon } from './Icons'
-import { FormError } from './ui'
 
 /**
  * 앱 화면(새 진단, 탐색, 추천, 이력서, 진단 시작, 리포트, 관리자, 내 정보)이 같이 쓰는 틀이에요.
- * 제목 줄, 흰 바탕, 아래 버튼 줄, 복사를 한 모양으로 맞춰요.
+ * 제목 줄, 흰 바탕, 스크롤 화면, 복사를 한 모양으로 맞춰요.
  * 새 앱 화면도 이것을 써서 따로 만들지 않아요.
  */
 
@@ -67,35 +66,6 @@ export function PageHeader({ title, owner, mark, onBack, backLabel, actions }: {
         </div>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
-    </div>
-  )
-}
-
-/** 내용 칸과 아래 버튼 줄이에요. 흰 바탕 위에 640px 폭으로 가운데에 둬요. 진단 시작 화면이 써요. */
-export function StepLayout({ top, children, error, note, buttons }: {
-  /** 내용 위에 두는 단계 표시 */
-  top?: ReactNode
-  children: ReactNode
-  /** 아래 줄 왼쪽에 빨갛게 보여줄 오류 */
-  error?: string
-  /** 오류가 없을 때 아래 줄 왼쪽에 옅게 적는 말 */
-  note?: string
-  buttons: ReactNode
-}) {
-  return (
-    <div className={canvas}>
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 md:px-10">
-        <div className="mx-auto w-full max-w-[640px]">
-          {top && <div className="mb-8">{top}</div>}
-          {children}
-        </div>
-      </div>
-      <div className="shrink-0 border-t border-gray-200 bg-white px-6 py-3 md:px-10">
-        <div className="mx-auto flex w-full max-w-[640px] items-center justify-between gap-3">
-          {error ? <FormError className="min-w-0">{error}</FormError> : note ? <p className="min-w-0 truncate text-[13px] text-gray-500">{note}</p> : <span />}
-          <div className="flex shrink-0 items-center gap-2">{buttons}</div>
-        </div>
-      </div>
     </div>
   )
 }

@@ -1266,6 +1266,17 @@ export function removeResume(id: string) {
 // ---------- 리포트 ----------
 
 /**
+ * 공고를 누르면 바로 진단해요. 대표 이력서로 이미 만든 리포트가 있으면 그것을 열고, 없으면 새로 만들어요.
+ * 대표 이력서가 없거나 역량이 비어 있으면 null이에요. 그때는 화면이 서류를 올리는 칸을 보여줘요.
+ */
+export async function startDiagnosis(postingId: string): Promise<Report | null> {
+  const resume = getResume()
+  if (!resume || resume.skills.length === 0 || !postingOf(postingId)) return null
+  const existing = reportsStore.get().find((report) => report.postingId === postingId && report.resumeId === resume.id)
+  return existing ?? createReport(postingId, resume.id)
+}
+
+/**
  * 리포트를 만들기 시작해요. 바로 pending 리포트를 돌려주고, 잠시 뒤에 done으로 바뀌어요. 서버의 POST /reports 202와 같은 흐름이에요.
  * resumeId를 주면 그 서류로, 없으면 대표 이력서로 진단해요.
  */

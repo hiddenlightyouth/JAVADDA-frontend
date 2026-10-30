@@ -1,17 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { track } from '../lib/analytics'
-import { careerName, companyOf, createReport, daysLeft, familyName, fitOf, postingOf, useResume } from '../lib/gap'
+import { careerName, companyOf, daysLeft, familyName, postingOf, startDiagnosis, useResume } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
-import { pageFrame, PageHeader, StepLayout } from './AppPage'
-import { CompanyMark, FitBadge, Notice, SkillChip, skillTone } from './GapParts'
+import { pageFrame, PageHeader } from './AppPage'
+import { CompanyMark, Notice, SkillChip } from './GapParts'
 import { ResumeUploader } from './MyResume'
 import { PostingBrowser, SplitView } from './PostingBrowser'
-import { label, primaryButton, toolButton } from './ui'
+import { label, toolButton } from './ui'
 
 /**
- * 진단 시작 화면이에요. 공고의 요구 역량을 훑고 바로 시작해요. 진단은 늘 대표 이력서(별을 누른 서류)로 해서 고르는 칸이 없어요.
- * 요구 역량 이름표는 대표 이력서 기준으로 칠해서, 시작하기 전에 무엇이 비는지 보여요.
- * 대표를 바꾸거나 역량을 고치는 것은 내 이력서 화면이 맡아요. 서류가 없으면 올리는 칸이 그 자리에 나와요.
+ * 진단 시작 주소(`/diagnose/공고`)의 화면이에요. 공고를 누르면 확인 화면 없이 대표 이력서로 바로 진단하고 리포트로 가서(`startDiagnosis`),
+ * 이 화면은 대표 이력서가 없을 때만 보여요. 공고 요약과 서류를 올리는 칸이 있고, 올리면 그 서류가 대표가 되어 바로 진단을 시작해요.
+ * 주소로 바로 들어왔는데 대표 이력서가 있으면 그릴 것 없이 바로 진단해요.
  */
 
 const TEXT = messages({
@@ -22,11 +22,8 @@ const TEXT = messages({
     preferred: '우대 역량',
     deadline: (days: number) => (days === 0 ? '오늘 마감' : `마감 ${days}일 전`),
     always: '상시 채용',
-    upload: '이력서를 올리면 진단할 수 있어요',
-    basis: (name: string) => `${name}으로 진단해요`,
+    upload: '이력서를 올리면 바로 진단해요',
     openPosting: '원문 보기',
-    start: '진단 시작',
-    starting: '시작하는 중',
     missing: '이 공고를 찾을 수 없어요.',
     missingBody: '마감되었거나 주소가 바뀐 공고예요.',
     goHome: '다른 공고 고르기',
@@ -38,11 +35,8 @@ const TEXT = messages({
     preferred: 'Preferred',
     deadline: (days: number) => (days === 0 ? 'Closes today' : `Closes in ${days} ${days === 1 ? 'day' : 'days'}`),
     always: 'Rolling',
-    upload: 'Upload a resume to start',
-    basis: (name: string) => `Using ${name}`,
+    upload: 'Upload a resume and we start right away',
     openPosting: 'Original',
-    start: 'Start diagnosis',
-    starting: 'Starting',
     missing: "Couldn't find this posting.",
     missingBody: 'It may have closed or moved.',
     goHome: 'Pick another posting',
@@ -52,7 +46,7 @@ const TEXT = messages({
 interface Props {
   postingId: string
   onBack: () => void
-  /** 리포트를 만들기 시작했어요. 리포트 화면으로 옮겨요. */
+  /** 리포트를 만들었어요. 리포트 화면으로 옮겨요. 뒤로 가기 기록에 이 화면을 남기지 않아요. */
   onReport: (id: string) => void
 }
 
@@ -60,8 +54,20 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
   const L = useMessages(TEXT)
   const posting = postingOf(postingId)
   const resume = useResume()
-  const [starting, setStarting] = useState(false)
   const [viewing, setViewing] = useState(false)
+  const started = useRef(false)
+
+  // 대표 이력서가 생기면(처음부터 있거나, 여기서 올렸거나) 한 번만 바로 진단해요.
+  const ready = !!posting && !!resume && resume.skills.length > 0
+  useEffect(() => {
+    if (!ready || started.current) return
+    started.current = true
+    void startDiagnosis(postingId).then((report) => {
+      if (!report) return
+      track('diagnose_start', { posting: postingId, reused: report.status === 'done' })
+      onReport(report.id)
+    })
+  }, [ready, postingId, onReport])
 
   if (!posting) {
     return (
@@ -72,19 +78,11 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
     )
   }
 
+  // 바로 리포트로 넘어가는 동안은 빈 화면이에요. 리포트가 뼈대를 보여줘요.
+  if (ready) return <main className="flex-1" />
+
   const company = companyOf(posting.companyId)
   const left = daysLeft(posting)
-
-  async function start() {
-    if (!resume || starting) return
-    setStarting(true)
-    track('diagnose_start', { posting: posting!.id, skills: resume.skills.length })
-    const report = await createReport(posting!.id, resume.id)
-    setStarting(false)
-    if (report) onReport(report.id)
-  }
-
-  const canStart = resume !== null && resume.skills.length > 0
 
   return (
     <SplitView side={viewing && <PostingBrowser posting={posting} onClose={() => setViewing(false)} />}>
@@ -102,23 +100,12 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
             </button>
           }
         />
-        <StepLayout
-          note={resume ? L.basis(resume.name) : undefined}
-          buttons={
-            <button type="button" disabled={!canStart || starting} onClick={() => void start()} className={primaryButton}>
-              {starting ? L.starting : L.start}
-            </button>
-          }
-        >
-          <div className="animate-rise space-y-8">
-            {/* 공고에서 볼 것만 짧게 적어요. 이름표는 고른 서류 기준으로 칠해요. */}
+        <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:-mx-10 md:px-10">
+          <div className="mx-auto w-full max-w-[640px] animate-rise space-y-8">
             <section className="rounded-2xl bg-gray-50 p-5">
-              <div className="flex items-start justify-between gap-4">
-                <p className="text-[13px] text-gray-500">
-                  {posting.location}, {familyName(posting.family)}, {careerName(posting.career)}, {left !== null ? L.deadline(left) : L.always}
-                </p>
-                <FitBadge fit={fitOf(posting, resume)} compact />
-              </div>
+              <p className="text-[13px] text-gray-500">
+                {posting.location}, {familyName(posting.family)}, {careerName(posting.career)}, {left !== null ? L.deadline(left) : L.always}
+              </p>
               <p className="mt-2 text-[13.5px] leading-relaxed text-gray-700">{posting.summary}</p>
               <div className="mt-5 space-y-4">
                 {(['required', 'preferred'] as const).map((kind) => (
@@ -126,7 +113,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
                     <h3 className={label}>{L[kind]}</h3>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {posting[kind].map((skill) => (
-                        <SkillChip key={skill} name={skill} tone={skillTone(skill, resume)} />
+                        <SkillChip key={skill} name={skill} />
                       ))}
                     </div>
                   </div>
@@ -134,17 +121,14 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
               </div>
             </section>
 
-            {/* 서류가 없을 때만 올리는 칸이 나와요. 올리면 그 서류가 대표가 되어 바로 진단할 수 있어요. */}
-            {!resume && (
-              <section>
-                <h2 className="text-[15px] font-semibold text-gray-900">{L.upload}</h2>
-                <div className="mt-3">
-                  <ResumeUploader />
-                </div>
-              </section>
-            )}
+            <section>
+              <h2 className="text-[15px] font-semibold text-gray-900">{L.upload}</h2>
+              <div className="mt-3">
+                <ResumeUploader />
+              </div>
+            </section>
           </div>
-        </StepLayout>
+        </div>
       </main>
     </SplitView>
   )

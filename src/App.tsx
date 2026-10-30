@@ -18,7 +18,7 @@ import { useShortcuts } from './lib/shortcuts'
 import { messages, pick, useLang } from './lib/i18n'
 import { applyMeta, HOME_META } from './lib/meta'
 import { reportFromPath } from './lib/routes'
-import { useResume } from './lib/gap'
+import { startDiagnosis, useResume } from './lib/gap'
 import { closePlans, refreshUsage, usePlansOpen } from './lib/usage'
 import type { AccountPage } from './components/Account'
 
@@ -77,8 +77,21 @@ export default function App() {
     if (appShell) void refreshUsage()
   }, [tokens])
 
-  const openDiagnose = useCallback((postingId: string) => open({ kind: 'diagnose', postingId }), [open])
   const openReport = useCallback((id: string, tab: ReportTab = 'summary', replace = false) => open({ kind: 'report', id, tab }, replace), [open])
+  // 공고를 누르면 확인 화면 없이 대표 이력서로 바로 진단해요. 서류가 없을 때만 올리는 화면(진단 시작)으로 가요.
+  const openDiagnose = useCallback(
+    (postingId: string) => {
+      void startDiagnosis(postingId).then((report) => {
+        if (!report) {
+          open({ kind: 'diagnose', postingId })
+          return
+        }
+        track('diagnose_start', { posting: postingId, reused: report.status === 'done' })
+        openReport(report.id)
+      })
+    },
+    [open, openReport],
+  )
   const openPractice = useCallback((id: string, question?: string) => open({ kind: 'practice', id, question }), [open])
   const openExplore = useCallback(() => open({ kind: 'explore' }), [open])
   const openRecommend = useCallback(() => open({ kind: 'recommend' }), [open])
