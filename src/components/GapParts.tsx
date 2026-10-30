@@ -21,7 +21,7 @@ const TEXT = messages({
     toneTips: { met: '이력서에서 충분히 보여요.', partial: '이력서에 있지만 근거가 약해요.', missing: '이력서에서 보이지 않아요.' } as Partial<Record<ChipTone, string>>,
     always: '상시 채용',
     posted: (days: number) => (days <= NEW_DAYS ? '신규' : `${days}일 전`),
-    fitTag: (fit: number): string => (fit >= 70 ? '잘 맞아요' : fit >= 50 ? '조금만 채우면 돼요' : '갭이 커요'),
+    fitTag: (fit: number): string => (fit >= 70 ? '높음' : fit >= 50 ? '중간' : '낮음'),
     dday: (days: number) => (days === 0 ? 'D-day' : `D-${days}`),
     family: '직군',
     career: '경력',
@@ -62,7 +62,7 @@ const TEXT = messages({
     toneTips: { met: 'Clearly shown in your resume.', partial: 'In your resume, but with thin evidence.', missing: 'Not found in your resume.' },
     always: 'Rolling',
     posted: (days: number) => (days <= NEW_DAYS ? 'New' : `${days} days ago`),
-    fitTag: (fit: number) => (fit >= 70 ? 'Good fit' : fit >= 50 ? 'Almost there' : 'Big gap'),
+    fitTag: (fit: number) => (fit >= 70 ? 'High' : fit >= 50 ? 'Medium' : 'Low'),
     dday: (days: number) => (days === 0 ? 'D-day' : `D-${days}`),
     family: 'Role',
     career: 'Level',
@@ -283,8 +283,8 @@ export const cardsGrid = 'grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] g
 /** 한 줄만 보여주는 카드 줄. 둘째 줄부터는 높이를 0으로 두고 잘라서, 화면 폭에 들어가는 만큼만 보여요. */
 export const cardsRow = 'grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] auto-rows-[0px] grid-rows-[auto] gap-x-4 overflow-hidden'
 
-/** 카드 위에 붙는 작은 태그예요. 신규와 잘 맞아요는 메인 컬러, 마감까지 남은 날은 빨간색, 나머지는 회색이에요. 공고 탐색의 마감 태그도 같은 모양이에요. */
-export function CardTag({ tone, children }: { tone: 'brand' | 'red' | 'gray'; children: ReactNode }) {
+/** 카드 위에 붙는 작은 태그예요. 신규와 적합도 높음은 메인 컬러, 적합도 중간은 노란색, 마감까지 남은 날과 적합도 낮음은 빨간색, 나머지는 회색이에요. 공고 탐색의 마감 태그도 같은 모양이에요. */
+export function CardTag({ tone, children }: { tone: 'brand' | 'amber' | 'red' | 'gray'; children: ReactNode }) {
   return (
     <Badge tone={tone} strong>
       {children}
@@ -423,12 +423,11 @@ export function PostingTile({ posting, resume, fit = fitOf(posting, resume), tag
   const company = companyOf(posting.companyId)
   const since = daysSince(posting)
   const left = daysLeft(posting)
-  const diagnosed = useDiagnosed(posting.id)
   return (
     <li className="min-h-0 animate-rise" style={stagger(order)}>
       <button type="button" onClick={() => onOpen(posting)} className={`group flex h-[196px] w-full flex-col rounded-2xl p-5 text-left transition-colors ${onGray ? 'bg-white hover:bg-gray-100' : 'bg-gray-50 hover:bg-gray-100'}`}>
         <span className="flex items-center justify-between gap-2">
-          {/* 진단한 공고는 진단함 태그를 맨 앞에 둬요. 적합도는 아래에 이미 보여서, 얼마나 맞는지 태그는 그때 빼요. */}
+          {/* 진단한 공고는 진단함 태그를 맨 앞에 두고, 원래 태그(신규, 마감, 얼마나 맞는지)는 그 뒤에 그대로 붙여요. */}
           <span className="flex shrink-0 items-center gap-1.5">
             <DiagnosedTag postingId={posting.id} />
             {tag === 'posted' ? (
@@ -436,7 +435,7 @@ export function PostingTile({ posting, resume, fit = fitOf(posting, resume), tag
             ) : tag === 'deadline' ? (
               <CardTag tone="red">{left === null ? L.always : L.dday(left)}</CardTag>
             ) : (
-              fit !== null && !diagnosed && <CardTag tone={fit >= 70 ? 'brand' : 'gray'}>{L.fitTag(fit)}</CardTag>
+              fit !== null && <CardTag tone={fit >= 70 ? 'brand' : fit >= 50 ? 'amber' : 'red'}>{L.fitTag(fit)}</CardTag>
             )}
           </span>
           <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-gray-500">

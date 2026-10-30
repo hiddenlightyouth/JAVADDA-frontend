@@ -90,8 +90,10 @@ const BADGE_TONES = {
   brand: 'bg-brand-soft text-brand-hover',
   /** 테두리만 메인 컬러. 면접 예상처럼 따로 눈여겨볼 것 */
   outline: 'border border-brand text-brand',
-  /** 마감까지 남은 날 */
+  /** 마감까지 남은 날, 적합도 낮음 */
   red: 'bg-red-50 text-red-600',
+  /** 적합도 중간 */
+  amber: 'bg-amber-50 text-amber-700',
   /** 회색 칸 안의 흰 이름표 */
   white: 'bg-white text-gray-600',
 }
