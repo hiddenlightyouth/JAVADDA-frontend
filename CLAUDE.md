@@ -14,13 +14,13 @@
 - 갭 진단: 적합도 점수(필수 역량, 우대 역량, 프로젝트 근거, 요즘 뜨는 역량 네 항목), 여섯 축 레이더, 부족과 보완과 강점으로 나눈 갭 목록, 갭마다 근거와 보완 방법과 예상 소요와 강의
 - 추천: 이력서의 역량과 가까운 공고를 적합도 순서로
 - 서류 검증: 자기소개서, 이력서, 포트폴리오를 공고 기준으로 문단마다 태그와 피드백
-- 면접: 서류 문단과 갭, 기업 기술 블로그, 기출에서 만든 예상 질문과 글로 답하는 연습 피드백
+- 면접: 서류 문단과 갭, 기업 기술 블로그, 기출에서 만든 예상 질문과 글이나 말로 답하는 연습 피드백
 
 
 1. 새 진단(`/`): 기업이나 공고를 검색하거나 아래 공고 줄에서 골라요.
 2. 공고를 누르면 확인 화면 없이 대표 이력서로 바로 진단하고 리포트로 가요. 대표 이력서가 없을 때만 진단 시작(`/diagnose/공고`)에서 서류를 올리고, 올리면 바로 진단해요.
 3. 리포트(`/r/아이디`): 적합도 점수, 역량 레이더, 갭 목록(부족, 보완, 강점), 요구 역량 변화, 강의 추천. 탭으로 적합도 설명, 서류 검증, 예상 면접 질문을 봐요. 갭을 누르면 오른쪽에 상세 칸이 열려요.
-4. 면접 연습(`/r/아이디/practice`): 예상 질문에 글로 답하고 점수와 보완할 점, 꼬리 질문을 받아요.
+4. 면접 연습(`/r/아이디/practice`): 예상 질문에 글이나 말로 답하고 점수와 보완할 점, 꼬리 질문을 받아요.
 5. 공고 탐색(`/explore`), 추천 공고(`/recommend`), 내 이력서(`/resume`)는 사이드바에서 열어요.
 
 ## 브랜딩 규칙
@@ -91,6 +91,7 @@ src/
   index.css           Tailwind 테마 토큰, 자간, 애니메이션
   lib/blogs.ts        기업 기술 블로그 요약. 서버에서 받기(fetchBlogDigests, GET /blogs), 요약이 있는 기업(blogCompaniesOf), 자주 나온 기술(topSkills), 여러 기업에 걸친 흐름(themeTrends), 서버에 닿지 못할 때 보여줄 기업 열한 곳의 글(DIGESTS)
   lib/gap.ts          진단의 자료와 API. 타입(기업, 공고, 이력서, 리포트, 갭, 서류 검증, 면접 질문, 연습 피드백), 기업과 공고 받기(loadCatalog, COMPANIES, POSTINGS, 서버에 닿지 못할 때의 목록), 서버 API(fetchPostings, uploadResume, saveResumeSkills, setPrimaryResume, removeResume, startDiagnosis, rerunReport, deleteReport, fetchReview, fetchQuestions, submitAnswer, togglePlan, saveNote), AI 진행 상황 묻기(withProgress, ProgressState, PROGRESS_START), 계정 자료 받기와 비우기(startAccountSync), 저장소(useResume는 대표 이력서, useResumeShelf는 올린 서류 전부, useReports, useReport, usePlans, useNotes, 공고를 진단한 최근 리포트 useDiagnosed), 로그인 화면 열기(setLoginHandler, requestLogin), 적합도 계산(fitOf, levelOf), 스킬 이름 정규화(canonical)
+  lib/speech.ts       면접 연습의 음성 기능. 말을 글자로 바꾸기(useDictation), 글자를 소리로 읽기(useSpeak), 지원 여부(canDictate, canSpeak)
   lib/i18n.ts         화면 언어(한국어, 영어) 정하기와 저장, 언어별 주소(/en), 문구 묶음(messages, useMessages, pick)
   lib/meta.ts         탭 제목과 링크 미리보기 태그를 화면과 언어에 맞게 바꾸기, 언어별 메인 화면 값(HOME_META)
   lib/http.ts         API 기본 주소, 응답의 data와 오류 코드 꺼내기(readResult), 본문을 조금씩 읽으며 받은 바이트 알리기(readJsonWithProgress, readWithLoad, OnLoad), 브라우저 소유자 키
@@ -128,7 +129,7 @@ src/
   components/Report.tsx      리포트 대시보드 (/r/아이디). 리포트, 적합도 설명, 서류 검증, 예상 질문 네 탭과 오른쪽에서 여는 갭 상세 칸
   components/ReportReview.tsx   리포트의 서류 검증 탭
   components/ReportQuestions.tsx 리포트의 예상 질문 탭
-  components/Practice.tsx    면접 연습 (/r/아이디/practice). 질문에 글로 답하면 피드백을 줘요
+  components/Practice.tsx    면접 연습 (/r/아이디/practice). 질문에 글이나 말로 답하면 피드백을 줘요
   components/GapParts.tsx    진단 화면이 같이 쓰는 부품. 기업 로고(CompanyMark, 로고가 없거나 못 불러오면 머리글자), 적합도(FitBadge, ScoreRing, 점수 머리말 ScoreHero), 짧은 설명 말풍선(Tip), 스킬 이름표(SkillChip), 공고의 직군과 경력과 지역 한 줄(PostingMeta), 기업 고르는 버튼 줄(CompanyFilter, 공고 탐색과 기술 블로그), 카드 태그(CardTag), 이미 진단한 공고의 태그(DiagnosedTag), AI를 기다리는 동안의 진행 막대(AiProgress, 단계 문장 useStageText, 모양은 ui의 ProgressBar), 부족과 보완과 강점 이름표(KindLabel), 체크 표시(CheckMark), 공고 카드(PostingTile), 회색 칸(Panel), 안내(Notice, Failed), 막대(Meter), 레이더(Radar), 작은 막대 그래프(Sparkline), 변화량(Delta)
   components/History.tsx     내 리포트 화면(/history)과, 사이드바가 같이 쓰는 리포트 지우기 창과 문구
   components/AppPage.tsx     앱 화면이 같이 쓰는 틀. 바깥 틀(pageFrame), 제목 줄(PageHeader), 제목 줄 아래 바탕(canvas), 제목 줄만 고정하고 아래를 스크롤하는 화면(ScrollPage, 공고 탐색, 추천 공고, 면접 연습), 복사(copyText)
@@ -198,7 +199,7 @@ src/
 - 리포트(`Report`): 제목 줄에 기업 이름을 작게, 공고 제목을 크게 적고, 오른쪽에 다시 진단(확인 창)과 면접 연습 버튼을 둬요. 탭은 리포트(`/r/아이디`), 적합도 설명(`/fit`), 서류 검증(`/review`), 예상 질문(`/questions`)이고 단축키 1부터 4예요. 탭마다 주소가 달라서 뒤로 가기로 앞의 탭에 돌아가요. 리포트가 pending이면 제목 줄과 탭은 그대로 두고 내용 자리에 진행 막대(`AiProgress`, 리포트의 progress와 stage)를 보여주고, 저장소가 done으로 바뀌면 바로 그려요.
 
 - 갭 상세(`GapPanel`)는 오른쪽에서 미끄러져 들어오는 칸이에요. 바깥을 누르거나 Esc를 누르면 닫혀요. `Modal`처럼 body에 그려요.
-- 면접 연습(`Practice`): 질문을 하나씩 보여주고 글로 답해요. 10자가 넘어야 제출할 수 있고, 채점하는 동안 버튼 글자가 "채점 중"으로 바뀌고 답 칸 아래에 진행 막대가 보여요. 마지막에는 답한 질문과 점수, 평균을 요약해요. 예상 질문 탭의 "이 질문 연습"은 `?q=질문아이디`로 그 질문부터 시작해요.
+- 면접 연습(`Practice`): 질문을 하나씩 보여주고 글이나 말로 답해요. 10자가 넘어야 제출할 수 있고, 채점하는 동안 버튼 글자가 "채점 중"으로 바뀌고 답 칸 아래에 진행 막대가 보여요. 마지막에는 답한 질문과 점수, 평균을 요약해요. 예상 질문 탭의 "이 질문 연습"은 `?q=질문아이디`로 그 질문부터 시작해요.
 - 내 리포트(`/history`)는 계정 화면 안에 있지만 앱에서는 사이드바가 대신해서 링크를 두지 않아요. 사이드바의 줄마다 기업 이름과 적합도, 공고 제목과 때가 있고, 마우스를 올리면 점 세 개 버튼으로 지우기 메뉴를 열어요. 열려 있는 리포트를 지우면 새 진단 화면으로 가요.
 - 로그인 안내 카드, 떠나기 확인 창, 리포트 공유하기는 없앴어요. 공고 탐색의 카드에만 공고 링크를 복사하는 버튼이 있어요. 리포트는 계정에 저장되어서 화면을 옮기거나 다른 기기에서 로그인해도 그대로예요.
 
@@ -282,7 +283,8 @@ src/
 면접 연습 (`Practice`, `/r/아이디/practice`, 질문 하나부터 시작하면 `?q=질문아이디`)
 
 - 위에 "3 / 8" 진행 표시와 가는 막대가 있고, 질문 카드에 유형, 나올 확률, 출처, 질문, "힌트 보기"(의도와 답변 포인트), 답을 적는 칸(글자 수를 아래에 적어요), "답변 제출" 버튼이 있어요. 열 글자 아래면 보낼 수 없어요. 채점하는 동안 버튼이 "채점 중"으로 바뀌고, 답 칸 아래에 진행 막대(`AiProgress`)가 보여요. 질문을 받는 동안(처음이면 AI가 만들어요)도 진행 막대예요.
-- 피드백은 아래에 회색 칸으로 붙어요. 점수 고리, 좋았어요, 보완할 점, 이렇게 말해 보세요, 꼬리 질문이 있고, "다시 답하기"와 "다음 질문"(마지막이면 "연습 마치기") 버튼이 있어요. 마치면 평균 점수와 답한 수, 리포트로 돌아가는 버튼이 나와요. 음성 답변은 기획서대로 후순위라 아직 없어요. 기획서의 10이에요.
+- 피드백은 아래에 회색 칸으로 붙어요. 점수 고리, 좋았어요, 보완할 점, 이렇게 말해 보세요, 꼬리 질문이 있고, "다시 답하기"와 "다음 질문"(마지막이면 "연습 마치기") 버튼이 있어요. 마치면 평균 점수와 답한 수, 리포트로 돌아가는 버튼이 나와요. 기획서의 10이에요.
+- 음성 연습: 질문 아래의 "질문 듣기"는 질문을 소리로 읽어 주고(`speechSynthesis`), 답변 칸 아래의 "말로 답하기"는 말을 글자로 바꿔 답변 칸에 채워요(`SpeechRecognition`, `src/lib/speech.ts`). 듣는 동안 칸은 읽기 전용이고 아직 확정되지 않은 글자까지 보여줘요. 멈추면 글자를 고쳐서 낼 수 있어요. 말하는 중에 답변 제출을 누르면 듣기를 멈추고 칸에 보이던 글자 그대로 내요. 채점은 글로 쓴 답과 같아서 서버 변경이 없어요. 마이크 권한이 없거나 마이크를 못 찾으면 토스트로 알려요. 지원하지 않는 환경(macOS 앱의 웹뷰, Firefox)에서는 버튼을 숨기고 글로만 답해요.
 
 내 리포트
 
@@ -411,7 +413,8 @@ src/
 | `review_view`, `review_rerun` | 서류 검증 탭에서 서류 종류를 보거나 재검증했을 때 | `doc`(coverLetter, resume, portfolio) |
 | `questions_filter`, `question_expand` | 예상 질문에서 유형을 고르거나 답변 포인트를 펼쳤을 때 | `category`, `id` |
 | `practice_start` | 면접 연습을 시작했을 때 | `from`(all, question) |
-| `practice_submit`, `practice_next`, `practice_finish` | 답을 보내고, 다음 질문으로 가고, 연습을 마쳤을 때 | `score`, `average`, `count` |
+| `practice_submit`, `practice_next`, `practice_finish` | 답을 보내고, 다음 질문으로 가고, 연습을 마쳤을 때 | `score`, `voice`(말로 답했는지), `average`, `count` |
+| `practice_voice_start`, `practice_voice_error`, `practice_question_listen` | 말로 답하기를 시작하거나 실패했을 때, 질문 듣기를 눌렀을 때 | `code` |
 | `history_report_open` | 사이드바에서 리포트를 눌렀을 때 | `from`(sidebar) |
 | `admin_tab_view`, `admin_period_change`, `admin_user_open`, `admin_user_action`, `admin_call_open`, `admin_call_copy`, `admin_chat_action` | 관리자 화면 | 전과 같아요 |
 | `language_change` | 헤더나 앱의 설정 창에서 언어를 바꿨을 때 | `lang`(ko, en), `from`(header, settings) |
@@ -441,7 +444,6 @@ src/
 - 아티클 글을 새 서비스에 맞게 다시 써요. 지금은 레포 분석 시절의 글이에요.
 - 목 자료의 한국어 조사("을(를)", "이(가)")를 서버가 글을 만들 때 자연스럽게 고쳐요.
 - 기업 북마크와 북마크한 기업의 새 공고 알림(앱 푸시)
-- 음성 답변(STT) 면접 연습
 - 테스트 코드
 
 
