@@ -50,6 +50,7 @@ const PAGE_TITLES = {
   recommend: 'Javadda 추천 공고',
   resume: 'Javadda 내 이력서',
   blogs: 'Javadda 기술 블로그',
+  company: 'Javadda 기업 상세',
   diagnose: 'Javadda 진단 시작',
   report: 'Javadda 리포트',
   practice: 'Javadda 면접 연습',
@@ -60,7 +61,7 @@ const PAGE_TITLES = {
 type Screen = keyof typeof PAGE_TITLES
 
 /** 주소에 ID가 들어가는 화면이에요. 보고서의 경로가 흩어지지 않게 ID 자리를 [id]로 적어요. */
-const ID_PATHS: Partial<Record<Screen, string>> = { diagnose: '/diagnose/[id]', report: '/r/[id]', practice: '/r/[id]/practice' }
+const ID_PATHS: Partial<Record<Screen, string>> = { company: '/company/[id]', diagnose: '/diagnose/[id]', report: '/r/[id]', practice: '/r/[id]/practice' }
 
 /** 화면이 바뀔 때마다 불러요. 리포트 ID는 경로에 넣지 않고 따로 보내서 보고서의 경로가 흩어지지 않게 해요. */
 export function trackPageView(
