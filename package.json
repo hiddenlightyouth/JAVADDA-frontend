@@ -11,6 +11,7 @@
     "worker:dev": "npm run build && wrangler dev"
   },
   "dependencies": {
+    "@lottiefiles/dotlottie-react": "^0.21.0",
     "marked": "^18.1.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
