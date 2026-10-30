@@ -23,14 +23,14 @@ import { SOCIAL_LABELS, type SocialProvider } from '../lib/social'
 import { IpPlace } from './IpPlace'
 import { useAiModelSetting } from './AiModelSetting'
 import { SocialButtons, useSocialClients } from './Social'
-import { Bone } from './Skeleton'
 import { messages, pick, useMessages } from '../lib/i18n'
+import { useLoadHold, useLoadProgress } from '../lib/load'
 import { CheckIcon } from './Icons'
-import { FormError, softButton, softDangerButton } from './ui'
+import { FormError, LoadProgress, softButton, softDangerButton } from './ui'
 
 const TEXT = messages({
   ko: {
-    loading: '불러오고 있어요.',
+    loadingMore: (percent: number) => `불러오고 있어요 ${percent}%`,
     unlinked: (name: string) => `${name} 연결을 해제했어요.`,
     social: '소셜 로그인',
     linked: '연결됨',
@@ -44,7 +44,6 @@ const TEXT = messages({
     signOut: '로그아웃',
     noRecords: '아직 로그인 기록이 없어요.',
     unknownAddress: '주소를 알 수 없어요',
-    working: '처리 중',
     more: '더 보기',
     withdrawn: '탈퇴했어요. 그동안 써 주셔서 고마워요.',
     title: '내 정보',
@@ -62,7 +61,7 @@ const TEXT = messages({
     withdrawConfirm: '탈퇴하기',
   },
   en: {
-    loading: 'Loading.',
+    loadingMore: (percent: number) => `Loading ${percent}%`,
     unlinked: (name: string) => `Disconnected ${name}.`,
     social: 'Social sign-in',
     linked: 'Connected',
@@ -76,7 +75,6 @@ const TEXT = messages({
     signOut: 'Sign out',
     noRecords: 'No sign-in history yet.',
     unknownAddress: 'Unknown address',
-    working: 'Working',
     more: 'Show more',
     withdrawn: 'Your account has been deleted. Thanks for using Javadda.',
     title: 'Account',
@@ -111,21 +109,12 @@ function Message({ children }: { children: React.ReactNode }) {
   return <p className="border-y border-gray-100 py-6 text-center text-[13.5px] text-gray-500">{children}</p>
 }
 
-function SkeletonRows({ count, action }: { count: number; action?: boolean }) {
-  const text = useMessages(TEXT)
+/** 목록 자리에서 받는 정도를 보여줘요. 목록과 같은 위아래 선 안에 가는 막대와 퍼센트만 둬요. */
+function LoadingRows({ percent }: { percent: number }) {
   return (
-    <ul className="divide-y divide-gray-100 border-y border-gray-100" aria-busy="true">
-      <li className="sr-only">{text.loading}</li>
-      {Array.from({ length: count }, (_, index) => (
-        <li key={index} aria-hidden className="flex items-center justify-between gap-4 py-4">
-          <div className="min-w-0 flex-1">
-            <Bone className="h-4 w-36" />
-            <Bone className="mt-2.5 h-3.5 w-48 max-w-full" />
-          </div>
-          <Bone className={action ? 'h-8 w-[72px] shrink-0' : 'h-3.5 w-24 shrink-0'} />
-        </li>
-      ))}
-    </ul>
+    <div className="border-y border-gray-100 py-6">
+      <LoadProgress percent={percent} compact />
+    </div>
   )
 }
 
@@ -223,16 +212,19 @@ function Sessions() {
   const [sessions, setSessions] = useState<DeviceSession[] | null>(null)
   const [error, setError] = useState('')
   const [revoking, setRevoking] = useState<string | null>(null)
+  const progress = useLoadProgress()
+  const { one } = progress
 
   const load = useCallback(async () => {
-    const result = await fetchSessions()
+    const result = await fetchSessions(one())
     if (result.ok) setSessions(result.data)
     else setError(result.message)
-  }, [])
+  }, [one])
 
   useEffect(() => {
     void load()
   }, [load])
+  const waiting = useLoadHold(!sessions && !error)
 
   async function revoke(sessionId: string) {
     setRevoking(sessionId)
@@ -243,7 +235,7 @@ function Sessions() {
     else setError(pick(TEXT).revokeFailed)
   }
 
-  if (!sessions) return error ? <Message>{error}</Message> : <SkeletonRows count={2} action />
+  if (waiting || !sessions) return waiting ? <LoadingRows percent={progress.percent} /> : <Message>{error}</Message>
 
   return (
     <>
@@ -288,10 +280,12 @@ function LoginHistory() {
   const [hasNext, setHasNext] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const progress = useLoadProgress()
+  const { one } = progress
 
   const load = useCallback(async (next: number) => {
     setLoading(true)
-    const result = await fetchLoginHistory(next)
+    const result = await fetchLoginHistory(next, one())
     setLoading(false)
     if (!result.ok) {
       setError(result.message)
@@ -301,15 +295,15 @@ function LoginHistory() {
     setRecords((prev) => (next === 0 ? result.data.items : [...prev, ...result.data.items]))
     setPage(next)
     setHasNext(result.data.hasNext)
-  }, [])
+  }, [one])
 
   useEffect(() => {
     void load(0)
   }, [load])
 
-  if (records.length === 0) {
-    return loading ? <SkeletonRows count={4} /> : <Message>{error || text.noRecords}</Message>
-  }
+  const waiting = useLoadHold(loading && records.length === 0)
+  if (waiting) return <LoadingRows percent={progress.percent} />
+  if (records.length === 0) return <Message>{error || text.noRecords}</Message>
 
   return (
     <>
@@ -341,9 +335,9 @@ function LoginHistory() {
               setShown(next)
               if (next > records.length && hasNext) void load(page + 1)
             }}
-            className={softButton}
+            className={`${softButton} tabular-nums`}
           >
-            {loading ? text.working : text.more}
+            {loading ? text.loadingMore(progress.percent) : text.more}
           </button>
         </div>
       )}
@@ -360,11 +354,14 @@ export function MyPage({ onSignedOut }: Props) {
   /** 탈퇴할지 물어보고 있는지 */
   const [askingWithdraw, setAskingWithdraw] = useState(false)
   const [withdrawing, setWithdrawing] = useState(false)
+  const meLoad = useLoadProgress()
+  const { one: oneMe } = meLoad
+  const waitingMe = useLoadHold(!me)
 
   useEffect(() => {
-    void loadMe()
+    void loadMe(oneMe())
     void loadConfig().then((config) => setWithdrawReady(config.withdraw))
-  }, [])
+  }, [oneMe])
 
   async function handleWithdraw() {
     setWithdrawing(true)
@@ -397,6 +394,9 @@ export function MyPage({ onSignedOut }: Props) {
       <div className="w-full max-w-2xl">
 
         <Section title={text.account}>
+          {waitingMe ? (
+            <LoadingRows percent={meLoad.percent} />
+          ) : (
           <dl className="divide-y divide-gray-100 border-y border-gray-100 text-[14px]">
             {[
               { label: text.name, value: me?.name },
@@ -406,11 +406,12 @@ export function MyPage({ onSignedOut }: Props) {
               <div key={row.label} className="flex items-center justify-between gap-4 py-3.5">
                 <dt className="shrink-0 text-gray-500">{row.label}</dt>
                 <dd className="min-w-0 truncate text-right font-medium text-gray-900">
-                  {me ? (row.value ?? '') : <Bone className="h-4 w-28" />}
+                  {row.value ?? ''}
                 </dd>
               </div>
             ))}
           </dl>
+          )}
           <div className="mt-4">
             <button
               type="button"

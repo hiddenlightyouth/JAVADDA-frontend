@@ -20,10 +20,10 @@ import { describeDevice, useAuth } from '../lib/auth'
 import { formatDateTime, formatWhen } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { ConfirmDialog, SidePanel } from './Dialog'
-import { DeviceTags, Empty, Failed, full, MoreButton, TableSkeleton, SearchBox, tableWrap, td, th, useDebounced, usePaged } from './AdminParts'
-import { Busy, ghostButton, Segmented, tag, toolButton, toolDangerButton } from './ui'
+import { DeviceTags, Empty, Failed, full, MoreButton, TableLoading, SearchBox, tableWrap, td, th, useDebounced, usePaged } from './AdminParts'
+import { ghostButton, loadCenter, LoadProgress, Segmented, tag, toolButton, toolDangerButton } from './ui'
+import { useLoadHold, useLoadProgress } from '../lib/load'
 import { IpPlace } from './IpPlace'
-import { Bone } from './Skeleton'
 import { messages, pick, useMessages } from '../lib/i18n'
 
 
@@ -45,7 +45,7 @@ export function AdminUsers({ onOpenChat }: { onOpenChat: (id: string) => void })
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<AdminUserFilter>('ALL')
   const keyword = useDebounced(query)
-  const list = usePaged<AdminUser>((page) => fetchAdminUsers(keyword, filter, page), `${keyword}:${filter}`)
+  const list = usePaged<AdminUser>((page, onLoad) => fetchAdminUsers(keyword, filter, page, onLoad), `${keyword}:${filter}`)
   const [openId, setOpenId] = useState<number | null>(null)
   const close = useCallback(() => setOpenId(null), [])
 
@@ -56,12 +56,10 @@ export function AdminUsers({ onOpenChat }: { onOpenChat: (id: string) => void })
         <Segmented label={L.kind} options={L.filters} value={filter} onChange={setFilter} />
       </div>
 
-      {list.items === null ? (
-        list.error ? (
-          <Failed message={list.error} onRetry={list.retry} />
-        ) : (
-          <TableSkeleton />
-        )
+      {list.waiting ? (
+        <TableLoading percent={list.percent} />
+      ) : list.items === null ? (
+        <Failed message={list.error} onRetry={list.retry} />
       ) : list.items.length === 0 ? (
         <Empty>{L.empty}</Empty>
       ) : (
@@ -111,7 +109,7 @@ export function AdminUsers({ onOpenChat }: { onOpenChat: (id: string) => void })
               </tbody>
             </table>
           </div>
-          {list.hasNext && <MoreButton loading={list.loadingMore} onClick={() => void list.more()} />}
+          {list.hasNext && <MoreButton loading={list.loadingMore} percent={list.percent} onClick={() => void list.more()} />}
         </>
       )}
 
@@ -215,7 +213,6 @@ const TEXT = messages({
     deviceLoggedOut: '그 기기를 로그아웃시켰어요.',
     panel: '회원 관리',
     close: '닫기',
-    loading: '불러오고 있어요.',
     registeredAt: '가입한 때',
     loginCount: '로그인한 횟수',
     times: (n: string) => `${n}번`,
@@ -301,7 +298,6 @@ const TEXT = messages({
     deviceLoggedOut: 'Signed out that device.',
     panel: 'Manage member',
     close: 'Close',
-    loading: 'Loading.',
     registeredAt: 'Joined',
     loginCount: 'Sign-ins',
     times: (n: string) => `${n}`,
@@ -351,10 +347,13 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
   const [version, setVersion] = useState(0)
   const [asking, setAsking] = useState<Action | null>(null)
   const [working, setWorking] = useState(false)
+  const load = useLoadProgress()
+  // 관리 작업 뒤에 다시 받을 때(version)는 보던 내용을 그대로 두고, 처음 받을 때만 진행 막대를 보여줘요.
+  const waiting = useLoadHold(!detail && !error)
 
   useEffect(() => {
     let stale = false
-    void fetchAdminUser(id).then((result) => {
+    void fetchAdminUser(id, load.one()).then((result) => {
       if (stale) return
       if (result.ok) {
         setError('')
@@ -364,7 +363,7 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
     return () => {
       stale = true
     }
-  }, [id, version])
+  }, [id, version, load.one])
 
   // 바깥을 누르거나 Esc를 누르면 닫는 것은 SidePanel이 맡아요.
   const cancel = useCallback(() => setAsking(null), [])
@@ -411,18 +410,12 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
     <>
       <SidePanel label={L.panel} closeLabel={L.close} onClose={onClose} dismissable={!asking} className="max-w-[440px]">
 
-        {!detail || !user ? (
-          error ? (
-            <Failed message={error} onRetry={() => setVersion((value) => value + 1)} />
-          ) : (
-            <Busy label={L.loading} className="px-6">
-              <Bone className="h-5 w-32" />
-              <Bone className="mt-2.5 h-3.5 w-48" />
-              <Bone className="mt-8 h-3 w-full" />
-              <Bone className="mt-3 h-3 w-4/5" />
-              <Bone className="mt-3 h-3 w-3/5" />
-            </Busy>
-          )
+        {waiting || (!detail && !error) ? (
+          <div className="px-6">
+            <LoadProgress percent={load.percent} className={loadCenter} />
+          </div>
+        ) : !detail || !user ? (
+          <Failed message={error} onRetry={() => setVersion((value) => value + 1)} />
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8">
             <h2 className="truncate text-[20px] leading-tight font-semibold text-gray-900">{user.name}</h2>

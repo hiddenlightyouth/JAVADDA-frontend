@@ -2,9 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
 import { fetchPostings, fitOf, sortPostings, useResume, type JobPosting, type PostingSort } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
+import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
-import { cardsGrid, Failed, Notice, PostingCardsSkeleton, PostingTile } from './GapParts'
+import { cardsGrid, Failed, Notice, PostingTile } from './GapParts'
+import { loadCenter, LoadProgress } from './ui'
 
 /**
  * 추천 공고 화면이에요. 올려 둔 이력서의 역량과 가까운 공고를 적합도 순서로 보여줘요.
@@ -54,12 +56,13 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
   const [threshold, setThreshold] = useState(0)
   const [loaded, setLoaded] = useState<Loaded | undefined>(undefined)
   const [attempt, setAttempt] = useState(0)
+  const load = useLoadProgress()
 
   // 공고 목록은 서류와 상관없어서, 서류를 바꿔도 다시 받지 않아요.
   useEffect(() => {
     let stale = false
     setLoaded(undefined)
-    void fetchPostings().then(
+    void fetchPostings({}, load.one()).then(
       (list) => {
         if (!stale) setLoaded(list)
       },
@@ -70,12 +73,13 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
     return () => {
       stale = true
     }
-  }, [attempt])
+  }, [attempt, load.one])
 
   const list = useMemo(
     () => (Array.isArray(loaded) && resume ? sortPostings(loaded, sort, resume).filter((posting) => (fitOf(posting, resume) ?? 0) >= threshold) : loaded),
     [loaded, sort, resume, threshold],
   )
+  const waiting = useLoadHold(list === undefined)
 
   if (!resume) {
     return (
@@ -124,8 +128,8 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
       </div>
 
       <div className="mt-4">
-        {list === undefined ? (
-          <PostingCardsSkeleton />
+        {waiting || list === undefined ? (
+          <LoadProgress percent={load.percent} className={loadCenter} />
         ) : list === 'failed' ? (
           <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
         ) : list.length === 0 ? (

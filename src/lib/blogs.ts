@@ -1,5 +1,5 @@
 import { COMPANIES, type Company } from './gap'
-import { apiUrl, readResult } from './http'
+import { apiUrl, readWithLoad, type OnLoad } from './http'
 
 /**
  * 기업 기술 블로그 요약이에요. 기업마다 대표 글과 한 줄 요약, 요즘 고민 분석, 면접에서 쓸 점을 모아 둬요.
@@ -432,10 +432,10 @@ export function themeTrends(digests: BlogDigest[]): { trends: ThemeTrend[]; acti
   return { trends, active }
 }
 
-/** 기술 블로그 요약 전체예요(GET /blogs). 서버에 닿지 못하면 적어 둔 글을 보여줘요. 글은 최신 순서로 맞춰 둬요. */
-export async function fetchBlogDigests(): Promise<BlogDigest[]> {
+/** 기술 블로그 요약 전체예요(GET /blogs). 서버에 닿지 못하면 적어 둔 글을 보여줘요. 글은 최신 순서로 맞춰 둬요. onLoad를 주면 받는 정도(0에서 1)를 알려요. */
+export async function fetchBlogDigests(onLoad?: OnLoad): Promise<BlogDigest[]> {
   try {
-    const result = await readResult<BlogDigest[]>(await fetch(apiUrl('/blogs')))
+    const result = await readWithLoad<BlogDigest[]>(await fetch(apiUrl('/blogs')), onLoad)
     if (result.ok && Array.isArray(result.data)) {
       COLLECTED_AT = today()
       return result.data.map((digest) => ({
@@ -448,6 +448,7 @@ export async function fetchBlogDigests(): Promise<BlogDigest[]> {
   } catch {
     // 아래에서 적어 둔 글을 보여줘요.
   }
+  onLoad?.(1)
   COLLECTED_AT = FALLBACK_COLLECTED_AT
   const ids = new Set(COMPANIES.map((company) => company.id))
   return DIGESTS.filter((digest) => ids.has(digest.companyId))

@@ -3,12 +3,12 @@ import { track } from '../lib/analytics'
 import { blogCompaniesOf, COLLECTED_AT, fetchBlogDigests, isStale, THEME_NAMES, themeTrends, topSkills, type BlogDigest, type BlogPost, type BlogTheme, type ThemeTrend } from '../lib/blogs'
 import { canEmbed, companyOf, POSTINGS } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
+import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
 import { CompanyFilter, CompanyMark, Failed, Notice } from './GapParts'
 import { PostingBrowser, SplitView, type BrowserPage } from './PostingBrowser'
-import { Bone } from './Skeleton'
-import { Badge, Bullets, Busy, label, primaryButton, stagger, toolButton } from './ui'
+import { Badge, Bullets, label, loadCenter, LoadProgress, primaryButton, stagger, toolButton } from './ui'
 
 /**
  * 기술 블로그 화면이에요. 여러 기업 기술 블로그의 글을 최신 순서로 한데 늘어놓고, 기업과 주제로 걸러 봐요.
@@ -105,12 +105,14 @@ export function Blogs({ company, onCompany, onJobs }: {
   const [attempt, setAttempt] = useState(0)
   const [theme, setTheme] = useState<BlogTheme | null>(null)
   const [reading, setReading] = useState<BrowserPage | null>(null)
+  const load = useLoadProgress()
+  const waiting = useLoadHold(loaded === undefined)
 
   useEffect(() => {
     if (cache) return
     let stale = false
     setLoaded(undefined)
-    fetchBlogDigests().then(
+    fetchBlogDigests(load.one()).then(
       (list) => {
         cache = list
         if (!stale) setLoaded(list)
@@ -122,7 +124,7 @@ export function Blogs({ company, onCompany, onJobs }: {
     return () => {
       stale = true
     }
-  }, [attempt])
+  }, [attempt, load.one])
 
   const digests = Array.isArray(loaded) ? loaded : null
   const blogCompanies = useMemo(() => blogCompaniesOf(digests ?? []), [digests])
@@ -202,8 +204,8 @@ export function Blogs({ company, onCompany, onJobs }: {
         </div>
 
         <div className="mt-4">
-          {loaded === undefined ? (
-            <BlogsSkeleton />
+          {waiting || loaded === undefined ? (
+            <LoadProgress percent={load.percent} className={loadCenter} />
           ) : loaded === 'failed' ? (
             <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
           ) : company && !digest ? (
@@ -385,28 +387,5 @@ function CompanyCard({ digest, onJobs }: { digest: BlogDigest; onJobs: (company:
         </button>
       )}
     </div>
-  )
-}
-
-/** 글 카드와 주제 칸이 섞인 갤러리의 뼈대예요. */
-function BlogsSkeleton() {
-  return (
-    <Busy className="grid items-start gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3">
-      {Array.from({ length: 6 }, (_, item) => (
-        <div key={item} className="rounded-2xl bg-gray-50 p-5">
-          <div className="flex items-center gap-2">
-            <Bone className="size-5 rounded-md!" />
-            <Bone className="h-3 w-16" />
-          </div>
-          <Bone className="mt-4 h-4 w-4/5" />
-          <Bone className="mt-3 h-3 w-full" />
-          <Bone className="mt-2 h-3 w-3/4" />
-          <div className="mt-4 flex gap-1">
-            <Bone className="h-6 w-20 rounded-md!" />
-            <Bone className="h-6 w-16 rounded-md!" />
-          </div>
-        </div>
-      ))}
-    </Busy>
   )
 }

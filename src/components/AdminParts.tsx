@@ -3,9 +3,10 @@ import type { Result } from '../lib/admin'
 import type { Slice } from '../lib/auth'
 import { Failed as Notice } from './GapParts'
 import { SearchIcon } from './Icons'
-import { Bone } from './Skeleton'
-import { Busy, fieldBase, softButton, tag } from './ui'
+import { fieldBase, LoadProgress, softButton, tag } from './ui'
+import type { OnLoad } from '../lib/http'
 import { getLang, messages, pick, useMessages } from '../lib/i18n'
+import { useLoadHold, useLoadProgress } from '../lib/load'
 
 
 const TEXT = messages({
@@ -14,7 +15,7 @@ const TEXT = messages({
     none: '기록 없음',
     app: '앱',
     mobile: '모바일',
-    working: '처리 중',
+    loadingMore: (percent: number) => `불러오고 있어요 ${percent}%`,
     more: '더 보기',
   },
   en: {
@@ -22,7 +23,7 @@ const TEXT = messages({
     none: 'No record',
     app: 'App',
     mobile: 'Mobile',
-    working: 'Working',
+    loadingMore: (percent: number) => `Loading ${percent}%`,
     more: 'Show more',
   },
 })
@@ -50,16 +51,11 @@ export function Stat({ label, value, note }: { label: string; value: string; not
   )
 }
 
-export function StatsSkeleton({ count }: { count: number }) {
+/** 숫자 칸이 올 자리에서 받는 정도를 보여줘요. 회색 칸 하나에 가는 막대와 퍼센트만 둬요. */
+export function StatsLoading({ percent }: { percent: number }) {
   return (
-    <div aria-hidden className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {Array.from({ length: count }, (_, item) => (
-        <div key={item} className={card}>
-          <Bone className="h-3 w-16" />
-          <Bone className="mt-3 h-6 w-24" />
-          <Bone className="mt-3 h-3 w-20" />
-        </div>
-      ))}
+    <div className={`mt-3 ${card} py-6`}>
+      <LoadProgress percent={percent} compact />
     </div>
   )
 }
@@ -133,8 +129,9 @@ export function useDebounced<T>(value: T, ms = 300): T {
 /**
  * 20개씩 더 보기로 받는 목록이에요. key가 바뀌면(검색어, 필터) 처음부터 다시 받아요.
  * refresh는 보던 목록을 비우지 않고 첫 쪽을 조용히 다시 받아서, 관리 작업 뒤에 화면이 깜빡이지 않아요.
+ * 받을 때마다 받은 바이트로 퍼센트를 세요(percent). 첫 쪽을 받는 동안(waiting)은 표 자리에 진행 막대를, 더 보기는 버튼에 퍼센트를 보여줘요.
  */
-export function usePaged<T>(load: (page: number) => Promise<Result<Slice<T>>>, key: string) {
+export function usePaged<T>(load: (page: number, onLoad?: OnLoad) => Promise<Result<Slice<T>>>, key: string) {
   const [items, setItems] = useState<T[] | null>(null)
   const [next, setNext] = useState<number | null>(null)
   const [error, setError] = useState('')
@@ -143,12 +140,14 @@ export function usePaged<T>(load: (page: number) => Promise<Result<Slice<T>>>, k
   const latest = useRef(load)
   latest.current = load
   const quiet = useRef(false)
+  const progress = useLoadProgress()
+  const { one } = progress
 
   useEffect(() => {
     let stale = false
     if (!quiet.current) setItems(null)
     quiet.current = false
-    void latest.current(0).then((result) => {
+    void latest.current(0, one()).then((result) => {
       if (stale) return
       if (!result.ok) {
         setError(result.message)
@@ -161,12 +160,14 @@ export function usePaged<T>(load: (page: number) => Promise<Result<Slice<T>>>, k
     return () => {
       stale = true
     }
-  }, [key, attempt])
+  }, [key, attempt, one])
+
+  const waiting = useLoadHold(items === null && !error)
 
   async function more() {
     if (next === null || loadingMore) return
     setLoadingMore(true)
-    const result = await latest.current(next)
+    const result = await latest.current(next, one())
     setLoadingMore(false)
     if (!result.ok) {
       setError(result.message)
@@ -181,6 +182,8 @@ export function usePaged<T>(load: (page: number) => Promise<Result<Slice<T>>>, k
     error,
     hasNext: next !== null,
     loadingMore,
+    percent: progress.percent,
+    waiting,
     more,
     retry: () => {
       setError('')
@@ -201,30 +204,21 @@ export function Empty({ children }: { children: ReactNode }) {
   return <p className="mt-16 text-center text-[13.5px] leading-relaxed text-gray-500">{children}</p>
 }
 
-/** 표와 같은 자리에 두는 스켈레톤이에요. */
-export function TableSkeleton({ rows = 8 }: { rows?: number }) {
+/** 표가 올 자리에서 받는 정도를 보여줘요. 표와 같은 테두리 안에 가는 막대와 퍼센트만 둬요. */
+export function TableLoading({ percent }: { percent: number }) {
   return (
-    <Busy className="mt-3 overflow-hidden rounded-2xl border border-gray-200 bg-white">
-      {Array.from({ length: rows }, (_, row) => (
-        <div key={row} className="flex h-[57px] items-center gap-6 border-t border-gray-100 px-4 first:border-t-0">
-          <div className="min-w-0 flex-1">
-            <Bone className={`h-3.5 ${row % 2 ? 'w-32' : 'w-24'}`} />
-            <Bone className="mt-2 h-3 w-44" />
-          </div>
-          <Bone className="h-3 w-16" />
-          <Bone className="h-3 w-12" />
-          <Bone className="h-3 w-20" />
-        </div>
-      ))}
-    </Busy>
+    <div className="mt-3 rounded-2xl border border-gray-200 bg-white px-4 py-6">
+      <LoadProgress percent={percent} compact />
+    </div>
   )
 }
 
-export function MoreButton({ loading, onClick }: { loading: boolean; onClick: () => void }) {
+/** 더 보기 버튼이에요. 받는 동안은 버튼 글자에 받은 정도(퍼센트)를 적어요. */
+export function MoreButton({ loading, percent = 0, onClick }: { loading: boolean; percent?: number; onClick: () => void }) {
   const L = useMessages(TEXT)
   return (
-    <button type="button" disabled={loading} onClick={onClick} className={`mt-4 ${softButton}`}>
-      {loading ? L.working : L.more}
+    <button type="button" disabled={loading} onClick={onClick} className={`mt-4 tabular-nums ${softButton}`}>
+      {loading ? L.loadingMore(percent) : L.more}
     </button>
   )
 }

@@ -2,9 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { createPortal } from 'react-dom'
 import { careerName, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, useDiagnosed, type Company, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
-import { Bone } from './Skeleton'
 import { BriefcaseIcon, CheckIcon, CloseIcon, MapPinIcon, PersonIcon, TriangleIcon } from './Icons'
-import { Badge, Busy, primaryButton, stagger } from './ui'
+import { Badge, primaryButton, ProgressBar, stagger } from './ui'
 
 /**
  * 취업 갭 진단의 화면들이 같이 쓰는 작은 부품이에요. 기업 머리글자, 적합도 표시, 스킬 이름표, 공고 카드, 흰 칸, 레이더와 막대 그래프가 있어요.
@@ -33,7 +32,6 @@ const TEXT = messages({
     checks: { met: '충분해요', partial: '근거가 약해요', missing: '보이지 않아요' } as Record<RequirementCheck['status'], string>,
     mine: '나',
     wanted: '공고',
-    loading: '불러오고 있어요.',
     failed: '불러오지 못했어요. 잠시 뒤에 다시 시도해 주세요.',
     retry: '다시 시도하기',
     remove: (name: string) => `${name} 빼기`,
@@ -52,7 +50,6 @@ const TEXT = messages({
       done: '다 됐어요',
     } as Record<string, string>,
     stageFallback: '처리하고 있어요',
-    progressLabel: '진행 정도',
     diagnosed: '진단함',
     diagnosing: '진단 중',
     diagnosedTip: '이미 진단한 공고예요. 누르면 그 리포트를 열어요.',
@@ -76,7 +73,6 @@ const TEXT = messages({
     checks: { met: 'Covered', partial: 'Weak evidence', missing: 'Not found' },
     mine: 'You',
     wanted: 'Posting',
-    loading: 'Loading.',
     failed: "Couldn't load. Please try again in a moment.",
     retry: 'Try again',
     remove: (name: string) => `Remove ${name}`,
@@ -95,7 +91,6 @@ const TEXT = messages({
       done: 'All done',
     },
     stageFallback: 'Working on it',
-    progressLabel: 'Progress',
     diagnosed: 'Diagnosed',
     diagnosing: 'Analyzing',
     diagnosedTip: 'You already diagnosed this posting. Click to open that report.',
@@ -327,30 +322,8 @@ export function useStageText(stage: string): string {
  * title을 주면 단계 문장 위에 작게 적어요(올리는 파일 이름 등).
  */
 export function AiProgress({ progress, stage, title, className = '' }: { progress: number; stage: string; title?: string; className?: string }) {
-  const L = useMessages(TEXT)
   const text = useStageText(stage)
-  const value = Math.min(100, Math.max(0, Math.round(progress)))
-  return (
-    <div className={`animate-fade ${className}`}>
-      {title && <p className="mb-1 truncate text-[12.5px] text-gray-400">{title}</p>}
-      <div className="flex items-baseline justify-between gap-4">
-        <p role="status" className="min-w-0 truncate text-[13.5px] text-gray-700">
-          {text}
-        </p>
-        <span className="shrink-0 text-[13px] font-semibold text-gray-900 tabular-nums">{value}%</span>
-      </div>
-      <div
-        role="progressbar"
-        aria-label={`${L.progressLabel}, ${text}`}
-        aria-valuenow={value}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-gray-200/70"
-      >
-        <div className="h-full rounded-full bg-brand transition-[width] duration-400 ease-out" style={{ width: `${value}%` }} />
-      </div>
-    </div>
-  )
+  return <ProgressBar value={progress} text={text} title={title} className={`animate-fade ${className}`} />
 }
 
 /**
@@ -489,34 +462,6 @@ export function PostingTile({ posting, resume, fit = fitOf(posting, resume), tag
         </span>
       </button>
     </li>
-  )
-}
-
-/** 공고 카드와 같은 크기와 배치의 뼈대예요. */
-export function PostingCardsSkeleton({ row = false, count }: { row?: boolean; count?: number }) {
-  const L = useMessages(TEXT)
-  return (
-    <Busy label={L.loading} className={row ? cardsRow : cardsGrid}>
-      {Array.from({ length: count ?? (row ? 8 : 9) }, (_, item) => (
-        <div key={item} className="flex h-[196px] min-h-0 flex-col rounded-2xl bg-gray-50 p-5">
-          <div className="flex items-center gap-3">
-            <Bone className="size-12 shrink-0 rounded-xl!" />
-            <div className="min-w-0 flex-1">
-              <Bone className="h-3.5 w-3/5" />
-              <Bone className="mt-2 h-3 w-2/5" />
-            </div>
-          </div>
-          <div className="mt-4 flex-1">
-            <Bone className="h-3 w-full" />
-            <Bone className="mt-2 h-3 w-4/5" />
-          </div>
-          <div className="flex items-center justify-between">
-            <Bone className="h-3 w-28" />
-            <Bone className="h-3 w-16" />
-          </div>
-        </div>
-      ))}
-    </Busy>
   )
 }
 

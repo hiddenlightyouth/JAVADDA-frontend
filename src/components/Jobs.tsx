@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
 import { careerName, COMPANIES, companyOf, type Company, daysLeft, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, type Resume, SEARCH_SUGGESTIONS, SUGGEST_MS } from '../lib/gap'
 import { getLang, localizePath, messages, pick, useMessages } from '../lib/i18n'
+import { useLoadHold, useLoadProgress } from '../lib/load'
 import { pathOf } from '../lib/routes'
 import { readItem, writeItem } from '../lib/storage'
 import { showToast } from '../lib/toast'
@@ -10,8 +11,7 @@ import { Dropdown } from './Dropdown'
 import { CardTag, CompanyFilter, CompanyMark, DiagnosedTag, Failed, FitBadge, Notice, PostingMeta, SkillChip, skillTone } from './GapParts'
 import { GridIcon, ListIcon, SearchIcon } from './Icons'
 import { PostingBrowser, SplitView } from './PostingBrowser'
-import { Bone } from './Skeleton'
-import { Busy, Segmented, stagger } from './ui'
+import { loadCenter, LoadProgress, Segmented, stagger } from './ui'
 
 /**
  * 공고 탐색 화면이에요. 공고를 화면 가득 펼쳐 놓고 직군과 경력으로 걸러 보다가, 눌러서 진단을 시작해요.
@@ -105,6 +105,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   // 미니 브라우저로 여는 것이에요. 공고의 원문이나 기업 소개 사이트예요.
   const [viewing, setViewing] = useState<{ posting: JobPosting } | { company: Company } | null>(null)
   const [layout, setLayout] = useState<Layout>(readLayout)
+  const load = useLoadProgress()
 
   // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요.
   useEffect(() => {
@@ -117,8 +118,9 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   useEffect(() => {
     let stale = false
     setLoaded(undefined)
+    const onLoad = load.one()
     const timer = window.setTimeout(() => {
-      void fetchPostings({ query, family, career }).then(
+      void fetchPostings({ query, family, career }, onLoad).then(
         (list) => {
           if (!stale) setLoaded(list)
         },
@@ -131,13 +133,14 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
       stale = true
       window.clearTimeout(timer)
     }
-  }, [query, family, career, attempt])
+  }, [query, family, career, attempt, load.one])
 
   // 기업은 받아 온 공고에서 바로 걸러요. 기업마다 공고가 몇 개뿐이라 서버에 다시 묻지 않아요.
   const list = useMemo(
     () => (Array.isArray(loaded) ? sortPostings(company ? loaded.filter((posting) => posting.companyId === company) : loaded, sort, resume) : loaded),
     [loaded, company, sort, resume],
   )
+  const waiting = useLoadHold(list === undefined)
 
   return (
     <SplitView
@@ -260,8 +263,8 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
         </div>
 
         <div className="mt-3">
-          {list === undefined ? (
-            layout === 'gallery' ? <JobCardsSkeleton /> : <JobRowsSkeleton />
+          {waiting || list === undefined ? (
+            <LoadProgress percent={load.percent} className={loadCenter} />
           ) : list === 'failed' ? (
             <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
           ) : list.length === 0 ? (
@@ -430,54 +433,5 @@ function JobRow({ posting, resume, fit, order, onOpen, onView, onCompany }: JobI
         {L.view}
       </button>
     </li>
-  )
-}
-
-/** 리스트형 줄과 같은 배치의 뼈대예요. */
-function JobRowsSkeleton() {
-  return (
-    <Busy className="flex flex-col gap-2">
-      {Array.from({ length: 8 }, (_, item) => (
-        <div key={item} className="flex items-center gap-4 rounded-2xl bg-gray-50 px-4 py-3.5">
-          <Bone className="size-10 shrink-0 rounded-xl!" />
-          <div className="min-w-0 flex-1">
-            <Bone className="h-4 w-1/2" />
-            <Bone className="mt-2 h-3 w-1/3" />
-          </div>
-          <Bone className="h-6 w-12 shrink-0 rounded-md!" />
-        </div>
-      ))}
-    </Busy>
-  )
-}
-
-/** 공고 카드와 같은 배치의 뼈대예요. */
-function JobCardsSkeleton() {
-  return (
-    <Busy className={jobsGrid}>
-      {Array.from({ length: 6 }, (_, item) => (
-        <div key={item} className="rounded-2xl bg-gray-50 p-5">
-          <div className="flex items-center gap-3">
-            <Bone className="size-10 shrink-0 rounded-xl!" />
-            <div className="min-w-0 flex-1">
-              <Bone className="h-3.5 w-24" />
-              <Bone className="mt-2 h-3 w-36" />
-            </div>
-            <Bone className="h-6 w-12 rounded-md!" />
-          </div>
-          <Bone className="mt-5 h-4 w-3/4" />
-          <Bone className="mt-3 h-3 w-full" />
-          <div className="mt-4 flex gap-1.5">
-            <Bone className="h-7 w-16 rounded-md!" />
-            <Bone className="h-7 w-20 rounded-md!" />
-            <Bone className="h-7 w-14 rounded-md!" />
-          </div>
-          <div className="mt-5 flex justify-between border-t border-gray-200 pt-4">
-            <Bone className="h-3 w-24" />
-            <Bone className="h-3 w-28" />
-          </div>
-        </div>
-      ))}
-    </Busy>
   )
 }

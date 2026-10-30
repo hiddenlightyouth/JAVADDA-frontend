@@ -94,7 +94,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
     )
   }
 
-  // 바로 리포트로 넘어가는 동안은 빈 화면이에요. 리포트가 뼈대를 보여줘요.
+  // 바로 리포트로 넘어가는 동안은 빈 화면이에요. 리포트가 진행 막대를 보여줘요.
   if (ready) return <main className="flex-1" />
 
   const company = companyOf(posting.companyId)

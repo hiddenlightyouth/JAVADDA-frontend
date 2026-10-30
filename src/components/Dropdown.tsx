@@ -1,15 +1,8 @@
 import { useRef, useState } from 'react'
 import { useDismiss } from '../hooks/useDismiss'
 import { Kbd } from './Shortcuts'
-import { messages, useMessages } from '../lib/i18n'
 import { CheckIcon, ChevronDownIcon } from './Icons'
-import { Bone } from './Skeleton'
-import { label as labelText, menuItem, menuPanel, toolButton } from './ui'
-
-const TEXT = messages({
-  ko: { loading: '불러오고 있어요.' },
-  en: { loading: 'Loading.' },
-})
+import { label as labelText, LoadProgress, menuItem, menuPanel, toolButton } from './ui'
 
 interface MenuItem {
   label: string
@@ -26,8 +19,8 @@ interface MenuGroup {
   items: MenuItem[]
   /** 항목 대신 보여줄 안내 (오류 등) */
   note?: string
-  /** 불러오는 중이면 true. 항목 대신 스켈레톤을 보여줘요. */
-  loading?: boolean
+  /** 불러오는 중이면 받은 정도(0에서 100)예요. 항목 대신 가는 진행 막대와 퍼센트를 보여줘요. */
+  progress?: number
 }
 
 /**
@@ -48,7 +41,6 @@ export function Dropdown({ label, value, active = false, groups, onOpen, align =
   /** 버튼 모양을 덧씌울 때 써요. */
   className?: string
 }) {
-  const L = useMessages(TEXT)
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -78,17 +70,7 @@ export function Dropdown({ label, value, active = false, groups, onOpen, align =
             <div key={group.title ?? index} className={index > 0 ? 'mt-1 border-t border-gray-100 pt-1' : ''}>
               {group.title && <p className={`px-2.5 pt-2 pb-1 ${labelText}`}>{group.title}</p>}
               {group.note && <p className="px-2.5 py-2 text-[13px] leading-relaxed text-gray-500">{group.note}</p>}
-              {group.loading && (
-                <div aria-busy="true">
-                  <span className="sr-only">{L.loading}</span>
-                  {['w-24', 'w-32', 'w-20', 'w-28', 'w-24'].map((width, order) => (
-                    <div key={order} aria-hidden className="flex h-9 items-center justify-between px-2.5">
-                      <Bone className={`h-3 ${width}`} />
-                      <Bone className="h-3 w-10" />
-                    </div>
-                  ))}
-                </div>
-              )}
+              {group.progress !== undefined && <LoadProgress percent={group.progress} compact className="px-2.5 py-3" />}
               {group.items.map((item, order) => (
                 <button
                   key={`${order}:${item.label}`}

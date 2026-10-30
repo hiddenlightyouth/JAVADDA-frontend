@@ -1,4 +1,5 @@
 import { authFetch, type Slice } from './auth'
+import type { OnLoad } from './http'
 import { getLang, messages, pick } from './i18n'
 
 export type Result<T> = { ok: true; data: T } | { ok: false; message: string }
@@ -163,9 +164,10 @@ const MESSAGES = messages<Record<string, string>>({
   },
 })
 
-async function request<T>(path: string, init?: RequestInit): Promise<Result<T>> {
+/** 관리자 API를 불러요. onLoad를 주면 응답을 받는 정도(0에서 1)를 알려요. 화면은 받는 동안 이것으로 퍼센트를 보여줘요. */
+async function request<T>(path: string, init?: RequestInit, onLoad?: OnLoad): Promise<Result<T>> {
   try {
-    const result = await authFetch<T>(path, init)
+    const result = await authFetch<T>(path, init, onLoad)
     if (result.ok) return { ok: true, data: result.data as T }
     // 관리자 API가 아직 없는 서버는 없는 주소라고 답해요.
     if (result.status === 404 && !result.code) return { ok: false, message: pick(MESSAGES).unsupported }
@@ -184,12 +186,12 @@ const listQuery = (query: string, filter: string, page: number) => {
   return params.toString()
 }
 
-export const fetchOverview = (days: number) => request<AdminOverview>(`/admin/overview?days=${days}`)
+export const fetchOverview = (days: number, onLoad?: OnLoad) => request<AdminOverview>(`/admin/overview?days=${days}`, undefined, onLoad)
 
-export const fetchAdminUsers = (query: string, filter: AdminUserFilter, page: number) =>
-  request<Slice<AdminUser>>(`/admin/users?${listQuery(query, filter, page)}`)
+export const fetchAdminUsers = (query: string, filter: AdminUserFilter, page: number, onLoad?: OnLoad) =>
+  request<Slice<AdminUser>>(`/admin/users?${listQuery(query, filter, page)}`, undefined, onLoad)
 
-export const fetchAdminUser = (id: number) => request<AdminUserDetail>(`/admin/users/${id}`)
+export const fetchAdminUser = (id: number, onLoad?: OnLoad) => request<AdminUserDetail>(`/admin/users/${id}`, undefined, onLoad)
 
 export const changeUserRole = (id: number, role: 'USER' | 'ADMIN') => send(`/admin/users/${id}/role`, 'PATCH', { role })
 
@@ -205,25 +207,25 @@ export const revokeUserSession = (id: number, sessionId: string) => send(`/admin
 
 export const deleteUser = (id: number) => send(`/admin/users/${id}`, 'DELETE')
 
-export const fetchAdminChats = (query: string, filter: AdminChatFilter, page: number) =>
-  request<Slice<AdminChat>>(`/admin/chats?${listQuery(query, filter, page)}`)
+export const fetchAdminChats = (query: string, filter: AdminChatFilter, page: number, onLoad?: OnLoad) =>
+  request<Slice<AdminChat>>(`/admin/chats?${listQuery(query, filter, page)}`, undefined, onLoad)
 
 export const unshareAdminChat = (id: string) => send(`/admin/chats/${id}/share`, 'DELETE')
 
 export const deleteAdminChat = (id: string) => send(`/admin/chats/${id}`, 'DELETE')
 
-export const fetchAdminFeedback = (kind: 'ALL' | 'RATING' | 'BUG', page: number) =>
-  request<Slice<AdminFeedback>>(`/admin/feedback?page=${page}&size=20${kind === 'ALL' ? '' : `&kind=${kind}`}`)
+export const fetchAdminFeedback = (kind: 'ALL' | 'RATING' | 'BUG', page: number, onLoad?: OnLoad) =>
+  request<Slice<AdminFeedback>>(`/admin/feedback?page=${page}&size=20${kind === 'ALL' ? '' : `&kind=${kind}`}`, undefined, onLoad)
 
-export const fetchFeedbackSummary = () => request<FeedbackSummary>('/admin/feedback/summary')
+export const fetchFeedbackSummary = (onLoad?: OnLoad) => request<FeedbackSummary>('/admin/feedback/summary', undefined, onLoad)
 
 /** from(YYYY-MM-DD)부터 오늘까지의 AI 사용량을 받아요. */
-export const fetchAiUsage = (from: string) => request<AiUsageRow[]>(`/ai-usage/daily?from=${from}`)
+export const fetchAiUsage = (from: string, onLoad?: OnLoad) => request<AiUsageRow[]>(`/ai-usage/daily?from=${from}`, undefined, onLoad)
 
-export const fetchAiCalls = (failedOnly: boolean, page: number) =>
-  request<Slice<AiCall>>(`/ai-usage/calls?page=${page}&size=20${failedOnly ? '&status=ERROR' : ''}`)
+export const fetchAiCalls = (failedOnly: boolean, page: number, onLoad?: OnLoad) =>
+  request<Slice<AiCall>>(`/ai-usage/calls?page=${page}&size=20${failedOnly ? '&status=ERROR' : ''}`, undefined, onLoad)
 
-export const fetchAiCall = (id: number) => request<AiCallDetail>(`/ai-usage/calls/${id}`)
+export const fetchAiCall = (id: number, onLoad?: OnLoad) => request<AiCallDetail>(`/ai-usage/calls/${id}`, undefined, onLoad)
 
 // 서버는 날짜를 한국 날짜로 묶어서, 화면도 한국 날짜로 기간을 세요.
 const seoulDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' })

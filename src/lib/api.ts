@@ -1,4 +1,4 @@
-import { apiUrl, readResult } from './http'
+import { apiUrl, readWithLoad, type OnLoad } from './http'
 import { readItem, writeItem } from './storage'
 import { createStore, useStore } from './store'
 
@@ -64,10 +64,10 @@ function readAi(value: unknown): AiConfig {
   return { defaultModel: typeof ai.defaultModel === 'string' ? ai.defaultModel : '', models }
 }
 
-/** 서버가 어떤 기능을 지원하는지 물어봐요. 서버에 닿지 못하면 모두 꺼진 것으로 봐요. */
-export async function fetchConfig(): Promise<ServerConfig> {
+/** 서버가 어떤 기능을 지원하는지 물어봐요. 서버에 닿지 못하면 모두 꺼진 것으로 봐요. onLoad를 주면 받는 정도(0에서 1)를 알려요. */
+export async function fetchConfig(onLoad?: OnLoad): Promise<ServerConfig> {
   try {
-    const result = await readResult<Partial<ServerConfig>>(await fetch(apiUrl('/config')))
+    const result = await readWithLoad<Partial<ServerConfig>>(await fetch(apiUrl('/config')), onLoad)
     if (!result.ok) return NONE
     return {
       admin: result.data?.admin === true,
@@ -82,6 +82,7 @@ export async function fetchConfig(): Promise<ServerConfig> {
       online: true,
     }
   } catch {
+    onLoad?.(1)
     return NONE
   }
 }
@@ -89,8 +90,8 @@ export async function fetchConfig(): Promise<ServerConfig> {
 let configOnce: Promise<ServerConfig> | null = null
 
 /** 서버에 다시 물어봐요. 설정 창을 열 때 써서, 앱을 연 뒤에 서버가 켜졌거나 키가 바뀌어도 새 목록을 보여줘요. */
-export function refreshConfig(): Promise<ServerConfig> {
-  configOnce = fetchConfig()
+export function refreshConfig(onLoad?: OnLoad): Promise<ServerConfig> {
+  configOnce = fetchConfig(onLoad)
   return configOnce
 }
 

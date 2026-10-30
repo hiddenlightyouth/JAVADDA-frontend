@@ -22,6 +22,7 @@ import { useAuth } from '../lib/auth'
 import { useShortcuts } from '../lib/shortcuts'
 import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
+import { useLoadHold, useLoadProgress } from '../lib/load'
 import { showToast } from '../lib/toast'
 import { pageFrame, PageHeader } from './AppPage'
 import { panelBody, SidePanel } from './Dialog'
@@ -30,8 +31,7 @@ import { DeleteReportDialog, removeReport } from './History'
 import { AlertIcon, CheckIcon, ChevronRightIcon, ClockIcon, LevelIcon, RefreshIcon, TrashIcon } from './Icons'
 import { ReviewTab } from './ReportReview'
 import { QuestionsTab } from './ReportQuestions'
-import { Bone } from './Skeleton'
-import { Bullets, Busy, label, NumberedList, primaryButton, Tabs, textArea, toolButton, toolDangerButton } from './ui'
+import { Bullets, label, LoadProgress, NumberedList, primaryButton, Tabs, textArea, toolButton, toolDangerButton } from './ui'
 
 /** 리포트의 탭이에요. 요약, 적합도 설명, 서류 검증, 예상 면접 질문 순서예요. */
 export type ReportTab = 'summary' | 'fit' | 'review' | 'questions'
@@ -171,42 +171,6 @@ interface Props {
   onPractice: (id: string, question?: string) => void
   /** 다른 공고로 진단을 시작해요. */
   onPick: (postingId: string) => void
-}
-
-/** 받는 동안 보여주는 뼈대예요. 요약 탭의 배치와 같아요. */
-function ReportSkeleton() {
-  return (
-    <Busy className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-6 rounded-2xl bg-gray-50 p-5">
-          <Bone className="size-28 shrink-0" />
-          <div className="min-w-0 flex-1">
-            <Bone className="h-3 w-full" />
-            <Bone className="mt-2 h-3 w-11/12" />
-            <Bone className="mt-2 h-3 w-2/3" />
-          </div>
-        </div>
-        <div className="rounded-2xl bg-gray-50 p-5">
-          <Bone className="h-3.5 w-20" />
-          <div className="mt-4 divide-y divide-gray-100 overflow-hidden rounded-xl bg-white">
-            {[0, 1, 2, 3, 4, 5].map((item) => (
-              <div key={item} className="flex items-center gap-4 px-4 py-3.5">
-                <div className="min-w-0 flex-1">
-                  <Bone className="h-3.5 w-24" />
-                  <Bone className="mt-2 h-3 w-3/5" />
-                </div>
-                <Bone className="h-3 w-12" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      <div className="rounded-2xl bg-gray-50 p-5">
-        <Bone className="h-3.5 w-24" />
-        <Bone className="mx-auto mt-6 size-56 rounded-full!" />
-      </div>
-    </Busy>
-  )
 }
 
 /** 강의 한 줄이에요. 플랫폼 로고와 제목, 아이콘을 붙인 난이도와 강의 시간을 보여줘요. */
@@ -571,7 +535,9 @@ function FitTab({ report, onPick }: { report: ReportData; onPick: (postingId: st
 /** 리포트 대시보드예요. 공고 하나와 내 서류를 맞춰 본 결과를 탭으로 나눠 보여줘요. */
 export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
   const L = useMessages(TEXT)
-  const report = useReport(id)
+  const load = useLoadProgress()
+  const report = useReport(id, load.one)
+  const waiting = useLoadHold(report === undefined)
   const resume = useResume()
   const posting = report ? postingOf(report.postingId) : null
   const company = report ? companyOf(report.companyId) : null
@@ -594,14 +560,12 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
     !deleting,
   )
 
-  // 상세를 받는 동안은 같은 배치의 뼈대를 보여줘요.
-  if (report === undefined) {
+  // 상세를 받는 동안은 받은 바이트로 센 퍼센트를 보여줘요. 만드는 중(pending)인 리포트는 아래에서 AI 진행 막대를 보여줘요.
+  if (waiting || report === undefined) {
     return (
       <main className={pageFrame}>
         <PageHeader title={L.tabs.summary} onBack={onBack} backLabel={L.back} />
-        <div className="pt-5">
-          <ReportSkeleton />
-        </div>
+        <LoadProgress percent={load.percent} className="mx-auto mt-24 w-full max-w-md" />
       </main>
     )
   }

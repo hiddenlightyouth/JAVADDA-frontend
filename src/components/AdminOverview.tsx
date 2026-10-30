@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { track } from '../lib/analytics'
 import { dayLabel, fetchOverview, type AdminOverview as Overview } from '../lib/admin'
-import { BarChart, card, Empty, Failed, full, sectionTitle, share, Stat, StatsSkeleton } from './AdminParts'
-import { Busy, Segmented } from './ui'
-import { Bone } from './Skeleton'
+import { BarChart, card, Empty, Failed, full, sectionTitle, share, Stat } from './AdminParts'
+import { loadCenter, LoadProgress, Segmented } from './ui'
+import { useLoadHold, useLoadProgress } from '../lib/load'
 import { messages, useMessages } from '../lib/i18n'
 
 type Metric = 'chats' | 'signups'
@@ -12,7 +12,6 @@ const TEXT = messages({
   ko: {
     periods: [[7, '7일'], [30, '30일'], [90, '90일']] as [number, string][],
     metrics: [['chats', '새 채팅'], ['signups', '가입']] as [Metric, string][],
-    loading: '불러오고 있어요.',
     users: '회원',
     devices: '사용 기기',
     chats: '채팅',
@@ -44,7 +43,6 @@ const TEXT = messages({
   en: {
     periods: [[7, '7 days'], [30, '30 days'], [90, '90 days']],
     metrics: [['chats', 'New chats'], ['signups', 'Sign-ups']],
-    loading: 'Loading.',
     users: 'Members',
     devices: 'Devices',
     chats: 'Chats',
@@ -84,33 +82,23 @@ export function AdminOverview() {
   const [metric, setMetric] = useState<Metric>('chats')
   const [loaded, setLoaded] = useState<Loaded>('loading')
   const [attempt, setAttempt] = useState(0)
+  const load = useLoadProgress()
+  const waiting = useLoadHold(loaded === 'loading')
 
   useEffect(() => {
     let stale = false
     // 기간만 바꿀 때는 보던 숫자를 그대로 두고 그래프만 바꿔요.
     setLoaded((prev) => (typeof prev === 'object' && 'overview' in prev ? prev : 'loading'))
-    void fetchOverview(period).then((result) => {
+    void fetchOverview(period, load.one()).then((result) => {
       if (stale) return
       setLoaded(result.ok ? { overview: result.data } : { error: result.message })
     })
     return () => {
       stale = true
     }
-  }, [period, attempt])
+  }, [period, attempt, load.one])
 
-  if (loaded === 'loading') {
-    return (
-      <Busy label={L.loading}>
-        <h2 className={sectionTitle}>{L.users}</h2>
-        <StatsSkeleton count={4} />
-        <h2 className={`${sectionTitle} mt-8`}>{L.devices}</h2>
-        <StatsSkeleton count={3} />
-        <h2 className={`${sectionTitle} mt-8`}>{L.chats}</h2>
-        <StatsSkeleton count={4} />
-        <Bone className="mt-3 h-[244px] w-full rounded-2xl!" />
-      </Busy>
-    )
-  }
+  if (waiting || loaded === 'loading') return <LoadProgress percent={load.percent} className={loadCenter} />
   if ('error' in loaded) return <Failed message={loaded.error} onRetry={() => setAttempt((value) => value + 1)} />
 
   const { users, devices, chats, daily, topRepos } = loaded.overview

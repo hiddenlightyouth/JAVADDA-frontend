@@ -3,9 +3,9 @@ import { track } from '../lib/analytics'
 import { addDays, dayLabel, daysBetween, fetchAiCall, fetchAiCalls, fetchAiUsage, monthLabel, seoulToday, type AiCall, type AiCallDetail, type AiUsageRow } from '../lib/admin'
 import { formatDateTime } from '../lib/format'
 import { showToast } from '../lib/toast'
-import { BarChart, card, compact, Empty, Failed, full, MoreButton, TableSkeleton, sectionTitle, share, Stat, StatsSkeleton, tableWrap, td, th, usePaged, type Bar } from './AdminParts'
-import { Busy, ghostButton, Segmented, tag } from './ui'
-import { Bone } from './Skeleton'
+import { BarChart, card, compact, Empty, Failed, full, MoreButton, TableLoading, sectionTitle, share, Stat, tableWrap, td, th, usePaged, type Bar } from './AdminParts'
+import { ghostButton, loadCenter, LoadProgress, Segmented, tag } from './ui'
+import { useLoadHold, useLoadProgress } from '../lib/load'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { SidePanel } from './Dialog'
 
@@ -24,7 +24,6 @@ const TEXT = messages({
     callsBar: (n: string) => `${n}번`,
     title: 'AI 사용량',
     period: '기간',
-    loading: '불러오고 있어요.',
     calls: '호출',
     perDay: (n: string) => `하루에 ${n}번쯤`,
     failedCalls: '실패한 호출',
@@ -78,7 +77,6 @@ const TEXT = messages({
     callsBar: (n: string) => `${n} calls`,
     title: 'AI usage',
     period: 'Period',
-    loading: 'Loading.',
     calls: 'Calls',
     perDay: (n: string) => `About ${n} a day`,
     failedCalls: 'Failed calls',
@@ -161,19 +159,21 @@ export function AdminUsage({ calls }: { calls: boolean }) {
   const [metric, setMetric] = useState<Metric>('tokens')
   const [loaded, setLoaded] = useState<Loaded>('loading')
   const [attempt, setAttempt] = useState(0)
+  const load = useLoadProgress()
+  const waiting = useLoadHold(loaded === 'loading')
 
   useEffect(() => {
     let stale = false
     setLoaded('loading')
     const from = period === 'all' ? EARLIEST : addDays(seoulToday(), -(period - 1))
-    void fetchAiUsage(from).then((result) => {
+    void fetchAiUsage(from, load.one()).then((result) => {
       if (stale) return
       setLoaded(result.ok ? { rows: result.data } : { error: result.message })
     })
     return () => {
       stale = true
     }
-  }, [period, attempt])
+  }, [period, attempt, load.one])
 
   const rows = typeof loaded === 'object' && 'rows' in loaded ? loaded.rows : null
 
@@ -231,15 +231,8 @@ export function AdminUsage({ calls }: { calls: boolean }) {
         />
       </div>
 
-      {loaded === 'loading' ? (
-        <Busy label={L.loading}>
-          <StatsSkeleton count={4} />
-          <Bone className="mt-3 h-[244px] w-full rounded-2xl!" />
-          <div className="mt-3 grid gap-3 lg:grid-cols-2">
-            <Bone className="h-44 w-full rounded-2xl!" />
-            <Bone className="h-44 w-full rounded-2xl!" />
-          </div>
-        </Busy>
+      {waiting || loaded === 'loading' ? (
+        <LoadProgress percent={load.percent} className={loadCenter} />
       ) : !summary ? (
         <Failed message={'error' in loaded ? loaded.error : ''} onRetry={() => setAttempt((value) => value + 1)} />
       ) : (
@@ -321,7 +314,7 @@ const seconds = (ms: number) => pick(TEXT).seconds((ms / 1000).toFixed(1))
 function Calls() {
   const L = useMessages(TEXT)
   const [filter, setFilter] = useState<'all' | 'failed'>('all')
-  const list = usePaged<AiCall>((page) => fetchAiCalls(filter === 'failed', page), filter)
+  const list = usePaged<AiCall>((page, onLoad) => fetchAiCalls(filter === 'failed', page, onLoad), filter)
   const [openId, setOpenId] = useState<number | null>(null)
   const close = useCallback(() => setOpenId(null), [])
 
@@ -332,12 +325,10 @@ function Calls() {
         <Segmented label={L.callKind} options={L.callFilters} value={filter} onChange={setFilter} />
       </div>
 
-      {list.items === null ? (
-        list.error ? (
-          <Failed message={list.error} onRetry={list.retry} />
-        ) : (
-          <TableSkeleton rows={6} />
-        )
+      {list.waiting ? (
+        <TableLoading percent={list.percent} />
+      ) : list.items === null ? (
+        <Failed message={list.error} onRetry={list.retry} />
       ) : list.items.length === 0 ? (
         <Empty>{filter === 'failed' ? L.noFailed : L.noCalls}</Empty>
       ) : (
@@ -391,7 +382,7 @@ function Calls() {
               </tbody>
             </table>
           </div>
-          {list.hasNext && <MoreButton loading={list.loadingMore} onClick={() => void list.more()} />}
+          {list.hasNext && <MoreButton loading={list.loadingMore} percent={list.percent} onClick={() => void list.more()} />}
         </>
       )}
 
@@ -459,10 +450,12 @@ function CallPanel({ id, onClose }: { id: number; onClose: () => void }) {
   const [call, setCall] = useState<AiCallDetail | null>(null)
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
+  const load = useLoadProgress()
+  const waiting = useLoadHold(!call && !error)
 
   useEffect(() => {
     let stale = false
-    void fetchAiCall(id).then((result) => {
+    void fetchAiCall(id, load.one()).then((result) => {
       if (stale) return
       if (result.ok) {
         setError('')
@@ -472,23 +465,18 @@ function CallPanel({ id, onClose }: { id: number; onClose: () => void }) {
     return () => {
       stale = true
     }
-  }, [id, attempt])
+  }, [id, attempt, load.one])
 
   // 바깥을 누르거나 Esc를 누르면 닫는 것은 SidePanel이 맡아요.
   return (
     <>
       <SidePanel label={L.panel} closeLabel={L.close} onClose={onClose} className="max-w-[640px]">
-        {!call ? (
-          error ? (
-            <Failed message={error} onRetry={() => setAttempt((value) => value + 1)} />
-          ) : (
-            <Busy label={L.loading} className="px-6">
-              <Bone className="h-5 w-40" />
-              <Bone className="mt-2.5 h-3.5 w-56" />
-              <Bone className="mt-8 h-32 w-full rounded-lg!" />
-              <Bone className="mt-6 h-48 w-full rounded-lg!" />
-            </Busy>
-          )
+        {waiting || (!call && !error) ? (
+          <div className="px-6">
+            <LoadProgress percent={load.percent} className={loadCenter} />
+          </div>
+        ) : !call ? (
+          <Failed message={error} onRetry={() => setAttempt((value) => value + 1)} />
         ) : (
           <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8">
             <h2 className="text-[20px] leading-tight font-semibold break-keep text-gray-900 [overflow-wrap:anywhere]">{call.label || purposeLabel(call.purpose)}</h2>

@@ -1,5 +1,6 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { messages, useMessages } from '../lib/i18n'
+import { LOAD_SHOW_AFTER_MS } from '../lib/load'
 import { Kbd } from './Shortcuts'
 
 /**
@@ -8,8 +9,8 @@ import { Kbd } from './Shortcuts'
  */
 
 const TEXT = messages({
-  ko: { loading: '불러오고 있어요.' },
-  en: { loading: 'Loading.' },
+  ko: { loading: '불러오고 있어요', progress: '진행 정도' },
+  en: { loading: 'Loading', progress: 'Progress' },
 })
 
 // ── 버튼 ───────────────────────────────────────────────
@@ -238,18 +239,72 @@ export function NumberedList({ items, onGray = false, className = '' }: { items:
 
 // ── 불러오는 중 ────────────────────────────────────────
 
-/** 뼈대를 감싸는 칸이에요. 읽기 프로그램에는 불러오는 중이라고 한 번만 알리고, 안쪽 뼈대는 건너뛰게 해요. 옆에 안내 문구가 따로 있으면 label을 빈 글자로 넘겨요. */
-export function Busy({ label: text, className = '', style, children }: { label?: string; className?: string; style?: CSSProperties; children: ReactNode }) {
+/**
+ * 퍼센트 진행 막대의 모양이에요. 왼쪽에 지금 하는 일의 문장, 오른쪽에 "42%"(고정폭 숫자), 아래에 가는 막대(gray-200/70 바탕에 메인 컬러)예요.
+ * compact는 메뉴나 표처럼 좁은 자리에 쓰는 한 줄 모양으로, 막대와 퍼센트만 보이고 문장은 읽기 프로그램에만 알려요.
+ * AI를 기다리는 막대(`AiProgress`, `GapParts`)와 자료를 받는 막대(`LoadProgress`)가 같이 써요.
+ */
+export function ProgressBar({ value, text, title, compact = false, className = '' }: { value: number; text: string; title?: string; compact?: boolean; className?: string }) {
   const L = useMessages(TEXT)
-  return (
-    <div aria-busy="true" className={className} style={style}>
-      {text !== '' && <span className="sr-only">{text ?? L.loading}</span>}
-      <div aria-hidden className="contents">
-        {children}
+  const percent = Math.min(100, Math.max(0, Math.round(value)))
+  const bar = (
+    <div
+      role="progressbar"
+      aria-label={`${L.progress}, ${text}`}
+      aria-valuenow={percent}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      className={`overflow-hidden rounded-full bg-gray-200/70 ${compact ? 'h-1 min-w-0 flex-1' : 'mt-2.5 h-1.5'}`}
+    >
+      <div className="h-full rounded-full bg-brand transition-[width] duration-300 ease-out" style={{ width: `${percent}%` }} />
+    </div>
+  )
+  if (compact) {
+    return (
+      <div className={`flex items-center gap-3 ${className}`}>
+        <span role="status" className="sr-only">
+          {text}
+        </span>
+        {bar}
+        <span className="shrink-0 text-[12px] font-medium text-gray-500 tabular-nums">{percent}%</span>
       </div>
+    )
+  }
+  return (
+    <div className={className}>
+      {title && <p className="mb-1 truncate text-[12.5px] text-gray-400">{title}</p>}
+      <div className="flex items-baseline justify-between gap-4">
+        <p role="status" className="min-w-0 truncate text-[13.5px] text-gray-700">
+          {text}
+        </p>
+        <span className="shrink-0 text-[13px] font-semibold text-gray-900 tabular-nums">{percent}%</span>
+      </div>
+      {bar}
     </div>
   )
 }
+
+/**
+ * 자료를 받는 동안 그 자리에 두는 진행 막대예요. 퍼센트는 받은 바이트로 셈해요(`useLoadProgress`, `src/lib/load.ts`).
+ * 금방 끝나는 받기에서 깜빡이지 않게 0.15초 뒤에 나타나요. 그동안은 자리만 차지해요. 문장을 주지 않으면 "불러오고 있어요"예요.
+ * 화면 가운데에 둘 때는 `loadCenter`를 className으로 넘겨요.
+ */
+export function LoadProgress({ percent, text, compact = false, className = '' }: { percent: number; text?: string; compact?: boolean; className?: string }) {
+  const L = useMessages(TEXT)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(true), LOAD_SHOW_AFTER_MS)
+    return () => clearTimeout(timer)
+  }, [])
+  return (
+    <div aria-busy="true" className={`${visible ? 'animate-fade' : 'invisible'} ${className}`}>
+      <ProgressBar value={percent} text={text ?? L.loading} compact={compact} />
+    </div>
+  )
+}
+
+/** 화면 가운데에 두는 진행 막대의 자리예요. AI 진행 막대와 같은 폭과 위치예요. */
+export const loadCenter = 'mx-auto mt-16 w-full max-w-md'
 
 // ── 카드 ───────────────────────────────────────────────
 

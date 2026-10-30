@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { track } from '../lib/analytics'
 import { refreshConfig, setAiModel, useAiModel, type AiConfig, type AiModel } from '../lib/api'
 import { messages, useMessages } from '../lib/i18n'
+import { useLoadProgress } from '../lib/load'
 import { Dropdown } from './Dropdown'
 
 const TEXT = messages({
@@ -40,16 +41,17 @@ export function useAiModelSetting(align: 'left' | 'right' = 'right') {
   // null은 아직 받는 중, 'offline'은 서버에 닿지 못했을 때예요.
   const [ai, setAi] = useState<AiConfig | 'offline' | null>(null)
   const chosen = useAiModel()
+  const load = useLoadProgress()
 
   useEffect(() => {
     let stale = false
-    void refreshConfig().then((config) => {
+    void refreshConfig(load.one()).then((config) => {
       if (!stale) setAi(config.online ? config.ai : 'offline')
     })
     return () => {
       stale = true
     }
-  }, [])
+  }, [load.one])
 
   const models = ai && ai !== 'offline' ? ai.models : []
   const serverDefault = ai && ai !== 'offline' ? (models.find((model) => model.id === ai.defaultModel) ?? models[0]) : undefined
@@ -64,7 +66,7 @@ export function useAiModelSetting(align: 'left' | 'right' = 'right') {
   const note = ai === 'offline' ? text.offline : ai && models.length === 0 ? text.noneNote : text.note
   const control =
     ai === null ? (
-      <Dropdown align={align} value={text.loading} groups={[{ items: [], loading: true }]} />
+      <Dropdown align={align} value={text.loading} groups={[{ items: [], progress: load.percent }]} />
     ) : models.length === 0 ? (
       <span className="text-[13px] text-gray-400">{text.none}</span>
     ) : (

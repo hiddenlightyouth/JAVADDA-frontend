@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { deviceLabels, fetchAdminFeedback, fetchFeedbackSummary, type AdminFeedback as Item, type FeedbackSummary } from '../lib/admin'
 import { formatDateTime } from '../lib/format'
-import { Empty, Failed, full, MoreButton, TableSkeleton, share, Stat, StatsSkeleton, tableWrap, td, th, usePaged } from './AdminParts'
+import { Empty, Failed, full, MoreButton, TableLoading, share, Stat, StatsLoading, tableWrap, td, th, usePaged } from './AdminParts'
 import { Segmented, ghostButton, tag } from './ui'
 import { messages, useMessages } from '../lib/i18n'
+import { useLoadHold, useLoadProgress } from '../lib/load'
 
 type Filter = 'ALL' | 'RATING' | 'BUG'
 
@@ -60,45 +61,46 @@ function KindTag({ item }: { item: Item }) {
 export function AdminFeedback({ onOpenChat }: { onOpenChat: (id: string) => void }) {
   const L = useMessages(TEXT)
   const [filter, setFilter] = useState<Filter>('ALL')
-  const [summary, setSummary] = useState<FeedbackSummary | null>(null)
-  const list = usePaged<Item>((page) => fetchAdminFeedback(filter, page), filter)
+  // 'failed'는 합계를 받지 못했을 때예요. 합계 칸만 비우고 아래 목록은 그대로 보여줘요.
+  const [summary, setSummary] = useState<FeedbackSummary | 'failed' | null>(null)
+  const list = usePaged<Item>((page, onLoad) => fetchAdminFeedback(filter, page, onLoad), filter)
+  const summaryLoad = useLoadProgress()
+  const waitingSummary = useLoadHold(summary === null)
 
   useEffect(() => {
     let stale = false
-    void fetchFeedbackSummary().then((result) => {
-      if (!stale && result.ok) setSummary(result.data)
+    void fetchFeedbackSummary(summaryLoad.one()).then((result) => {
+      if (!stale) setSummary(result.ok ? result.data : 'failed')
     })
     return () => {
       stale = true
     }
-  }, [])
+  }, [summaryLoad.one])
 
-  const rated = summary ? summary.good + summary.bad : 0
+  const rated = summary && summary !== 'failed' ? summary.good + summary.bad : 0
 
   return (
     <>
-      {summary ? (
+      {waitingSummary || summary === null ? (
+        <div className="-mt-3">
+          <StatsLoading percent={summaryLoad.percent} />
+        </div>
+      ) : summary !== 'failed' ? (
         <dl className="grid grid-cols-3 gap-3">
           <Stat label={L.good} value={full(summary.good)} note={rated > 0 ? share(summary.good, rated).replace(L.ofTotal, L.ofRatings) : undefined} />
           <Stat label={L.bad} value={full(summary.bad)} note={rated > 0 ? share(summary.bad, rated).replace(L.ofTotal, L.ofRatings) : undefined} />
           <Stat label={L.bug} value={full(summary.bugs)} />
         </dl>
-      ) : (
-        <div className="-mt-3">
-          <StatsSkeleton count={3} />
-        </div>
-      )}
+      ) : null}
 
       <div className="mt-8 flex justify-end">
         <Segmented label={L.kind} options={L.filters} value={filter} onChange={setFilter} />
       </div>
 
-      {list.items === null ? (
-        list.error ? (
-          <Failed message={list.error} onRetry={list.retry} />
-        ) : (
-          <TableSkeleton rows={6} />
-        )
+      {list.waiting ? (
+        <TableLoading percent={list.percent} />
+      ) : list.items === null ? (
+        <Failed message={list.error} onRetry={list.retry} />
       ) : list.items.length === 0 ? (
         <Empty>{L.empty}</Empty>
       ) : (
@@ -150,7 +152,7 @@ export function AdminFeedback({ onOpenChat }: { onOpenChat: (id: string) => void
               </tbody>
             </table>
           </div>
-          {list.hasNext && <MoreButton loading={list.loadingMore} onClick={() => void list.more()} />}
+          {list.hasNext && <MoreButton loading={list.loadingMore} percent={list.percent} onClick={() => void list.more()} />}
         </>
       )}
     </>

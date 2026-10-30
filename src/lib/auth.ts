@@ -1,4 +1,4 @@
-import { apiUrl, ownerHeaders, readResult, type ApiResult } from './http'
+import { apiUrl, ownerHeaders, readResult, readWithLoad, type ApiResult, type OnLoad } from './http'
 import { getLang, messages, pick } from './i18n'
 import { readJson, writeItem, writeJson } from './storage'
 import { createStore, useStore } from './store'
@@ -207,12 +207,20 @@ async function authHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
-export async function authFetch<T>(path: string, init: RequestInit = {}): Promise<ApiResult<T>> {
+/**
+ * 로그인한 요청이에요. onLoad를 주면 응답을 받는 정도(0에서 1)를 알려요(`readWithLoad`). 서버에 닿지 못해 오류가 나도 끝났다고(1) 알린 뒤에 오류를 넘겨요.
+ */
+export async function authFetch<T>(path: string, init: RequestInit = {}, onLoad?: OnLoad): Promise<ApiResult<T>> {
   const send = async () =>
     fetch(apiUrl(path), { ...init, headers: { ...(init.headers as Record<string, string>), ...(await authHeaders()) } })
-  let res = await send()
-  if (res.status === 401 && auth.get().tokens && (await reissue())) res = await send()
-  return readResult<T>(res)
+  try {
+    let res = await send()
+    if (res.status === 401 && auth.get().tokens && (await reissue())) res = await send()
+    return await readWithLoad<T>(res, onLoad)
+  } catch (error) {
+    onLoad?.(1)
+    throw error
+  }
 }
 
 const messageOf = (code: string | null) => (code && pick(ERROR_MESSAGES)[code]) || UNKNOWN_MESSAGE()
@@ -391,10 +399,13 @@ export async function signOut(): Promise<void> {
   clearAuth()
 }
 
-export async function loadMe(): Promise<Me | null> {
-  if (!auth.get().tokens) return null
+export async function loadMe(onLoad?: OnLoad): Promise<Me | null> {
+  if (!auth.get().tokens) {
+    onLoad?.(1)
+    return null
+  }
   try {
-    const result = await authFetch<Me>('/users/me')
+    const result = await authFetch<Me>('/users/me', {}, onLoad)
     if (result.ok && result.data && auth.get().tokens) setState({ ...auth.get(), me: result.data })
     return result.data
   } catch {
@@ -402,18 +413,18 @@ export async function loadMe(): Promise<Me | null> {
   }
 }
 
-async function fetchList<T>(path: string): Promise<{ ok: true; data: T } | { ok: false; message: string }> {
+async function fetchList<T>(path: string, onLoad?: OnLoad): Promise<{ ok: true; data: T } | { ok: false; message: string }> {
   try {
-    const result = await authFetch<T>(path)
+    const result = await authFetch<T>(path, {}, onLoad)
     return result.ok && result.data ? { ok: true, data: result.data } : { ok: false, message: messageOf(result.code) }
   } catch {
     return { ok: false, message: NETWORK_MESSAGE() }
   }
 }
 
-export const fetchSessions = () => fetchList<DeviceSession[]>('/auth/sessions')
+export const fetchSessions = (onLoad?: OnLoad) => fetchList<DeviceSession[]>('/auth/sessions', onLoad)
 
-export const fetchLoginHistory = (page: number) => fetchList<Slice<LoginRecord>>(`/users/me/login-history?page=${page}&size=20`)
+export const fetchLoginHistory = (page: number, onLoad?: OnLoad) => fetchList<Slice<LoginRecord>>(`/users/me/login-history?page=${page}&size=20`, onLoad)
 
 export const isAdmin = (me: Me | null) => me?.role === 'ADMIN'
 

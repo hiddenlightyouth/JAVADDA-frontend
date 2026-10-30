@@ -4,7 +4,7 @@ import { deleteAdminChat, fetchAdminChats, unshareAdminChat, type AdminChat, typ
 import { formatWhen } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { ConfirmDialog } from './Dialog'
-import { Empty, Failed, full, MoreButton, TableSkeleton, SearchBox, tableWrap, td, th, useDebounced, usePaged } from './AdminParts'
+import { Empty, Failed, full, MoreButton, TableLoading, SearchBox, tableWrap, td, th, useDebounced, usePaged } from './AdminParts'
 import { Segmented, ghostButton, ghostDangerButton, tag } from './ui'
 import { messages, pick, useMessages } from '../lib/i18n'
 
@@ -67,7 +67,7 @@ export function AdminChats({ onOpenChat }: { onOpenChat: (id: string) => void })
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<AdminChatFilter>('ALL')
   const keyword = useDebounced(query)
-  const list = usePaged<AdminChat>((page) => fetchAdminChats(keyword, filter, page), `${keyword}:${filter}`)
+  const list = usePaged<AdminChat>((page, onLoad) => fetchAdminChats(keyword, filter, page, onLoad), `${keyword}:${filter}`)
   const [asking, setAsking] = useState<{ chat: AdminChat; action: 'unshare' | 'delete' } | null>(null)
   const [working, setWorking] = useState(false)
   const cancel = useCallback(() => setAsking(null), [])
@@ -95,12 +95,10 @@ export function AdminChats({ onOpenChat }: { onOpenChat: (id: string) => void })
         <Segmented label={L.kind} options={L.filters} value={filter} onChange={setFilter} />
       </div>
 
-      {list.items === null ? (
-        list.error ? (
-          <Failed message={list.error} onRetry={list.retry} />
-        ) : (
-          <TableSkeleton />
-        )
+      {list.waiting ? (
+        <TableLoading percent={list.percent} />
+      ) : list.items === null ? (
+        <Failed message={list.error} onRetry={list.retry} />
       ) : list.items.length === 0 ? (
         <Empty>{L.empty}</Empty>
       ) : (
@@ -163,7 +161,7 @@ export function AdminChats({ onOpenChat }: { onOpenChat: (id: string) => void })
               </tbody>
             </table>
           </div>
-          {list.hasNext && <MoreButton loading={list.loadingMore} onClick={() => void list.more()} />}
+          {list.hasNext && <MoreButton loading={list.loadingMore} percent={list.percent} onClick={() => void list.more()} />}
         </>
       )}
 

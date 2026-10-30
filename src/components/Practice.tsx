@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import { track } from '../lib/analytics'
 import { companyOf, fetchQuestions, postingOf, PROGRESS_START, submitAnswer, useReport, type InterviewQuestion, type PracticeFeedback, type ProgressState } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
+import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
 import { AiProgress, Notice, Panel, ScoreRing } from './GapParts'
 import { Probability, QUESTION_TEXT, QuestionDetail } from './ReportQuestions'
-import { Bone } from './Skeleton'
-import { Bullets, Busy, ghostButton, label, primaryButton, tag, textArea, toolButton } from './ui'
+import { Bullets, ghostButton, loadCenter, LoadProgress, label, primaryButton, tag, textArea, toolButton } from './ui'
 
 const TEXT = messages({
   ko: {
@@ -14,7 +14,6 @@ const TEXT = messages({
     missing: '연습할 질문이 없어요',
     missingBody: '리포트가 지워졌거나 아직 질문을 만들지 못했어요.',
     back: '돌아가기',
-    loading: '질문을 준비하고 있어요.',
     progress: (current: number, total: number) => `${current} / ${total}`,
     hint: '힌트 보기',
     hideHint: '힌트 접기',
@@ -40,7 +39,6 @@ const TEXT = messages({
     missing: 'Nothing to practice yet',
     missingBody: 'The report was deleted or questions are not ready.',
     back: 'Go back',
-    loading: 'Preparing questions.',
     progress: (current: number, total: number) => `${current} / ${total}`,
     hint: 'Show hint',
     hideHint: 'Hide hint',
@@ -73,7 +71,10 @@ const MIN_CHARS = 10
 export function Practice({ id, question: startId, onBack }: { id: string; question?: string; onBack: () => void }) {
   const L = useMessages(TEXT)
   const Q = useMessages(QUESTION_TEXT)
-  const report = useReport(id)
+  const reportLoad = useLoadProgress()
+  const report = useReport(id, reportLoad.one)
+  // 리포트 상세는 자료를 받는 것이라 받은 바이트로, 질문은 AI가 만드는 것이라 서버의 단계로 퍼센트를 보여줘요.
+  const waitingReport = useLoadHold(report === undefined)
   const [questions, setQuestions] = useState<InterviewQuestion[] | null | undefined>(undefined)
   const [index, setIndex] = useState(0)
   const [answer, setAnswer] = useState('')
@@ -142,15 +143,11 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
       <div className="mx-auto w-full max-w-[720px]">
         {report === null || questions === null ? (
           <Notice title={L.missing} body={L.missingBody} action={L.back} onAction={onBack} className="mt-16" />
-        ) : report !== undefined && questions === undefined ? (
+        ) : waitingReport || report === undefined ? (
+          <LoadProgress percent={reportLoad.percent} className={loadCenter} />
+        ) : questions === undefined || !current ? (
           // AI가 질문을 만드는 동안은 진행 정도를 막대로 보여줘요. 이미 만들어 둔 질문이면 금방 지나가요.
-          <AiProgress progress={loadProgress.progress} stage={loadProgress.stage} className="mx-auto mt-16 w-full max-w-md" />
-        ) : report === undefined || questions === undefined || !current ? (
-          <Busy label={L.loading} className="rounded-2xl bg-gray-50 p-5">
-            <Bone className="h-3 w-16" />
-            <Bone className="mt-5 h-5 w-4/5" />
-            <Bone className="mt-6 h-40 w-full rounded-xl!" />
-          </Busy>
+          <AiProgress progress={loadProgress.progress} stage={loadProgress.stage} className={loadCenter} />
         ) : finished ? (
           <Panel className="flex flex-col items-center py-10 text-center animate-rise">
             <ScoreRing score={average} />

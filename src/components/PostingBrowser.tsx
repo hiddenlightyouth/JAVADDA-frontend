@@ -2,11 +2,11 @@ import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as 
 import { track } from '../lib/analytics'
 import { canEmbed, careerName, companyOf, familyName, POSTINGS, type Company, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
+import { useLoadHold } from '../lib/load'
 import { readItem, writeItem } from '../lib/storage'
 import { CompanyMark, SkillChip } from './GapParts'
 import { CloseButton, ExternalLinkIcon, RefreshIcon } from './Icons'
-import { Bone } from './Skeleton'
-import { Busy, iconButton, label, primaryButton } from './ui'
+import { iconButton, label, loadCenter, LoadProgress, primaryButton } from './ui'
 
 /**
  * 공고 원문이나 기업 소개 사이트를 새 탭 대신 앱 안에서 보는 미니 브라우저예요. 화면을 가리지 않고 오른쪽에 나란히 붙어서, 공고 목록을 보면서 원문을 같이 봐요.
@@ -29,7 +29,7 @@ const TEXT = messages({
     openings: (count: number) => `열려 있는 공고 ${count}개`,
     required: '필수 역량',
     preferred: '우대 역량',
-    loading: '원문을 불러오고 있어요.',
+    loading: '원문을 불러오고 있어요',
     resize: '원문 칸 크기 조절',
   },
   en: {
@@ -45,7 +45,7 @@ const TEXT = messages({
     openings: (count: number) => `${count} open ${count === 1 ? 'posting' : 'postings'}`,
     required: 'Required',
     preferred: 'Preferred',
-    loading: 'Loading the original.',
+    loading: 'Loading the original',
     resize: 'Resize the original pane',
   },
 })
@@ -95,6 +95,8 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
   const title = posting ? L.title(company.name) : page ? page.title : L.companyTitle(company.name)
   const embeddable = canEmbed(url)
   const [loaded, setLoaded] = useState(false)
+  // 다른 사이트의 화면은 받은 바이트를 알 수 없어요. 주소를 열기 시작하면 30%, load 이벤트가 오면 100%로 보여줘요.
+  const waiting = useLoadHold(!loaded)
   const [version, setVersion] = useState(0)
   const [width, setWidth] = useState(() => Number(readItem(WIDTH_KEY)) || DEFAULT_WIDTH)
   const [dragging, setDragging] = useState(false)
@@ -222,14 +224,10 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
 
       {embeddable ? (
         <div className="relative min-h-0 flex-1">
-          {!loaded && (
-            <Busy label={L.loading} className="absolute inset-0 p-8">
-              <Bone className="h-6 w-1/2" />
-              <Bone className="mt-6 h-3.5 w-full" />
-              <Bone className="mt-3 h-3.5 w-5/6" />
-              <Bone className="mt-3 h-3.5 w-2/3" />
-              <Bone className="mt-8 h-40 w-full rounded-xl!" />
-            </Busy>
+          {waiting && (
+            <div className="absolute inset-0 px-8">
+              <LoadProgress percent={loaded ? 100 : 30} text={L.loading} className={loadCenter} />
+            </div>
           )}
           <iframe
             key={version}
@@ -238,7 +236,7 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
             onLoad={() => setLoaded(true)}
             sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
             referrerPolicy="no-referrer"
-            className={`size-full bg-white transition-opacity ${loaded ? 'opacity-100' : 'opacity-0'}`}
+            className={`size-full bg-white transition-opacity ${waiting ? 'opacity-0' : 'opacity-100'}`}
           />
         </div>
       ) : (

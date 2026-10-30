@@ -4,10 +4,11 @@
  * 기업과 공고는 처음 그리기 전에 한 번 받아 두고(`loadCatalog`), 서버에 닿지 못하면 이 파일에 적어 둔 목록을 보여줘요.
  * 이력서, 리포트, 보완 계획, 면접 노트는 계정에 저장돼서, 로그인하면 받아 오고 로그아웃하면 비워요.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { aiModelHeaders } from './api'
 import { authFetch, isSignedIn, onSignedInChange } from './auth'
-import { apiUrl, readResult, type ApiResult } from './http'
+import { apiUrl, readWithLoad, type ApiResult, type OnLoad } from './http'
+import type { LoadTracker } from './load'
 import { getLang, messages, pick } from './i18n'
 import { createStore, useStore } from './store'
 import { showToast } from './toast'
@@ -815,14 +816,15 @@ function fail(result: ApiResult<unknown>) {
 
 /**
  * 로그인한 계정으로 서버를 불러요. ai면 설정 창에서 고른 AI 모델을 헤더로 붙여요. extra는 더 붙일 헤더예요(진행 아이디 등).
- * 서버에 닿지 못하면 status 0이에요.
+ * 서버에 닿지 못하면 status 0이에요. onLoad를 주면 응답을 받는 정도(0에서 1)를 알려요(`readWithLoad`).
  */
-async function call<T>(path: string, init: RequestInit = {}, ai = false, extra: Record<string, string> = {}): Promise<ApiResult<T>> {
+async function call<T>(path: string, init: RequestInit = {}, ai = false, extra: Record<string, string> = {}, onLoad?: OnLoad): Promise<ApiResult<T>> {
   try {
     const headers: Record<string, string> = { ...(init.headers as Record<string, string> | undefined), ...(ai ? await aiModelHeaders() : {}), ...extra }
     if (typeof init.body === 'string') headers['Content-Type'] = 'application/json'
-    return await authFetch<T>(path, { ...init, headers })
+    return await authFetch<T>(path, { ...init, headers }, onLoad)
   } catch {
+    onLoad?.(1)
     return NETWORK
   }
 }
@@ -946,15 +948,22 @@ const CATALOG_TIMEOUT_MS = 8000
 /**
  * 기업과 공고를 서버에서 받아 `COMPANIES`와 `POSTINGS`를 채워요. 처음 그리기 전에 한 번 불러요(`src/main.tsx`).
  * 서버에 닿지 못하거나 오래 걸리면 적어 둔 목록 그대로 둬서 화면은 늘 그려져요.
+ * tracker를 주면 두 요청을 더해 받는 정도를 알려요. 처음 화면의 진행 막대가 이것을 봐요.
  */
-export async function loadCatalog(): Promise<void> {
+export async function loadCatalog(tracker?: LoadTracker): Promise<void> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), CATALOG_TIMEOUT_MS)
+  const get = <T,>(path: string) => {
+    const onLoad = tracker?.track()
+    return fetch(apiUrl(path), { signal: controller.signal })
+      .then((res) => readWithLoad<T>(res, onLoad))
+      .catch((error: unknown) => {
+        onLoad?.(1)
+        throw error
+      })
+  }
   try {
-    const [companies, postings] = await Promise.all([
-      fetch(apiUrl('/companies'), { signal: controller.signal }).then((res) => readResult<ServerCompany[]>(res)),
-      fetch(apiUrl('/postings'), { signal: controller.signal }).then((res) => readResult<ServerPosting[]>(res)),
-    ])
+    const [companies, postings] = await Promise.all([get<ServerCompany[]>('/companies'), get<ServerPosting[]>('/postings')])
     if (!companies.ok || !Array.isArray(companies.data) || !postings.ok || !Array.isArray(postings.data)) return
     COMPANIES.splice(0, COMPANIES.length, ...companies.data.map(toCompany))
     POSTINGS.splice(0, POSTINGS.length, ...postings.data.map(toPosting))
@@ -993,15 +1002,18 @@ function filterLocally(filter: PostingFilter): JobPosting[] {
 }
 
 /** 공고 목록이에요(GET /postings). 검색어, 직군, 경력으로 걸러요. 받지 못하면 오류를 내서 화면이 다시 시도 버튼을 보여줘요. */
-export async function fetchPostings(filter: PostingFilter = {}): Promise<JobPosting[]> {
-  if (!catalogLive) return filterLocally(filter)
+export async function fetchPostings(filter: PostingFilter = {}, onLoad?: OnLoad): Promise<JobPosting[]> {
+  if (!catalogLive) {
+    onLoad?.(1)
+    return filterLocally(filter)
+  }
   const params = new URLSearchParams()
   const query = filter.query?.trim()
   if (query) params.set('query', query)
   if (filter.family) params.set('family', filter.family)
   if (filter.career) params.set('career', filter.career)
   const search = params.toString()
-  const result = await call<ServerPosting[]>(`/postings${search ? `?${search}` : ''}`)
+  const result = await call<ServerPosting[]>(`/postings${search ? `?${search}` : ''}`, {}, false, {}, onLoad)
   if (!result.ok || !Array.isArray(result.data)) throw new Error(result.code ?? 'postings')
   return result.data.map((item) => {
     const posting = toPosting(item)
@@ -1378,9 +1390,9 @@ async function loadReports() {
 }
 
 /** 리포트 하나를 상세까지 받아요. 없으면(지웠거나 다른 계정) 'missing', 서버에 닿지 못하면 'error'예요. */
-async function loadReport(id: string): Promise<Report | 'missing' | 'error'> {
+async function loadReport(id: string, onLoad?: OnLoad): Promise<Report | 'missing' | 'error'> {
   const started = generation
-  const result = await call<ServerReport>(`/reports/${Number(id)}`)
+  const result = await call<ServerReport>(`/reports/${Number(id)}`, {}, false, {}, onLoad)
   if (started !== generation) return 'error'
   if (result.ok && result.data) {
     const report = toReport(result.data)
@@ -1447,8 +1459,9 @@ const currentId = (id: string) => {
  * 아이디로 리포트를 읽어요. 다시 진단해서 바뀐 아이디면 새 리포트를 돌려줘요.
  * 상세를 아직 받지 않았으면 서버에서 받아요. 받는 동안은 undefined, 없으면 null이에요.
  * 만드는 중(pending)이면 다 될 때까지 저장소가 알아서 상태를 물어요.
+ * startLoad를 주면 상세를 받을 때마다(다시 물을 때도) 불러서 받은 정도를 알릴 함수를 얻어요(`useLoadProgress`의 one).
  */
-export function useReport(id: string | null): Report | null | undefined {
+export function useReport(id: string | null, startLoad?: () => OnLoad): Report | null | undefined {
   const report = useStore(reportsStore, (reports) => {
     if (!id) return null
     const target = currentId(id)
@@ -1457,13 +1470,15 @@ export function useReport(id: string | null): Report | null | undefined {
   const [missing, setMissing] = useState<string | null>(null)
   const target = id ? (report?.id ?? currentId(id)) : null
   const needsDetail = !!target && !full.has(target)
+  const startLoadRef = useRef(startLoad)
+  startLoadRef.current = startLoad
 
   useEffect(() => {
     if (!target || !needsDetail) return
     let stale = false
     let timer: ReturnType<typeof setTimeout> | undefined
     const load = () => {
-      void loadReport(target).then((result) => {
+      void loadReport(target, startLoadRef.current?.()).then((result) => {
         if (stale) return
         if (result === 'missing') setMissing(target)
         // 서버에 닿지 못했으면 잠시 뒤에 다시 물어요.
@@ -1480,7 +1495,7 @@ export function useReport(id: string | null): Report | null | undefined {
   if (!id) return null
   if (report && !needsDetail) return report
   if (missing === target) return null
-  // 목록의 요약만 있으면 상세를 받을 때까지 기다려요. 만드는 중이면 요약만으로도 뼈대를 그려요.
+  // 목록의 요약만 있으면 상세를 받을 때까지 기다려요. 만드는 중이면 요약만으로도 진행 막대를 그려요.
   return report?.status === 'pending' ? report : undefined
 }
 
