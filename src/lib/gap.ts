@@ -1224,6 +1224,9 @@ export function levelOf(resume: Resume | null, skill: string): number {
 /** 서류마다 공고별 적합도를 기억해요. 정렬과 카드가 같은 값을 여러 번 물어서, 한 번만 계산해요. */
 const fitTables = new WeakMap<Resume, Map<string, number>>()
 
+/** 추천(추천 공고, 새 진단 화면의 나와 잘 맞는 공고)에 넣는 적합도의 최소값이에요. 중간(50%) 아래는 낮음이라 추천하지 않아요. */
+export const RECOMMEND_MIN_FIT = 50
+
 /** 이 공고와 이력서의 적합도(0에서 100)예요. 필수 역량을 더 무겁게 봐요. 이력서가 없으면 null이에요. */
 export function fitOf(posting: JobPosting, resume: Resume | null): number | null {
   if (!resume || resume.skills.length === 0) return null

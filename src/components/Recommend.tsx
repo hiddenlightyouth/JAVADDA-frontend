@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
-import { fetchPostings, fitOf, sortPostings, useResume, type JobPosting, type PostingSort } from '../lib/gap'
+import { fetchPostings, fitOf, RECOMMEND_MIN_FIT, sortPostings, useResume, type JobPosting, type PostingSort } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
@@ -22,30 +22,31 @@ const TEXT = messages({
     sort: '정렬',
     sorts: { fit: '유사도순', recent: '최신순', deadline: '마감 임박순' } as Record<PostingSort, string>,
     threshold: '적합도',
-    thresholds: { 0: '전체', 50: '50% 이상', 70: '70% 이상' } as Record<number, string>,
+    thresholds: { 50: '50% 이상', 70: '70% 이상' } as Record<number, string>,
     items: (count: number) => `${count}개의 공고`,
     noResume: '이력서를 올리면 공고를 추천해요',
     noResumeBody: '이력서나 포트폴리오를 올리면 역량을 읽어서, 지금 역량과 가까운 공고를 유사도 순서로 보여줘요.',
     upload: '이력서 올리기',
-    none: '이 조건에 맞는 공고가 없어요.',
-    noneBody: '적합도 조건을 낮춰 보세요.',
+    none: '아직 잘 맞는 공고가 없어요.',
+    noneBody: '적합도가 50% 이상인 공고만 추천해요. 내 이력서에서 역량을 보완하거나 공고 탐색에서 둘러보세요.',
   },
   en: {
     title: 'Recommended',
     sort: 'Sort',
     sorts: { fit: 'Most similar', recent: 'Newest', deadline: 'Closing soon' },
     threshold: 'Fit',
-    thresholds: { 0: 'All', 50: '50% and up', 70: '70% and up' },
+    thresholds: { 50: '50% and up', 70: '70% and up' },
     items: (count: number) => `${count} ${count === 1 ? 'posting' : 'postings'}`,
     noResume: 'Upload a resume to get recommendations',
     noResumeBody: 'Once we read the skills in your resume or portfolio, we rank postings by how close they are to what you have now.',
     upload: 'Upload a resume',
-    none: 'No postings match this filter.',
-    noneBody: 'Try lowering the fit threshold.',
+    none: 'No good matches yet.',
+    noneBody: 'We only recommend postings with a fit of 50% or more. Strengthen your resume or browse all postings.',
   },
 })
 
-const THRESHOLDS = [0, 50, 70]
+/** 추천은 적합도가 중간(50%) 이상인 공고만이에요. 낮음은 추천이라고 할 수 없어서 고를 수도 없게 했어요. */
+const THRESHOLDS = [RECOMMEND_MIN_FIT, 70]
 
 type Loaded = JobPosting[] | 'failed'
 
@@ -53,7 +54,7 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
   const L = useMessages(TEXT)
   const resume = useResume()
   const [sort, setSort] = useState<PostingSort>('fit')
-  const [threshold, setThreshold] = useState(0)
+  const [threshold, setThreshold] = useState(RECOMMEND_MIN_FIT)
   const [loaded, setLoaded] = useState<Loaded | undefined>(undefined)
   const [attempt, setAttempt] = useState(0)
   const load = useLoadProgress()

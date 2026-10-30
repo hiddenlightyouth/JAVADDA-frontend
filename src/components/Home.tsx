@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
-import { COMPANIES, companyOf, fitOf, POSTINGS, postingOf, SEARCH_SUGGESTIONS, sortPostings, SUGGEST_MS, useReports, useResume, type JobPosting } from '../lib/gap'
+import { COMPANIES, companyOf, fitOf, POSTINGS, postingOf, RECOMMEND_MIN_FIT, SEARCH_SUGGESTIONS, sortPostings, SUGGEST_MS, useReports, useResume, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { cardsRow, CompanyMark, DiagnosedTag, FitBadge, PostingTile } from './GapParts'
 import { ChevronRightIcon, SearchIcon } from './Icons'
@@ -149,7 +149,11 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   // 올라온 순서와 마감 순서는 이력서와 상관없어서 처음 한 번만 정해요.
   const recent = useMemo(() => sortPostings(POSTINGS, 'recent', null).slice(0, ROW_SIZE), [])
   const closing = useMemo(() => sortPostings(POSTINGS.filter((posting) => posting.deadline), 'deadline', null).slice(0, ROW_SIZE), [])
-  const fit = useMemo(() => (resume ? sortPostings(POSTINGS, 'fit', resume).slice(0, ROW_SIZE) : []), [resume])
+  // 나와 잘 맞는 공고는 추천 공고와 같이 적합도 50% 이상만이에요. 낮음은 이 줄에 넣지 않아요.
+  const fit = useMemo(
+    () => (resume ? sortPostings(POSTINGS, 'fit', resume).filter((posting) => (fitOf(posting, resume) ?? 0) >= RECOMMEND_MIN_FIT).slice(0, ROW_SIZE) : []),
+    [resume],
+  )
   /** 진단해 둔 공고 중 적합도가 낮았던 것. 보완한 뒤에 다시 보라고 보여줘요. */
   const again = useMemo(
     () =>
