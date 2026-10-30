@@ -73,6 +73,7 @@ export default function App() {
   const openRecommend = useCallback(() => open({ kind: 'recommend' }), [open])
   const openCompany = useCallback((company: string) => open({ kind: 'explore', company }), [open])
   const openResume = useCallback(() => open({ kind: 'resume' }), [open])
+  const openBlogs = useCallback((company: string | null = null) => open({ kind: 'blogs', company: company ?? undefined }), [open])
   const openAdmin = useCallback((tab: AdminTab = 'overview') => open({ kind: 'admin', tab }), [open])
 
   // 로그인 화면에서 로그인하면, 보던 리포트가 있으면 그리로 돌아가고 아니면 새 진단 화면으로 가요.
@@ -113,6 +114,7 @@ export default function App() {
       Slash: () => document.querySelector<HTMLInputElement>('input[data-search-input]')?.focus(),
       KeyT: appShell ? openExplore : undefined,
       KeyR: appShell && resume ? openRecommend : undefined,
+      KeyG: appShell ? () => openBlogs() : undefined,
       KeyB: appShell ? () => toggleSidebar(!sidebarOpen) : undefined,
     },
     !(isApp && tokens === null) && page?.kind !== 'app-login',
@@ -162,6 +164,8 @@ export default function App() {
           onPractice={openPractice}
           onExplore={openExplore}
           onResume={openResume}
+          onBlogs={openBlogs}
+          onCompany={openCompany}
           onAdmin={openAdmin}
           onArticle={openArticle}
           onAccount={openAccount}
@@ -203,7 +207,7 @@ export default function App() {
       sidebar={{
         activeReportId,
         page:
-          page?.kind === 'explore' || page?.kind === 'recommend' || page?.kind === 'resume' || page?.kind === 'admin'
+          page?.kind === 'explore' || page?.kind === 'recommend' || page?.kind === 'resume' || page?.kind === 'blogs' || page?.kind === 'admin'
             ? page.kind
             : account === 'me'
               ? 'me'
@@ -214,6 +218,7 @@ export default function App() {
         onExplore: openExplore,
         onRecommend: openRecommend,
         onResume: openResume,
+        onBlogs: () => openBlogs(),
         onOpenReport: (id) => {
           track('history_report_open', { from: 'sidebar' })
           openReport(id)

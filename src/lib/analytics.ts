@@ -49,6 +49,7 @@ const PAGE_TITLES = {
   explore: 'Javadda 공고 탐색',
   recommend: 'Javadda 추천 공고',
   resume: 'Javadda 내 이력서',
+  blogs: 'Javadda 기술 블로그',
   diagnose: 'Javadda 진단 시작',
   report: 'Javadda 리포트',
   practice: 'Javadda 면접 연습',

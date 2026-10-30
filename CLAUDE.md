@@ -86,6 +86,7 @@ src/
   App.tsx             화면을 묶는 곳. 화면 옮기기, 로그인하러 갔다 돌아오기, 단축키, 헤더와 본문과 사이드바 배치
   prerender.tsx       소개 화면과 아티클 화면을 빌드할 때 미리 HTML로 그리는 코드 (브라우저에서는 쓰지 않아요)
   index.css           Tailwind 테마 토큰, 자간, 애니메이션
+  lib/blogs.ts        기업 기술 블로그 요약. 기업 열한 곳의 대표 글(제목, 원문 주소, 날짜, 요약, 주제, 기술), 요즘 고민 분석, 면접에서 쓸 점, 주제 비중(themeShare), 자주 나온 기술(topSkills), 여러 기업에 걸친 흐름(themeTrends), 가짜 API(fetchBlogDigests)
   lib/gap.ts          진단의 자료와 API. 타입(기업, 공고, 이력서, 리포트, 갭, 서류 검증, 면접 질문, 연습 피드백), 목 자료(기업 12곳, 공고 22개, 강의, 시장 비율), 가짜 API(fetchPostings, uploadResume, createReport, fetchReview, fetchQuestions, submitAnswer), 저장소(useResume는 대표 이력서, useResumeShelf는 올린 서류 전부, setPrimaryResume, removeResume, useReports, usePlans, useNotes, useBookmarks), 적합도 계산(fitOf), 스킬 이름 정규화(canonical)
   lib/i18n.ts         화면 언어(한국어, 영어) 정하기와 저장, 언어별 주소(/en), 문구 묶음(messages, useMessages, pick)
   lib/meta.ts         탭 제목과 링크 미리보기 태그를 화면과 언어에 맞게 바꾸기, 언어별 메인 화면 값(HOME_META)
@@ -111,10 +112,11 @@ src/
   lib/app.ts          macOS 앱 안에서 열렸는지 판별, 앱 설치 파일 주소, 앱에 메시지 보내기, 창을 옮기는 곳(data-app-drag) 처리
   components/AppGate.tsx     앱에서 로그인하지 않았을 때 보여주는 로그인 화면
   components/AppFrame.tsx    앱의 배치. 왼쪽 사이드바와 접기 버튼, 설정 창, 화면 공유 중 가리는 막을 두르고, 로그인하지 않았을 때의 화면(`AppSignedOut`)도 여기 있어요
-  components/PageView.tsx    주소로 여는 화면(공고 탐색, 추천 공고, 내 이력서, 진단 시작, 리포트, 면접 연습, 관리자, 소개, 아티클, 계정, 앱 로그인)을 고르고, 화면 코드는 열 때만 받아요
-  components/AppSidebar.tsx  앱 화면 왼쪽의 사이드바 (새 진단, 공고 탐색, 추천 공고, 내 이력서, 내 리포트 목록, 계정 메뉴)
+  components/PageView.tsx    주소로 여는 화면(공고 탐색, 추천 공고, 내 이력서, 기술 블로그, 진단 시작, 리포트, 면접 연습, 관리자, 소개, 아티클, 계정, 앱 로그인)을 고르고, 화면 코드는 열 때만 받아요
+  components/AppSidebar.tsx  앱 화면 왼쪽의 사이드바 (새 진단, 공고 탐색, 추천 공고, 기술 블로그, 내 이력서, 내 리포트 목록, 계정 메뉴)
   components/Home.tsx        새 진단 화면 (앱의 메인). 손글씨 Javadda, 타이틀, 기업과 공고 검색창, 그 아래 공고 줄(나와 잘 맞는 공고, 따끈따끈 공고, 마감이 가까운 공고, 다시 볼 공고)
   components/Jobs.tsx        공고 탐색 (/explore). 검색창과 직군, 경력, 정렬 드롭다운 한 줄, 기업 버튼 줄, 갤러리형 카드(JobCard)와 리스트형 줄(JobRow)
+  components/Blogs.tsx       기술 블로그 (/blogs, /blogs/기업). 전체 흐름과 기업별 요약 카드, 기업마다 요즘 고민과 대표 글, 주제 비중, 면접에서 쓸 점
   components/Recommend.tsx   추천 공고 (/recommend). 기준 이력서 안내, 유사도와 적합도 기준 메뉴, 공고 카드
   components/MyResume.tsx    내 이력서 (/resume). 서류 카드 목록(ResumeCard), 오른쪽에서 여는 서류 상세 칸(ResumeSheet), 서류 추가 창, PDF 끌어다 놓기와 링크로 올리기(ResumeUploader), 읽은 역량 고치기(SkillEditor)
   components/PostingBrowser.tsx 공고 원문이나 기업 소개 사이트를 새 탭 대신 앱 안에서 보는 미니 브라우저. 화면을 가리지 않고 오른쪽에 나란히 붙고(`SplitView`), 폭을 끌어서 바꿔요. 막아 둔 사이트는 공고 요약을 보여줘요
@@ -230,6 +232,15 @@ src/
 
 - 이력서가 없으면 사이드바의 추천 공고가 흐리게 잠기고 눌리지 않아요. 마우스를 올리면 메뉴 오른쪽에 왼쪽으로 꼬리가 달린 "이력서를 먼저 등록하세요" 말풍선(`Tip`의 `side="right"`)이 뜨고, 단축키 R도 받지 않아요. 주소로 바로 들어오면 올리라는 안내와 버튼만 보여줘요. 있으면 맨 위에 어떤 이력서(이름, 올린 때)를 기준으로 추천하는지와 추천에 쓴 역량 여덟 개, 이력서 바꾸기 버튼이 있고, 그 아래에 정렬(유사도순, 최신순, 마감 임박순)과 적합도 기준(전체, 50% 이상, 70% 이상) 메뉴, 공고 카드가 있어요.
 
+기술 블로그 (`Blogs`, `/blogs`, 기업은 `/blogs/기업아이디`, 단축키 G)
+
+- 기업 기술 블로그의 대표 글을 요약하고, 요즘 어떤 고민을 하는지 분석해서 보여줘요. 글은 각 블로그의 RSS와 글 목록에서 2026년 10월 29일에 모은 실제 글이고, 제목과 원문 주소는 그대로예요. 요약과 분석은 `src/lib/blogs.ts`에 적어 두었고, 서버가 생기면 수집과 요약을 서버가 맡아요(`fetchBlogDigests`의 속만 바꿔요).
+- 제목 줄 아래에 공고 탐색과 같은 모양의 기업 버튼 줄(전체와 기업 열한 곳)이 있어요. 기업을 고르면 주소가 바뀌어서 뒤로 가기로 앞에 보던 기업이나 전체로 돌아가요. 두나무는 공개 기술 블로그가 없어서 빠져 있어요.
+- 전체: "요즘 기업들의 고민" 칸에 최근 넉 달 동안 글을 쓴 기업 중 몇 곳이 어떤 주제를 다뤘는지 한 문장과 막대(`Meter`)로 보여주고, 막대 아래에 그 기업 이름을 적어요. 아래에는 기업별 요약 카드(로고, 블로그 이름, 마지막 글 날짜, 요즘 고민 한 줄, 주요 주제 셋, 마지막 글 링크, 글 수)가 있고, 카드를 누르면 그 기업으로 가요. 마지막 글이 180일보다 오래되었으면 날짜 대신 "쉬는 중"이에요.
+- 기업: 제목 줄에 기업 로고와 이름, 뒤로 가기(전체로), 오른쪽에 "블로그 열기"가 있어요. 왼쪽에는 "요즘 이런 고민을 해요"(한 줄 요약, 분석 한 문단, 고민 세 가지와 근거가 된 글 링크)와 "대표 글"(날짜, 제목, 두 문장 요약, 주제와 기술 이름표, 원문 읽기), 오른쪽에는 주제 비중 막대, 자주 나온 기술, "면접에서 이렇게 써 보세요", 그 기업 공고로 가는 버튼이 있어요. 멈춘 블로그는 고민 칸 위에 마지막 글 날짜와 함께 지금과 다를 수 있다고 알려줘요.
+- 글 제목과 근거 글, 블로그 링크는 모두 새 탭으로 원문을 바로 열어요. 맨 아래에 언제까지 올라온 글을 모았는지 작게 적어요.
+- 주제(`THEME_NAMES`)는 여러 기업의 글을 같은 기준으로 묶는 이름이에요. 주제 비중과 전체 흐름은 글에 붙인 주제로 계산해서, 글을 더하면 분석도 같이 바뀌어요.
+
 내 이력서 (`MyResume`, `/resume`)
 
 - 서류 목록 화면이에요. 제목 줄 오른쪽에 메인 컬러의 "서류 추가" 버튼이 늘 있어요. 서류가 없으면 가운데에 "아직 올린 이력서가 없어요" 안내(`Notice`)와 서류 추가 버튼만 보여줘요.
@@ -324,7 +335,7 @@ src/
 
 - 글자를 입력하는 중이거나, 보조 키를 누르고 있거나, 확인 창이 떠 있을 때는 받지 않아요.
 - 글자가 아니라 키의 자리(`event.code`)로 알아봐서, 한글 자판 상태에서도 그대로 동작해요.
-- 어디서나: N 새 진단, / 검색창으로. 앱에서는 T 공고 탐색, R 추천 공고, B 사이드바 접기와 펴기도 있어요.
+- 어디서나: N 새 진단, / 검색창으로. 앱에서는 T 공고 탐색, R 추천 공고, G 기술 블로그, B 사이드바 접기와 펴기도 있어요.
 - 관리자 화면: 1부터 5까지 탭 바꾸기.
 - 리포트: 1부터 4까지 탭 바꾸기. 갭 상세 칸이나 확인 창이 열려 있으면 받지 않아요.
 - 어떤 키를 누르면 되는지는 평소에는 숨겨 두고, Option(Alt)을 누르고 있는 동안에만 화면에 자판 모양(`Kbd`)으로 보여줘요(`useShortcutHints`). 앱 사이드바의 새 진단과 공고 탐색과 추천 공고, 리포트의 탭 옆에 나와요. 줄 안에 넣은 것은 자리를 미리 차지하고, 탭에는 오른쪽 위 모서리에 얹어서(`corner`), 나타나도 화면이 밀리지 않아요. Option을 누른 채로 키를 눌러도 단축키가 동작해요.
@@ -361,12 +372,14 @@ src/
 
 | 이벤트 | 언제 | 주요 값 |
 | --- | --- | --- |
-| `page_view` | 화면이 바뀔 때 | `screen`(home, explore, recommend, resume, diagnose, report, practice, about, articles, article, login, signup, me, history, app-login, admin), `posting`, `tab`, `slug` |
+| `page_view` | 화면이 바뀔 때 | `screen`(home, explore, recommend, resume, blogs, diagnose, report, practice, about, articles, article, login, signup, me, history, app-login, admin), `posting`, `tab`, `slug` |
 | `posting_select` | 공고 카드나 검색 결과를 눌러 진단 시작으로 갔을 때 | `posting`, `from`(home, explore, recommend), `query` |
 | `home_more_click` | 새 진단 화면의 공고 줄에서 전체 보기를 눌렀을 때 | `row`(fit, recent, closing) |
 | `home_company_select` | 새 진단 화면의 기업으로 둘러보기에서 기업을 눌렀을 때 | `company` |
 | `home_suggestion_use` | 새 진단 화면의 빈 검색창에서 Enter로 추천 검색어를 썼을 때 | `query` |
-| `explore_open`, `recommend_open`, `resume_open` | 사이드바에서 공고 탐색, 추천 공고, 내 이력서를 눌렀을 때 | `from`(sidebar) |
+| `explore_open`, `recommend_open`, `resume_open`, `blogs_open` | 사이드바에서 공고 탐색, 추천 공고, 내 이력서, 기술 블로그를 눌렀을 때 | `from`(sidebar) |
+| `blog_company_select` | 기술 블로그에서 기업을 고르거나 전체로 돌아갔을 때 | `company`, `from`(chips, card, back, missing) |
+| `blog_post_open`, `blog_site_open`, `blog_jobs_open` | 기술 블로그에서 원문 글, 블로그, 그 기업 공고를 열었을 때 | `company`, `post`, `from`(card, concern, list) |
 | `jobs_family_select`, `jobs_career_select`, `jobs_sort_change` | 공고 탐색에서 직군, 경력, 정렬을 바꿨을 때 | `family`, `career`, `sort` |
 | `posting_browser_open` | 공고 원문을 미니 브라우저로 열었을 때 | `posting`, `embedded`(원문을 띄웠는지) |
 | `company_browser_open` | 공고 탐색 카드의 기업 로고를 눌러 기업 소개를 열었을 때 | `company`, `embedded` |
@@ -402,6 +415,7 @@ src/
 
 - 소개 화면을 메인 주소로, 웹의 /app에서 앱과 같은 화면으로 진단하기 (위의 웹 앱 절 참고)
 - 새 진단 화면 (손글씨 Javadda, 타이틀, 기업과 공고 검색, 공고 줄)
+- 기업 기술 블로그 요약과 요즘 고민 분석 (위의 진단 흐름 절 참고)
 - 공고 탐색, 추천 공고, 내 이력서, 진단 시작, 리포트(네 탭과 갭 상세), 면접 연습, 내 리포트 (위의 진단 흐름 절 참고)
 - 소개 화면과 아티클, 한국어와 영어 화면 (위의 각 절 참고)
 - 로그인, 회원가입, 내 정보, GitHub와 카카오 로그인, 회원 탈퇴 (위의 로그인과 계정 절 참고)
@@ -412,6 +426,7 @@ src/
 
 - 백엔드: 공고 수집(워크넷 API, 기업 채용 페이지), 스킬 추출과 임베딩, 이력서 파싱(PDF, 링크), 리포트 생성(`POST /reports` 202와 폴링), 추천, 서류 검증, 면접 코퍼스와 질문 생성, 연습 피드백 API. 생기면 `src/lib/gap.ts`의 함수 속을 fetch로 바꾸고, 이력서와 리포트를 계정에 저장해요.
 - 서버에 리포트 API가 생기면 관리자 화면의 채팅 탭을 리포트 탭으로 바꾸고, 현황의 채팅 수치도 리포트로 바꿔요.
+- 기술 블로그 글을 서버가 RSS로 정기적으로 모으고 요약과 고민 분석을 만들게 해요. 지금은 2026년 10월 29일에 모은 글을 `src/lib/blogs.ts`에 적어 두었어요.
 - 아티클 글을 새 서비스에 맞게 다시 써요. 지금은 레포 분석 시절의 글이에요.
 - 목 자료의 한국어 조사("을(를)", "이(가)")를 서버가 글을 만들 때 자연스럽게 고쳐요.
 - 기업 북마크와 북마크한 기업의 새 공고 알림(앱 푸시)

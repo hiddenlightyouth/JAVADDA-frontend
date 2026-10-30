@@ -10,6 +10,7 @@ const AppLogin = lazy(() => import('./AppLogin').then((module) => ({ default: mo
 // 진단 화면들은 열 때만 받아요.
 const Jobs = lazy(() => import('./Jobs').then((module) => ({ default: module.Jobs })))
 const Recommend = lazy(() => import('./Recommend').then((module) => ({ default: module.Recommend })))
+const Blogs = lazy(() => import('./Blogs').then((module) => ({ default: module.Blogs })))
 const MyResume = lazy(() => import('./MyResume').then((module) => ({ default: module.MyResume })))
 const Diagnose = lazy(() => import('./Diagnose').then((module) => ({ default: module.Diagnose })))
 const Report = lazy(() => import('./Report').then((module) => ({ default: module.Report })))
@@ -37,6 +38,10 @@ interface Props {
   onPractice: (id: string, question?: string) => void
   onExplore: () => void
   onResume: () => void
+  /** 기술 블로그를 열어요. 기업을 넘기면 그 기업의 분석으로 가요. */
+  onBlogs: (company: string | null) => void
+  /** 그 기업 공고만 골라 둔 공고 탐색으로 가요. */
+  onCompany: (company: string) => void
   onAdmin: (tab?: AdminTab) => void
   onArticle: (slug: string | null) => void
   onAccount: (page: AccountPage, replace?: boolean) => void
@@ -51,7 +56,7 @@ interface Props {
 }
 
 /** 메인 화면(새 진단)을 뺀, 주소로 여는 화면을 그려요. 화면 코드는 열 때만 받아요. */
-export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExplore, onResume, onAdmin, onArticle, onAccount, onSignedIn, onOpenReport, loginNotice, loginReturnTo, adminApi, feedback }: Props) {
+export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExplore, onResume, onBlogs, onCompany, onAdmin, onArticle, onAccount, onSignedIn, onOpenReport, loginNotice, loginReturnTo, adminApi, feedback }: Props) {
   return (
     <Suspense fallback={<main className="flex-1" />}>
       {page.kind === 'app-login' ? (
@@ -62,6 +67,8 @@ export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExp
         <Recommend onPick={onDiagnose} onResume={onResume} />
       ) : page.kind === 'resume' ? (
         <MyResume onExplore={onExplore} />
+      ) : page.kind === 'blogs' ? (
+        <Blogs company={page.company ?? null} onCompany={onBlogs} onJobs={onCompany} />
       ) : page.kind === 'diagnose' ? (
         <Diagnose postingId={page.postingId} onBack={onHome} onReport={(id) => onReport(id, 'summary', true)} />
       ) : page.kind === 'report' ? (

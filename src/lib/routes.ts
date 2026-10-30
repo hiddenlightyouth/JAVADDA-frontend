@@ -33,6 +33,8 @@ const RECOMMEND_PATH = /^\/recommend\/?$/
 
 const RESUME_PATH = /^\/resume\/?$/
 
+const BLOGS_PATH = /^\/blogs(?:\/([^/]+))?\/?$/
+
 const DIAGNOSE_PATH = /^\/diagnose\/([^/]+)\/?$/
 
 /** 진단 시작 주소면 고른 공고를 돌려줘요. */
@@ -63,6 +65,7 @@ export type Page =
   | { kind: 'explore'; company?: string }
   | { kind: 'recommend' }
   | { kind: 'resume' }
+  | { kind: 'blogs'; company?: string }
   | { kind: 'diagnose'; postingId: string }
   | { kind: 'report'; id: string; tab: ReportTab }
   | { kind: 'practice'; id: string; question?: string }
@@ -70,11 +73,12 @@ export type Page =
   | { kind: 'account'; page: AccountPage }
   | { kind: 'article'; slug: string | null }
 
-/** 공고 탐색, 추천 공고, 내 이력서, 진단, 리포트, 면접 연습, 관리자 화면은 앱 화면(macOS 앱, 웹의 /app)에서만 써요. */
+/** 공고 탐색, 추천 공고, 내 이력서, 기술 블로그, 진단, 리포트, 면접 연습, 관리자 화면은 앱 화면(macOS 앱, 웹의 /app)에서만 써요. */
 export const isAppOnly = (page: Page) =>
   page.kind === 'explore' ||
   page.kind === 'recommend' ||
   page.kind === 'resume' ||
+  page.kind === 'blogs' ||
   page.kind === 'diagnose' ||
   page.kind === 'report' ||
   page.kind === 'practice' ||
@@ -89,6 +93,9 @@ export function pageFromPath(): Page | null {
   if (EXPLORE_PATH.test(path)) return { kind: 'explore', company: new URLSearchParams(window.location.search).get('company') ?? undefined }
   if (RECOMMEND_PATH.test(path)) return { kind: 'recommend' }
   if (RESUME_PATH.test(path)) return { kind: 'resume' }
+  // 기술 블로그는 /blogs/기업아이디로 그 기업의 분석을 바로 열어요.
+  const blogs = BLOGS_PATH.exec(path)
+  if (blogs) return { kind: 'blogs', company: blogs[1] ? decodeURIComponent(blogs[1]) : undefined }
   const postingId = diagnoseFromPath()
   if (postingId) return { kind: 'diagnose', postingId }
   const report = reportFromPath()
@@ -121,6 +128,8 @@ export function pathOf(page: Page | null): string {
       return '/recommend'
     case 'resume':
       return '/resume'
+    case 'blogs':
+      return page.company ? `/blogs/${encodeURIComponent(page.company)}` : '/blogs'
     case 'diagnose':
       return `/diagnose/${page.postingId}`
     case 'report':

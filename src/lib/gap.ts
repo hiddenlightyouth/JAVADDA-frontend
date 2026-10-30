@@ -21,7 +21,7 @@ export interface Company {
   industry: string
   /** 기업 소개 사이트 주소. 공고 탐색에서 로고를 누르면 미니 브라우저로 열어요. */
   site: string
-  /** 기업 기술 블로그 주소. 요구 스택의 변화를 읽는 자료예요. */
+  /** 기업 기술 블로그 주소. 요구 스택의 변화를 읽는 자료이고, 요약은 `blogs.ts`에 있어요. */
   techBlog?: string
 }
 
@@ -220,11 +220,11 @@ export const COMPANIES: Company[] = [
   { id: 'coupang', name: '쿠팡', initial: 'C', logo: '/logos/coupang.png', industry: '커머스', site: 'https://www.aboutcoupang.com', techBlog: 'https://medium.com/coupang-engineering' },
   { id: 'line', name: '라인플러스', initial: 'L', logo: '/logos/line.png', industry: '메신저', site: 'https://www.linepluscorp.com', techBlog: 'https://techblog.lycorp.co.jp/ko' },
   { id: 'daangn', name: '당근', initial: '당', logo: '/logos/daangn.png', industry: '로컬 커뮤니티', site: 'https://about.daangn.com', techBlog: 'https://medium.com/daangn' },
-  { id: 'musinsa', name: '무신사', initial: 'M', logo: '/logos/musinsa.png', industry: '패션 커머스', site: 'https://www.musinsacareers.com/ko/home' },
+  { id: 'musinsa', name: '무신사', initial: 'M', logo: '/logos/musinsa.png', industry: '패션 커머스', site: 'https://www.musinsacareers.com/ko/home', techBlog: 'https://techblog.musinsa.com' },
   { id: 'dunamu', name: '두나무', initial: 'D', logo: '/logos/dunamu.png', industry: '핀테크', site: 'https://www.dunamu.com' },
-  { id: 'zigbang', name: '직방', initial: 'Z', logo: '/logos/zigbang.png', industry: '프롭테크', site: 'https://career.zigbang.com' },
-  { id: 'wanted', name: '원티드랩', initial: 'W', logo: '/logos/wanted.png', industry: 'HR 테크', site: 'https://www.wantedlab.com' },
-  { id: 'bucketplace', name: '오늘의집', initial: '오', logo: '/logos/bucketplace.png', industry: '리빙 커머스', site: 'https://www.bucketplace.com' },
+  { id: 'zigbang', name: '직방', initial: 'Z', logo: '/logos/zigbang.png', industry: '프롭테크', site: 'https://career.zigbang.com', techBlog: 'https://medium.com/zigbang' },
+  { id: 'wanted', name: '원티드랩', initial: 'W', logo: '/logos/wanted.png', industry: 'HR 테크', site: 'https://www.wantedlab.com', techBlog: 'https://medium.com/wantedjobs' },
+  { id: 'bucketplace', name: '오늘의집', initial: '오', logo: '/logos/bucketplace.png', industry: '리빙 커머스', site: 'https://www.bucketplace.com', techBlog: 'https://www.bucketplace.com/culture/Tech/' },
 ]
 
 const companyById = new Map(COMPANIES.map((company) => [company.id, company]))

@@ -26,6 +26,8 @@ function trackPage(page: Page | null) {
     case 'recommend':
     case 'resume':
       return trackPageView(page.kind)
+    case 'blogs':
+      return trackPageView('blogs', { company: page.company ?? 'all' })
     case 'diagnose':
       return trackPageView('diagnose', { posting: page.postingId })
     case 'report':

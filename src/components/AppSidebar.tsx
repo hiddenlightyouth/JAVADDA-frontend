@@ -21,6 +21,7 @@ const TEXT = messages({
     recommend: '추천 공고',
     recommendLocked: '이력서를 먼저 등록하세요',
     resume: '내 이력서',
+    blogs: '기술 블로그',
     resumeNone: '아직 올리지 않았어요',
     me: '내 정보',
     admin: '관리자',
@@ -39,6 +40,7 @@ const TEXT = messages({
     recommend: 'Recommended',
     recommendLocked: 'Upload your resume first',
     resume: 'My resume',
+    blogs: 'Tech blogs',
     resumeNone: 'Not uploaded yet',
     me: 'Account',
     admin: 'Admin',
@@ -62,7 +64,7 @@ function resetLeft(value: string): { days: number; hours: number } | null {
   return { days: hours >= 24 ? Math.ceil(ms / 86_400_000) : 0, hours }
 }
 
-export type SidebarPage = 'explore' | 'recommend' | 'resume' | 'articles' | 'me' | 'admin' | null
+export type SidebarPage = 'explore' | 'recommend' | 'resume' | 'blogs' | 'articles' | 'me' | 'admin' | null
 
 interface Props {
   /** 지금 열려 있는 리포트. 목록에서 강조해요. */
@@ -73,6 +75,8 @@ interface Props {
   onExplore: () => void
   onRecommend: () => void
   onResume: () => void
+  /** 기술 블로그 요약을 열어요. */
+  onBlogs: () => void
   onOpenReport: (id: string) => void
   /** 목록에서 리포트를 지웠을 때 불러요. 열려 있는 리포트면 화면도 맞춰요. */
   onReportDeleted: (id: string) => void
@@ -193,8 +197,8 @@ function NavLink({ href, active, onClick, icon, label, shortcut, locked }: { hre
   )
 }
 
-/** 앱 화면 왼쪽의 사이드바예요. 새 진단, 공고 탐색, 추천 공고, 내 이력서, 내 리포트 목록과 관리, 내 정보로 가는 링크가 있어요. */
-export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onResume, onOpenReport, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, signedIn, onLogin }: Props) {
+/** 앱 화면 왼쪽의 사이드바예요. 새 진단, 공고 탐색, 추천 공고, 기술 블로그, 내 이력서, 내 리포트 목록과 관리, 내 정보로 가는 링크가 있어요. */
+export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onResume, onBlogs, onOpenReport, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, signedIn, onLogin }: Props) {
   const { me } = useAuth()
   const list = useMessages(REPORT_LIST_TEXT)
   const text = useMessages(TEXT)
@@ -263,6 +267,23 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           icon={
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
               <path d="M8 2.2l1.8 3.7 4 .6-2.9 2.8.7 4L8 11.4l-3.6 1.9.7-4L2.2 6.5l4-.6z" />
+            </svg>
+          }
+        />
+        <NavLink
+          href="/blogs"
+          active={page === 'blogs'}
+          onClick={() => {
+            track('blogs_open', { from: 'sidebar' })
+            onBlogs()
+          }}
+          label={text.blogs}
+          shortcut="G"
+          icon={
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden="true">
+              <path d="M2.5 3.5h6a2 2 0 0 1 2 2v8a1.5 1.5 0 0 0-1.5-1.5h-6.5z" />
+              <path d="M13.5 3.5h-1a2 2 0 0 0-2 2" />
+              <path d="M10.5 13.5V6M13.5 3.5V12h-3" />
             </svg>
           }
         />
