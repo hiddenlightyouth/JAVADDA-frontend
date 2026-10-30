@@ -94,7 +94,11 @@ const TEXT = messages({
 const LINK = /^https?:\/\/(?:www\.)?(?:github\.com|notion\.so|[\w-]+\.notion\.site)\/\S+/i
 
 /** 서류를 올리는 칸이에요. PDF 끌어다 놓기와 링크 두 가지를 받아요. 올리면 onDone으로 알려줘요. */
-export function ResumeUploader({ onDone }: { onDone?: (resume: Resume) => void }) {
+export function ResumeUploader({ onDone, onWorking }: {
+  onDone?: (resume: Resume) => void
+  /** 읽기 시작하고 끝날 때 알려요. 창이 그동안 닫히지 않게 할 때 써요. */
+  onWorking?: (working: boolean) => void
+}) {
   const L = useMessages(TEXT)
   /** 올리는 동안의 진행 상황과 올리는 것의 이름이에요. 올리지 않을 때는 null이에요. */
   const [working, setWorking] = useState<(ProgressState & { name: string }) | null>(null)
@@ -106,8 +110,10 @@ export function ResumeUploader({ onDone }: { onDone?: (resume: Resume) => void }
   async function upload(input: { file?: File; link?: string }) {
     const name = input.file?.name ?? input.link ?? ''
     setWorking({ ...PROGRESS_START, name })
+    onWorking?.(true)
     const resume = await uploadResume(input, (progress) => setWorking({ ...progress, name }))
     setWorking(null)
+    onWorking?.(false)
     // 로그인하지 않았으면 로그인 화면으로 갔고, 실패했으면 토스트로 알렸어요.
     if (!resume) return
     track('resume_upload', { source: resume.source, skills: resume.skills.length })
@@ -337,6 +343,8 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
   const L = useMessages(TEXT)
   const shelf = useResumeShelf()
   const [adding, setAdding] = useState(false)
+  /** 서류를 읽는 동안이에요. 그동안은 올리는 창을 닫을 수 없어요(바깥 누름, Esc, 닫기 버튼 모두). */
+  const [uploading, setUploading] = useState(false)
   const signedIn = useAuth().tokens !== null
   /** 서류는 계정에 저장돼서, 로그인하지 않았으면 올리는 창 대신 로그인 화면으로 가요. */
   const addDocument = () => (signedIn ? setAdding(true) : requestLogin())
@@ -392,16 +400,24 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
         />
       )}
       {adding && (
-        <Modal onClose={() => setAdding(false)} labelledBy="resume-add-title" closeOnBackdrop={false} className="w-full max-w-2xl p-6">
+        <Modal
+          onClose={() => setAdding(false)}
+          labelledBy="resume-add-title"
+          closeOnBackdrop={false}
+          closeOnEscape={!uploading}
+          className="w-full max-w-2xl p-6"
+        >
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
               <h2 id="resume-add-title" className="text-[17px] font-semibold text-gray-900">
                 {L.addTitle}
               </h2>
             </div>
-            <CloseButton label={L.close} size="md" onClick={() => setAdding(false)} />
+            {/* 읽는 동안 닫으면 결과를 볼 곳이 없어서, 닫기 버튼을 숨겨 둬요. */}
+            {!uploading && <CloseButton label={L.close} size="md" onClick={() => setAdding(false)} />}
           </div>
           <ResumeUploader
+            onWorking={setUploading}
             onDone={(resume) => {
               setAdding(false)
               setOpenId(resume.id)
@@ -426,6 +442,7 @@ function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resum
         closeLabel={L.close}
         labelledBy="resume-sheet-title"
         dismissable={!removing}
+        closeOnOutside={false}
         className="max-w-[480px]"
         header={
           <>
