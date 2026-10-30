@@ -205,7 +205,8 @@ function GapRow({ gap, inPlan, onOpen }: { gap: SkillGap; inPlan: boolean; onOpe
   const line = gap.kind === 'missing' ? L.notFound(gap.estimatedWeeks) : (gap.evidence ?? gap.reason)
   return (
     <li className="animate-rise">
-      <button type="button" onClick={onOpen} className="group flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-gray-50">
+      {/* 표의 한 줄이라 누를 때 작아지지 않게 해요. 줄 전체가 줄었다 늘면 표가 출렁여 보여요. */}
+      <button type="button" data-no-press onClick={onOpen} className="group flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-gray-50">
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
             <span className="truncate text-[14px] font-semibold text-gray-900 transition-colors group-hover:text-brand">{gap.skill}</span>
