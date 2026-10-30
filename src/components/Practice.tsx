@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
+import { VOICES, voiceOf } from '../../shared/voices'
 import { track } from '../lib/analytics'
 import { companyOf, fetchQuestions, postingOf, PROGRESS_START, submitAnswer, useReport, type InterviewQuestion, type PracticeFeedback, type ProgressState } from '../lib/gap'
 import { messages, useLang, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { canDictate, canSpeak, joinSpeech, useDictation, useSpeak } from '../lib/speech'
+import { readItem, writeItem } from '../lib/storage'
 import { showToast } from '../lib/toast'
 import { PageHeader, ScrollPage } from './AppPage'
+import { Dropdown } from './Dropdown'
 import { AiProgress, Notice, Panel, ScoreRing } from './GapParts'
 import { MicIcon, SpeakerIcon } from './Icons'
 import { Probability, QUESTION_TEXT, QuestionDetail } from './ReportQuestions'
@@ -22,6 +25,8 @@ const TEXT = messages({
     hideHint: '힌트 접기',
     listen: '질문 듣기',
     stopListen: '그만 듣기',
+    preparing: '목소리 준비 중',
+    voice: '목소리',
     speak: '말로 답하기',
     stopSpeak: '말하기 멈추기',
     hearing: '듣고 있어요. 면접관 앞이라고 생각하고 말해 보세요.',
@@ -55,6 +60,8 @@ const TEXT = messages({
     hideHint: 'Hide hint',
     listen: 'Hear question',
     stopListen: 'Stop',
+    preparing: 'Preparing voice',
+    voice: 'Voice',
     speak: 'Answer by voice',
     stopSpeak: 'Stop speaking',
     hearing: "Listening. Answer as if you're in the interview.",
@@ -79,6 +86,13 @@ const TEXT = messages({
     toReport: 'Back to the report',
   },
 })
+
+/** 고른 목소리는 이 기기에 기억해요. */
+const VOICE_KEY = 'whoisloafing:practice-voice'
+const readVoice = () => {
+  const key = readItem(VOICE_KEY)
+  return key && voiceOf(key) ? key : null
+}
 
 /** 답이 이보다 짧으면 제출할 수 없어요. */
 const MIN_CHARS = 10
@@ -112,6 +126,8 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   const spoken = useRef(false)
   const field = useRef<HTMLTextAreaElement>(null)
   const voice = useSpeak()
+  /** 사용자가 고른 목소리. null이면 기본 목소리예요. */
+  const [speaker, setSpeaker] = useState(readVoice)
   const dictation = useDictation(
     lang === 'ko' ? 'ko-KR' : 'en-US',
     (text) => setAnswer((prev) => joinSpeech(prev, text)),
@@ -180,7 +196,15 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   function toggleListen(question: string) {
     if (voice.speaking) return voice.stop()
     track('practice_question_listen')
-    void voice.speak(question)
+    void voice.speak(question, speaker)
+  }
+
+  /** 목소리를 고르면 지금 질문을 그 목소리로 바로 들려줘요. 말하는 중에는 소리가 답변에 섞이지 않게 틀지 않아요. */
+  function pickVoice(key: string, question: string) {
+    setSpeaker(key)
+    writeItem(VOICE_KEY, key)
+    track('practice_voice_select', { voice: key })
+    if (!dictation.listening) void voice.speak(question, key)
   }
 
   function next() {
@@ -246,8 +270,25 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
                 {canSpeak() && (
                   <button type="button" aria-pressed={voice.speaking} onClick={() => toggleListen(current.question)} className={`${ghostButton} flex items-center gap-1.5`}>
                     <SpeakerIcon className="size-3.5" />
-                    {voice.speaking ? L.stopListen : L.listen}
+                    {voice.preparing ? L.preparing : voice.speaking ? L.stopListen : L.listen}
                   </button>
+                )}
+                {canSpeak() && voice.remote && (
+                  <Dropdown
+                    label={L.voice}
+                    value={(voiceOf(speaker ?? '') ?? VOICES[0]).name[lang]}
+                    className="h-8! rounded-md! border-transparent! bg-transparent! px-2! text-[12.5px]! text-gray-600! hover:bg-gray-100!"
+                    groups={[
+                      {
+                        items: VOICES.map((item) => ({
+                          label: item.name[lang],
+                          hint: item.hint[lang],
+                          checked: (speaker ?? VOICES[0].key) === item.key,
+                          onSelect: () => pickVoice(item.key, current.question),
+                        })),
+                      },
+                    ]}
+                  />
                 )}
               </div>
               {hint && <QuestionDetail question={current} followUp={false} className="mt-2" />}

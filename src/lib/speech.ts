@@ -144,19 +144,20 @@ const voices = new Map<string, string>()
 let remoteOff = false
 
 /** 사람 목소리 음성의 주소를 받아요. 못 받으면 null이에요. */
-async function fetchVoice(text: string, signal: AbortSignal): Promise<string | null> {
-  const known = voices.get(text)
+async function fetchVoice(text: string, voice: string | null, signal: AbortSignal): Promise<string | null> {
+  const name = `${voice ?? ''}\n${text}`
+  const known = voices.get(name)
   if (known) return known
   if (remoteOff) return null
   try {
-    const response = await fetch('/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }), signal })
+    const response = await fetch('/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, voice: voice ?? undefined }), signal })
     if (!response.ok) {
       if (response.status === 503 || response.status === 404 || response.status === 405) remoteOff = true
       else track('practice_tts_fallback', { status: response.status })
       return null
     }
     const url = URL.createObjectURL(await response.blob())
-    voices.set(text, url)
+    voices.set(name, url)
     return url
   } catch {
     return null
@@ -169,6 +170,10 @@ async function fetchVoice(text: string, signal: AbortSignal): Promise<string | n
  */
 export function useSpeak() {
   const [speaking, setSpeaking] = useState(false)
+  /** 음성을 받는 중인지예요. 처음 쓰는 목소리는 몇 초 걸려요. */
+  const [preparing, setPreparing] = useState(false)
+  /** 사람 목소리를 쓸 수 있는지예요. 서버에 키가 없으면 목소리를 고를 수 없어요. */
+  const [remote, setRemote] = useState(!remoteOff)
   /** 가장 최근의 읽기예요. 음성을 받는 동안 멈추면 늦게 온 음성을 틀지 않아요. */
   const turn = useRef(0)
   const request = useRef<AbortController | null>(null)
@@ -182,6 +187,7 @@ export function useSpeak() {
     audio.current = null
     if ('speechSynthesis' in window) window.speechSynthesis.cancel()
     setSpeaking(false)
+    setPreparing(false)
   }, [])
 
   const speakInBrowser = useCallback((text: string) => {
@@ -195,14 +201,17 @@ export function useSpeak() {
   }, [])
 
   const speak = useCallback(
-    async (text: string) => {
+    async (text: string, voice: string | null = null) => {
       stop()
       const mine = turn.current
       const controller = new AbortController()
       request.current = controller
       setSpeaking(true)
-      const url = await fetchVoice(text, controller.signal)
+      setPreparing(true)
+      const url = await fetchVoice(text, voice, controller.signal)
       if (mine !== turn.current) return
+      setPreparing(false)
+      setRemote(!remoteOff)
       if (!url) return speakInBrowser(text)
       const player = new Audio(url)
       audio.current = player
@@ -220,5 +229,5 @@ export function useSpeak() {
 
   useEffect(() => stop, [stop])
 
-  return { speaking, speak, stop }
+  return { speaking, preparing, remote, speak, stop }
 }

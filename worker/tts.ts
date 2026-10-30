@@ -4,13 +4,13 @@
  * 키가 없거나 실패하면 오류로 답하고, 화면은 브라우저 음성으로 읽어요.
  */
 
+import { VOICES, voiceOf } from '../shared/voices'
+
 export const TTS_PATH = '/tts'
 
 /** 질문 하나의 길이를 넉넉히 잡았어요. 다른 글을 읽히는 데 쓰이지 않게 막아요. */
 const MAX_CHARS = 300
 const DEFAULT_BASE_URL = 'https://api.elevenlabs.io'
-/** 기본 목소리예요. 웅장한 면접관 느낌의 낮은 한국어 남성 목소리 Midnight Cave이고, `ELEVENLABS_VOICE_ID`로 바꿔요. */
-const DEFAULT_VOICE_ID = 'aQzFKIjVemqRAhfd9est'
 /** 한국어를 지원하는 모델 중 가장 자연스러워요. 최신 v4는 이 API로 쓸 수 없어요. */
 const DEFAULT_MODEL_ID = 'eleven_multilingual_v2'
 const OUTPUT_FORMAT = 'mp3_44100_128'
@@ -48,11 +48,14 @@ export async function handleTts(request: Request, env: TtsEnv, options: TtsOptio
   // 다른 사이트의 화면에서 이 경로를 쓰지 못하게 해요.
   if (request.headers.get('Origin') !== new URL(request.url).origin) return reply(403, 'forbidden')
 
-  const body = (await request.json().catch(() => null)) as { text?: unknown } | null
+  const body = (await request.json().catch(() => null)) as { text?: unknown; voice?: unknown } | null
   const text = typeof body?.text === 'string' ? body.text.trim() : ''
   if (!text || text.length > MAX_CHARS) return reply(400, 'invalid_text')
 
-  const voice = env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID
+  // 사용자가 고른 목소리는 목록에 있는 것만 받아요. 고르지 않았으면 기본 목소리예요.
+  const picked = typeof body?.voice === 'string' ? voiceOf(body.voice) : undefined
+  if (body?.voice !== undefined && !picked) return reply(400, 'invalid_voice')
+  const voice = picked?.id ?? (env.ELEVENLABS_VOICE_ID || VOICES[0].id)
   const model = env.ELEVENLABS_MODEL_ID || DEFAULT_MODEL_ID
   const key = options.cache ? await cacheKey(voice, model, text) : null
   if (key) {
