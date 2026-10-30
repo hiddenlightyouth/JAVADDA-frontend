@@ -1,5 +1,7 @@
-import { type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
+import { loadConfig, setAiModel, useAiModel, type AiConfig } from '../lib/api'
+import { Dropdown } from './Dropdown'
 import { Modal } from './Dialog'
 import { appAtLeast, appVersion, postToApp, type AppTheme } from '../lib/app'
 import { setShortcutHintsPinned, useShortcutHintsPinned } from '../lib/shortcuts'
@@ -24,6 +26,9 @@ const TEXT = messages({
     privacy: '개인정보 보호',
     shield: '화면 녹화 감지 시 가리기',
     shieldNote: 'macOS에서 화면 녹화가 감지되면 해제 시까지 화면을 가립니다.',
+    ai: 'AI',
+    aiModel: 'AI 모델',
+    aiModelNote: '진단, 서류 검증, 예상 질문, 면접 연습에 사용할 모델입니다.',
     app: '앱',
     version: '버전',
     update: '업데이트 확인',
@@ -40,6 +45,9 @@ const TEXT = messages({
     privacy: 'Privacy',
     shield: 'Hide screen while recording',
     shieldNote: 'When screen recording is detected on macOS, the screen stays hidden until you reveal it.',
+    ai: 'AI',
+    aiModel: 'AI model',
+    aiModelNote: 'The model used for diagnosis, document review, interview questions, and practice.',
     app: 'App',
     version: 'Version',
     update: 'Check for updates',
@@ -94,6 +102,22 @@ export function Settings({ onClose }: { onClose: () => void }) {
   const hints = useShortcutHintsPinned()
   const lang = useLang()
   const text = useMessages(TEXT)
+  const [ai, setAi] = useState<AiConfig | null>(null)
+  const chosen = useAiModel()
+
+  useEffect(() => {
+    let stale = false
+    void loadConfig().then((config) => {
+      if (!stale) setAi(config.ai)
+    })
+    return () => {
+      stale = true
+    }
+  }, [])
+
+  // 고른 모델이 서버 목록에서 빠졌으면 서버의 기본 모델을 쓰고 있는 것으로 보여줘요.
+  const models = ai?.models ?? []
+  const current = models.find((model) => model.id === chosen) ?? models.find((model) => model.id === ai?.defaultModel) ?? models[0]
 
   return (
     <Modal onClose={onClose} labelledBy="settings-title" className="flex max-h-[85dvh] w-full max-w-lg flex-col">
@@ -141,6 +165,30 @@ export function Settings({ onClose }: { onClose: () => void }) {
           />
         </Row>
       </Section>
+
+      {/* 서버에 키가 있는 모델이 하나도 없으면 고를 것이 없어서 숨겨요. */}
+      {current && (
+        <Section title={text.ai}>
+          <Row label={text.aiModel} note={text.aiModelNote}>
+            <Dropdown
+              align="right"
+              value={current.label}
+              groups={[
+                {
+                  items: models.map((model) => ({
+                    label: model.label,
+                    checked: model.id === current.id,
+                    onSelect: () => {
+                      track('app_ai_model_change', { model: model.id })
+                      setAiModel(model.id)
+                    },
+                  })),
+                },
+              ]}
+            />
+          </Row>
+        </Section>
+      )}
 
       {/* 화면 공유를 알아채는 것은 앱 1.2부터라, 그보다 낮은 앱에서는 보여주지 않아요. */}
       {appAtLeast('1.2') && (

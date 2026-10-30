@@ -1,8 +1,24 @@
 import { apiUrl, readResult } from './http'
+import { readItem, writeItem } from './storage'
+import { createStore, useStore } from './store'
+
+/** 서버가 쓸 수 있는 AI 모델 하나예요. */
+export interface AiModel {
+  id: string
+  provider: 'openai' | 'claude'
+  /** 설정 창에 보여줄 이름 */
+  label: string
+}
+
+export interface AiConfig {
+  /** 고르지 않았을 때 서버가 쓰는 모델의 아이디 */
+  defaultModel: string
+  /** 서버에 키가 있는 모델만 와요. 비어 있으면 설정 창에서 모델 고르기를 숨겨요. */
+  models: AiModel[]
+}
 
 /**
- * 서버가 지원하는 기능이에요. 회원, 피드백, 관리자 같은 공통 기능은 백엔드가 맡고,
- * 공고와 리포트 같은 진단 기능은 아직 서버가 없어서 `src/lib/gap.ts`의 가짜 API를 써요.
+ * 서버가 지원하는 기능이에요. 회원, 피드백, 관리자, 진단(공고, 이력서, 리포트) 모두 백엔드가 맡아요.
  */
 export interface ServerConfig {
   /** 서버에 관리자 API가 있는지. 없으면 앱의 관리자 화면에서 AI 사용량만 보여줘요. */
@@ -21,9 +37,29 @@ export interface ServerConfig {
   withdraw: boolean
   /** 서버가 주간 사용량과 요금제를 다루는지. 없으면 사용량을 보여주지 않아요. */
   usage: boolean
+  /** 고를 수 있는 AI 모델 */
+  ai: AiConfig
 }
 
-const NONE: ServerConfig = { admin: false, feedback: false, githubClientId: null, kakaoClientId: null, socialAppLink: false, socialUnlink: false, withdraw: false, usage: false }
+const NONE: ServerConfig = {
+  admin: false,
+  feedback: false,
+  githubClientId: null,
+  kakaoClientId: null,
+  socialAppLink: false,
+  socialUnlink: false,
+  withdraw: false,
+  usage: false,
+  ai: { defaultModel: '', models: [] },
+}
+
+function readAi(value: unknown): AiConfig {
+  const ai = (value ?? {}) as Partial<AiConfig>
+  const models = Array.isArray(ai.models)
+    ? ai.models.filter((model): model is AiModel => !!model && typeof model.id === 'string' && model.id !== '' && typeof model.label === 'string')
+    : []
+  return { defaultModel: typeof ai.defaultModel === 'string' ? ai.defaultModel : '', models }
+}
 
 /** 서버가 어떤 기능을 지원하는지 물어봐요. 서버에 닿지 못하면 모두 꺼진 것으로 봐요. */
 export async function fetchConfig(): Promise<ServerConfig> {
@@ -39,6 +75,7 @@ export async function fetchConfig(): Promise<ServerConfig> {
       socialUnlink: result.data?.socialUnlink === true,
       withdraw: result.data?.withdraw === true,
       usage: result.data?.usage === true,
+      ai: readAi(result.data?.ai),
     }
   } catch {
     return NONE
@@ -51,4 +88,24 @@ let configOnce: Promise<ServerConfig> | null = null
 export function loadConfig(): Promise<ServerConfig> {
   configOnce ??= fetchConfig()
   return configOnce
+}
+
+const AI_MODEL_KEY = 'whoisloafing:ai-model'
+
+/** 설정 창에서 고른 AI 모델의 아이디예요. 고르지 않았으면 null이고, 그때는 서버의 기본 모델을 써요. */
+const aiModel = createStore<string | null>(readItem(AI_MODEL_KEY))
+
+export const useAiModel = () => useStore(aiModel, (value) => value, null)
+
+export function setAiModel(id: string | null) {
+  writeItem(AI_MODEL_KEY, id)
+  aiModel.set(id)
+}
+
+/** AI를 쓰는 요청에 붙이는 헤더예요. 고른 모델이 서버의 목록에 있을 때만 붙여요. */
+export async function aiModelHeaders(): Promise<Record<string, string>> {
+  const id = aiModel.get()
+  if (!id) return {}
+  const config = await loadConfig()
+  return config.ai.models.some((model) => model.id === id) ? { 'X-AI-Model': id } : {}
 }

@@ -34,7 +34,7 @@ interface MenuGroup {
  * 버튼을 누르면 아래로 펼쳐지는 메뉴예요. 공고 탐색의 직군, 경력, 정렬과 예상 질문의 유형 고르기에 같이 써요.
  * 고른 항목에는 체크 표시가 붙고, 바깥을 누르거나 Esc를 누르면 닫혀요.
  */
-export function Dropdown({ label, value, active = false, groups, onOpen, className = '' }: {
+export function Dropdown({ label, value, active = false, groups, onOpen, align = 'left', className = '' }: {
   /** 버튼에 적는 이름. 고른 값만 보여줘도 뜻이 통하면 넘기지 않아요. */
   label?: string
   /** 지금 고른 값. 있으면 버튼에 이름 옆으로 보여줘요. */
@@ -43,6 +43,8 @@ export function Dropdown({ label, value, active = false, groups, onOpen, classNa
   groups: MenuGroup[]
   /** 메뉴를 열 때 불러요. 내용을 그때 받아 올 때 써요. */
   onOpen?: () => void
+  /** 메뉴를 버튼의 어느 쪽 끝에 맞출지. 오른쪽 끝에 놓인 버튼(설정 창)은 right예요. */
+  align?: 'left' | 'right'
   /** 버튼 모양을 덧씌울 때 써요. */
   className?: string
 }) {
@@ -71,7 +73,7 @@ export function Dropdown({ label, value, active = false, groups, onOpen, classNa
       </button>
 
       {open && (
-        <div role="menu" className={`absolute top-full left-0 z-10 mt-2 max-h-[60dvh] w-64 origin-top-left overflow-y-auto ${menuPanel}`}>
+        <div role="menu" className={`absolute top-full z-10 mt-2 max-h-[60dvh] w-64 overflow-y-auto ${align === 'right' ? 'right-0 origin-top-right' : 'left-0 origin-top-left'} ${menuPanel}`}>
           {groups.map((group, index) => (
             <div key={group.title ?? index} className={index > 0 ? 'mt-1 border-t border-gray-100 pt-1' : ''}>
               {group.title && <p className={`px-2.5 pt-2 pb-1 ${labelText}`}>{group.title}</p>}

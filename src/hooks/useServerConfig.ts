@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchConfig, type ServerConfig } from '../lib/api'
+import { loadConfig, type ServerConfig } from '../lib/api'
 import { setFeedbackReady } from '../lib/feedback'
 
 /**
@@ -10,7 +10,7 @@ export function useServerConfig(): ServerConfig | null {
   const [config, setConfig] = useState<ServerConfig | null>(null)
 
   useEffect(() => {
-    void fetchConfig().then((next) => {
+    void loadConfig().then((next) => {
       setConfig(next)
       setFeedbackReady(next.feedback)
     })
