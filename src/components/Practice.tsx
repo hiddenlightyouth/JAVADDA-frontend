@@ -105,8 +105,9 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   async function submit() {
     if (!current || answer.trim().length < MIN_CHARS) return
     setSending(true)
-    const result = await submitAnswer(current, answer)
+    const result = await submitAnswer(id, current, answer)
     setSending(false)
+    if (!result) return
     setFeedback(result)
     setScores((prev) => [...prev, result.score])
     track('practice_submit', { score: result.score })
@@ -132,9 +133,9 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   return (
     <ScrollPage header={<PageHeader title={L.title} owner={posting && company ? `${company.name} ${posting.title}` : undefined} onBack={onBack} />}>
       <div className="mx-auto w-full max-w-[720px]">
-        {!report || questions === null ? (
+        {report === null || questions === null ? (
           <Notice title={L.missing} body={L.missingBody} action={L.back} onAction={onBack} className="mt-16" />
-        ) : questions === undefined || !current ? (
+        ) : report === undefined || questions === undefined || !current ? (
           <Busy label={L.loading} className="rounded-2xl bg-gray-50 p-5">
             <Bone className="h-3 w-16" />
             <Bone className="mt-5 h-5 w-4/5" />

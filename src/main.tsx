@@ -1,6 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { appShell } from './lib/app'
+import { loadCatalog, startAccountSync } from './lib/gap'
 import { currentPath } from './lib/i18n'
 import { aboutFromPath } from './lib/routes'
 import './index.css'
@@ -40,4 +42,9 @@ const start = () => {
 const path = currentPath()
 if (/^\/articles(\/|$)/.test(path)) void import('./components/Articles').finally(start)
 else if (aboutFromPath()) void import('./components/About').finally(start)
-else start()
+else if (appShell) {
+  // 앱 화면은 기업과 공고를 받은 뒤에 그려요. 공고를 찾는 함수(postingOf, companyOf)가 바로 답할 수 있게요.
+  // 받는 동안은 빈 화면이고, 서버에 닿지 못하면 적어 둔 목록으로 그려요. 로그인해 있으면 이력서와 리포트도 같이 받기 시작해요.
+  startAccountSync()
+  void loadCatalog().finally(start)
+} else start()

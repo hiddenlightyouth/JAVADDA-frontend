@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
-import { axisOf, canonical, removeResume, suggestSkills, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type Resume, type ResumeSkill } from '../lib/gap'
+import { useAuth } from '../lib/auth'
+import { axisOf, canonical, removeResume, requestLogin, suggestSkills, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type Resume, type ResumeSkill } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { showToast } from '../lib/toast'
@@ -108,6 +109,8 @@ export function ResumeUploader({ onDone }: { onDone?: (resume: Resume) => void }
     setWorking(true)
     const resume = await uploadResume(input)
     setWorking(false)
+    // 로그인하지 않았으면 로그인 화면으로 갔고, 실패했으면 토스트로 알렸어요.
+    if (!resume) return
     track('resume_upload', { source: resume.source, skills: resume.skills.length })
     showToast(pick(TEXT).uploaded)
     onDone?.(resume)
@@ -341,6 +344,9 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
   const L = useMessages(TEXT)
   const shelf = useResumeShelf()
   const [adding, setAdding] = useState(false)
+  const signedIn = useAuth().tokens !== null
+  /** 서류는 계정에 저장돼서, 로그인하지 않았으면 올리는 창 대신 로그인 화면으로 가요. */
+  const addDocument = () => (signedIn ? setAdding(true) : requestLogin())
   const [openId, setOpenId] = useState<string | null>(null)
   const open = shelf.list.find((resume) => resume.id === openId) ?? null
 
@@ -356,7 +362,7 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
       <PageHeader
         title={L.title}
         actions={
-          <button type="button" onClick={() => setAdding(true)} className={`${primaryButton} flex items-center gap-1.5`}>
+          <button type="button" onClick={addDocument} className={`${primaryButton} flex items-center gap-1.5`}>
             <PlusIcon className="size-3.5" />
             {L.addDoc}
           </button>
@@ -366,7 +372,7 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
         {/* 공고 탐색처럼 제목 줄과 같은 폭으로 늘어놓고, 칸 수는 목록 폭을 보고 정해요. */}
         <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
           {shelf.list.length === 0 ? (
-            <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={() => setAdding(true)} className="mt-24" />
+            <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={addDocument} className="mt-24" />
           ) : (
             <ul className="grid gap-4 @2xl:grid-cols-2 @5xl:grid-cols-3">
               {shelf.list.map((resume) => (

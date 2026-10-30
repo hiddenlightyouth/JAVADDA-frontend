@@ -9,6 +9,7 @@ import {
   togglePlan,
   useNotes,
   usePlans,
+  requestLogin,
   useReport,
   useResume,
   type Course,
@@ -17,6 +18,7 @@ import {
   type ScoreItem,
   type SkillGap,
 } from '../lib/gap'
+import { useAuth } from '../lib/auth'
 import { useShortcuts } from '../lib/shortcuts'
 import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
@@ -49,10 +51,16 @@ const TEXT = messages({
     staleAction: '다시 진단하기',
     delete: '삭제',
     missing: '이 리포트를 찾을 수 없어요.',
-    missingBody: '지웠거나 다른 기기에서 만든 리포트예요.',
+    missingBody: '지웠거나 다른 계정에서 만든 리포트예요.',
+    signInTitle: '로그인하면 리포트를 볼 수 있어요.',
+    signInBody: '리포트는 계정에 저장돼요.',
+    signIn: '로그인',
+    failedTitle: '리포트를 만들지 못했어요.',
+    failedBody: '잠시 뒤에 다시 진단해 주세요.',
+    failedAction: '다시 진단하기',
     goHome: '새 진단 시작하기',
     pending: '공고와 서류를 맞춰 보고 있어요.',
-    pendingBody: '보통 몇 초 안에 끝나요.',
+    pendingBody: '보통 1분 안에 끝나요.',
     fitTitle: '적합도',
     verdict: (score: number): string => (score >= 70 ? '잘 맞아요! 바로 지원해 볼 만해요.' : score >= 50 ? '좋아요! 조금만 채우면 돼요.' : '갭이 있어요. 하나씩 채워 봐요.'),
     createdAt: (when: string) => `${when} 진단`,
@@ -106,10 +114,16 @@ const TEXT = messages({
     staleAction: 'Re-run',
     delete: 'Delete',
     missing: "Couldn't find this report.",
-    missingBody: 'It may have been deleted or created on another device.',
+    missingBody: 'It may have been deleted or created with another account.',
+    signInTitle: 'Sign in to see this report.',
+    signInBody: 'Reports are saved to your account.',
+    signIn: 'Sign in',
+    failedTitle: "We couldn't make this report.",
+    failedBody: 'Please run the diagnosis again in a moment.',
+    failedAction: 'Run again',
     goHome: 'Start a new diagnosis',
     pending: 'Comparing the posting with your documents.',
-    pendingBody: 'This usually takes a few seconds.',
+    pendingBody: 'This usually takes under a minute.',
     fitTitle: 'Fit',
     verdict: (score: number) => (score >= 70 ? 'Great fit! Worth applying now.' : score >= 50 ? 'Nice! Just a little more to go.' : 'Some gaps here. Close them one by one.'),
     createdAt: (when: string) => `Diagnosed ${when}`,
@@ -569,6 +583,7 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
   const [gap, setGap] = useState<SkillGap | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [rerunning, setRerunning] = useState(false)
+  const signedIn = useAuth().tokens !== null
 
   // 리포트가 바뀌면 열어 둔 갭 상세를 닫아요.
   useEffect(() => setGap(null), [id, tab])
@@ -584,11 +599,27 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
     !deleting,
   )
 
+  // 상세를 받는 동안은 같은 배치의 뼈대를 보여줘요.
+  if (report === undefined) {
+    return (
+      <main className={pageFrame}>
+        <PageHeader title={L.tabs.summary} onBack={onBack} backLabel={L.back} />
+        <div className="pt-5">
+          <ReportSkeleton />
+        </div>
+      </main>
+    )
+  }
+
   if (!report || !posting || !company) {
     return (
       <main className={pageFrame}>
         <PageHeader title={L.tabs.summary} onBack={onBack} backLabel={L.back} />
-        <Notice title={L.missing} body={L.missingBody} action={L.goHome} onAction={onBack} className="mt-24" />
+        {signedIn ? (
+          <Notice title={L.missing} body={L.missingBody} action={L.goHome} onAction={onBack} className="mt-24" />
+        ) : (
+          <Notice title={L.signInTitle} body={L.signInBody} action={L.signIn} onAction={requestLogin} className="mt-24" />
+        )}
       </main>
     )
   }
@@ -606,6 +637,7 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
   }
 
   const done = report.status === 'done'
+  const failed = report.status === 'failed'
   // 이 리포트를 만든 서류와 지금 별을 누른 대표 이력서가 다르면, 대표 이력서로 다시 진단하자고 알려요.
   const outdated = done && !!resume && report.resumeId !== resume.id
 
@@ -619,7 +651,7 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
         backLabel={L.back}
         actions={
           <>
-            <button type="button" disabled={!done || rerunning} onClick={() => void rerun()} className={`${toolButton} disabled:text-gray-400`}>
+            <button type="button" disabled={(!done && !failed) || rerunning} onClick={() => void rerun()} className={`${toolButton} disabled:text-gray-400`}>
               <RefreshIcon className={`size-4 ${rerunning ? 'motion-safe:animate-spin' : ''}`} />
               {L.rerun}
             </button>
@@ -663,7 +695,9 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
             </button>
           </div>
         )}
-        {!done ? (
+        {failed ? (
+          <Notice title={L.failedTitle} body={L.failedBody} action={L.failedAction} onAction={() => void rerun()} className="mt-24" />
+        ) : !done ? (
           <>
             <ReportSkeleton />
             <p className="mt-6 text-center text-[13px] text-gray-500">

@@ -128,6 +128,20 @@ export function useAuth(): AuthState {
   return useStore(auth)
 }
 
+/** 지금 로그인해 있는지예요. 화면 밖(진단 자료를 받는 곳)에서 써요. */
+export const isSignedIn = () => auth.get().tokens !== null
+
+/** 로그인하거나 로그아웃할 때만 알려줘요. 토큰을 새로 받는 것은 알리지 않아요. 그만 들으려면 돌려준 함수를 불러요. */
+export function onSignedInChange(listener: (signedIn: boolean) => void): () => void {
+  let last = isSignedIn()
+  return auth.subscribe(() => {
+    const next = isSignedIn()
+    if (next === last) return
+    last = next
+    listener(next)
+  })
+}
+
 
 function clearAuth() {
   if (auth.get().tokens || auth.get().me) setState({ tokens: null, me: null })

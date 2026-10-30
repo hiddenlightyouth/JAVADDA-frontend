@@ -15,10 +15,10 @@ import { isAdmin, loadMe, useAuth } from './lib/auth'
 import { socialFromPath } from './lib/social'
 import { useFeedback } from './lib/feedback'
 import { useShortcuts } from './lib/shortcuts'
-import { messages, pick, useLang } from './lib/i18n'
+import { localizePath, messages, pick, useLang } from './lib/i18n'
 import { applyMeta, HOME_META } from './lib/meta'
-import { reportFromPath } from './lib/routes'
-import { startDiagnosis, useResume } from './lib/gap'
+import { pathOf, reportFromPath } from './lib/routes'
+import { setLoginHandler, startDiagnosis, useResume } from './lib/gap'
 import { closePlans, refreshUsage, usePlansOpen } from './lib/usage'
 import type { AccountPage } from './components/Account'
 
@@ -29,8 +29,8 @@ const Home = lazy(() => import('./components/Home').then((module) => ({ default:
 const BugReport = lazy(() => import('./components/Feedback').then((module) => ({ default: module.BugReport })))
 
 const TEXT = messages({
-  ko: { loginToSave: '로그인하면 보던 리포트로 바로 돌아가요.' },
-  en: { loginToSave: "Sign in and we'll bring you right back to your report." },
+  ko: { loginToSave: '로그인하면 보던 리포트로 바로 돌아가요.', loginToContinue: '이력서와 리포트는 계정에 저장돼요. 로그인하면 하던 곳으로 바로 돌아가요.' },
+  en: { loginToSave: "Sign in and we'll bring you right back to your report.", loginToContinue: "Resumes and reports are saved to your account. Sign in and we'll bring you right back." },
 })
 
 export default function App() {
@@ -78,10 +78,32 @@ export default function App() {
   }, [tokens])
 
   const openReport = useCallback((id: string, tab: ReportTab = 'summary', replace = false) => open({ kind: 'report', id, tab }, replace), [open])
+
+  /** 로그인이 필요한 일을 하려 했어요. 로그인 화면으로 가고, 로그인하면 path(없으면 지금 화면)로 돌아와요. */
+  const requireLogin = useCallback(
+    (path: string = window.location.pathname + window.location.search) => {
+      loginReturn.current = { path, notice: pick(TEXT).loginToContinue }
+      openAccount('login')
+    },
+    [loginReturn, openAccount],
+  )
+
+  // 이력서를 올리거나 보완 계획에 넣는 것처럼 계정에 저장하는 일은 로그인해야 해요. 진단 자료가 로그인 화면을 열 수 있게 해 둬요.
+  useEffect(() => {
+    setLoginHandler(() => requireLogin())
+    return () => setLoginHandler(null)
+  }, [requireLogin])
+
   // 공고를 누르면 확인 화면 없이 대표 이력서로 바로 진단해요. 서류가 없을 때만 올리는 화면(진단 시작)으로 가요.
+  // 진단은 계정에 저장돼서, 로그인하지 않았으면 로그인 화면으로 갔다가 그 공고의 진단 시작으로 돌아와요.
   const openDiagnose = useCallback(
     (postingId: string) => {
+      if (!tokens) {
+        requireLogin(localizePath(pathOf({ kind: 'diagnose', postingId })))
+        return
+      }
       void startDiagnosis(postingId).then((report) => {
+        if (report === 'failed') return
         if (!report) {
           open({ kind: 'diagnose', postingId })
           return
@@ -90,7 +112,7 @@ export default function App() {
         openReport(report.id)
       })
     },
-    [open, openReport],
+    [open, openReport, requireLogin, tokens],
   )
   const openPractice = useCallback((id: string, question?: string) => open({ kind: 'practice', id, question }), [open])
   const openExplore = useCallback(() => open({ kind: 'explore' }), [open])

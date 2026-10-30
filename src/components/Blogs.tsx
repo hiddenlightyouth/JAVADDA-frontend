@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
-import { BLOG_COMPANIES, COLLECTED_AT, fetchBlogDigests, isStale, THEME_NAMES, themeTrends, topSkills, type BlogDigest, type BlogPost, type BlogTheme, type ThemeTrend } from '../lib/blogs'
+import { blogCompaniesOf, COLLECTED_AT, fetchBlogDigests, isStale, THEME_NAMES, themeTrends, topSkills, type BlogDigest, type BlogPost, type BlogTheme, type ThemeTrend } from '../lib/blogs'
 import { canEmbed, companyOf, POSTINGS } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { PageHeader, ScrollPage } from './AppPage'
@@ -125,6 +125,7 @@ export function Blogs({ company, onCompany, onJobs }: {
   }, [attempt])
 
   const digests = Array.isArray(loaded) ? loaded : null
+  const blogCompanies = useMemo(() => blogCompaniesOf(digests ?? []), [digests])
   const digest = company && digests ? (digests.find((item) => item.companyId === company) ?? null) : null
 
   /** 모든 기업의 글을 최신 순서로 이어 붙여요. */
@@ -181,7 +182,7 @@ export function Blogs({ company, onCompany, onJobs }: {
         }
       >
         {/* 기업은 공고 탐색처럼 로고를 보고 한 번에 골라요. */}
-        <CompanyFilter companies={BLOG_COMPANIES} value={company} label={L.company} allLabel={L.all} onChange={selectCompany} />
+        <CompanyFilter companies={blogCompanies} value={company} label={L.company} allLabel={L.all} onChange={selectCompany} />
 
         <div className="mt-4 flex h-9 items-center justify-between gap-3">
           <Dropdown

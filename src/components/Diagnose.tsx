@@ -3,7 +3,7 @@ import { track } from '../lib/analytics'
 import { careerName, companyOf, daysLeft, familyName, postingOf, startDiagnosis, useResume } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { pageFrame, PageHeader } from './AppPage'
-import { CompanyMark, Notice, SkillChip } from './GapParts'
+import { CompanyMark, Failed, Notice, SkillChip } from './GapParts'
 import { ResumeUploader } from './MyResume'
 import { PostingBrowser, SplitView } from './PostingBrowser'
 import { label, toolButton } from './ui'
@@ -56,24 +56,40 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
   const resume = useResume()
   const [viewing, setViewing] = useState(false)
   const started = useRef(false)
+  /** 진단을 시작하지 못했으면 true예요. 다시 시도 버튼을 보여줘요. */
+  const [failed, setFailed] = useState(false)
 
   // 대표 이력서가 생기면(처음부터 있거나, 여기서 올렸거나) 한 번만 바로 진단해요.
   const ready = !!posting && !!resume && resume.skills.length > 0
   useEffect(() => {
-    if (!ready || started.current) return
+    if (!ready || failed || started.current) return
     started.current = true
     void startDiagnosis(postingId).then((report) => {
+      if (report === 'failed') {
+        started.current = false
+        setFailed(true)
+        return
+      }
       if (!report) return
       track('diagnose_start', { posting: postingId, reused: report.status === 'done' })
       onReport(report.id)
     })
-  }, [ready, postingId, onReport])
+  }, [ready, failed, postingId, onReport])
 
   if (!posting) {
     return (
       <main className={pageFrame}>
         <PageHeader title={L.title} onBack={onBack} backLabel={L.back} />
         <Notice title={L.missing} body={L.missingBody} action={L.goHome} onAction={onBack} className="mt-24" />
+      </main>
+    )
+  }
+
+  if (ready && failed) {
+    return (
+      <main className={pageFrame}>
+        <PageHeader title={posting.title} onBack={onBack} backLabel={L.back} />
+        <Failed onRetry={() => setFailed(false)} className="mt-24" />
       </main>
     )
   }

@@ -6,7 +6,7 @@
 
 신입과 주니어 개발자가 특정 기업이나 공고를 기준으로 자기 역량의 갭을 객관적으로 보고, 채울 방법과 맞는 공고까지 받는 취업 갭 진단 서비스예요. 공고를 고르고 이력서나 포트폴리오(PDF, GitHub나 노션 링크)를 올리면, 적합도와 부족한 역량, 보완 방법, 학습 로드맵(강의), 서류 검증, 예상 면접 질문과 면접 연습까지 한 리포트로 받아요. 기획서(취업 갭 진단 서비스 기획서, 2026년 9월)의 10개 화면을 이 레포의 기존 틀(사이드바와 오른쪽 화면, 제목 줄과 흰 바탕, 회색 칸)에 맞춰 옮겼어요. 예전에는 GitHub 레포의 기여도를 채팅처럼 풀어 주는 서비스였고, 그 화면과 코드는 이 브랜치(`feat/job-gap`)에서 지웠어요. 브랜딩, 계정, 설정, 관리자, 앱 틀은 그대로예요.
 
-브라우저의 메인 주소(/)는 소개 화면이고, "시작하기"를 누르면 `/app`에서 macOS 앱과 같은 화면(왼쪽 사이드바와 오른쪽 화면)으로 진단해요. 로그인하지 않아도 진단할 수 있어요. 백엔드가 아직 없어서 공고와 리포트는 `src/lib/gap.ts`의 목 자료와 가짜 API로 만들고, 이력서와 리포트는 이 기기의 localStorage에 남겨요.
+브라우저의 메인 주소(/)는 소개 화면이고, "시작하기"를 누르면 `/app`에서 macOS 앱과 같은 화면(왼쪽 사이드바와 오른쪽 화면)으로 진단해요. 공고 탐색과 기술 블로그는 로그인하지 않아도 보고, 이력서를 올리고 진단하려면 로그인해야 해요. 공고, 이력서, 리포트, 서류 검증, 면접 질문은 모두 백엔드(이 서비스의 서버 레포, `/api/v1`)에서 받고, 화면은 `src/lib/gap.ts`의 함수만 불러요. 이력서, 리포트, 보완 계획, 면접 노트는 계정에 저장돼요.
 
 분석 항목은 아래와 같아요.
 
@@ -54,7 +54,7 @@
 - 프론트엔드: React + TypeScript (Vite)
 - 스타일: Tailwind CSS v4 (`@tailwindcss/vite`)
 
-- 서버: 회원, 피드백, 관리자, 사용량은 백엔드 레포(hiddenlightyouth/whoisloafing-server, Kotlin, Spring Boot)를 써요. 진단 기능의 서버는 아직 없어요.
+- 서버: 회원, 피드백, 관리자, 사용량, 진단(기업, 공고, 이력서, 리포트, 서류 검증, 면접 질문과 연습, 보완 계획, 면접 노트, 기술 블로그)을 모두 백엔드(Spring Boot)가 맡아요. 주소는 `VITE_API_BASE_URL`이고, 응답은 늘 `{ data, error: { code, message } }` 모양이에요(`readResult`).
 - 배포: Cloudflare Workers (정적 파일 assets만)
 - 분석 도구: Google Analytics 4 (`VITE_GA_MEASUREMENT_ID`가 있을 때만 켜짐)
 - 아티클: 마크다운 파일을 `marked`로 변환해서 보여줘요.
@@ -85,16 +85,17 @@ articles/en/          영어 아티클. 한국어 글과 같은 파일 이름이
 wrangler.toml         Cloudflare Workers 설정 (정적 파일 폴더, 없는 주소는 index.html로)
 src/
   lib/shell.ts        앱 화면(macOS 앱, 웹의 /app)으로 보여줄지 정하기(appShell, isWebApp), 예전 주소를 /app 주소로 옮기기, /app 붙이고 떼기. 다른 모듈을 불러오지 않아서 가장 먼저 읽혀요
-  App.tsx             화면을 묶는 곳. 화면 옮기기, 로그인하러 갔다 돌아오기, 단축키, 헤더와 본문과 사이드바 배치
+  main.tsx            처음 그리기. 앱 화면이면 기업과 공고를 받은 뒤에 그리고(loadCatalog), 계정 자료 받기를 켜요(startAccountSync)
+  App.tsx             화면을 묶는 곳. 화면 옮기기, 로그인하러 갔다 돌아오기(requireLogin), 단축키, 헤더와 본문과 사이드바 배치
   prerender.tsx       소개 화면과 아티클 화면을 빌드할 때 미리 HTML로 그리는 코드 (브라우저에서는 쓰지 않아요)
   index.css           Tailwind 테마 토큰, 자간, 애니메이션
-  lib/blogs.ts        기업 기술 블로그 요약. 기업 열한 곳의 대표 글(제목, 원문 주소, 날짜, 요약, 주제, 기술), 요즘 고민 분석, 면접에서 쓸 점, 자주 나온 기술(topSkills), 여러 기업에 걸친 흐름(themeTrends), 가짜 API(fetchBlogDigests)
-  lib/gap.ts          진단의 자료와 API. 타입(기업, 공고, 이력서, 리포트, 갭, 서류 검증, 면접 질문, 연습 피드백), 목 자료(기업 12곳, 공고 22개, 강의, 시장 비율), 가짜 API(fetchPostings, uploadResume, fetchReview, fetchQuestions, submitAnswer), 저장소(useResume는 대표 이력서, useResumeShelf는 올린 서류 전부, setPrimaryResume, removeResume, useReports, useReport, usePlans, useNotes), 공고를 눌렀을 때 바로 진단하기(startDiagnosis), 다시 진단(rerunReport), 적합도 계산(fitOf, levelOf), 스킬 이름 정규화(canonical)
+  lib/blogs.ts        기업 기술 블로그 요약. 서버에서 받기(fetchBlogDigests, GET /blogs), 요약이 있는 기업(blogCompaniesOf), 자주 나온 기술(topSkills), 여러 기업에 걸친 흐름(themeTrends), 서버에 닿지 못할 때 보여줄 기업 열한 곳의 글(DIGESTS)
+  lib/gap.ts          진단의 자료와 API. 타입(기업, 공고, 이력서, 리포트, 갭, 서류 검증, 면접 질문, 연습 피드백), 기업과 공고 받기(loadCatalog, COMPANIES, POSTINGS, 서버에 닿지 못할 때의 목록), 서버 API(fetchPostings, uploadResume, saveResumeSkills, setPrimaryResume, removeResume, startDiagnosis, rerunReport, deleteReport, fetchReview, fetchQuestions, submitAnswer, togglePlan, saveNote), 계정 자료 받기와 비우기(startAccountSync), 저장소(useResume는 대표 이력서, useResumeShelf는 올린 서류 전부, useReports, useReport, usePlans, useNotes), 로그인 화면 열기(setLoginHandler, requestLogin), 적합도 계산(fitOf, levelOf), 스킬 이름 정규화(canonical)
   lib/i18n.ts         화면 언어(한국어, 영어) 정하기와 저장, 언어별 주소(/en), 문구 묶음(messages, useMessages, pick)
   lib/meta.ts         탭 제목과 링크 미리보기 태그를 화면과 언어에 맞게 바꾸기, 언어별 메인 화면 값(HOME_META)
   lib/http.ts         API 기본 주소, 응답의 data와 오류 코드 꺼내기, 브라우저 소유자 키
-  lib/api.ts          서버가 지원하는 기능 조회(/config)
-  lib/auth.ts         로그인 상태 저장소(useAuth), 토큰 재발급, 회원가입과 로그인, 내 정보, 로그인한 기기, 로그인 기록, 관리자인지 판별(isAdmin)
+  lib/api.ts          서버가 지원하는 기능 조회(/config, loadConfig로 한 번만), 고른 AI 모델 저장(useAiModel, setAiModel)과 요청 헤더(aiModelHeaders)
+  lib/auth.ts         로그인 상태 저장소(useAuth, isSignedIn, 로그인과 로그아웃만 알리는 onSignedInChange), 로그인한 요청(authFetch), 토큰 재발급, 회원가입과 로그인, 내 정보, 로그인한 기기, 로그인 기록, 관리자인지 판별(isAdmin)
   lib/social.ts       소셜 로그인(GitHub, 카카오) 흐름
   components/Social.tsx      소셜 로그인 버튼과, 소셜 서비스에서 돌아온 화면 (/auth/github/callback, /auth/kakao/callback)
   lib/usage.ts        이번 주 사용량과 요금제 받기(useUsage, refreshUsage), 플랜 변경 창 열고 닫기(openPlans, closePlans, usePlansOpen)
@@ -131,8 +132,8 @@ src/
   components/History.tsx     내 리포트 화면(/history)과, 사이드바가 같이 쓰는 리포트 지우기 창과 문구
   components/AppPage.tsx     앱 화면이 같이 쓰는 틀. 바깥 틀(pageFrame), 제목 줄(PageHeader), 제목 줄 아래 바탕(canvas), 제목 줄만 고정하고 아래를 스크롤하는 화면(ScrollPage, 공고 탐색, 추천 공고, 면접 연습), 복사(copyText)
   components/ui.tsx          기본 모양을 한 곳에서 정해요. 버튼(primaryButton, primaryButtonMd, primaryButtonLg, quietButton, dangerButton, softButton, softDangerButton, toolButton, toolDangerButton, ghostButton, ghostDangerButton, iconButton), 메뉴(menuPanel, menuItem, menuDangerItem), 입력칸(fieldBase, textField, textFieldSm, textArea, 좁은 화면에서는 16px), 작은 제목(label), 이름표(tag), 테두리 없는 작은 이름표(Badge, gray, muted, brand, outline, red, white), 오류 문구(FormError), 고르는 칸(Segmented, sm과 md), 밑줄 탭(Tabs), 점 목록(Bullets), 번호(NumberBadge, NumberedList), 뼈대 감싸기(Busy), 카드 떠오르는 순서(stagger). 새 화면은 같은 모양을 다시 적지 않고 여기 것을 써요
-  components/Dropdown.tsx    버튼을 누르면 펼쳐지는 고르기 메뉴(Dropdown). 공고 탐색, 추천 공고, 예상 질문이 써요
-  components/Settings.tsx    앱의 설정 창. 화면 모드, 언어, 단축키 항상 표시, 화면 녹화 감지 시 가리기, 버전
+  components/Dropdown.tsx    버튼을 누르면 펼쳐지는 고르기 메뉴(Dropdown). 공고 탐색, 추천 공고, 예상 질문, 설정 창의 AI 모델이 써요. 오른쪽 끝에 놓인 버튼은 `align="right"`로 메뉴를 오른쪽에 맞춰요
+  components/Settings.tsx    앱의 설정 창. 화면 모드, 언어, 단축키 항상 표시, AI 모델, 화면 녹화 감지 시 가리기, 버전
   components/AppLogin.tsx    앱이 브라우저로 열어 주는 앱 로그인 화면 (/app-login)
   components/CaptureShield.tsx  앱에서 화면 공유나 녹화가 감지되면 화면 전체를 가리는 막
   components/Admin.tsx       앱의 관리자 화면 (/admin). 관리자 계정만 보고, 탭으로 나눠요
@@ -144,7 +145,7 @@ src/
   components/About.tsx       소개 화면 (/about, 브라우저의 메인 주소)
   components/Skeleton.tsx    글자나 그림이 올 자리의 회색 칸(Bone). 여러 개를 묶을 때는 ui의 Busy로 감싸요
   components/         Header, Logo, Footer, LofyScript, Articles, Account, AuthForm, MyPage, IpPlace, Toast
-  hooks/useServerConfig.ts  서버의 `/config`를 처음 한 번 받아 두기 (관리자, 피드백, 소셜 로그인 같은 서버 기능이 켜져 있는지)
+  hooks/useServerConfig.ts  서버의 `/config`를 처음 한 번 받아 두기 (관리자, 피드백, 소셜 로그인, AI 모델 같은 서버 기능이 켜져 있는지)
   hooks/useScreen.ts    지금 보여줄 화면(`Page`), 주소에서 화면 맞추기와 뒤로 가기, 화면을 옮기는 함수(open, goHome 등)
   hooks/useDismiss.ts   열려 있는 메뉴를 바깥을 누르거나 Esc를 누르면 닫기
 ```
@@ -158,24 +159,20 @@ src/
 
 ## 진단 자료와 계산 규칙
 
-지금은 모두 `src/lib/gap.ts`가 맡아요. 서버가 생기면 같은 규칙을 서버가 지켜요.
+계산과 생성은 서버가 맡고, 화면은 `src/lib/gap.ts`가 받아 온 값을 그려요. 화면에서 직접 계산하는 것은 적합도(`fitOf`)와 스킬 이름 정규화뿐이에요.
 
-- 공고(`POSTINGS`)는 12개 기업의 22개 공고예요. 필수(`required`)와 우대(`preferred`) 역량, 직군(`family`), 경력(`career`), 마감(`deadline`)이 있어요. 마감이 없으면 상시 채용이에요.
-- 스킬 이름은 `canonical`로 하나의 표기로 모아요(Spring Boot, 스프링부트, springboot는 모두 Spring Boot). 별칭 표(`ALIASES`)에 더해요. 스킬마다 레이더의 축(`axisOf`: 언어, 프레임워크, 데이터베이스, 인프라, 협업, CS 기초)이 있어요.
-- 시장 비율(`MARKET`)은 같은 직군 공고 중 그 스킬을 적은 비율과 지난 6개월의 변화예요. 공고가 쌓이기 전이라 어림한 값이에요.
-- 이력서는 PDF 파일이나 GitHub, 노션 링크로 올려요. 지금은 파일을 읽지 않고, 이름으로 백엔드와 프론트엔드를 어림해 그럴듯한 역량 목록(이름, 숙련도 1에서 5, 근거 문장)과 문단 네 개를 만들어요. 이름이 같으면 결과도 같아요(`seeded`). 서류는 여러 개 올려 두고 그중 하나를 대표 이력서로 정해요. 적합도와 추천은 대표 이력서로 하고, 진단도 대표 이력서로 해요. 리포트는 만든 서류의 아이디(`resumeId`)를 기억해서, 서류 검증, 예상 질문, 재진단도 그 서류로 해요. 지웠으면 대표로 해요. 목록과 대표 아이디는 localStorage의 `whoisloafing:gap:resumes:v1`에 두고, 예전에 하나만 두던 `whoisloafing:gap:resume:v1`이 있으면 처음 읽을 때 대표로 옮겨요. 새로 올린 서류는 대표가 없을 때만 대표가 돼요. 대표를 지우면 남은 것 중 가장 최근 것이 대표예요. 역량은 내 이력서 화면에서 고칠 수 있어요(이름표를 누르면 숙련도가 한 단계 올라가고, X로 빼고, 칸으로 더해요).
-- 적합도(`fitOf`)는 필수 역량 60%, 우대 역량 25%, 역량 폭 15%예요. 역량마다 숙련도 3을 채우면 1점이에요. 이력서가 없으면 null이고 화면에 보이지 않아요. 서류는 고칠 때마다 새 객체라, 서류마다 숙련도 표와 공고별 적합도를 한 번만 계산해 기억해요(`levelOf`, WeakMap). 정렬과 카드가 같은 값을 여러 번 물어도 다시 계산하지 않아요.
-
-- 리포트(`createReport`)는 바로 pending으로 돌려주고 2.6초 뒤에 done으로 바뀌어요. 서버의 POST /reports 202와 GET /reports/{id} 폴링과 같은 흐름이에요. 같은 공고의 예전 리포트는 새 리포트가 대신해요. 리포트는 localStorage의 `whoisloafing:gap:reports:v1`에 남아서 사이드바의 내 리포트에 보여요.
-  - 갭(`buildGaps`)은 공고의 역량마다 숙련도 3 이상이면 강점, 1 이상이면 보완, 없으면 부족이에요. 부족과 보완에는 근거, 보완 방법 세 가지, 예상 소요(주), 올라갈 점수, 강의(스킬마다 둘까지)가 붙고, 강점에는 어필 포인트, 주의, 예상 질문이 붙어요.
-  - 점수 구성(`buildBreakdown`)은 필수 역량 45%, 우대 역량 20%, 프로젝트 근거 20%, 요즘 뜨는 역량 15%예요.
-  - 레이더(`buildRadar`)는 축마다 내 평균 숙련도와 공고가 그 축에 적은 역량 수로 그려요.
-  - 요구 역량 변화(`buildTrends`)는 공고의 역량 여섯 개까지, 최근 12주의 공고 수를 시장 변화량으로 만들어요.
-  - 다른 선택지(`alternatives`)는 같은 직군에서 적합도가 더 높은 공고 셋이에요.
-- 서류 검증(`fetchReview`)은 자기소개서, 이력서, 포트폴리오마다 문단에 좋아요(good), 고쳐요(fix), 빠졌어요(missing), 면접 예상(interview) 태그와 피드백을 붙여요. 면접 예상 태그가 붙은 문단은 예상 질문의 출처가 돼요.
-- 예상 질문(`fetchQuestions`)은 문단, 강점, 부족, 기출(코퍼스), 기술 블로그에서 만들고 확률 순서로 정렬해요. 질문마다 의도, 답변 포인트, 꼬리 질문이 있어요.
-- 연습 피드백(`submitAnswer`)은 답변에 답변 포인트의 낱말이 들어 있는지, 숫자가 있는지, 흐름 낱말(먼저, 그래서, 결과)이 있는지, 길이가 적당한지로 점수를 내요. 음성 답변은 없어요.
-- 보완 계획(`whoisloafing:gap:plans:v1`)과 면접 노트(`whoisloafing:gap:notes:v1`)도 이 기기에 저장해요. 예전의 기업 북마크(`whoisloafing:gap:bookmarks:v1`)는 쓰는 화면이 없어서 코드에서 뺐어요.
+- 기업(`COMPANIES`)과 공고(`POSTINGS`)는 앱 화면을 처음 그리기 전에 `loadCatalog`가 GET /companies, GET /postings로 받아 배열 속을 바꿔요. 받는 동안은 빈 화면이고, 8초 안에 받지 못하거나 서버에 닿지 못하면 `gap.ts`에 적어 둔 기업 12곳과 공고 22개(`FALLBACK_COMPANIES`, `FALLBACK_POSTINGS`)로 그려요. `postingOf`와 `companyOf`는 받아 둔 목록에서 바로 찾아요. 공고에는 필수(`required`)와 우대(`preferred`) 역량, 직군(`family`), 경력(`career`), 마감(`deadline`)이 있어요. 마감이 없으면(서버는 null) 상시 채용이에요.
+- 스킬 이름은 `canonical`로 하나의 표기로 모아요(Spring Boot, 스프링부트, springboot는 모두 Spring Boot). 별칭 표(`ALIASES`)에 더해요. 스킬마다 레이더의 축(`axisOf`: 언어, 프레임워크, 데이터베이스, 인프라, 협업, CS 기초)이 있어요. 역량 더하기의 추천(`suggestSkills`)도 이 표와 받아 둔 공고에서 찾아요.
+- 이력서는 PDF 파일(POST /resumes, `file` 칸)이나 GitHub, 노션 링크(POST /resumes/link)로 올려요. 서버가 AI로 읽어서 1분 가까이 걸릴 수 있고, 그동안 "서류를 읽고 있어요" 뼈대를 보여줘요. 서류는 여러 개 올려 두고 그중 하나를 대표 이력서로 정해요(PUT /resumes/{id}/primary). 대표는 서버가 정해서, 새로 올린 서류는 대표가 없을 때만 대표가 되고 대표를 지우면 남은 것 중 가장 최근 것이 대표예요. 올리거나 대표를 바꾸거나 지우면 목록(GET /resumes)을 다시 받아요. 역량은 내 이력서 화면에서 고쳐요(PUT /resumes/{id}/skills, 화면에는 바로 보이고 서버의 답으로 맞춰요). 적합도와 추천과 진단은 대표 이력서로 해요.
+- 서버의 이력서와 리포트 아이디는 숫자라서, 받을 때 글자로 바꿔 두고(`String`) 보낼 때 다시 숫자로 바꿔요(`Number`). 기업과 공고 아이디는 원래 글자예요.
+- 적합도(`fitOf`)는 필수 역량 60%, 우대 역량 25%, 역량 폭 15%예요. 역량마다 숙련도 3을 채우면 1점이에요. 이력서가 없으면 null이고 화면에 보이지 않아요. 서류는 고칠 때마다 새 객체라, 서류마다 숙련도 표와 공고별 적합도를 한 번만 계산해 기억해요(`levelOf`, WeakMap). 서버가 공고에 붙여 주는 `fitScore`는 쓰지 않고 화면에서 다시 계산해요.
+- 리포트(`startDiagnosis`)는 POST /reports {postingId}가 202로 바로 돌려줘요. 만드는 중(pending)이거나, 같은 공고를 이미 진단한 리포트예요. 만드는 중인 리포트가 저장소에 있으면 다 될 때까지(done이나 failed) 1.5초마다 GET /reports/{id}로 물어요. 화면을 옮겨도 계속 물어서 사이드바의 "진단 중"이 끝까지 바뀌어요. 목록(GET /reports)은 요약만 있어서, 리포트 화면을 열면 상세를 한 번 받아요(`useReport`, 받는 동안은 undefined라 뼈대를 보여줘요). 만들지 못한(failed) 리포트는 안내와 다시 진단 버튼을 보여줘요.
+- 다시 진단(`rerunReport`)은 POST /reports/{id}/rerun이에요. 서버가 새 아이디로 만들고 예전 리포트를 지워요. 예전 아이디는 새 아이디로 이어 둬서(`replacedBy`) 예전 주소로 보던 화면이 따라가요. 지우기는 DELETE /reports/{id}예요.
+- 서류 검증(`fetchReview`, GET /reports/{id}/reviews/{coverLetter, resume, portfolio}), 예상 질문(`fetchQuestions`, GET /reports/{id}/questions), 연습 피드백(`submitAnswer(리포트, 질문, 답)`, POST /reports/{id}/questions/{질문}/answers)은 AI가 만들어서 5초에서 1분쯤 걸려요. 리포트가 아직 만드는 중이면 서버가 409(C4092)로 답해요.
+- 보완 계획(GET /plans, PUT과 DELETE /plans/{스킬}, 답은 새 목록)과 면접 노트(GET /notes, PUT /notes/{스킬})도 계정에 저장해요. 화면에는 바로 보이고 서버의 답으로 맞춰요.
+- AI를 쓰는 요청(이력서 올리기, 진단, 다시 진단, 서류 검증, 예상 질문, 답변 피드백)에는 설정 창에서 고른 모델을 `X-AI-Model` 헤더로 붙여요. 고른 모델이 `/config`의 `ai.models`에 없으면 붙이지 않고, 그때는 서버의 기본 모델(`ai.defaultModel`)을 써요.
+- 실패하면 토스트로 알려요. 서버의 오류 코드를 쉬운 말로 바꿔요(C4001 PDF만, C4002 GitHub나 노션 링크만, C4221 서류를 읽지 못함, C413 10MB까지, C502 외부 서비스 실패, C4003 역량이 비어 있음, C4043 이력서 없음, C4092 리포트를 아직 만드는 중).
+- 예전에 이 기기에 두던 `whoisloafing:gap:resumes:v1`, `whoisloafing:gap:resume:v1`, `whoisloafing:gap:reports:v1`, `whoisloafing:gap:plans:v1`, `whoisloafing:gap:notes:v1`은 더 이상 읽지도 쓰지도 않아요.
 
 ## 화면 규칙
 
@@ -190,28 +187,21 @@ src/
 - 갭 상세(`GapPanel`)는 오른쪽에서 미끄러져 들어오는 칸이에요. 바깥을 누르거나 Esc를 누르면 닫혀요. `Modal`처럼 body에 그려요.
 - 면접 연습(`Practice`): 질문을 하나씩 보여주고 글로 답해요. 10자가 넘어야 제출할 수 있고, 채점하는 동안 버튼 글자가 "채점 중"으로 바뀌어요. 마지막에는 답한 질문과 점수, 평균을 요약해요. 예상 질문 탭의 "이 질문 연습"은 `?q=질문아이디`로 그 질문부터 시작해요.
 - 내 리포트(`/history`)는 계정 화면 안에 있지만 앱에서는 사이드바가 대신해서 링크를 두지 않아요. 사이드바의 줄마다 기업 이름과 적합도, 공고 제목과 때가 있고, 마우스를 올리면 점 세 개 버튼으로 지우기 메뉴를 열어요. 열려 있는 리포트를 지우면 새 진단 화면으로 가요.
-- 로그인 안내 카드, 떠나기 확인 창, 리포트 공유하기는 없앴어요. 공고 탐색의 카드에만 공고 링크를 복사하는 버튼이 있어요. 리포트는 이 기기에 저장되어서 화면을 옮겨도 사라지지 않아요.
+- 로그인 안내 카드, 떠나기 확인 창, 리포트 공유하기는 없앴어요. 공고 탐색의 카드에만 공고 링크를 복사하는 버튼이 있어요. 리포트는 계정에 저장되어서 화면을 옮기거나 다른 기기에서 로그인해도 그대로예요.
 
 ## 로그인과 계정
 
 백엔드의 회원 API를 써요. 요청과 응답 모양은 백엔드 레포의 `docs/api.md`에 있어요.
 
-## 자료와 가짜 API
+## 자료와 API
 
-진단에 쓰는 자료와 API는 모두 `src/lib/gap.ts`에 있어요. 백엔드가 생기기 전까지 화면은 이 파일만 보고, 서버가 생기면 함수 속만 fetch로 바꿔요. 타입은 기획서의 DB 스키마(company, job_posting, resume, user_skill, analysis_report, skill_gap, course, recommendation, document_review, review_feedback, interview_question, practice_answer, interview_note)를 따라요.
+진단에 쓰는 자료와 API는 모두 `src/lib/gap.ts`에 있어요. 화면은 이 파일의 함수와 저장소만 보고, 요청 모양은 위의 진단 자료와 계산 규칙 절에 있어요. 타입은 서버의 응답 모양을 따라요(숫자 아이디만 글자로 바꿔요).
 
-- 기업 12곳(`COMPANIES`)과 공고 22개(`POSTINGS`)가 적혀 있어요. 기업마다 로고(`logo`, `public/logos`)와 기업 소개 사이트(`site`)가 있고, 다크 모드에서도 로고 칸의 바탕은 흰색이에요. 없는 기업은 머리글자(`initial`)를 보여줘요. 공고마다 직군(백엔드, 프론트엔드, 모바일, 데이터, DevOps), 경력(신입, 주니어, 경력 무관), 지역, 올린 날과 마감, 필수와 우대 역량, 한 줄 소개, 출처(워크넷, 기업 채용 페이지)가 있어요. 올린 날과 마감은 오늘을 기준으로 계산해서 늘 그럴듯하게 보여요.
-- 스킬 이름은 `canonical`로 하나의 표기로 모아요(springboot, 스프링부트는 Spring Boot). 스킬이 어느 축(언어, 프레임워크, 데이터베이스, 인프라, 협업, CS 기초)인지는 `axisOf`가 정하고, 레이더의 축이에요.
-- 같은 직군 공고 중 스킬을 적은 비율과 지난 6개월 변화(`MARKET`)는 공고가 쌓이기 전이라 어림한 값이에요. 기획서대로 공고가 3개월에서 6개월 쌓이면 서버의 `skill_trend_weekly`로 바꿔요.
-- 이력서 올리기(`uploadResume`)는 PDF 파일이나 GitHub, 노션 링크를 받아요. 실제 파싱은 서버가 할 일이라, 지금은 파일 이름이나 링크에 front, react 같은 말이 있으면 프론트엔드 역량을, 아니면 백엔드 역량을 그럴듯하게 뽑아요. 같은 이름이면 같은 결과가 나와요. 역량마다 숙련도(1에서 5)와 근거 문장이 있고, 서류 검증과 예상 질문에 쓰는 문단 네 개도 같이 만들어요.
-- 적합도(`fitOf`)는 필수 역량 60%, 우대 역량 25%, 역량 수 15%로 계산해요. 숙련도 3 이상이면 충분히 보여주는 것으로 봐요.
-- 리포트 만들기(`createReport`)는 서버의 `POST /reports` 202와 같은 흐름이에요. 바로 pending 리포트를 돌려주고, 2.6초쯤 뒤에 done으로 바뀌어요. 화면은 저장소를 구독하고 있어서 따로 폴링하지 않아요. 같은 공고를 다시 진단하면 예전 리포트를 지우고 새로 만들어요(`rerunReport`).
-- 리포트에는 적합도, 한 문단 해설, 점수 구성 네 항목(필수 역량 45%, 우대 역량 20%, 프로젝트 근거 20%, 요즘 뜨는 역량 15%), 레이더, 갭 목록(부족은 서류에 없는 것, 보완은 있지만 숙련도가 낮은 것, 강점은 숙련도 3 이상), 12주 요구 변화, 필수와 우대 역량 점검(충분해요, 근거가 약해요, 보이지 않아요), 강의 네 개, 더 잘 맞는 다른 공고 세 개가 있어요.
-- 서류 검증(`fetchReview`)은 자기소개서, 이력서, 포트폴리오마다 문단에 좋아요(good), 고쳐요(fix), 빠졌어요(missing), 면접 예상(interview) 태그와 피드백을 붙이고, 부합도 점수와 더 어필할 점을 돌려줘요.
-- 예상 질문(`fetchQuestions`)은 서류 문단, 강점, 부족한 필수 역량, 기업 기술 블로그, 기출 코퍼스에서 만든 질문을 나올 확률 순서로 돌려줘요. 질문마다 유형(기술, 프로젝트, CS 기초, 컬처핏), 출처, 의도, 답변 포인트, 꼬리 질문이 있어요.
-- 연습 피드백(`submitAnswer`)은 답변에 답변 포인트의 낱말이 들어 있는지, 숫자가 있는지, 흐름을 잇는 말이 있는지, 길이를 보고 점수와 좋았어요, 보완할 점, 이렇게 말해 보세요, 꼬리 질문을 돌려줘요.
-- 저장: 이력서 목록과 대표는 `whoisloafing:gap:resumes:v1`, 리포트 목록은 `whoisloafing:gap:reports:v1`, 보완 계획에 넣은 스킬은 `whoisloafing:gap:plans:v1`, 면접 노트는 `whoisloafing:gap:notes:v1`에 둬요. 예전의 기업 북마크(`whoisloafing:gap:bookmarks:v1`)는 쓰는 화면이 없어서 코드에서 뺐어요. 서버가 생기면 계정에 저장해요.
-- 가짜 API는 실제 서버처럼 잠깐 기다렸다가 응답해서(공고 0.3초, 이력서 1.4초, 서류 검증 1.6초, 질문 1.2초, 피드백 1.5초), 스켈레톤이 보이는지 확인할 수 있어요.
+- 기업마다 로고(`logo`, `public/logos`)와 기업 소개 사이트(`site`)가 있고, 다크 모드에서도 로고 칸의 바탕은 흰색이에요. 로고가 없는 기업은 머리글자(`initial`)를 보여줘요. 공고마다 직군(백엔드, 프론트엔드, 모바일, 데이터, DevOps), 경력(신입, 주니어, 경력 무관), 지역, 올린 날과 마감, 필수와 우대 역량, 한 줄 소개, 출처(워크넷, 기업 채용 페이지)가 있어요. 서버에 닿지 못할 때 보여줄 공고의 올린 날과 마감은 오늘을 기준으로 계산해요.
+- 공고 검색(`fetchPostings`)은 GET /postings?query=&family=&career=예요. 서버에 닿지 못해 적어 둔 목록을 쓰고 있으면 그 목록에서 찾아요. 정렬(`sortPostings`)은 화면에서 해요.
+- 서버 시각은 시간대 없는 ISO 글자(한국 시각)로 와서, 브라우저가 그 기기의 시각으로 읽어요(`format.ts`, `daysLeft`, `daysSince`).
+- 로그인 상태가 바뀌면(`onSignedInChange`) 로그인할 때 이력서, 리포트, 보완 계획, 면접 노트를 받고, 로그아웃할 때 비워요(`startAccountSync`). 로그아웃 전에 보낸 요청의 답은 버려요.
+- 로그인하지 않은 채 공고를 눌러 진단하려 하면 로그인 화면으로 가고, 로그인하면 그 공고의 진단 시작(`/diagnose/공고`)으로 돌아와요. 서류 추가, 이력서 올리기, 보완 계획, 노트 저장도 로그인 화면으로 보내고, 로그인하면 보던 화면으로 돌아와요(`setLoginHandler`, App의 `requireLogin`).
 
 ## 진단 흐름
 
@@ -237,7 +227,7 @@ src/
 
 기술 블로그 (`Blogs`, `/blogs`, 기업은 `/blogs/기업아이디`, 단축키 G)
 
-- 기업 기술 블로그의 대표 글을 요약하고, 요즘 어떤 고민을 하는지 분석해서 보여줘요. 글은 각 블로그의 RSS와 글 목록에서 2026년 10월 29일에 모은 실제 글이고, 제목과 원문 주소는 그대로예요. 요약과 분석은 `src/lib/blogs.ts`에 적어 두었고, 서버가 생기면 수집과 요약을 서버가 맡아요(`fetchBlogDigests`의 속만 바꿔요).
+- 기업 기술 블로그의 대표 글을 요약하고, 요즘 어떤 고민을 하는지 분석해서 보여줘요. 서버가 각 블로그의 RSS를 모아 요약하고, 화면은 GET /blogs로 받아요(`fetchBlogDigests`). 기업 버튼 줄은 받은 요약이 있는 기업만 기업 목록 순서로 보여줘요(`blogCompaniesOf`). 멈춘 블로그를 세는 기준일(`COLLECTED_AT`)은 오늘이에요. 서버에 닿지 못하면 `src/lib/blogs.ts`에 적어 둔 글(2026년 10월 29일에 모은 기업 열한 곳의 글)을 보여주고, 그때 기준일은 그 날이에요.
 - 여러 기업 블로그의 글을 최신 순서로 한데 늘어놓고 기업과 주제로 걸러 봐요. 제목 줄 아래에 공고 탐색과 같은 모양의 기업 버튼 줄(전체와 기업 열한 곳)이 있어요. 기업을 고르면 주소(`/blogs/기업아이디`)가 바뀌어서 뒤로 가기로 앞에 보던 기업이나 전체로 돌아가요. 두나무는 공개 기술 블로그가 없어서 빠져 있어요. 그 아래 줄에 주제 메뉴(`Dropdown`, 지금 고른 기업의 글에 나온 주제를 많은 순서로, 수와 함께)와 글 수가 있어요. 기업을 바꾸면 주제는 풀려요.
 - 글은 높이가 다른 칸을 빈틈없이 쌓는 갤러리(`Gallery`)로 늘어놓아요. 칸 수는 목록 폭을 보고 하나에서 셋까지이고, 칸을 왼쪽부터 차례로 나눠 담아 읽는 순서가 그대로예요. 글 카드(`PostCard`)에는 작은 로고와 기업 이름, 날짜, 제목, 요약, 주제 이름표가 있어요. 기업도 주제도 고르지 않았으면 최근 넉 달 동안 많이 다룬 주제 여섯 개를 연한 메인 컬러 칸(`ThemeCard`)으로 글 사이사이에 끼워요. 칸에는 "AI 에이전트를 고민하고 있는 조직은?"처럼 질문 한 줄(주제 이름만 메인 컬러, 받침에 맞춰 을/를)과 그 주제를 쓴 기업 로고가 있어요. 누르면 그 주제 글만 걸러 봐요. 설명 문장, 몇 곳인지 같은 숫자는 두지 않아요.
 - 기업을 고르면 제목 줄 오른쪽에 "블로그 열기"가 생기고, 갤러리 맨 앞에 그 기업 칸(`CompanyCard`)이 와요. 요즘 고민 한 줄과 분석 한 문단, 자주 나온 기술, "면접에서 이렇게 써 보세요", 그 기업 공고로 가는 버튼이 있어요. 멈춘 블로그(마지막 글이 180일보다 오래됨)는 맨 위에 마지막 글 날짜와 함께 지금과 다를 수 있다고 알려줘요.
@@ -293,9 +283,9 @@ src/
 - 앱 화면인지(`appShell`)는 macOS 앱이거나(`isApp`) 주소가 `/app`으로 시작할 때(`isWebApp`)예요. 페이지를 처음 열 때 정해져서, 소개 화면과 `/app` 사이는 페이지를 새로 열어서 오가요.
 - 진단, 리포트, 계정, 탐색, 추천, 이력서, 관리자 화면은 모두 `/app` 아래에 있어요(`/app/r/아이디`, `/app/login`, `/app/explore` 등). 예전 주소(`/r/아이디`, `/login` 등)로 들어오면 `/app`을 붙인 주소로 옮겨요. 예전 소개 주소(`/about`)는 메인 주소로 옮겨요. 주소를 만들 때는 `localizePath`가 `/app`을 붙이고, 화면을 고를 때는 `currentPath`가 `/app`을 떼요. 주소 모양은 `routes.ts`의 `pathOf` 한 곳에서 정해요. 소개, 아티클, 앱 로그인(`/app-login`), 소셜 로그인에서 돌아오는 주소는 `/app` 밖에 있어요. `/app`에는 언어 주소(`/en`)를 붙이지 않아요.
 - 배치는 macOS 앱과 같아요. 사이드바 맨 위에는 사이드바 버튼과 로고가 있고, 로고를 누르면 새 진단 화면으로 가요. 창 버튼과 창 옮기기, 화면 녹화 가리기, 앱 버전과 업데이트 확인, 단축키 안내(`ShortcutTip`)는 macOS 앱에서만 써요.
-- 로그인하지 않아도 써요. 로그인하지 않았으면 사이드바의 계정 버튼 자리에 로그인 버튼을 보여줘요. 리포트를 보다가 로그인하러 가면 로그인한 뒤에 그 리포트로 돌아와요. 로그인하면 새 진단 화면으로 가요.
-- 떠나기 확인 창은 두지 않아요. 리포트는 만들자마자 이 기기에 저장되고, 만드는 중에 화면을 옮겨도 뒤에서 끝까지 만들어져요.
-- 설정 창에서 화면 모드, 언어, 단축키 항상 표시를 바꿔요. 다크 모드도 `/app`에서는 켜져요.
+- 공고 탐색과 기술 블로그는 로그인하지 않아도 써요. 이력서, 리포트, 서류 검증, 예상 질문, 면접 연습, 보완 계획, 면접 노트는 로그인해야 하고(서버가 401로 답해요), 로그인하지 않았으면 내 이력서와 내 리포트가 비어 있어요. 로그인하지 않았으면 사이드바의 계정 버튼 자리에 로그인 버튼을 보여줘요. 리포트를 보다가 로그인하러 가면 로그인한 뒤에 그 리포트로 돌아오고, 로그인하지 않고 리포트 주소로 들어오면 로그인 안내를 보여줘요. 진단하거나 서류를 올리려다 로그인하러 가면 하던 화면으로 돌아와요. 그 밖에는 로그인하면 새 진단 화면으로 가요.
+- 떠나기 확인 창은 두지 않아요. 리포트는 서버가 만들고 계정에 저장해서, 만드는 중에 화면을 옮겨도 끝까지 만들어져요.
+- 설정 창에서 화면 모드, 언어, 단축키 항상 표시, AI 모델을 바꿔요. 다크 모드도 `/app`에서는 켜져요. AI 모델은 `/config`의 `ai.models`(서버에 키가 있는 모델만)를 드롭다운으로 보여주고, 고른 것은 localStorage의 `whoisloafing:ai-model`에 둬요. 고른 것이 없거나 목록에서 빠졌으면 서버의 기본 모델이 체크되어 보여요. 목록이 비어 있으면 이 줄을 숨겨요.
 - 좁은 화면(768px 미만)에서는 사이드바를 숨겨 두고, 왼쪽 위 버튼을 누르면 왼쪽에서 서랍으로 미끄러져 나와요(`animate-slide-in-left`). 화면을 고르면 서랍이 닫히고, 바깥의 어두운 부분이나 Esc를 눌러도 닫혀요.
 - `index.html`에는 소개 화면을 미리 그려 둬요. 이 파일은 없는 주소(`/app/...`)에도 대신 가서, 메인 주소가 아니거나 macOS 앱이면 `<head>`의 짧은 스크립트가 미리 그린 화면을 숨기고 `src/main.tsx`가 비운 뒤에 그려요.
 
@@ -357,7 +347,7 @@ src/
 
 - 맨 위는 화면 높이를 다 채우는 검은(#0f1012) 첫 화면(`Hero`)이에요. 제자리에 머물고(sticky), 그 아래의 흰 본문이 스크롤하면 위로 덮으며 올라와요.
   - 모서리 네 곳만 그린 틀이 바깥에서 조여들며 나타나고, "공고 하나를 기준으로 / [필수 역량, 우대 역량, 자기소개서, 면접 질문]까지 진단해요" 문장이 떠올라요. 가운데 낱말은 1.1초마다 위로 굴러 바뀌고(`Roll`), 둘레 글자는 낱말 폭에 맞춰 밀리고 당겨져요.
-  - 3.3초 뒤(또는 0.9초가 지난 뒤 아래로 스크롤하거나 키를 누르면 바로) 아래에서 위로 빛줄기가 1.1초 동안 지나가요. 줄 아래로는 흰 손글씨 로고, 제목 "내 역량과 공고 사이, 얼마나 멀까요?", "로그인 없이 바로 진단해요", 시작하기와 macOS 앱 다운로드 버튼이 드러나요. 스크롤을 막지는 않아요.
+  - 3.3초 뒤(또는 0.9초가 지난 뒤 아래로 스크롤하거나 키를 누르면 바로) 아래에서 위로 빛줄기가 1.1초 동안 지나가요. 줄 아래로는 흰 손글씨 로고, 제목 "내 역량과 공고 사이, 얼마나 멀까요?", "로그인하고 바로 진단해요", 시작하기와 macOS 앱 다운로드 버튼이 드러나요. 스크롤을 막지는 않아요.
   - 단계는 `data-phase`(idle, intro, sweep, final)로 나타내고 움직임은 `src/index.css`의 kv 규칙이 맡아요. 빛줄기와 비네팅만 그라데이션을 써서, 그라데이션 금지 규칙의 예외예요. 탭이 뒤에 있어 화면을 그리지 않아도 시간이 지나면 다 드러난 모습으로 마쳐요.
   - 움직임 줄이기 설정에서는 처음부터 다 드러난 모습이에요. 미리 그린 HTML은 idle 모습이라 로고 쪽이 가려져 있고, 자바스크립트가 없으면 noscript 규칙이 가림을 풀어요.
   - 첫 화면이 헤더 뒤에 있는 동안 헤더는 투명하고 글자와 로고가 흰색이에요(`src/lib/hero.ts`의 `heroDark`, 헤더의 `data-on-dark`). 모바일 메뉴를 열면 흰 헤더로 돌아와요.
@@ -416,7 +406,7 @@ src/
 | `team_link_click`, `article_nav_click`, `article_cta_click`, `team_articles_click`, `about_nav_click`, `about_cta_click`, `try_app_click`, `app_download_click` | 소개와 아티클, 헤더의 링크 | `from` |
 | `account_nav_click`, `auth_login`, `auth_signup`, `auth_social_click`, `auth_social`, `auth_logout`, `auth_social_unlink`, `auth_withdraw`, `session_revoke` | 계정 | 전과 같아요 |
 | `app_login_browser_click`, `app_login_approve`, `app_login_cancel`, `app_login` | 앱 로그인 | `success` |
-| `settings_open`, `app_theme_change`, `app_update_check`, `app_shield_change`, `capture_shield_view`, `capture_shield_allow`, `app_shortcut_hints_change`, `app_menu_open`, `plans_open` | 앱의 설정과 메뉴 | 전과 같아요 |
+| `settings_open`, `app_theme_change`, `app_update_check`, `app_shield_change`, `capture_shield_view`, `capture_shield_allow`, `app_shortcut_hints_change`, `app_ai_model_change`(`model`), `app_menu_open`, `plans_open` | 앱의 설정과 메뉴 | 전과 같아요 |
 | `feedback_prompt_view`, `feedback_prompt_close`, `bug_report_open`, `feedback_send` | 평가와 버그 신고 | `kind`, `rating`, `commented`, `success` |
 
 ## 현재까지 구현된 기능
@@ -432,9 +422,9 @@ src/
 
 ## 남은 작업
 
-- 백엔드: 공고 수집(워크넷 API, 기업 채용 페이지), 스킬 추출과 임베딩, 이력서 파싱(PDF, 링크), 리포트 생성(`POST /reports` 202와 폴링), 추천, 서류 검증, 면접 코퍼스와 질문 생성, 연습 피드백 API. 생기면 `src/lib/gap.ts`의 함수 속을 fetch로 바꾸고, 이력서와 리포트를 계정에 저장해요.
+- 서버가 공고에 붙여 주는 적합도(`fitScore`)와 화면의 `fitOf` 중 하나로 맞추기
+- 카탈로그에서 빠진(마감된) 공고의 리포트는 공고 제목을 찾지 못해요. 리포트 목록의 `postingTitle`, `companyName`을 쓰게 바꾸기
 - 서버에 리포트 API가 생기면 관리자 화면의 채팅 탭을 리포트 탭으로 바꾸고, 현황의 채팅 수치도 리포트로 바꿔요.
-- 기술 블로그 글을 서버가 RSS로 정기적으로 모으고 요약과 고민 분석을 만들게 해요. 지금은 2026년 10월 29일에 모은 글을 `src/lib/blogs.ts`에 적어 두었어요.
 - 아티클 글을 새 서비스에 맞게 다시 써요. 지금은 레포 분석 시절의 글이에요.
 - 목 자료의 한국어 조사("을(를)", "이(가)")를 서버가 글을 만들 때 자연스럽게 고쳐요.
 - 기업 북마크와 북마크한 기업의 새 공고 알림(앱 푸시)

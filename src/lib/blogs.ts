@@ -1,9 +1,10 @@
 import { COMPANIES, type Company } from './gap'
+import { apiUrl, readResult } from './http'
 
 /**
  * 기업 기술 블로그 요약이에요. 기업마다 대표 글과 한 줄 요약, 요즘 고민 분석, 면접에서 쓸 점을 모아 둬요.
- * 글은 각 블로그의 RSS(미디엄과 사내 블로그)에서 2026년 10월 29일에 모은 실제 글이고, 제목과 주소는 원문 그대로예요.
- * 요약과 분석은 본문 앞부분을 읽고 사람이 쓴 글이라, 서버가 생기면 수집과 요약을 서버가 맡아요(`fetchBlogDigests`의 속만 fetch로 바꿔요).
+ * 서버가 각 블로그의 RSS를 모아 요약해 두고, 화면은 GET /blogs로 받아요(`fetchBlogDigests`).
+ * 이 파일의 글(`DIGESTS`)은 2026년 10월 29일에 모은 실제 글이고, 서버에 닿지 못할 때만 대신 보여줘요.
  * 주제 비중과 여러 기업에 걸친 흐름은 글에 붙인 주제(`themes`)에서 계산해서, 글을 더하면 분석도 같이 바뀌어요.
  */
 
@@ -80,8 +81,19 @@ export interface BlogDigest {
   posts: BlogPost[]
 }
 
-/** 글을 모은 날이에요. 마지막 글이 이보다 오래되었는지 셀 때 기준이 돼요. */
-export const COLLECTED_AT = '2026-10-29'
+/** 적어 둔 글(`DIGESTS`)을 모은 날이에요. */
+const FALLBACK_COLLECTED_AT = '2026-10-29'
+
+const today = () => {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * 글을 모은 날이에요. 마지막 글이 이보다 오래되었는지 셀 때 기준이 돼요.
+ * 서버가 RSS를 늘 모으고 있어서 오늘이고, 적어 둔 글을 보여줄 때만 그 글을 모은 날이에요.
+ */
+export let COLLECTED_AT = today()
 
 /** 마지막 글이 이만큼(일) 지났으면 블로그가 멈춘 것으로 보고 안내해요. */
 const STALE_DAYS = 180
@@ -374,16 +386,17 @@ const DIGESTS: BlogDigest[] = [
   },
 ]
 
-const digestByCompany = new Map(DIGESTS.map((digest) => [digest.companyId, digest]))
-
-/** 기술 블로그 요약이 있는 기업이에요. 공고가 있는 기업 순서를 따라요. */
-export const BLOG_COMPANIES: Company[] = COMPANIES.filter((company) => digestByCompany.has(company.id))
+/** 기술 블로그 요약이 있는 기업이에요. 기업 목록(`COMPANIES`)의 순서를 따라요. */
+export function blogCompaniesOf(digests: BlogDigest[]): Company[] {
+  const ids = new Set(digests.map((digest) => digest.companyId))
+  return COMPANIES.filter((company) => ids.has(company.id))
+}
 
 const dayMs = 86_400_000
 const daysBetween = (from: string, to: string) => Math.round((new Date(to).getTime() - new Date(from).getTime()) / dayMs)
 
 /** 마지막 글이 오래되어 멈춘 블로그인지예요. */
-export const isStale = (digest: BlogDigest) => daysBetween(digest.posts[0].date, COLLECTED_AT) > STALE_DAYS
+export const isStale = (digest: BlogDigest) => digest.posts.length > 0 && daysBetween(digest.posts[0].date, COLLECTED_AT) > STALE_DAYS
 
 /** 기업의 글에 자주 나온 기술이에요. */
 export function topSkills(digest: BlogDigest, limit = 8): string[] {
@@ -419,10 +432,23 @@ export function themeTrends(digests: BlogDigest[]): { trends: ThemeTrend[]; acti
   return { trends, active }
 }
 
-const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
-
-/** 기술 블로그 요약 전체예요. 서버가 생기면 GET /blogs로 바꿔요. */
+/** 기술 블로그 요약 전체예요(GET /blogs). 서버에 닿지 못하면 적어 둔 글을 보여줘요. 글은 최신 순서로 맞춰 둬요. */
 export async function fetchBlogDigests(): Promise<BlogDigest[]> {
-  await wait(320)
-  return BLOG_COMPANIES.map((company) => digestByCompany.get(company.id)!)
+  try {
+    const result = await readResult<BlogDigest[]>(await fetch(apiUrl('/blogs')))
+    if (result.ok && Array.isArray(result.data)) {
+      COLLECTED_AT = today()
+      return result.data.map((digest) => ({
+        ...digest,
+        concerns: digest.concerns ?? [],
+        interview: digest.interview ?? [],
+        posts: [...(digest.posts ?? [])].sort((a, b) => (a.date < b.date ? 1 : -1)),
+      }))
+    }
+  } catch {
+    // 아래에서 적어 둔 글을 보여줘요.
+  }
+  COLLECTED_AT = FALLBACK_COLLECTED_AT
+  const ids = new Set(COMPANIES.map((company) => company.id))
+  return DIGESTS.filter((digest) => ids.has(digest.companyId))
 }
