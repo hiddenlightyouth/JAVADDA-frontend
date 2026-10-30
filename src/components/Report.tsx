@@ -647,9 +647,11 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
         {outdated && (
           <div role="status" className="mb-5 flex animate-rise flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl bg-brand-soft px-5 py-4">
             <AlertIcon className="size-5 shrink-0 text-brand" />
-            <p className="min-w-0 flex-1 text-[13.5px] leading-relaxed text-gray-700">
-              <span className="font-semibold text-gray-900">{L.staleTitle}</span> {L.staleBody}
-            </p>
+            {/* 제목과 설명은 두 줄로 나눠 적어요. 한 줄에 이어 붙이면 문장 두 개가 한 문장처럼 읽혀요. */}
+            <div className="min-w-0 flex-1 text-[13.5px] leading-relaxed">
+              <p className="font-semibold text-gray-900">{L.staleTitle}</p>
+              <p className="mt-0.5 text-gray-700">{L.staleBody}</p>
+            </div>
             <button type="button" disabled={rerunning} onClick={() => void rerun('outdated')} className={primaryButton}>
               {L.staleAction}
             </button>
