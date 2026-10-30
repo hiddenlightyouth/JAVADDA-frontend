@@ -51,7 +51,7 @@ const chip = 'flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font
 function ReviewSkeleton() {
   const L = useMessages(TEXT)
   return (
-    <Busy label={L.reading} className="space-y-10">
+    <Busy label={L.reading} className="space-y-6">
       <div className="flex items-end justify-between gap-12">
         <div className="flex-1">
           <Bone className="h-5 w-3/5" />
@@ -312,7 +312,7 @@ export function ReviewTab({ reportId }: { reportId: string }) {
   }, [doc, reportId])
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         <Segmented size="md" label={L.docs} options={DOCS.map((item) => [item, docName(item)] as const)} value={doc} onChange={setDoc} />
         <div className="ml-auto flex items-center gap-3">

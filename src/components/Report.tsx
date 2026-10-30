@@ -454,7 +454,7 @@ function SummaryTab({ report, onOpenGap, onPick }: { report: ReportData; onOpenG
   const plans = usePlans()
   const groups: SkillGap['kind'][] = ['missing', 'partial', 'strength']
   return (
-    <div className="space-y-10">
+    <div className="space-y-4">
       <ScoreHero score={report.fitScore} label={L.fitTitle} meta={L.createdAt(formatDateTime(report.createdAt))} title={L.verdict(report.fitScore)} body={report.summary} />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-w-0 flex-col gap-4">
@@ -653,7 +653,7 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
         }
       />
 
-      <div role="tabpanel" className="-mx-6 -mb-6 flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-5 md:-mx-10 md:px-10">
+      <div role="tabpanel" className="-mx-6 flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-5 pb-16 md:-mx-10 md:px-10">
         {outdated && (
           <div role="status" className="mb-5 flex animate-rise flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl bg-brand-soft px-5 py-4">
             <AlertIcon className="size-5 shrink-0 text-brand" />

@@ -1303,7 +1303,11 @@ export async function createReport(postingId: string, resumeId?: string): Promis
     courses: [],
     alternatives: [],
   }
-  setReports([pending, ...reportsStore.get().filter((report) => report.postingId !== postingId)])
+  const reports = reportsStore.get()
+  // 같은 공고의 예전 리포트는 새 리포트로 이어 둬요. 다시 진단하는 동안 예전 주소로 보던 화면이 빈 화면 없이 새 리포트를 그려요.
+  for (const old of reports) if (old.postingId === postingId) replacedBy.set(old.id, pending.id)
+  // 지우기와 더하기를 한 번에 해서, 그 사이에 리포트가 없는 순간이 없어요.
+  setReports([pending, ...reports.filter((report) => report.postingId !== postingId)])
   void finishReport(pending, posting, resume)
   return pending
 }
@@ -1338,8 +1342,23 @@ async function finishReport(pending: Report, posting: JobPosting, resume: Resume
 
 export const reportOf = (id: string): Report | null => reportsStore.get().find((report) => report.id === id) ?? null
 
+/** 다시 진단해서 바뀐 리포트의 예전 아이디와 새 아이디예요. 이 기기에서 앱을 여는 동안만 기억해요. */
+const replacedBy = new Map<string, string>()
+
+/** 예전 아이디면 새 아이디를 따라가요. 여러 번 다시 진단했으면 끝까지 따라가요. */
+const currentId = (id: string) => {
+  let next = id
+  for (let hops = 0; replacedBy.has(next) && hops < 20; hops += 1) next = replacedBy.get(next)!
+  return next
+}
+
+/** 아이디로 리포트를 읽어요. 다시 진단해서 바뀐 아이디면 새 리포트를 돌려줘요. */
 export function useReport(id: string | null): Report | null {
-  return useStore(reportsStore, (reports) => (id ? reports.find((report) => report.id === id) ?? null : null))
+  return useStore(reportsStore, (reports) => {
+    if (!id) return null
+    const target = currentId(id)
+    return reports.find((report) => report.id === target) ?? null
+  })
 }
 
 export function deleteReport(id: string) {
@@ -1350,7 +1369,7 @@ export function deleteReport(id: string) {
 export async function rerunReport(id: string): Promise<Report | null> {
   const report = reportOf(id)
   if (!report) return null
-  deleteReport(id)
+  // 따로 지우지 않아요. 새 리포트를 만들면서 같은 공고의 예전 리포트를 한 번에 바꿔요.
   return createReport(report.postingId, getResume()?.id ?? report.resumeId)
 }
 
