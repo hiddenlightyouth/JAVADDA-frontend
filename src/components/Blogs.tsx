@@ -5,10 +5,10 @@ import { canEmbed, companyOf, POSTINGS } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
-import { CompanyMark, Failed, Notice } from './GapParts'
+import { CompanyFilter, CompanyMark, Failed, Notice } from './GapParts'
 import { PostingBrowser, SplitView, type BrowserPage } from './PostingBrowser'
 import { Bone } from './Skeleton'
-import { Bullets, Busy, label, primaryButton, stagger, toolButton } from './ui'
+import { Badge, Bullets, Busy, label, primaryButton, stagger, toolButton } from './ui'
 
 /**
  * 기술 블로그 화면이에요. 여러 기업 기술 블로그의 글을 최신 순서로 한데 늘어놓고, 기업과 주제로 걸러 봐요.
@@ -33,7 +33,6 @@ const TEXT = messages({
     pickTheme: (name: string) => `${name} 글만 보기`,
     // 주제 이름 뒤에 붙는 말이에요. 끝 글자에 받침이 있으면 '을', 없으면 '를'이에요.
     themeAsk: (name: string) => `${hasBatchim(name) ? '을' : '를'} 고민하고 있는 조직은?`,
-    paused: '쉬는 중',
     stale: (date: string) => `마지막 글이 ${date}에 올라왔어요. 지금의 고민과는 다를 수 있어요.`,
     skillsTitle: '자주 나온 기술',
     interviewTitle: '면접에서 이렇게 써 보세요',
@@ -53,7 +52,6 @@ const TEXT = messages({
     count: (count: number) => `${count} ${count === 1 ? 'post' : 'posts'}`,
     pickTheme: (name: string) => `Show ${name} posts`,
     themeAsk: () => '',
-    paused: 'Paused',
     stale: (date: string) => `The latest post is from ${date}. Their focus may have changed since.`,
     skillsTitle: 'Frequent tech',
     interviewTitle: 'Use it in your interview',
@@ -183,34 +181,7 @@ export function Blogs({ company, onCompany, onJobs }: {
         }
       >
         {/* 기업은 공고 탐색처럼 로고를 보고 한 번에 골라요. */}
-        <div role="radiogroup" aria-label={L.company} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
-          <button
-            type="button"
-            role="radio"
-            aria-checked={!company}
-            onClick={() => selectCompany(null)}
-            className={`flex h-9 shrink-0 items-center rounded-full border px-4 text-[13px] font-medium transition-colors ${
-              !company ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
-            }`}
-          >
-            {L.all}
-          </button>
-          {BLOG_COMPANIES.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="radio"
-              aria-checked={company === item.id}
-              onClick={() => selectCompany(item.id)}
-              className={`flex h-9 shrink-0 items-center gap-2 rounded-full border py-1 pr-3.5 pl-1.5 text-[13px] font-medium transition-colors ${
-                company === item.id ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
-              }`}
-            >
-              <CompanyMark company={item} className="size-6 rounded-full! text-[10px]" />
-              {item.name}
-            </button>
-          ))}
-        </div>
+        <CompanyFilter companies={BLOG_COMPANIES} value={company} label={L.company} allLabel={L.all} onChange={selectCompany} />
 
         <div className="mt-4 flex h-9 items-center justify-between gap-3">
           <Dropdown
@@ -343,9 +314,9 @@ function PostCard({ entry, order, read }: { entry: Entry; order: number; read: (
       <span className="mt-2 line-clamp-3 block text-[13px] leading-relaxed text-gray-600">{entry.summary}</span>
       <span className="mt-3 flex flex-wrap gap-1">
         {entry.themes.map((item) => (
-          <span key={item} className="inline-flex h-6 items-center rounded-md bg-gray-200/70 px-2 text-[11.5px] font-medium text-gray-600">
+          <Badge key={item} strong>
             {THEME_NAMES[item]}
-          </span>
+          </Badge>
         ))}
       </span>
     </a>

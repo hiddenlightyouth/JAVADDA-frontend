@@ -4,7 +4,7 @@ import { careerName, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf,
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { Bone } from './Skeleton'
 import { BriefcaseIcon, CheckIcon, CloseIcon, MapPinIcon, PersonIcon, TriangleIcon } from './Icons'
-import { primaryButton, stagger } from './ui'
+import { Badge, Busy, primaryButton, stagger } from './ui'
 
 /**
  * 취업 갭 진단의 화면들이 같이 쓰는 작은 부품이에요. 기업 머리글자, 적합도 표시, 스킬 이름표, 공고 카드, 흰 칸, 레이더와 막대 그래프가 있어요.
@@ -20,7 +20,6 @@ const TEXT = messages({
     noFit: '이력서를 올리면 적합도가 보여요',
     fitTip: '내 이력서가 이 공고의 요구 역량을 얼마나 채우는지예요. 필수 역량을 가장 크게 보고, 우대 역량과 역량의 폭을 더해요.',
     toneTips: { met: '이력서에서 충분히 보여요.', partial: '이력서에 있지만 근거가 약해요.', missing: '이력서에서 보이지 않아요.' } as Partial<Record<ChipTone, string>>,
-    deadline: (days: number) => (days === 0 ? '오늘 마감' : `마감 ${days}일 전`),
     always: '상시 채용',
     posted: (days: number) => (days <= NEW_DAYS ? '신규' : `${days}일 전`),
     fitTag: (fit: number): string => (fit >= 70 ? '잘 맞아요' : fit >= 50 ? '조금만 채우면 돼요' : '갭이 커요'),
@@ -44,7 +43,6 @@ const TEXT = messages({
     noFit: 'Upload a resume to see your fit',
     fitTip: 'How well your resume covers what this posting asks for. Required skills count most, then preferred skills and breadth.',
     toneTips: { met: 'Clearly shown in your resume.', partial: 'In your resume, but with thin evidence.', missing: 'Not found in your resume.' },
-    deadline: (days: number) => (days === 0 ? 'Closes today' : `Closes in ${days} ${days === 1 ? 'day' : 'days'}`),
     always: 'Rolling',
     posted: (days: number) => (days <= NEW_DAYS ? 'New' : `${days} days ago`),
     fitTag: (fit: number) => (fit >= 70 ? 'Good fit' : fit >= 50 ? 'Almost there' : 'Big gap'),
@@ -164,7 +162,7 @@ export function FitBadge({ fit, compact = false }: { fit: number | null; compact
   )
 }
 
-export type ChipTone = 'plain' | 'met' | 'partial' | 'missing' | 'active'
+type ChipTone = 'plain' | 'met' | 'partial' | 'missing' | 'active'
 
 const CHIP_TONES: Record<ChipTone, string> = {
   plain: 'border-gray-200 bg-white text-gray-700',
@@ -220,13 +218,9 @@ export function SkillChip({ name, tone = 'plain', hint, onRemove, onClick, class
 export function KindLabel({ kind }: { kind: GapKind }) {
   const L = useMessages(TEXT)
   return (
-    <span
-      className={`inline-flex h-6 items-center rounded-md px-2 text-[11.5px] font-medium ${
-        kind === 'strength' ? 'bg-brand-soft text-brand-hover' : kind === 'partial' ? 'bg-gray-200/70 text-gray-600' : 'bg-gray-200/70 text-gray-500'
-      }`}
-    >
+    <Badge tone={kind === 'strength' ? 'brand' : 'gray'} strong>
       {L.kinds[kind]}
-    </span>
+    </Badge>
   )
 }
 
@@ -254,14 +248,81 @@ export const cardsGrid = 'grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] g
 /** 한 줄만 보여주는 카드 줄. 둘째 줄부터는 높이를 0으로 두고 잘라서, 화면 폭에 들어가는 만큼만 보여요. */
 export const cardsRow = 'grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] auto-rows-[0px] grid-rows-[auto] gap-x-4 overflow-hidden'
 
-const CARD_TAG_TONES = { brand: 'bg-brand-soft text-brand-hover', red: 'bg-red-50 text-red-600', gray: 'bg-gray-200/70 text-gray-700' }
-
 /** 카드 위에 붙는 작은 태그예요. 신규와 잘 맞아요는 메인 컬러, 마감까지 남은 날은 빨간색, 나머지는 회색이에요. 공고 탐색의 마감 태그도 같은 모양이에요. */
-export function CardTag({ tone, children }: { tone: keyof typeof CARD_TAG_TONES; children: ReactNode }) {
+export function CardTag({ tone, children }: { tone: 'brand' | 'red' | 'gray'; children: ReactNode }) {
   return (
-    <span className={`inline-flex h-6 shrink-0 items-center rounded-md px-2 text-[12px] font-medium whitespace-nowrap ${CARD_TAG_TONES[tone]}`}>
+    <Badge tone={tone} strong>
       {children}
+    </Badge>
+  )
+}
+
+/**
+ * 공고의 직군, 경력, 지역을 작은 선 아이콘과 함께 한 줄에 늘어놓아요. 공고 카드(`PostingTile`), 공고 탐색의 카드와 줄이 같이 써요.
+ * 줄이 좁을 때 경력이나 지역을 숨기려면 careerClass, locationClass에 `hidden @xl:flex` 같은 것을 넘겨요. 앞에 기업 이름 같은 것을 붙이려면 children으로 넘겨요.
+ */
+export function PostingMeta({ posting, size = 'sm', careerClass = 'flex', locationClass = 'flex', className = '', children }: {
+  posting: JobPosting
+  size?: 'sm' | 'md'
+  careerClass?: string
+  locationClass?: string
+  className?: string
+  children?: ReactNode
+}) {
+  const L = useMessages(TEXT)
+  const item = size === 'md' ? 'items-center gap-1.5' : 'items-center gap-1'
+  return (
+    <span className={`flex min-w-0 items-center text-gray-600 ${size === 'md' ? 'flex-wrap gap-x-3.5 gap-y-1 text-[12.5px]' : 'gap-x-3 text-[12px]'} ${className}`}>
+      {children}
+      <span className={`flex shrink-0 ${item}`}>
+        <BriefcaseIcon label={L.family} />
+        {familyName(posting.family)}
+      </span>
+      <span className={`shrink-0 ${item} ${careerClass}`}>
+        <PersonIcon label={L.career} />
+        {careerName(posting.career)}
+      </span>
+      <span className={`min-w-0 ${item} ${locationClass}`}>
+        <MapPinIcon label={L.location} />
+        <span className="truncate">{posting.location}</span>
+      </span>
     </span>
+  )
+}
+
+/**
+ * 기업을 로고와 이름으로 한 번에 고르는 버튼 줄이에요. 공고 탐색과 기술 블로그가 같이 써요.
+ * 고른 기업을 다시 누르면 풀려요. allLabel을 넘기면 맨 앞에 전체 버튼이 생겨요. 넓은 목록에서는 여러 줄로, 좁으면 옆으로 넘겨요.
+ */
+export function CompanyFilter({ companies, value, onChange, label, allLabel }: {
+  companies: readonly Company[]
+  value: string | null
+  onChange: (company: string | null) => void
+  label: string
+  allLabel?: string
+}) {
+  const tone = (on: boolean) => (on ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950')
+  return (
+    <div role="radiogroup" aria-label={label} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
+      {allLabel && (
+        <button type="button" role="radio" aria-checked={!value} onClick={() => onChange(null)} className={`flex h-9 shrink-0 items-center rounded-full border px-4 text-[13px] font-medium transition-colors ${tone(!value)}`}>
+          {allLabel}
+        </button>
+      )}
+      {companies.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          role="radio"
+          aria-checked={value === item.id}
+          onClick={() => onChange(value === item.id ? null : item.id)}
+          className={`flex h-9 shrink-0 items-center gap-2 rounded-full border py-1 pr-3.5 pl-1.5 text-[13px] font-medium transition-colors ${tone(value === item.id)}`}
+        >
+          <CompanyMark company={item} className="size-6 rounded-full! text-[10px]" />
+          {item.name}
+        </button>
+      ))}
+    </div>
   )
 }
 
@@ -310,30 +371,16 @@ export function PostingTile({ posting, resume, fit = fitOf(posting, resume), tag
           </span>
         </span>
         <span className="mt-3 line-clamp-2 text-[16px] leading-snug font-semibold text-gray-900 transition-colors group-hover:text-brand">{posting.title}</span>
-        {/* 직군, 경력, 지역은 공고 탐색의 카드처럼 아이콘을 붙여 한 줄에 늘어놓아요. */}
-        <span className="mt-2 flex min-w-0 items-center gap-x-3 text-[12px] text-gray-600">
-          <span className="flex shrink-0 items-center gap-1">
-            <BriefcaseIcon label={L.family} />
-            {familyName(posting.family)}
-          </span>
-          <span className="flex shrink-0 items-center gap-1">
-            <PersonIcon label={L.career} />
-            {careerName(posting.career)}
-          </span>
-          <span className="flex min-w-0 items-center gap-1">
-            <MapPinIcon label={L.location} />
-            <span className="truncate">{posting.location}</span>
-          </span>
-        </span>
+        <PostingMeta posting={posting} className="mt-2" />
         <span className="mt-auto flex items-end justify-between gap-3 pt-3">
           {/* 회색 바탕 위라 테두리 있는 이름표 대신 한 단계 짙은 회색 태그로 적어요. 이력서가 있으면 갖춘 역량만 메인 컬러로 칠해요. */}
           <span className="flex min-w-0 flex-wrap gap-1 overflow-hidden [max-height:24px]">
             {posting.required.slice(0, 3).map((skill) => {
               const tone = skillTone(skill, resume)
               return (
-                <span key={skill} className={`inline-flex h-6 items-center rounded-md px-2 text-[12px] whitespace-nowrap ${tone === 'met' ? 'bg-brand-soft text-brand-hover' : tone === 'missing' ? 'bg-gray-200/40 text-gray-400' : 'bg-gray-200/70 text-gray-700'}`}>
+                <Badge key={skill} tone={tone === 'met' ? 'brand' : tone === 'missing' ? 'muted' : 'gray'}>
                   {skill}
-                </span>
+                </Badge>
               )
             })}
           </span>
@@ -348,10 +395,9 @@ export function PostingTile({ posting, resume, fit = fitOf(posting, resume), tag
 export function PostingCardsSkeleton({ row = false, count }: { row?: boolean; count?: number }) {
   const L = useMessages(TEXT)
   return (
-    <ul className={row ? cardsRow : cardsGrid} aria-busy="true">
-      <li className="sr-only">{L.loading}</li>
+    <Busy label={L.loading} className={row ? cardsRow : cardsGrid}>
       {Array.from({ length: count ?? (row ? 8 : 9) }, (_, item) => (
-        <li key={item} aria-hidden className="flex h-[196px] min-h-0 flex-col rounded-2xl bg-gray-50 p-5">
+        <div key={item} className="flex h-[196px] min-h-0 flex-col rounded-2xl bg-gray-50 p-5">
           <div className="flex items-center gap-3">
             <Bone className="size-12 shrink-0 rounded-xl!" />
             <div className="min-w-0 flex-1">
@@ -367,9 +413,9 @@ export function PostingCardsSkeleton({ row = false, count }: { row?: boolean; co
             <Bone className="h-3 w-28" />
             <Bone className="h-3 w-16" />
           </div>
-        </li>
+        </div>
       ))}
-    </ul>
+    </Busy>
   )
 }
 

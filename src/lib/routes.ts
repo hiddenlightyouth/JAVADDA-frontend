@@ -9,7 +9,7 @@ import { appShell } from './shell'
 const ARTICLE_PATH = /^\/articles(?:\/([^/]+))?\/?$/
 
 /** 아티클 주소면 보고 있는 글을 돌려줘요. slug가 null이면 목록이에요. */
-export function articleFromPath(): { slug: string | null } | null {
+function articleFromPath(): { slug: string | null } | null {
   const match = ARTICLE_PATH.exec(currentPath())
   return match ? { slug: match[1] ?? null } : null
 }
@@ -21,11 +21,11 @@ export const aboutFromPath = () => ABOUT_PATH.test(currentPath()) || (!appShell 
 
 const ACCOUNT_PATH = /^\/(login|signup|me|history)\/?$/
 
-export const accountFromPath = () => (ACCOUNT_PATH.exec(currentPath())?.[1] as AccountPage | undefined) ?? null
+const accountFromPath = () => (ACCOUNT_PATH.exec(currentPath())?.[1] as AccountPage | undefined) ?? null
 
 const APP_LOGIN_PATH = /^\/app-login\/?$/
 
-export const appLoginFromPath = () => APP_LOGIN_PATH.test(currentPath())
+const appLoginFromPath = () => APP_LOGIN_PATH.test(currentPath())
 
 const EXPLORE_PATH = /^\/explore\/?$/
 
@@ -38,9 +38,7 @@ const BLOGS_PATH = /^\/blogs(?:\/([^/]+))?\/?$/
 const DIAGNOSE_PATH = /^\/diagnose\/([^/]+)\/?$/
 
 /** 진단 시작 주소면 고른 공고를 돌려줘요. */
-export const diagnoseFromPath = () => DIAGNOSE_PATH.exec(currentPath())?.[1] ?? null
-
-export const REPORT_TABS: ReportTab[] = ['summary', 'fit', 'review', 'questions']
+const diagnoseFromPath = () => DIAGNOSE_PATH.exec(currentPath())?.[1] ?? null
 
 const REPORT_PATH = /^\/r\/([^/]+)(?:\/(fit|review|questions|practice))?\/?$/
 
@@ -53,7 +51,7 @@ export function reportFromPath(): { id: string; tab: ReportTab | 'practice' } | 
 const ADMIN_PATH = /^\/admin(?:\/(users|chats|feedback|ai))?\/?$/
 
 /** 관리자 화면 주소면 보고 있는 탭을 돌려줘요. */
-export function adminFromPath(): AdminTab | null {
+function adminFromPath(): AdminTab | null {
   const match = ADMIN_PATH.exec(currentPath())
   return match ? ((match[1] as AdminTab | undefined) ?? 'overview') : null
 }

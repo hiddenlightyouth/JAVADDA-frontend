@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react'
 import { track } from '../lib/analytics'
 import { dayLabel, fetchOverview, type AdminOverview as Overview } from '../lib/admin'
 import { BarChart, card, Empty, Failed, full, sectionTitle, share, Stat, StatsSkeleton } from './AdminParts'
-import { Segmented } from './ui'
+import { Busy, Segmented } from './ui'
+import { Bone } from './Skeleton'
 import { messages, useMessages } from '../lib/i18n'
 
 type Metric = 'chats' | 'signups'
@@ -99,16 +100,15 @@ export function AdminOverview() {
 
   if (loaded === 'loading') {
     return (
-      <div aria-busy="true">
-        <span className="sr-only">{L.loading}</span>
+      <Busy label={L.loading}>
         <h2 className={sectionTitle}>{L.users}</h2>
         <StatsSkeleton count={4} />
         <h2 className={`${sectionTitle} mt-8`}>{L.devices}</h2>
         <StatsSkeleton count={3} />
         <h2 className={`${sectionTitle} mt-8`}>{L.chats}</h2>
         <StatsSkeleton count={4} />
-        <div aria-hidden className="mt-3 h-[244px] rounded-2xl bg-gray-100 motion-safe:animate-pulse" />
-      </div>
+        <Bone className="mt-3 h-[244px] w-full rounded-2xl!" />
+      </Busy>
     )
   }
   if ('error' in loaded) return <Failed message={loaded.error} onRetry={() => setAttempt((value) => value + 1)} />

@@ -22,7 +22,7 @@ const EN_PREFIX = /^\/en(?=\/|$)/
 const LOCALIZED = /^\/(?:about|articles(?:\/[^/]+)?)?\/?$/
 
 /** 주소 앞의 /en을 떼요. 화면을 고를 때는 이 값을 봐요. */
-export const stripLocale = (path: string) => path.replace(EN_PREFIX, '') || '/'
+const stripLocale = (path: string) => path.replace(EN_PREFIX, '') || '/'
 
 /** 지금 주소에서 언어 표시(/en)와 웹 앱 표시(/app)를 뗀 경로 */
 export const currentPath = () => stripApp(stripLocale(window.location.pathname))
@@ -45,7 +45,7 @@ function stored(): Lang | null {
 }
 
 /** 브라우저 언어가 한국어면 한국어, 그 밖에는 영어예요. */
-export function detectLang(): Lang {
+function detectLang(): Lang {
   if (typeof navigator === 'undefined') return 'ko'
   const list = navigator.languages?.length ? navigator.languages : [navigator.language]
   return list.some((code) => /^ko\b/i.test(code ?? '')) ? 'ko' : 'en'

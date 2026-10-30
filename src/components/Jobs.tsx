@@ -7,8 +7,8 @@ import { readItem, writeItem } from '../lib/storage'
 import { showToast } from '../lib/toast'
 import { copyText, PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
-import { CardTag, CompanyMark, Failed, FitBadge, Notice, SkillChip, skillTone } from './GapParts'
-import { BriefcaseIcon, GridIcon, ListIcon, MapPinIcon, PersonIcon, SearchIcon } from './Icons'
+import { CardTag, CompanyFilter, CompanyMark, Failed, FitBadge, Notice, PostingMeta, SkillChip, skillTone } from './GapParts'
+import { GridIcon, ListIcon, SearchIcon } from './Icons'
 import { PostingBrowser, SplitView } from './PostingBrowser'
 import { Bone } from './Skeleton'
 import { Busy, Segmented, stagger } from './ui'
@@ -25,7 +25,6 @@ const SORTS: PostingSort[] = ['fit', 'recent', 'deadline']
 const TEXT = messages({
   ko: {
     title: '공고 탐색',
-    placeholder: '기업, 공고, 기술 이름으로 찾기',
     label: '공고 찾기',
     companyInfo: (name: string) => `${name} 기업 정보 보기`,
     layout: '보기 방식',
@@ -50,7 +49,6 @@ const TEXT = messages({
   },
   en: {
     title: 'Explore jobs',
-    placeholder: 'Search companies, postings, or skills',
     label: 'Search postings',
     companyInfo: (name: string) => `About ${name}`,
     layout: 'View',
@@ -235,26 +233,16 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
         </div>
 
         {/* 기업도 로고를 보고 한 번에 골라요. 다시 누르면 풀려요. */}
-        <div role="radiogroup" aria-label={L.company} className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
-          {COMPANIES.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="radio"
-              aria-checked={company === item.id}
-              onClick={() => {
-                const next = company === item.id ? null : item.id
-                track('jobs_company_select', { company: next ?? 'all' })
-                setCompany(next)
-              }}
-              className={`flex h-9 shrink-0 items-center gap-2 rounded-full border py-1 pr-3.5 pl-1.5 text-[13px] font-medium transition-colors ${
-                company === item.id ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
-              }`}
-            >
-              <CompanyMark company={item} className="size-6 rounded-full! text-[10px]" />
-              {item.name}
-            </button>
-          ))}
+        <div className="mt-3">
+          <CompanyFilter
+            companies={COMPANIES}
+            value={company}
+            label={L.company}
+            onChange={(next) => {
+              track('jobs_company_select', { company: next ?? 'all' })
+              setCompany(next)
+            }}
+          />
         </div>
 
         <div className="mt-5 flex h-8 items-center justify-between gap-3">
@@ -354,20 +342,7 @@ function JobCard({ posting, resume, fit, order, onOpen, onView, onCompany }: Job
         </button>
       </h3>
       {/* 직군, 경력, 지역은 아이콘을 붙여 한 줄에 늘어놓아서, 훑어볼 때 바로 눈에 들어와요. */}
-      <ul className="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[12.5px] text-gray-600">
-        <li className="flex items-center gap-1.5">
-          <BriefcaseIcon label={L.family} />
-          {familyName(posting.family)}
-        </li>
-        <li className="flex items-center gap-1.5">
-          <PersonIcon label={L.career} />
-          {careerName(posting.career)}
-        </li>
-        <li className="flex min-w-0 items-center gap-1.5">
-          <MapPinIcon label={L.location} />
-          <span className="truncate">{posting.location}</span>
-        </li>
-      </ul>
+      <PostingMeta posting={posting} size="md" className="mt-2" />
       <p className="mt-3 line-clamp-2 text-[13px] leading-relaxed text-gray-500">{posting.summary}</p>
 
       <div className="mt-4 flex flex-1 flex-wrap content-start gap-1.5">
@@ -436,21 +411,9 @@ function JobRow({ posting, resume, fit, order, onOpen, onView, onCompany }: JobI
             {posting.title}
           </button>
         </h3>
-        <p className="mt-1 flex min-w-0 items-center gap-x-3 text-[12.5px] text-gray-500">
+        <PostingMeta posting={posting} className="mt-1 text-[12.5px]!" careerClass="hidden @xl:flex" locationClass="hidden @2xl:flex">
           <span className="truncate font-medium text-gray-700">{company.name}</span>
-          <span className="flex shrink-0 items-center gap-1">
-            <BriefcaseIcon label={L.family} />
-            {familyName(posting.family)}
-          </span>
-          <span className="hidden shrink-0 items-center gap-1 @xl:flex">
-            <PersonIcon label={L.career} />
-            {careerName(posting.career)}
-          </span>
-          <span className="hidden min-w-0 items-center gap-1 @2xl:flex">
-            <MapPinIcon label={L.location} />
-            <span className="truncate">{posting.location}</span>
-          </span>
-        </p>
+        </PostingMeta>
       </div>
       <div className="hidden shrink-0 gap-1.5 @5xl:flex">
         {posting.required.slice(0, 3).map((skill) => (

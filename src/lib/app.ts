@@ -25,9 +25,6 @@ export const MAC_SUPPORT = 'for Apple Silicon'
 /** macOS 앱을 받을 수 있게 열어 뒀는지. false로 바꾸면 헤더의 macOS가 준비 중으로 보이고, 앱을 권하는 툴팁과 안내도 띄우지 않아요. */
 export const MAC_DOWNLOAD_OPEN: boolean = false
 
-/** 앱을 깔 수 있는 Mac에서 보고 있는지. iPad는 Mac으로 알려 오기도 해서 터치 여부로 걸러요. */
-export const isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform) && navigator.maxTouchPoints < 2
-
 /** 앱이 로그인 코드를 받아 왔을 때 웹뷰에 보내는 이벤트예요. */
 export const APP_LOGIN_EVENT = 'whoisloafing:app-login'
 

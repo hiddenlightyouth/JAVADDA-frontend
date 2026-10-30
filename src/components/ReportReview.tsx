@@ -6,7 +6,7 @@ import { messages, useMessages } from '../lib/i18n'
 import { Failed, Panel, ScoreHero } from './GapParts'
 import { RefreshIcon } from './Icons'
 import { Bone } from './Skeleton'
-import { Busy, NumberBadge, NumberedList, Segmented, toolButton } from './ui'
+import { Badge, Busy, NumberBadge, NumberedList, Segmented, toolButton } from './ui'
 
 const DOCS: DocType[] = ['coverLetter', 'resume', 'portfolio']
 
@@ -39,12 +39,8 @@ const TEXT = messages({
   },
 })
 
-const TAG_TONES: Record<ParagraphTag, string> = {
-  good: 'bg-brand-soft text-brand-hover',
-  fix: 'bg-gray-200/70 text-gray-700',
-  missing: 'bg-gray-200/70 text-gray-500',
-  interview: 'border border-brand text-brand',
-}
+/** 서류 검증 태그의 색이에요. 좋아요는 메인 컬러, 면접 예상은 메인 컬러 테두리, 고쳐요는 회색, 빠졌어요는 옅은 회색이에요. */
+const TAG_TONES = { good: 'brand', fix: 'gray', missing: 'muted', interview: 'outline' } as const satisfies Record<ParagraphTag, string>
 
 const chip = 'flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition-colors'
 
@@ -99,15 +95,16 @@ function Tags({ tags }: { tags: ParagraphTag[] }) {
   return (
     <div className="flex flex-wrap gap-1.5">
       {tags.map((tag) => (
-        <span key={tag} className={`inline-flex h-6 items-center rounded-md px-2 text-[11.5px] font-medium ${TAG_TONES[tag]}`}>
+        <Badge key={tag} tone={TAG_TONES[tag]} strong>
           {L.tags[tag]}
-        </span>
+        </Badge>
       ))}
     </div>
   )
 }
 
-function Badge({ value, on }: { value: number; on: boolean }) {
+/** 문단과 코멘트를 잇는 번호예요. 마우스를 올린 문단은 메인 컬러예요. */
+function ParagraphNumber({ value, on }: { value: number; on: boolean }) {
   return <NumberBadge n={value} tone={on ? 'brand' : 'muted'} className="transition-colors" />
 }
 
@@ -115,7 +112,7 @@ function Comment({ paragraph, index, on }: { paragraph: ReviewParagraph; index: 
   return (
     <>
       <div className="flex items-center gap-2">
-        <Badge value={index + 1} on={on} />
+        <ParagraphNumber value={index + 1} on={on} />
         <Tags tags={paragraph.tags} />
       </div>
       <p className="mt-2.5 text-[13px] leading-relaxed text-gray-700">{paragraph.feedback}</p>
@@ -218,7 +215,7 @@ function DocumentView({ title, owner, paragraphs, filter }: { title: string; own
                   className={`-mx-3 flex gap-3 rounded-r-lg border-l-2 py-2 pr-3 pl-3 transition-colors ${BARS[paragraph.tags[0]]} ${on ? TINTS[paragraph.tags[0]] : ''}`}
                 >
                   <span className="mt-[5px]">
-                    <Badge value={index + 1} on={on} />
+                    <ParagraphNumber value={index + 1} on={on} />
                   </span>
                   <p className="min-w-0 flex-1 text-[15px] leading-[1.9] text-gray-800">{paragraph.text}</p>
                 </div>

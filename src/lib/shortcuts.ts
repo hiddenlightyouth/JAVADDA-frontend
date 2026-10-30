@@ -6,7 +6,7 @@ import { readFlag, writeFlag } from './storage'
  * 단축키는 글자가 아니라 키의 자리(`event.code`)로 알아봐요. 한글 자판 상태에서 N을 눌러도 ㅜ가 아니라 N으로 받아요.
  * Shift를 같이 누르는 키는 앞에 `Shift+`를 붙여요. (예: `Shift+Slash`는 물음표)
  */
-export type ShortcutMap = Record<string, (() => void) | undefined>
+type ShortcutMap = Record<string, (() => void) | undefined>
 
 const TYPING = 'input, textarea, select, [contenteditable="true"]'
 

@@ -13,7 +13,7 @@ export interface PlanInfo {
   monthlyPrice: number
 }
 
-export interface Usage {
+interface Usage {
   /** 로그인하지 않았으면 null이에요. */
   plan: PlanId | null
   guest: boolean

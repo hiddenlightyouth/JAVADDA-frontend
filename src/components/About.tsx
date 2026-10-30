@@ -37,7 +37,7 @@ interface FlowText {
  * 소개 화면의 문구예요. 서비스에 실제로 있는 기능만 적어요. 미리보기는 실제 화면 부품에 보기 자료를 넣어 그려요.
  * 첫 화면의 굴러가는 낱말(roll)은 마지막에 첫 낱말을 한 번 더 적어서 끊기지 않고 처음으로 돌아가요.
  */
-export const ABOUT_TEXT = messages({
+const ABOUT_TEXT = messages({
   ko: {
     intro: ['공고 하나를 기준으로'],
     rollBefore: '',

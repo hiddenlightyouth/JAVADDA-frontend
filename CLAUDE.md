@@ -89,7 +89,7 @@ src/
   prerender.tsx       소개 화면과 아티클 화면을 빌드할 때 미리 HTML로 그리는 코드 (브라우저에서는 쓰지 않아요)
   index.css           Tailwind 테마 토큰, 자간, 애니메이션
   lib/blogs.ts        기업 기술 블로그 요약. 기업 열한 곳의 대표 글(제목, 원문 주소, 날짜, 요약, 주제, 기술), 요즘 고민 분석, 면접에서 쓸 점, 자주 나온 기술(topSkills), 여러 기업에 걸친 흐름(themeTrends), 가짜 API(fetchBlogDigests)
-  lib/gap.ts          진단의 자료와 API. 타입(기업, 공고, 이력서, 리포트, 갭, 서류 검증, 면접 질문, 연습 피드백), 목 자료(기업 12곳, 공고 22개, 강의, 시장 비율), 가짜 API(fetchPostings, uploadResume, createReport, fetchReview, fetchQuestions, submitAnswer), 저장소(useResume는 대표 이력서, useResumeShelf는 올린 서류 전부, setPrimaryResume, removeResume, useReports, usePlans, useNotes, useBookmarks), 적합도 계산(fitOf), 스킬 이름 정규화(canonical)
+  lib/gap.ts          진단의 자료와 API. 타입(기업, 공고, 이력서, 리포트, 갭, 서류 검증, 면접 질문, 연습 피드백), 목 자료(기업 12곳, 공고 22개, 강의, 시장 비율), 가짜 API(fetchPostings, uploadResume, fetchReview, fetchQuestions, submitAnswer), 저장소(useResume는 대표 이력서, useResumeShelf는 올린 서류 전부, setPrimaryResume, removeResume, useReports, useReport, usePlans, useNotes), 공고를 눌렀을 때 바로 진단하기(startDiagnosis), 다시 진단(rerunReport), 적합도 계산(fitOf, levelOf), 스킬 이름 정규화(canonical)
   lib/i18n.ts         화면 언어(한국어, 영어) 정하기와 저장, 언어별 주소(/en), 문구 묶음(messages, useMessages, pick)
   lib/meta.ts         탭 제목과 링크 미리보기 태그를 화면과 언어에 맞게 바꾸기, 언어별 메인 화면 값(HOME_META)
   lib/http.ts         API 기본 주소, 응답의 data와 오류 코드 꺼내기, 브라우저 소유자 키
@@ -127,10 +127,10 @@ src/
   components/ReportReview.tsx   리포트의 서류 검증 탭
   components/ReportQuestions.tsx 리포트의 예상 질문 탭
   components/Practice.tsx    면접 연습 (/r/아이디/practice). 질문에 글로 답하면 피드백을 줘요
-  components/GapParts.tsx    진단 화면이 같이 쓰는 부품. 기업 로고(CompanyMark, 로고가 없거나 못 불러오면 머리글자), 적합도(FitBadge, ScoreRing, 점수 머리말 ScoreHero), 짧은 설명 말풍선(Tip), 스킬 이름표(SkillChip), 부족과 보완과 강점 이름표(KindLabel), 체크 표시(CheckMark), 공고 카드(PostingTile)와 뼈대, 회색 칸(Panel), 안내(Notice, Failed), 막대(Meter), 레이더(Radar), 작은 막대 그래프(Sparkline), 변화량(Delta)
+  components/GapParts.tsx    진단 화면이 같이 쓰는 부품. 기업 로고(CompanyMark, 로고가 없거나 못 불러오면 머리글자), 적합도(FitBadge, ScoreRing, 점수 머리말 ScoreHero), 짧은 설명 말풍선(Tip), 스킬 이름표(SkillChip), 공고의 직군과 경력과 지역 한 줄(PostingMeta), 기업 고르는 버튼 줄(CompanyFilter, 공고 탐색과 기술 블로그), 카드 태그(CardTag), 부족과 보완과 강점 이름표(KindLabel), 체크 표시(CheckMark), 공고 카드(PostingTile)와 뼈대, 회색 칸(Panel), 안내(Notice, Failed), 막대(Meter), 레이더(Radar), 작은 막대 그래프(Sparkline), 변화량(Delta)
   components/History.tsx     내 리포트 화면(/history)과, 사이드바가 같이 쓰는 리포트 지우기 창과 문구
   components/AppPage.tsx     앱 화면이 같이 쓰는 틀. 바깥 틀(pageFrame), 제목 줄(PageHeader), 제목 줄 아래 바탕(canvas), 제목 줄만 고정하고 아래를 스크롤하는 화면(ScrollPage, 공고 탐색, 추천 공고, 면접 연습), 복사(copyText)
-  components/ui.tsx          기본 모양을 한 곳에서 정해요. 버튼(primaryButton, primaryButtonMd, primaryButtonLg, quietButton, dangerButton, softButton, softDangerButton, toolButton, toolDangerButton, ghostButton, ghostDangerButton, iconButton), 메뉴(menuPanel, menuItem, menuDangerItem), 입력칸(fieldBase, textField, textFieldSm, textArea, 좁은 화면에서는 16px), 작은 제목(label), 이름표(tag), 오류 문구(FormError), 고르는 칸(Segmented, sm과 md), 밑줄 탭(Tabs), 점 목록(Bullets), 번호(NumberBadge, NumberedList), 뼈대 감싸기(Busy), 카드 떠오르는 순서(stagger). 새 화면은 같은 모양을 다시 적지 않고 여기 것을 써요
+  components/ui.tsx          기본 모양을 한 곳에서 정해요. 버튼(primaryButton, primaryButtonMd, primaryButtonLg, quietButton, dangerButton, softButton, softDangerButton, toolButton, toolDangerButton, ghostButton, ghostDangerButton, iconButton), 메뉴(menuPanel, menuItem, menuDangerItem), 입력칸(fieldBase, textField, textFieldSm, textArea, 좁은 화면에서는 16px), 작은 제목(label), 이름표(tag), 테두리 없는 작은 이름표(Badge, gray, muted, brand, outline, red, white), 오류 문구(FormError), 고르는 칸(Segmented, sm과 md), 밑줄 탭(Tabs), 점 목록(Bullets), 번호(NumberBadge, NumberedList), 뼈대 감싸기(Busy), 카드 떠오르는 순서(stagger). 새 화면은 같은 모양을 다시 적지 않고 여기 것을 써요
   components/Dropdown.tsx    버튼을 누르면 펼쳐지는 고르기 메뉴(Dropdown). 공고 탐색, 추천 공고, 예상 질문이 써요
   components/Settings.tsx    앱의 설정 창. 화면 모드, 언어, 단축키 항상 표시, 화면 녹화 감지 시 가리기, 버전
   components/AppLogin.tsx    앱이 브라우저로 열어 주는 앱 로그인 화면 (/app-login)
@@ -142,7 +142,8 @@ src/
   components/Dialog.tsx      화면을 덮고 가운데에 뜨는 창(Modal), 한 번 더 묻는 확인 창(ConfirmDialog), 오른쪽에서 여는 칸(SidePanel, 갭 상세, 서류 상세, 관리자의 회원과 호출 상세가 같이 써요. body에 그리고 바깥이나 Esc로 닫아요)
   components/Icons.tsx       여러 화면이 같이 쓰는 선 아이콘(찾기, 새 탭, 올리기, 링크, 서류, 설정, 버그, 점 세 개 등)과 닫기(X) 버튼(CloseButton). 화면 코드에 svg를 직접 적지 않고 여기에 더해요. 브랜드 로고와 그래프는 예외예요
   components/About.tsx       소개 화면 (/about, 브라우저의 메인 주소)
-  components/         Header, Logo, Footer, LofyScript, Articles, Account, AuthForm, MyPage, IpPlace, Skeleton, Toast
+  components/Skeleton.tsx    글자나 그림이 올 자리의 회색 칸(Bone). 여러 개를 묶을 때는 ui의 Busy로 감싸요
+  components/         Header, Logo, Footer, LofyScript, Articles, Account, AuthForm, MyPage, IpPlace, Toast
   hooks/useServerConfig.ts  서버의 `/config`를 처음 한 번 받아 두기 (관리자, 피드백, 소셜 로그인 같은 서버 기능이 켜져 있는지)
   hooks/useScreen.ts    지금 보여줄 화면(`Page`), 주소에서 화면 맞추기와 뒤로 가기, 화면을 옮기는 함수(open, goHome 등)
   hooks/useDismiss.ts   열려 있는 메뉴를 바깥을 누르거나 Esc를 누르면 닫기
@@ -174,7 +175,7 @@ src/
 - 서류 검증(`fetchReview`)은 자기소개서, 이력서, 포트폴리오마다 문단에 좋아요(good), 고쳐요(fix), 빠졌어요(missing), 면접 예상(interview) 태그와 피드백을 붙여요. 면접 예상 태그가 붙은 문단은 예상 질문의 출처가 돼요.
 - 예상 질문(`fetchQuestions`)은 문단, 강점, 부족, 기출(코퍼스), 기술 블로그에서 만들고 확률 순서로 정렬해요. 질문마다 의도, 답변 포인트, 꼬리 질문이 있어요.
 - 연습 피드백(`submitAnswer`)은 답변에 답변 포인트의 낱말이 들어 있는지, 숫자가 있는지, 흐름 낱말(먼저, 그래서, 결과)이 있는지, 길이가 적당한지로 점수를 내요. 음성 답변은 없어요.
-- 북마크(`whoisloafing:gap:bookmarks:v1`), 보완 계획(`whoisloafing:gap:plans:v1`), 면접 노트(`whoisloafing:gap:notes:v1`)도 이 기기에 저장해요.
+- 보완 계획(`whoisloafing:gap:plans:v1`)과 면접 노트(`whoisloafing:gap:notes:v1`)도 이 기기에 저장해요. 예전의 기업 북마크(`whoisloafing:gap:bookmarks:v1`)는 쓰는 화면이 없어서 코드에서 뺐어요.
 
 ## 화면 규칙
 
@@ -209,7 +210,7 @@ src/
 - 서류 검증(`fetchReview`)은 자기소개서, 이력서, 포트폴리오마다 문단에 좋아요(good), 고쳐요(fix), 빠졌어요(missing), 면접 예상(interview) 태그와 피드백을 붙이고, 부합도 점수와 더 어필할 점을 돌려줘요.
 - 예상 질문(`fetchQuestions`)은 서류 문단, 강점, 부족한 필수 역량, 기업 기술 블로그, 기출 코퍼스에서 만든 질문을 나올 확률 순서로 돌려줘요. 질문마다 유형(기술, 프로젝트, CS 기초, 컬처핏), 출처, 의도, 답변 포인트, 꼬리 질문이 있어요.
 - 연습 피드백(`submitAnswer`)은 답변에 답변 포인트의 낱말이 들어 있는지, 숫자가 있는지, 흐름을 잇는 말이 있는지, 길이를 보고 점수와 좋았어요, 보완할 점, 이렇게 말해 보세요, 꼬리 질문을 돌려줘요.
-- 저장: 이력서 목록과 대표는 `whoisloafing:gap:resumes:v1`, 리포트 목록은 `whoisloafing:gap:reports:v1`, 보완 계획에 넣은 스킬은 `whoisloafing:gap:plans:v1`, 면접 노트는 `whoisloafing:gap:notes:v1`, 북마크한 기업은 `whoisloafing:gap:bookmarks:v1`에 둬요. 서버가 생기면 계정에 저장해요.
+- 저장: 이력서 목록과 대표는 `whoisloafing:gap:resumes:v1`, 리포트 목록은 `whoisloafing:gap:reports:v1`, 보완 계획에 넣은 스킬은 `whoisloafing:gap:plans:v1`, 면접 노트는 `whoisloafing:gap:notes:v1`에 둬요. 예전의 기업 북마크(`whoisloafing:gap:bookmarks:v1`)는 쓰는 화면이 없어서 코드에서 뺐어요. 서버가 생기면 계정에 저장해요.
 - 가짜 API는 실제 서버처럼 잠깐 기다렸다가 응답해서(공고 0.3초, 이력서 1.4초, 서류 검증 1.6초, 질문 1.2초, 피드백 1.5초), 스켈레톤이 보이는지 확인할 수 있어요.
 
 ## 진단 흐름

@@ -1,6 +1,7 @@
 import { track } from '../lib/analytics'
 import { openBugReport, useFeedback } from '../lib/feedback'
 import { messages, useMessages } from '../lib/i18n'
+import { ExternalLinkIcon } from './Icons'
 
 const TEXT = messages({
   ko: { team: '숨은빚청년들 팀', bug: '버그 신고', rights: '© 2026 Javadda. 모든 권리 보유.' },
@@ -22,9 +23,7 @@ export function Footer({ className, from }: { className: string; from?: string }
         className="inline-flex items-center gap-1 transition-colors hover:text-gray-700"
       >
         {text.team}
-        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4" className="size-3" aria-hidden="true">
-          <path d="M3.5 8.5l5-5M4.5 3.5h4v4" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <ExternalLinkIcon className="size-3" />
       </a>
       {ready && (
         <button type="button" onClick={openBugReport} className="transition-colors hover:text-gray-700">

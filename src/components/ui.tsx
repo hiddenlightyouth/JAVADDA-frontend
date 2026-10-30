@@ -80,6 +80,33 @@ export const label = 'text-[12.5px] font-medium text-gray-500'
 /** 작은 이름표의 모양이에요. 테두리를 두른 흰 칸이에요. */
 export const tag = 'inline-flex h-7 max-w-full items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2.5 text-[12.5px] text-gray-700'
 
+const BADGE_TONES = {
+  /** 회색 칸 위의 기본 이름표 */
+  gray: 'bg-gray-200/70 text-gray-600',
+  /** 한 단계 옅은 회색. 빠진 것, 덜 중요한 것 */
+  muted: 'bg-gray-200/40 text-gray-400',
+  /** 갖춘 것, 강점, 신규처럼 좋은 쪽 */
+  brand: 'bg-brand-soft text-brand-hover',
+  /** 테두리만 메인 컬러. 면접 예상처럼 따로 눈여겨볼 것 */
+  outline: 'border border-brand text-brand',
+  /** 마감까지 남은 날 */
+  red: 'bg-red-50 text-red-600',
+  /** 회색 칸 안의 흰 이름표 */
+  white: 'bg-white text-gray-600',
+}
+
+/**
+ * 테두리 없이 바탕색으로 구분하는 작은 이름표예요(24px). 카드의 태그, 주제, 부족과 강점, 서류 검증 태그, 출처에 같이 써요.
+ * 테두리를 두른 스킬 이름표는 `SkillChip`, 고르는 버튼은 `Segmented`예요.
+ */
+export function Badge({ tone = 'gray', strong = false, className = '', children }: { tone?: keyof typeof BADGE_TONES; strong?: boolean; className?: string; children: ReactNode }) {
+  return (
+    <span className={`inline-flex h-6 shrink-0 items-center rounded-md px-2 text-[12px] whitespace-nowrap ${strong ? 'font-medium' : ''} ${BADGE_TONES[tone]} ${className}`}>
+      {children}
+    </span>
+  )
+}
+
 /** 입력 아래나 버튼 줄에 빨갛게 띄우는 오류 문구예요. */
 export function FormError({ children, className = '' }: { children: ReactNode; className?: string }) {
   if (!children) return null

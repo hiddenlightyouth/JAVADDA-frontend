@@ -93,7 +93,6 @@ const TEXT = messages({
     close: '닫기',
     planToast: (skill: string) => `${skill}을(를) 보완 계획에 넣었어요.`,
     planRemoved: (skill: string) => `${skill}을(를) 보완 계획에서 뺐어요.`,
-    nothing: '해당하는 역량이 없어요.',
   },
   en: {
     tabs: { summary: 'Report', fit: 'Fit breakdown', review: 'Document check', questions: 'Questions' },
@@ -151,7 +150,6 @@ const TEXT = messages({
     close: 'Close',
     planToast: (skill: string) => `Added ${skill} to your plan.`,
     planRemoved: (skill: string) => `Removed ${skill} from your plan.`,
-    nothing: 'Nothing here.',
   },
 })
 

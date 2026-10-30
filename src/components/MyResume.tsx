@@ -9,7 +9,7 @@ import { ConfirmDialog, Modal, panelBody, SidePanel } from './Dialog'
 import { Notice, SkillChip, Tip } from './GapParts'
 import { CloseButton, CloseIcon, LinkIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
 import { Bone } from './Skeleton'
-import { Busy, FormError, menuPanel, NumberedList, primaryButton, textField, textFieldSm, toolButton, toolDangerButton } from './ui'
+import { Badge, Busy, FormError, menuPanel, NumberedList, primaryButton, textField, textFieldSm, toolButton, toolDangerButton } from './ui'
 
 /**
  * 내 이력서 화면이에요. PDF나 GitHub, 노션 링크를 올리면 역량을 읽어 이름표로 보여주고, 잘못 읽은 것은 빼거나 더해요.
@@ -37,9 +37,7 @@ const TEXT = messages({
     skills: '내 역량',
     addPlaceholder: '역량 더하기',
     add: '더하기',
-    saved: '역량을 저장했어요.',
     paragraphs: '주요 경력',
-    replace: '다른 서류 올리기',
     addDoc: '서류 추가',
     addTitle: '서류 추가',
     emptyTitle: '아직 올린 이력서가 없어요',
@@ -54,9 +52,7 @@ const TEXT = messages({
     removeBody: '올린 서류와 읽은 역량을 지워요. 리포트는 그대로 남아요.',
     removePrimaryBody: '대표 이력서예요. 지우면 남은 서류 중 가장 최근에 올린 것이 대표가 돼요. 리포트는 그대로 남아요.',
     removed: '서류를 지웠어요.',
-    evidence: '근거',
     browse: '이 이력서로 공고 보기',
-    keep: '지금 서류 그대로 두기',
   },
   en: {
     title: 'My resume',
@@ -78,9 +74,7 @@ const TEXT = messages({
     skills: 'My skills',
     addPlaceholder: 'Add a skill',
     add: 'Add',
-    saved: 'Skills saved.',
     paragraphs: 'Key experience',
-    replace: 'Upload a different document',
     addDoc: 'Add document',
     addTitle: 'Add a document',
     emptyTitle: 'No resumes yet',
@@ -95,9 +89,7 @@ const TEXT = messages({
     removeBody: 'This removes the document and the skills we read. Reports stay.',
     removePrimaryBody: 'This is your main resume. Once deleted, your most recent other document becomes the main one. Reports stay.',
     removed: 'Document deleted.',
-    evidence: 'Evidence',
     browse: 'Browse jobs with this resume',
-    keep: 'Keep the current document',
   },
 })
 
@@ -223,7 +215,7 @@ export function ResumeUploader({ onDone }: { onDone?: (resume: Resume) => void }
 }
 
 /** 읽은 역량을 고치는 칸이에요. 이름표를 누르면 숙련도가 오르고, X로 빼고, 아래 입력칸으로 더해요. 바꾸면 바로 저장해요. */
-export function SkillEditor({ resume }: { resume: Resume }) {
+function SkillEditor({ resume }: { resume: Resume }) {
   const L = useMessages(TEXT)
   const [draft, setDraft] = useState('')
   /** 친 글자에 맞는 스킬 목록을 펼쳐 둘지. 고르거나 Esc를 누르면 접어요. */
@@ -442,7 +434,7 @@ function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resum
               {resume.name}
             </h2>
             <p className="mt-1.5 flex items-center gap-2 text-[12.5px] text-gray-500">
-              <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-semibold text-gray-600">{L.sources[resume.source]}</span>
+              <Badge tone="gray" strong>{L.sources[resume.source]}</Badge>
               {L.uploadedAt(formatDateTime(resume.uploadedAt))}
             </p>
           </>
@@ -531,8 +523,8 @@ function ResumeCard({ resume, primary, selected, onSelect, onPrimary }: { resume
       </p>
       <ul className="mt-4 flex flex-wrap gap-1">
         {resume.skills.slice(0, 4).map((skill) => (
-          <li key={skill.name} className="rounded-md bg-white px-2 py-0.5 text-[12px] text-gray-600">
-            {skill.name}
+          <li key={skill.name}>
+            <Badge tone="white">{skill.name}</Badge>
           </li>
         ))}
       </ul>

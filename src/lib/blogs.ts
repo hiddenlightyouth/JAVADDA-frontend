@@ -56,7 +56,7 @@ export interface BlogPost {
 }
 
 /** 요즘 고민 하나와, 그 고민이 드러난 글이에요. */
-export interface BlogConcern {
+interface BlogConcern {
   title: string
   body: string
   /** 근거가 된 글의 id */
@@ -378,8 +378,6 @@ const digestByCompany = new Map(DIGESTS.map((digest) => [digest.companyId, diges
 
 /** 기술 블로그 요약이 있는 기업이에요. 공고가 있는 기업 순서를 따라요. */
 export const BLOG_COMPANIES: Company[] = COMPANIES.filter((company) => digestByCompany.has(company.id))
-
-export const hasBlog = (companyId: string) => digestByCompany.has(companyId)
 
 const dayMs = 86_400_000
 const daysBetween = (from: string, to: string) => Math.round((new Date(to).getTime() - new Date(from).getTime()) / dayMs)

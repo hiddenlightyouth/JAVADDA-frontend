@@ -9,7 +9,7 @@ import { createStore, useStore } from './store'
 
 export type JobFamily = 'backend' | 'frontend' | 'mobile' | 'data' | 'devops'
 export type CareerLevel = 'entry' | 'junior' | 'any'
-export type Requirement = 'required' | 'preferred'
+type Requirement = 'required' | 'preferred'
 
 export interface Company {
   id: string
@@ -118,7 +118,7 @@ export interface RadarAxis {
   required: number
 }
 
-export interface SkillTrend {
+interface SkillTrend {
   skill: string
   /** 최근 12주의 공고 수 */
   series: number[]
@@ -169,7 +169,7 @@ export interface DocumentReview {
 }
 
 export type QuestionCategory = 'tech' | 'project' | 'cs' | 'culture'
-export type QuestionSource = 'paragraph' | 'gap' | 'strength' | 'blog' | 'corpus'
+type QuestionSource = 'paragraph' | 'gap' | 'strength' | 'blog' | 'corpus'
 
 export interface InterviewQuestion {
   id: string
@@ -191,7 +191,7 @@ export interface PracticeFeedback {
   followUp: string
 }
 
-export interface InterviewNote {
+interface InterviewNote {
   skill: string
   text: string
   savedAt: string
@@ -205,7 +205,6 @@ const KEYS = {
   resume: 'whoisloafing:gap:resume:v1',
   resumes: 'whoisloafing:gap:resumes:v1',
   reports: 'whoisloafing:gap:reports:v1',
-  bookmarks: 'whoisloafing:gap:bookmarks:v1',
   notes: 'whoisloafing:gap:notes:v1',
   plans: 'whoisloafing:gap:plans:v1',
 }
@@ -232,8 +231,8 @@ const companyById = new Map(COMPANIES.map((company) => [company.id, company]))
 export const companyOf = (id: string): Company => companyById.get(id) ?? { id, name: id, initial: id[0]?.toUpperCase() ?? '?', industry: '', site: '' }
 
 /** 스킬이 어느 묶음인지. 레이더의 축이에요. */
-export const SKILL_AXES = ['언어', '프레임워크', '데이터베이스', '인프라', '협업', 'CS 기초'] as const
-export type SkillAxis = (typeof SKILL_AXES)[number]
+const SKILL_AXES = ['언어', '프레임워크', '데이터베이스', '인프라', '협업', 'CS 기초'] as const
+type SkillAxis = (typeof SKILL_AXES)[number]
 
 const AXIS_OF: Record<string, SkillAxis> = {
   Java: '언어',
@@ -417,7 +416,7 @@ const FAMILY_NAMES_EN: Record<JobFamily, string> = { backend: 'Backend', fronten
 
 export const familyName = (family: JobFamily) => (getLang() === 'en' ? FAMILY_NAMES_EN[family] : FAMILY_NAMES[family])
 
-export const CAREER_NAMES: Record<CareerLevel, { ko: string; en: string }> = {
+const CAREER_NAMES: Record<CareerLevel, { ko: string; en: string }> = {
   entry: { ko: '신입', en: 'Entry level' },
   junior: { ko: '주니어(1년 이상)', en: 'Junior (1+ years)' },
   any: { ko: '경력 무관', en: 'Any level' },
@@ -855,7 +854,7 @@ const marketOf = (skill: string) => MARKET[skill] ?? { share: 0.1, change: 0 }
 // ---------- 저장소 ----------
 
 /** 올려 둔 서류 목록과, 진단과 추천에 쓰는 대표 서류의 아이디예요. */
-export interface ResumeShelf {
+interface ResumeShelf {
   list: Resume[]
   primaryId: string | null
 }
@@ -871,34 +870,24 @@ function readShelf(): ResumeShelf {
 const shelfStore = createStore<ResumeShelf>(readShelf())
 const primaryOf = (shelf: ResumeShelf) => shelf.list.find((resume) => resume.id === shelf.primaryId) ?? null
 const reportsStore = createStore<Report[]>(readJson<Report[]>(KEYS.reports, []))
-const bookmarksStore = createStore<string[]>(readJson<string[]>(KEYS.bookmarks, []))
 const notesStore = createStore<InterviewNote[]>(readJson<InterviewNote[]>(KEYS.notes, []))
 /** 보완 계획에 넣어 둔 스킬 */
 const plansStore = createStore<string[]>(readJson<string[]>(KEYS.plans, []))
 
 /** 대표 이력서예요. 적합도, 추천, 진단은 모두 이 서류를 기준으로 해요. */
 export const useResume = () => useStore(shelfStore, primaryOf)
-export const getResume = () => primaryOf(shelfStore.get())
+const getResume = () => primaryOf(shelfStore.get())
 /** 올려 둔 서류 전부와 대표 서류의 아이디 */
 export const useResumeShelf = () => useStore(shelfStore)
 /** 아이디로 서류를 찾아요. 지웠거나 아이디가 없으면 대표 서류예요. */
 const resumeOf = (id?: string | null) => shelfStore.get().list.find((resume) => resume.id === id) ?? getResume()
 export const useReports = () => useStore(reportsStore)
-export const getReports = () => reportsStore.get()
-export const useBookmarks = () => useStore(bookmarksStore)
 export const useNotes = () => useStore(notesStore)
 export const usePlans = () => useStore(plansStore)
 
 function setReports(next: Report[]) {
   reportsStore.set(next)
   writeJson(KEYS.reports, next)
-}
-
-export function toggleBookmark(companyId: string) {
-  const current = bookmarksStore.get()
-  const next = current.includes(companyId) ? current.filter((id) => id !== companyId) : [...current, companyId]
-  bookmarksStore.set(next)
-  writeJson(KEYS.bookmarks, next)
 }
 
 export function togglePlan(skill: string) {
@@ -1083,7 +1072,7 @@ function buildSummary(posting: JobPosting, company: Company, fit: number, gaps: 
 
 // ---------- 공고 ----------
 
-export interface PostingFilter {
+interface PostingFilter {
   query?: string
   family?: JobFamily | null
   career?: CareerLevel | null
@@ -1280,7 +1269,7 @@ export async function startDiagnosis(postingId: string): Promise<Report | null> 
  * 리포트를 만들기 시작해요. 바로 pending 리포트를 돌려주고, 잠시 뒤에 done으로 바뀌어요. 서버의 POST /reports 202와 같은 흐름이에요.
  * resumeId를 주면 그 서류로, 없으면 대표 이력서로 진단해요.
  */
-export async function createReport(postingId: string, resumeId?: string): Promise<Report | null> {
+async function createReport(postingId: string, resumeId?: string): Promise<Report | null> {
   const posting = postingOf(postingId)
   const resume = resumeOf(resumeId)
   if (!posting || !resume) return null
@@ -1340,7 +1329,7 @@ async function finishReport(pending: Report, posting: JobPosting, resume: Resume
   setReports(reportsStore.get().map((report) => (report.id === pending.id ? done : report)))
 }
 
-export const reportOf = (id: string): Report | null => reportsStore.get().find((report) => report.id === id) ?? null
+const reportOf = (id: string): Report | null => reportsStore.get().find((report) => report.id === id) ?? null
 
 /** 다시 진단해서 바뀐 리포트의 예전 아이디와 새 아이디예요. 이 기기에서 앱을 여는 동안만 기억해요. */
 const replacedBy = new Map<string, string>()

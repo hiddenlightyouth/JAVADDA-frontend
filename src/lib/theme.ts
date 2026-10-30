@@ -9,7 +9,7 @@ const SETTINGS_EVENT = 'whoisloafing:app-settings'
 
 const THEMES: AppTheme[] = ['system', 'light', 'dark']
 
-export interface AppSettings {
+interface AppSettings {
   /** 화면 모드 */
   theme: AppTheme
   /** 화면 공유나 녹화가 감지되면 화면을 가릴지. 처음에는 켜져 있어요. */

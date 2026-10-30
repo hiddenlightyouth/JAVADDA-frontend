@@ -6,7 +6,7 @@ import { localizePath } from '../lib/i18n'
 import { isAppOnly, pageFromPath, pathOf, type Page } from '../lib/routes'
 
 /** 로그인 화면으로 갔을 때, 로그인한 뒤에 돌아올 화면과 로그인 화면에 보여줄 안내 */
-export interface LoginReturn {
+interface LoginReturn {
   path: string
   notice: string
 }

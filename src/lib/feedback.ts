@@ -2,7 +2,7 @@ import { createStore, useStore } from './store'
 import { authFetch } from './auth'
 
 /** 서버에 보내는 피드백. 평가는 분석이 어땠는지, 버그는 문제가 생겼다는 신고예요. 지금 화면에서는 버그 신고만 보내요. */
-export interface FeedbackInput {
+interface FeedbackInput {
   kind: 'RATING' | 'BUG'
   rating?: 'GOOD' | 'BAD'
   comment?: string

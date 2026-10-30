@@ -27,7 +27,7 @@ export interface Me {
   passwordSet?: boolean
 }
 
-export interface AuthState {
+interface AuthState {
   tokens: Tokens | null
   me: Me | null
 }
@@ -55,20 +55,6 @@ export interface LoginRecord {
   ipAddress: string | null
   loggedInAt: string
   current: boolean
-}
-
-export interface ChatSummary {
-  id: string
-  repoUrl: string
-  repoName: string
-  shared: boolean
-  /** 내 작업 맨 위에 고정했는지. 예전 서버는 이 값을 보내지 않아요. */
-  pinned?: boolean
-  preview: string | null
-  lastSender: 'user' | 'bot' | null
-  messageCount: number
-  createdAt: string
-  updatedAt: string
 }
 
 export type AuthOutcome = { ok: true } | { ok: false; message: string }
@@ -142,8 +128,6 @@ export function useAuth(): AuthState {
   return useStore(auth)
 }
 
-/** 지금 로그인해 있는지. 화면 바깥(저장소)에서 쓸 때 봐요. */
-export const isSignedIn = () => auth.get().tokens !== null
 
 function clearAuth() {
   if (auth.get().tokens || auth.get().me) setState({ tokens: null, me: null })
@@ -204,7 +188,7 @@ async function freshAccessToken(): Promise<string | null> {
   return auth.get().tokens?.accessToken ?? null
 }
 
-export async function authHeaders(): Promise<Record<string, string>> {
+async function authHeaders(): Promise<Record<string, string>> {
   const token = await freshAccessToken()
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
@@ -393,12 +377,6 @@ export async function signOut(): Promise<void> {
   clearAuth()
 }
 
-/** 이 브라우저에서 로그인하지 않고 만든 채팅을 내 계정에 연결해요. */
-export async function claimChats(): Promise<void> {
-  if (!auth.get().tokens) return
-  await authFetch('/users/me/chats/claim', { method: 'POST', headers: ownerHeaders() }).catch(() => null)
-}
-
 export async function loadMe(): Promise<Me | null> {
   if (!auth.get().tokens) return null
   try {
@@ -424,8 +402,6 @@ export const fetchSessions = () => fetchList<DeviceSession[]>('/auth/sessions')
 export const fetchLoginHistory = (page: number) => fetchList<Slice<LoginRecord>>(`/users/me/login-history?page=${page}&size=20`)
 
 export const isAdmin = (me: Me | null) => me?.role === 'ADMIN'
-
-export const fetchMyChats = (page: number) => fetchList<Slice<ChatSummary>>(`/users/me/chats?page=${page}&size=20`)
 
 export async function revokeSession(sessionId: string): Promise<boolean> {
   try {

@@ -7,7 +7,7 @@ import { localizePath, messages, type Lang } from './i18n'
 export const SITE = 'https://lofy.hidly.dev'
 export const SITE_TITLE = 'Javadda'
 
-export interface PageMeta {
+interface PageMeta {
   /** 탭 제목 */
   title: string
   description: string

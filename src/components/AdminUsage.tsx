@@ -232,15 +232,14 @@ export function AdminUsage({ calls }: { calls: boolean }) {
       </div>
 
       {loaded === 'loading' ? (
-        <div aria-busy="true">
-          <span className="sr-only">{L.loading}</span>
+        <Busy label={L.loading}>
           <StatsSkeleton count={4} />
-          <div aria-hidden className="mt-3 h-[244px] rounded-2xl bg-gray-100 motion-safe:animate-pulse" />
-          <div aria-hidden className="mt-3 grid gap-3 lg:grid-cols-2">
-            <div className="h-44 rounded-2xl bg-gray-100 motion-safe:animate-pulse" />
-            <div className="h-44 rounded-2xl bg-gray-100 motion-safe:animate-pulse" />
+          <Bone className="mt-3 h-[244px] w-full rounded-2xl!" />
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <Bone className="h-44 w-full rounded-2xl!" />
+            <Bone className="h-44 w-full rounded-2xl!" />
           </div>
-        </div>
+        </Busy>
       ) : !summary ? (
         <Failed message={'error' in loaded ? loaded.error : ''} onRetry={() => setAttempt((value) => value + 1)} />
       ) : (

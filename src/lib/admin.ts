@@ -3,7 +3,7 @@ import { getLang, messages, pick } from './i18n'
 
 export type Result<T> = { ok: true; data: T } | { ok: false; message: string }
 
-export type DeviceKind = 'APP' | 'MOBILE' | 'DESKTOP' | 'UNKNOWN'
+type DeviceKind = 'APP' | 'MOBILE' | 'DESKTOP' | 'UNKNOWN'
 
 const DEVICES = messages<Record<DeviceKind, string>>({
   ko: { APP: '앱', MOBILE: '모바일', DESKTOP: 'PC', UNKNOWN: '알 수 없음' },
@@ -40,7 +40,7 @@ export interface AdminUser {
   chatCount: number
 }
 
-export interface AdminSession {
+interface AdminSession {
   sessionId: string
   deviceName: string | null
   device: DeviceKind
@@ -49,7 +49,7 @@ export interface AdminSession {
   lastUsedAt: string
 }
 
-export interface AdminLogin {
+interface AdminLogin {
   id: number
   deviceName: string | null
   device: DeviceKind

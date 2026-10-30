@@ -1,6 +1,6 @@
 import { createStore, useStore } from './store'
 
-export interface ToastMessage {
+interface ToastMessage {
   id: number
   text: string
 }

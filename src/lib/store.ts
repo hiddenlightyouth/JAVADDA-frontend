@@ -2,7 +2,7 @@ import { useSyncExternalStore } from 'react'
 
 // 화면 밖에 두는 작은 값이에요. 값이 바뀌면 이 값을 읽는 컴포넌트가 다시 그려져요.
 
-export interface Store<T> {
+interface Store<T> {
   get: () => T
   set: (next: T) => void
   subscribe: (listener: () => void) => () => void
