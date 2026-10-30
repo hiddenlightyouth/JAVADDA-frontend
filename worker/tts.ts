@@ -9,13 +9,13 @@ export const TTS_PATH = '/tts'
 /** 질문 하나의 길이를 넉넉히 잡았어요. 다른 글을 읽히는 데 쓰이지 않게 막아요. */
 const MAX_CHARS = 300
 const DEFAULT_BASE_URL = 'https://api.elevenlabs.io'
-/** 기본 목소리예요. 면접관처럼 차분한 한국어 대화체 Harry Kim이고, `ELEVENLABS_VOICE_ID`로 바꿔요. */
-const DEFAULT_VOICE_ID = 'pb3lVZVjdFWbkhPKlelB'
+/** 기본 목소리예요. 웅장한 면접관 느낌의 낮은 한국어 남성 목소리 Midnight Cave이고, `ELEVENLABS_VOICE_ID`로 바꿔요. */
+const DEFAULT_VOICE_ID = 'aQzFKIjVemqRAhfd9est'
 /** 한국어를 지원하는 모델 중 가장 자연스러워요. 최신 v4는 이 API로 쓸 수 없어요. */
 const DEFAULT_MODEL_ID = 'eleven_multilingual_v2'
 const OUTPUT_FORMAT = 'mp3_44100_128'
-/** 사람처럼 들리게 억양의 폭을 조금 넓혔어요. 더 낮추면 말투가 불안정해져요. style은 0이어야 또렷하고 빨라요. */
-const VOICE_SETTINGS = { stability: 0.45, similarity_boost: 0.75, style: 0, use_speaker_boost: true }
+/** 면접관답게 흔들림 없이, 평소보다 조금 빠르게 말해요. style은 0이어야 또렷하고 빨라요. */
+const VOICE_SETTINGS = { stability: 0.5, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: 1.1 }
 
 export interface TtsEnv {
   ELEVENLABS_API_KEY?: string
