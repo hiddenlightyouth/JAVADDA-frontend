@@ -6,7 +6,7 @@ import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { showToast } from '../lib/toast'
 import { canvas, pageFrame, PageHeader } from './AppPage'
-import { ConfirmDialog, Modal, panelBody, SidePanel } from './Dialog'
+import { ConfirmDialog, panelBody, SidePanel } from './Dialog'
 import { AiProgress, Notice, SkillChip, Tip } from './GapParts'
 import { CloseButton, CloseIcon, LinkIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
 import { Badge, FormError, menuPanel, NumberedList, primaryButton, textField, textFieldSm, toolButton, toolDangerButton } from './ui'
@@ -343,10 +343,10 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
   const L = useMessages(TEXT)
   const shelf = useResumeShelf()
   const [adding, setAdding] = useState(false)
-  /** 서류를 읽는 동안이에요. 그동안은 올리는 창을 닫을 수 없어요(바깥 누름, Esc, 닫기 버튼 모두). */
+  /** 서류를 읽는 동안이에요. 그동안은 올리는 칸을 닫을 수 없어요. */
   const [uploading, setUploading] = useState(false)
   const signedIn = useAuth().tokens !== null
-  /** 서류는 계정에 저장돼서, 로그인하지 않았으면 올리는 창 대신 로그인 화면으로 가요. */
+  /** 서류는 계정에 저장돼서, 로그인하지 않았으면 올리는 칸 대신 로그인 화면으로 가요. */
   const addDocument = () => (signedIn ? setAdding(true) : requestLogin())
   const [openId, setOpenId] = useState<string | null>(null)
   const open = shelf.list.find((resume) => resume.id === openId) ?? null
@@ -372,8 +372,27 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
       <div className={canvas}>
         {/* 공고 탐색처럼 제목 줄과 같은 폭으로 늘어놓고, 칸 수는 목록 폭을 보고 정해요. */}
         <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
+          {/* 서류 추가는 창 대신 목록 위에 펼쳐요. 창은 바깥을 누르면 닫혀서 읽는 진행 상황을 놓쳤어요. */}
+          {adding && (
+            <section aria-labelledby="resume-add-title" className="mb-8 max-w-3xl">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <h2 id="resume-add-title" className="text-[17px] font-semibold text-gray-900">
+                  {L.addTitle}
+                </h2>
+                {/* 읽는 동안 닫으면 결과를 볼 곳이 없어서, 닫기 버튼을 숨겨 둬요. */}
+                {!uploading && <CloseButton label={L.close} size="md" onClick={() => setAdding(false)} />}
+              </div>
+              <ResumeUploader
+                onWorking={setUploading}
+                onDone={(resume) => {
+                  setAdding(false)
+                  setOpenId(resume.id)
+                }}
+              />
+            </section>
+          )}
           {shelf.list.length === 0 ? (
-            <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={addDocument} className="mt-24" />
+            !adding && <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={addDocument} className="mt-24" />
           ) : (
             <ul className="grid gap-4 @2xl:grid-cols-2 @5xl:grid-cols-3">
               {shelf.list.map((resume) => (
@@ -398,32 +417,6 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
           onExplore={onExplore}
           onClose={() => setOpenId(null)}
         />
-      )}
-      {adding && (
-        <Modal
-          onClose={() => setAdding(false)}
-          labelledBy="resume-add-title"
-          closeOnBackdrop={false}
-          closeOnEscape={!uploading}
-          className="w-full max-w-2xl p-6"
-        >
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <h2 id="resume-add-title" className="text-[17px] font-semibold text-gray-900">
-                {L.addTitle}
-              </h2>
-            </div>
-            {/* 읽는 동안 닫으면 결과를 볼 곳이 없어서, 닫기 버튼을 숨겨 둬요. */}
-            {!uploading && <CloseButton label={L.close} size="md" onClick={() => setAdding(false)} />}
-          </div>
-          <ResumeUploader
-            onWorking={setUploading}
-            onDone={(resume) => {
-              setAdding(false)
-              setOpenId(resume.id)
-            }}
-          />
-        </Modal>
       )}
     </main>
   )
