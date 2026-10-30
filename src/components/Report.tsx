@@ -25,7 +25,7 @@ import { pageFrame, PageHeader } from './AppPage'
 import { panelBody, SidePanel } from './Dialog'
 import { CheckMark, CompanyMark, Delta, FitBadge, KindLabel, Meter, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreHero, ScoreRing, Sparkline, Tip, percent } from './GapParts'
 import { DeleteReportDialog, removeReport } from './History'
-import { CheckIcon, ChevronRightIcon, ClockIcon, LevelIcon, RefreshIcon, TrashIcon } from './Icons'
+import { AlertIcon, CheckIcon, ChevronRightIcon, ClockIcon, LevelIcon, RefreshIcon, TrashIcon } from './Icons'
 import { ReviewTab } from './ReportReview'
 import { QuestionsTab } from './ReportQuestions'
 import { Bone } from './Skeleton'
@@ -44,6 +44,9 @@ const TEXT = messages({
     practice: '면접 연습',
     rerun: '재진단',
     rerunDone: '다시 진단하고 있어요.',
+    staleTitle: '이력서 업데이트를 감지했어요',
+    staleBody: '해당 공고를 현재의 이력서로 다시 검토해 볼까요?',
+    staleAction: '다시 진단하기',
     delete: '삭제',
     missing: '이 리포트를 찾을 수 없어요.',
     missingBody: '지웠거나 다른 기기에서 만든 리포트예요.',
@@ -99,6 +102,9 @@ const TEXT = messages({
     practice: 'Practice',
     rerun: 'Re-run',
     rerunDone: 'Running the diagnosis again.',
+    staleTitle: 'Your resume has changed',
+    staleBody: 'Review this posting again with your current resume?',
+    staleAction: 'Re-run',
     delete: 'Delete',
     missing: "Couldn't find this report.",
     missingBody: 'It may have been deleted or created on another device.',
@@ -559,6 +565,7 @@ function FitTab({ report, onPick }: { report: ReportData; onPick: (postingId: st
 export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
   const L = useMessages(TEXT)
   const report = useReport(id)
+  const resume = useResume()
   const posting = report ? postingOf(report.postingId) : null
   const company = report ? companyOf(report.companyId) : null
   const [gap, setGap] = useState<SkillGap | null>(null)
@@ -588,9 +595,9 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
     )
   }
 
-  async function rerun() {
+  async function rerun(from: 'button' | 'outdated' = 'button') {
     setRerunning(true)
-    track('report_rerun')
+    track('report_rerun', { from })
     const next = await rerunReport(id)
     setRerunning(false)
     if (!next) return
@@ -601,6 +608,8 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
   }
 
   const done = report.status === 'done'
+  // 이 리포트를 만든 서류와 지금 별을 누른 대표 이력서가 다르면, 대표 이력서로 다시 진단하자고 알려요.
+  const outdated = done && !!resume && report.resumeId !== resume.id
 
   return (
     <main className={pageFrame}>
@@ -645,6 +654,17 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
       />
 
       <div role="tabpanel" className="-mx-6 -mb-6 flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-5 md:-mx-10 md:px-10">
+        {outdated && (
+          <div role="status" className="mb-5 flex animate-rise flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl bg-brand-soft px-5 py-4">
+            <AlertIcon className="size-5 shrink-0 text-brand" />
+            <p className="min-w-0 flex-1 text-[13.5px] leading-relaxed text-gray-700">
+              <span className="font-semibold text-gray-900">{L.staleTitle}</span> {L.staleBody}
+            </p>
+            <button type="button" disabled={rerunning} onClick={() => void rerun('outdated')} className={primaryButton}>
+              {L.staleAction}
+            </button>
+          </div>
+        )}
         {!done ? (
           <>
             <ReportSkeleton />

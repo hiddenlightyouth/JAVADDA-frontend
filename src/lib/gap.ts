@@ -1346,12 +1346,12 @@ export function deleteReport(id: string) {
   setReports(reportsStore.get().filter((report) => report.id !== id))
 }
 
-/** 같은 공고를 다시 진단해요. 이력서를 고친 뒤에 써요. */
+/** 같은 공고를 지금의 대표 이력서로 다시 진단해요. 예전 리포트는 지우고 새 리포트를 돌려줘요. 대표 이력서가 없으면 그 리포트를 만든 서류로 해요. */
 export async function rerunReport(id: string): Promise<Report | null> {
   const report = reportOf(id)
   if (!report) return null
   deleteReport(id)
-  return createReport(report.postingId, report.resumeId)
+  return createReport(report.postingId, getResume()?.id ?? report.resumeId)
 }
 
 // ---------- 서류 검증 ----------

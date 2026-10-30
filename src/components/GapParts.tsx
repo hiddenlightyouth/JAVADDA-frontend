@@ -471,10 +471,10 @@ const BANDS = [
 export function ScoreHero({ score, label, meta, title, body }: { score: number; label: string; meta?: ReactNode; title: string; body: string }) {
   const L = useMessages(TEXT)
   return (
-    <section className="flex animate-rise flex-col gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-12">
+    <section className="flex animate-rise flex-col gap-6 rounded-2xl bg-gray-50 p-6 sm:flex-row sm:items-end sm:justify-between sm:gap-12">
       <div className="min-w-0 max-w-2xl">
-        {meta && <p className="text-[12.5px] text-gray-400">{meta}</p>}
-        <h2 className="mt-1.5 text-[22px] leading-snug font-semibold text-gray-900">{title}</h2>
+        {meta && <p className="mb-1.5 text-[12.5px] text-gray-500">{meta}</p>}
+        <h2 className="text-[22px] leading-snug font-semibold text-gray-900">{title}</h2>
         <p className="mt-2 text-[14.5px] leading-relaxed text-gray-600">{body}</p>
       </div>
       <div className="w-full shrink-0 sm:w-72">

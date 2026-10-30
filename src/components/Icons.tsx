@@ -320,3 +320,13 @@ export function BookIcon({ className = 'size-4', strokeWidth = 1.4, label }: Ico
     </Icon>
   )
 }
+
+/** 알려 줄 것이 있다는 동그라미 느낌표예요. */
+export function AlertIcon({ className = 'size-4 shrink-0', strokeWidth = 1.6, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <circle cx="8" cy="8" r="6" />
+      <path d="M8 5v3.5M8 11h.01" />
+    </Icon>
+  )
+}
