@@ -157,6 +157,9 @@ src/
 
 `.env.example`에 정리되어 있어요. `.env`는 절대 커밋하지 않아요. `.env.production`은 브라우저에 공개되는 값만 담아서 저장소에 포함해요.
 
+- 로컬 개발(`npm run dev`)은 로컬 백엔드를 써요. `.env.development`의 `VITE_API_BASE_URL`이 비어 있어서 요청이 `/api/v1`로 가고, `vite.config.ts`의 proxy가 `http://localhost:8080`(JAVADDA-server를 `./gradlew bootRun`으로 띄운 곳)으로 넘겨요. 같은 주소라 CORS 설정이 필요 없어요. 다른 서버를 보려면 커밋하지 않는 `.env.development.local`에 주소를 적어요.
+- 운영은 대기 중이에요. `.env.production`은 아직 예전 서버(api.whoisloafing.hidly.dev)를 가리켜서 진단 기능이 동작하지 않아요. 새 백엔드의 운영 주소가 정해지면 이 값과 백엔드의 `CORS_ALLOWED_ORIGINS`를 같이 바꾸고 배포해요. 그 전까지 운영 배포(`npm run build` 뒤 Workers 배포)는 하지 않아요. `npm run preview`와 `npm run worker:dev`도 운영 값으로 빌드해서 예전 서버를 봐요.
+
 ## 진단 자료와 계산 규칙
 
 계산과 생성은 서버가 맡고, 화면은 `src/lib/gap.ts`가 받아 온 값을 그려요. 화면에서 직접 계산하는 것은 적합도(`fitOf`)와 스킬 이름 정규화뿐이에요.

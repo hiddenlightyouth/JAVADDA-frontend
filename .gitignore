@@ -6,6 +6,7 @@ build
 .env.*
 !.env.example
 !.env.production
+!.env.development
 *.log
 .DS_Store
 .claude/settings.local.json
