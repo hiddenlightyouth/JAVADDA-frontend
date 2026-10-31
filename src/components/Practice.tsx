@@ -18,7 +18,7 @@ const TEXT = messages({
     back: '돌아가기',
     exit: '면접 나가기',
     exitTitle: '면접을 여기서 마칠까요?',
-    exitBody: '지금까지 답한 질문만 채점해서 결과를 보여줘요. 답변은 기록에 남아요.',
+    exitBody: '지금까지 답변한 질문은 안전하게 저장돼요.',
     stay: '계속하기',
     leave: '여기까지 평가받기',
     progress: (current: number, total: number) => `${current} / ${total}`,
@@ -71,7 +71,7 @@ const TEXT = messages({
     back: 'Go back',
     exit: 'Leave interview',
     exitTitle: 'End the interview here?',
-    exitBody: "We'll grade only the questions you answered and show the results. Your answers are saved.",
+    exitBody: 'Your answers so far are saved safely.',
     stay: 'Keep going',
     leave: 'Get feedback so far',
     progress: (current: number, total: number) => `${current} / ${total}`,
@@ -374,7 +374,12 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     body = <LoadProgress percent={reportLoad.percent} className={loadCenter} />
   } else if (questions === undefined || !current) {
     // AI가 질문을 만드는 동안이에요. 이미 만들어 둔 질문이면 금방 지나가요.
-    body = <AiProgress progress={loadProgress.progress} stage={loadProgress.stage} className="mx-auto mt-[18vh] w-full max-w-md" />
+    // 시작 화면처럼 위의 나가기 줄 높이만큼 아래를 비워서, 화면 전체의 가운데에 오게 해요.
+    body = (
+      <div className="flex min-h-full items-center justify-center pb-16">
+        <AiProgress progress={loadProgress.progress} stage={loadProgress.stage} className="w-full max-w-md" />
+      </div>
+    )
   } else if (phase === 'intro') {
     body = (
       // 위의 나가기 줄 높이만큼 아래를 비워서, 화면 전체의 가운데에 오게 해요.
@@ -431,6 +436,16 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
           )}
         </div>
 
+        {/* 마이크 사용 중은 버튼 줄 바로 위 가운데에 한 줄로 둬요. 버튼 사이에 끼면 어중간해 보여요. */}
+        {phase === 'answering' && !typing && dictation.listening && (
+          <p className="mb-3 flex items-center justify-center gap-2 text-[13px] text-[#fff]/55">
+            <span className="relative flex size-2.5">
+              <span className="absolute inset-0 rounded-full bg-red-500 motion-safe:animate-ping" />
+              <span className="relative size-2.5 rounded-full bg-red-500" />
+            </span>
+            {L.silenceNote}
+          </p>
+        )}
         <div className="flex min-h-14 flex-wrap items-center justify-center gap-3 pb-2">
           {phase === 'asking' && canSpeak() && (
             <button type="button" onClick={() => voice.stop()} className={darkButton}>
@@ -439,15 +454,6 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
           )}
           {phase === 'answering' && (
             <>
-              {!typing && dictation.listening && (
-                <span className="mr-2 flex items-center gap-2 text-[13px] text-[#fff]/55">
-                  <span className="relative flex size-2.5">
-                    <span className="absolute inset-0 rounded-full bg-red-500 motion-safe:animate-ping" />
-                    <span className="relative size-2.5 rounded-full bg-red-500" />
-                  </span>
-                  {L.silenceNote}
-                </span>
-              )}
               {canSpeak() && (
                 <button type="button" onClick={() => void ask(index, true)} className={darkButton}>
                   {L.replay}
