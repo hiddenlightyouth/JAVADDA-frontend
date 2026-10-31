@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { track } from '../lib/analytics'
 import { careerName, companyOf, daysLeft, familyName, postingOf, startDiagnosis, useResume } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
-import { pageFrame, PageHeader } from './AppPage'
-import { CompanyMark, Failed, Notice, SkillChip } from './GapParts'
+import { pageFrame, PageHeader, scrollBody } from './AppPage'
+import { CompanyMark, Failed, Notice, Panel, SkillChip } from './GapParts'
 import { ResumeUploader } from './MyResume'
 import { PostingBrowser, SplitView } from './PostingBrowser'
 import { label, toolButton } from './ui'
@@ -116,9 +116,9 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
             </button>
           }
         />
-        <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:-mx-10 md:px-10">
+        <div className={scrollBody}>
           <div className="mx-auto w-full max-w-2xl animate-rise space-y-8">
-            <section className="rounded-2xl bg-gray-50 p-5">
+            <Panel>
               <p className="text-[13px] text-gray-500">
                 {posting.location}, {familyName(posting.family)}, {careerName(posting.career)}, {left !== null ? L.deadline(left) : L.always}
               </p>
@@ -135,7 +135,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
                   </div>
                 ))}
               </div>
-            </section>
+            </Panel>
 
             <section>
               <h2 className="text-[15px] font-semibold text-gray-900">{L.upload}</h2>

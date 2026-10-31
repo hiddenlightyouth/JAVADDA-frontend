@@ -3,9 +3,8 @@ import { track } from '../lib/analytics'
 import { addDays, dayLabel, daysBetween, fetchAiCall, fetchAiCalls, fetchAiUsage, monthLabel, seoulToday, type AiCall, type AiCallDetail, type AiUsageRow } from '../lib/admin'
 import { formatDateTime } from '../lib/format'
 import { showToast } from '../lib/toast'
-import { BarChart, card, compact, Empty, Failed, full, MoreButton, TableLoading, sectionTitle, share, Stat, tableWrap, td, th, usePaged, type Bar } from './AdminParts'
+import { BarChart, card, cardTitle, compact, Empty, Failed, full, InfoGrid, openableRow, PagedTable, PanelContent, sectionTitle, share, Stat, td, th, useAdminData, usePaged, type Bar } from './AdminParts'
 import { ghostButton, loadCenter, LoadProgress, Segmented, tag } from './ui'
-import { useLoadHold, useLoadProgress } from '../lib/load'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { SidePanel } from './Dialog'
 
@@ -150,32 +149,14 @@ function groupBy(rows: AiUsageRow[], key: (row: AiUsageRow) => string): Group[] 
   return [...groups.values()].sort((a, b) => b.totalTokens - a.totalTokens || b.calls - a.calls)
 }
 
-type Loaded = 'loading' | { rows: AiUsageRow[] } | { error: string }
 
 /** 관리자 화면의 AI 사용량 탭이에요. calls가 false면 서버에 호출 기록 API가 없어서 합계만 보여줘요. */
 export function AdminUsage({ calls }: { calls: boolean }) {
   const L = useMessages(TEXT)
   const [period, setPeriod] = useState<Period>(30)
   const [metric, setMetric] = useState<Metric>('tokens')
-  const [loaded, setLoaded] = useState<Loaded>('loading')
-  const [attempt, setAttempt] = useState(0)
-  const load = useLoadProgress()
-  const waiting = useLoadHold(loaded === 'loading')
-
-  useEffect(() => {
-    let stale = false
-    setLoaded('loading')
-    const from = period === 'all' ? EARLIEST : addDays(seoulToday(), -(period - 1))
-    void fetchAiUsage(from, load.one()).then((result) => {
-      if (stale) return
-      setLoaded(result.ok ? { rows: result.data } : { error: result.message })
-    })
-    return () => {
-      stale = true
-    }
-  }, [period, attempt, load.one])
-
-  const rows = typeof loaded === 'object' && 'rows' in loaded ? loaded.rows : null
+  const state = useAdminData<AiUsageRow[]>((onLoad) => fetchAiUsage(period === 'all' ? EARLIEST : addDays(seoulToday(), -(period - 1)), onLoad), period)
+  const rows = state.data
 
   const summary = useMemo(() => {
     if (!rows) return null
@@ -231,10 +212,10 @@ export function AdminUsage({ calls }: { calls: boolean }) {
         />
       </div>
 
-      {waiting || loaded === 'loading' ? (
-        <LoadProgress percent={load.percent} className={loadCenter} />
+      {state.waiting || (!summary && !state.error) ? (
+        <LoadProgress percent={state.percent} className={loadCenter} />
       ) : !summary ? (
-        <Failed message={'error' in loaded ? loaded.error : ''} onRetry={() => setAttempt((value) => value + 1)} />
+        <Failed message={state.error} onRetry={state.reload} />
       ) : (
         <>
           <dl className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -250,7 +231,7 @@ export function AdminUsage({ calls }: { calls: boolean }) {
             <>
               <section className={`${card} mt-3`}>
                 <div className="flex items-center justify-between gap-4">
-                  <h3 className="text-[13.5px] font-semibold text-gray-900">{summary.monthly ? L.monthly : L.daily}</h3>
+                  <h3 className={cardTitle}>{summary.monthly ? L.monthly : L.daily}</h3>
                   <Segmented label={L.metric} options={L.metrics} value={metric} onChange={setMetric} />
                 </div>
                 <BarChart
@@ -279,7 +260,7 @@ function Breakdown({ title, groups, mono = false }: { title: string; groups: Gro
   const L = useMessages(TEXT)
   return (
     <section className={card}>
-      <h3 className="text-[13.5px] font-semibold text-gray-900">{title}</h3>
+      <h3 className={cardTitle}>{title}</h3>
       <table className="mt-2 w-full text-[13px] tabular-nums">
         <thead>
           <tr className="text-left text-[12px] text-gray-400">
@@ -325,66 +306,57 @@ function Calls() {
         <Segmented label={L.callKind} options={L.callFilters} value={filter} onChange={setFilter} />
       </div>
 
-      {list.waiting ? (
-        <TableLoading percent={list.percent} />
-      ) : list.items === null ? (
-        <Failed message={list.error} onRetry={list.retry} />
-      ) : list.items.length === 0 ? (
-        <Empty>{filter === 'failed' ? L.noFailed : L.noCalls}</Empty>
-      ) : (
-        <>
-          <div className={tableWrap}>
-            <table className="w-full min-w-[720px] text-[13px] text-gray-700 tabular-nums">
-              <thead>
-                <tr>
-                  <th className={th}>{L.when}</th>
-                  <th className={th}>{L.purpose}</th>
-                  <th className={th}>{L.content}</th>
-                  <th className={th}>{L.model}</th>
-                  <th className={`${th} text-right`}>{L.tokens}</th>
-                  <th className={`${th} text-right`}>{L.duration}</th>
-                  <th className={th}>{L.result}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.items.map((call) => (
-                  <tr
-                    key={call.id}
-                    tabIndex={0}
-                    aria-label={L.detail(purposeLabel(call.purpose))}
-                    onClick={() => {
-                      track('admin_call_open', { status: call.status })
-                      setOpenId(call.id)
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') setOpenId(call.id)
-                    }}
-                    className={`cursor-pointer border-t border-gray-100 transition-colors hover:bg-gray-50 ${openId === call.id ? 'bg-gray-50' : ''}`}
-                  >
-                    <td className={`${td} whitespace-nowrap text-gray-500`}>{formatDateTime(call.createdAt)}</td>
-                    <td className={`${td} whitespace-nowrap`}>{purposeLabel(call.purpose)}</td>
-                    <td className={`${td} max-w-[260px]`}>
-                      <p className="truncate text-gray-900" title={call.label ?? undefined}>
-                        {call.label ?? ''}
-                      </p>
-                      {call.error && (
-                        <p className="mt-0.5 truncate text-[12px] text-red-500" title={call.error}>
-                          {call.error}
-                        </p>
-                      )}
-                    </td>
-                    <td className={`${td} font-mono text-[12.5px] tracking-normal whitespace-nowrap`}>{call.model}</td>
-                    <td className={`${td} text-right`}>{call.totalTokens === null ? '' : full(call.totalTokens)}</td>
-                    <td className={`${td} text-right`}>{seconds(call.durationMs)}</td>
-                    <td className={td}>{call.status === 'OK' ? <span className={tag}>{L.ok}</span> : <span className={`${tag} text-red-500`}>{L.failed}</span>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {list.hasNext && <MoreButton loading={list.loadingMore} percent={list.percent} onClick={() => void list.more()} />}
-        </>
-      )}
+      <PagedTable
+        list={list}
+        empty={filter === 'failed' ? L.noFailed : L.noCalls}
+        minWidth="min-w-[720px]"
+        head={
+          <>
+            <th className={th}>{L.when}</th>
+            <th className={th}>{L.purpose}</th>
+            <th className={th}>{L.content}</th>
+            <th className={th}>{L.model}</th>
+            <th className={`${th} text-right`}>{L.tokens}</th>
+            <th className={`${th} text-right`}>{L.duration}</th>
+            <th className={th}>{L.result}</th>
+          </>
+        }
+      >
+        {(call) => (
+          <tr
+            key={call.id}
+            tabIndex={0}
+            aria-label={L.detail(purposeLabel(call.purpose))}
+            onClick={() => {
+              track('admin_call_open', { status: call.status })
+              setOpenId(call.id)
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') setOpenId(call.id)
+            }}
+            className={openableRow(openId === call.id)}
+          >
+            <td className={`${td} whitespace-nowrap text-gray-500`}>{formatDateTime(call.createdAt)}</td>
+            <td className={`${td} whitespace-nowrap`}>{purposeLabel(call.purpose)}</td>
+            <td className={`${td} max-w-[260px]`}>
+              <p className="truncate text-gray-900" title={call.label ?? undefined}>
+                {call.label ?? ''}
+              </p>
+              {call.error && (
+                <p className="mt-0.5 truncate text-[12px] text-red-500" title={call.error}>
+                  {call.error}
+                </p>
+              )}
+            </td>
+            <td className={`${td} font-mono text-[12.5px] tracking-normal whitespace-nowrap`}>{call.model}</td>
+            <td className={`${td} text-right`}>{call.totalTokens === null ? '' : full(call.totalTokens)}</td>
+            <td className={`${td} text-right`}>{seconds(call.durationMs)}</td>
+            <td className={td}>
+              <StatusTag ok={call.status === 'OK'} />
+            </td>
+          </tr>
+        )}
+      </PagedTable>
 
       {openId !== null && <CallPanel key={openId} id={openId} onClose={close} />}
     </>
@@ -402,10 +374,26 @@ function pretty(text: string): string {
   }
 }
 
+/** 프롬프트, 응답, 오류의 원문을 담는 회색 칸이에요. 높이는 덧붙여서 정해요. */
+const rawText = 'mt-2 overflow-auto rounded-lg bg-gray-50 p-3 font-mono text-[12.5px] leading-[20px] tracking-normal break-words whitespace-pre-wrap text-gray-700'
+
+/** 호출이 성공했는지의 이름표예요. 실패만 빨간 글자예요. */
+function StatusTag({ ok }: { ok: boolean }) {
+  const L = useMessages(TEXT)
+  return ok ? <span className={tag}>{L.ok}</span> : <span className={`${tag} text-red-500`}>{L.failed}</span>
+}
+
 /** 프롬프트나 응답 한 덩어리를 원문 그대로 보여주는 칸이에요. */
 function Passage({ title, note, text, empty }: { title: string; note?: string; text: string | null; empty: string }) {
   const L = useMessages(TEXT)
   const [copied, setCopied] = useState(false)
+
+  // 복사했다는 표시는 2초 뒤에 지워요. 그 전에 칸이 닫히면 타이머도 같이 멈춰요.
+  useEffect(() => {
+    if (!copied) return
+    const timer = window.setTimeout(() => setCopied(false), 2000)
+    return () => window.clearTimeout(timer)
+  }, [copied])
 
   async function copy() {
     if (!text) return
@@ -419,13 +407,12 @@ function Passage({ title, note, text, empty }: { title: string; note?: string; t
       return
     }
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
   }
 
   return (
     <section className="mt-6">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="flex min-w-0 items-baseline gap-2 text-[13.5px] font-semibold text-gray-900">
+        <h3 className={`flex min-w-0 items-baseline gap-2 ${cardTitle}`}>
           {title}
           {note && <span className="truncate text-[12px] font-normal text-gray-400 tabular-nums">{note}</span>}
         </h3>
@@ -435,11 +422,7 @@ function Passage({ title, note, text, empty }: { title: string; note?: string; t
           </button>
         )}
       </div>
-      {text ? (
-        <pre className="mt-2 max-h-[55dvh] overflow-auto rounded-lg bg-gray-50 p-3 font-mono text-[12.5px] leading-[20px] tracking-normal break-words whitespace-pre-wrap text-gray-700">{text}</pre>
-      ) : (
-        <p className="mt-2 text-[13px] text-gray-500">{empty}</p>
-      )}
+      {text ? <pre className={`max-h-[55dvh] ${rawText}`}>{text}</pre> : <p className="mt-2 text-[13px] text-gray-500">{empty}</p>}
     </section>
   )
 }
@@ -447,63 +430,35 @@ function Passage({ title, note, text, empty }: { title: string; note?: string; t
 /** AI 호출 하나를 오른쪽에서 열어 보는 칸이에요. 넣은 것을 시스템과 사용자로 나눠서, 받은 것을 그 아래에 보여줘요. */
 function CallPanel({ id, onClose }: { id: number; onClose: () => void }) {
   const L = useMessages(TEXT)
-  const [call, setCall] = useState<AiCallDetail | null>(null)
-  const [error, setError] = useState('')
-  const [attempt, setAttempt] = useState(0)
-  const load = useLoadProgress()
-  const waiting = useLoadHold(!call && !error)
-
-  useEffect(() => {
-    let stale = false
-    void fetchAiCall(id, load.one()).then((result) => {
-      if (stale) return
-      if (result.ok) {
-        setError('')
-        setCall(result.data)
-      } else setError(result.message)
-    })
-    return () => {
-      stale = true
-    }
-  }, [id, attempt, load.one])
+  const state = useAdminData<AiCallDetail>((onLoad) => fetchAiCall(id, onLoad), id)
 
   // 바깥을 누르거나 Esc를 누르면 닫는 것은 SidePanel이 맡아요.
   return (
-    <>
-      <SidePanel label={L.panel} closeLabel={L.close} onClose={onClose} className="max-w-[640px]">
-        {waiting || (!call && !error) ? (
-          <div className="px-6">
-            <LoadProgress percent={load.percent} className={loadCenter} />
-          </div>
-        ) : !call ? (
-          <Failed message={error} onRetry={() => setAttempt((value) => value + 1)} />
-        ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8">
+    <SidePanel label={L.panel} closeLabel={L.close} onClose={onClose} className="max-w-[640px]">
+      <PanelContent state={state}>
+        {(call) => (
+          <>
             <h2 className="text-[20px] leading-tight font-semibold break-keep text-gray-900 [overflow-wrap:anywhere]">{call.label || purposeLabel(call.purpose)}</h2>
             <div className="mt-3 flex flex-wrap gap-1">
               <span className={tag}>{purposeLabel(call.purpose)}</span>
               <span className={`${tag} font-mono tracking-normal`}>{call.model}</span>
-              {call.status === 'OK' ? <span className={tag}>{L.ok}</span> : <span className={`${tag} text-red-500`}>{L.failed}</span>}
+              <StatusTag ok={call.status === 'OK'} />
             </div>
 
-            <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-[13px] sm:grid-cols-4">
-              {[
+            <InfoGrid
+              wide
+              rows={[
                 [L.calledAt, formatDateTime(call.createdAt)],
                 [L.duration, seconds(call.durationMs)],
                 [L.inputTokens, call.inputTokens === null ? L.unknown : full(call.inputTokens)],
                 [L.outputTokens, call.outputTokens === null ? L.unknown : full(call.outputTokens)],
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <dt className="text-[12px] text-gray-400">{label}</dt>
-                  <dd className="mt-0.5 text-gray-900 tabular-nums">{value}</dd>
-                </div>
-              ))}
-            </dl>
+              ]}
+            />
 
             {call.error && (
               <section className="mt-6">
                 <h3 className="text-[13.5px] font-semibold text-red-500">{L.error}</h3>
-                <pre className="mt-2 max-h-40 overflow-auto rounded-lg bg-gray-50 p-3 font-mono text-[12.5px] leading-[20px] tracking-normal break-words whitespace-pre-wrap text-gray-700">{call.error}</pre>
+                <pre className={`max-h-40 ${rawText}`}>{call.error}</pre>
               </section>
             )}
 
@@ -515,9 +470,9 @@ function CallPanel({ id, onClose }: { id: number; onClose: () => void }) {
               text={call.response ? pretty(call.response) : null}
               empty={L.noResponse}
             />
-          </div>
+          </>
         )}
-      </SidePanel>
-    </>
+      </PanelContent>
+    </SidePanel>
   )
 }

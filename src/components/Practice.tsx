@@ -8,7 +8,8 @@ import { canDictate, canSpeak, chime, joinSpeech, prefetchVoice, unlockChime, us
 import { showToast } from '../lib/toast'
 import { AiProgress, CompanyMark, Notice, ScoreRing } from './GapParts'
 import { CloseIcon, MicIcon } from './Icons'
-import { Bullets, label, loadCenter, LoadProgress } from './ui'
+import { FeedbackSections } from './ReportParts'
+import { label, loadCenter, LoadProgress } from './ui'
 
 const TEXT = messages({
   ko: {
@@ -55,9 +56,6 @@ const TEXT = messages({
     gradeFailed: '채점하지 못했어요',
     skipped: '답변하지 않음',
     myAnswer: '내 답변',
-    good: '좋았어요',
-    improve: '보완할 점',
-    rephrase: '이렇게 말해 보세요',
     followUp: '꼬리 질문',
     again: '다시 연습하기',
     toReport: '리포트로 돌아가기',
@@ -106,9 +104,6 @@ const TEXT = messages({
     gradeFailed: "Couldn't grade this one",
     skipped: 'Not answered',
     myAnswer: 'Your answer',
-    good: 'What worked',
-    improve: 'What to improve',
-    rephrase: 'Try saying it like this',
     followUp: 'Follow-up',
     again: 'Practice again',
     toReport: 'Back to the report',
@@ -470,7 +465,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
                 type="button"
                 disabled={!shown.trim()}
                 onClick={() => complete()}
-                className="h-11 rounded-full bg-[#fff] px-6 text-[14px] font-semibold text-[#000] transition-opacity hover:opacity-90 disabled:opacity-30"
+                className={lightButton}
               >
                 {L.done}
               </button>
@@ -544,7 +539,10 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   )
 }
 
+/** 검은 화면의 보조 버튼이에요. 옅은 흰 바탕이에요. */
 const darkButton = 'h-11 rounded-full bg-[#fff]/10 px-5 text-[14px] font-medium text-white transition-colors hover:bg-[#fff]/20'
+/** 검은 화면의 주 버튼이에요. 흰 바탕에 검은 글자예요. */
+const lightButton = 'h-11 rounded-full bg-[#fff] px-6 text-[14px] font-semibold text-[#000] transition-opacity hover:opacity-90 disabled:opacity-30'
 
 /**
  * 면접관이 읽는 질문이에요. 노래방 자막처럼 읽은 만큼 낱말이 왼쪽부터 밝아져요.
@@ -595,7 +593,7 @@ function Summary({ answers, single, onAgain, onBack }: { answers: Answer[]; sing
           <button type="button" onClick={onAgain} className={darkButton}>
             {single ? L.answerAgain : L.again}
           </button>
-          <button type="button" onClick={onBack} className="h-11 rounded-full bg-[#fff] px-6 text-[14px] font-semibold text-[#000] transition-opacity hover:opacity-90">
+          <button type="button" onClick={onBack} className={lightButton}>
             {L.toReport}
           </button>
         </div>
@@ -628,18 +626,7 @@ function Summary({ answers, single, onAgain, onBack }: { answers: Answer[]; sing
             {item.feedback === 'skipped' && <p className="mt-4 text-[13px] text-[#fff]/45">{L.skipped}</p>}
             {typeof item.feedback === 'object' && (
               <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <section>
-                  <h3 className={label}>{L.good}</h3>
-                  <Bullets items={item.feedback.good} brand className="mt-1" />
-                </section>
-                <section>
-                  <h3 className={label}>{L.improve}</h3>
-                  <Bullets items={item.feedback.improve} className="mt-1" />
-                </section>
-                <section>
-                  <h3 className={label}>{L.rephrase}</h3>
-                  <Bullets items={item.feedback.rephrase} className="mt-1" />
-                </section>
+                <FeedbackSections feedback={item.feedback} />
                 <section>
                   <h3 className={label}>{L.followUp}</h3>
                   <p className="mt-1 text-[13.5px] leading-relaxed text-[#fff]/70">{item.feedback.followUp}</p>

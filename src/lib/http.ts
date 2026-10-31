@@ -43,14 +43,14 @@ export async function readResult<T>(res: Response): Promise<ApiResult<T>> {
 }
 
 /** 받은 바이트(loaded)와 전체 바이트(total)를 알려요. 전체를 모르면 total은 null이에요. */
-export type OnBytes = (loaded: number, total: number | null) => void
+type OnBytes = (loaded: number, total: number | null) => void
 
 /**
  * readResult와 같은 결과를 돌려주면서, 본문을 조금씩 읽어 받은 바이트를 알려요. 전체는 서버가 붙여 주는 Content-Length예요.
  * Content-Length가 없거나 본문을 조금씩 읽을 수 없으면 readResult로 한 번에 읽고, 다 읽은 뒤에 끝났다고 한 번 알려요(loaded와 total이 같아요).
  * 압축해서 보내면 받은 바이트가 Content-Length보다 커질 수 있어서 total을 넘지 않게 잘라요.
  */
-export async function readJsonWithProgress<T>(res: Response, onBytes?: OnBytes): Promise<ApiResult<T>> {
+async function readJsonWithProgress<T>(res: Response, onBytes?: OnBytes): Promise<ApiResult<T>> {
   const header = res.headers.get('Content-Length')
   const total = header !== null && /^\d+$/.test(header.trim()) ? Number(header) : null
   if (!onBytes || !total || !res.body || typeof TextDecoder === 'undefined') {

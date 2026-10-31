@@ -25,7 +25,7 @@ export interface Place {
 const place = (id: string, name: string, region: RegionId, lon: number, lat: number, keys: string[], within?: string): Place => ({ id, name, region, lon, lat, keys, within })
 
 // 앞에 있는 것부터 찾아요. 넓은 자리(서울, 경기, 권역 이름)는 동네가 하나도 맞지 않을 때 쓰는 자리예요.
-export const PLACES: Place[] = [
+const PLACES: Place[] = [
   place('gangnam', '강남', 'capital', 127.0473, 37.5172, ['강남', '역삼', '삼성동', '선릉'], 'seoul'),
   place('seocho', '서초', 'capital', 127.0324, 37.4837, ['서초', '양재'], 'seoul'),
   place('songpa', '송파', 'capital', 127.1059, 37.5145, ['송파', '잠실', '문정'], 'seoul'),

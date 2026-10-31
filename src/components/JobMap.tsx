@@ -1,18 +1,18 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
-import { companyOf, daysLeft, fetchPostings, officeOf, fitOf, useReports, useResume, type Company, type JobPosting } from '../lib/gap'
+import { companyOf, daysLeft, officeOf, fitOf, useResume, type Company, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
-import { useLoadHold, useLoadProgress } from '../lib/load'
 import { naverMapEnabled } from '../lib/naverMap'
 import { isBroad, kmBetween, placesOf, REGIONS, type Place, type RegionId } from '../lib/regions'
-import { PageHeader } from './AppPage'
-import { CompanyMark, Failed, FitTag, PostingMeta, usePickConfirm } from './GapParts'
-import { CloseButton, CrosshairIcon } from './Icons'
-import { DeadlineTag } from './JobCard'
-import { NaverJobMap } from './NaverJobMap'
 import { showToast } from '../lib/toast'
+import { PageHeader } from './AppPage'
+import { CompanyMark, DeadlineTag, DiagnosedTag, FitTag, usePickConfirm } from './GapParts'
+import { CloseButton, CrosshairIcon } from './Icons'
+import { PickRow } from './JobCard'
 import { boxAround, KoreaMap, pinKey, regionBox, type MapBox, type MapPin, type PinGroup } from './KoreaMap'
-import { Badge, loadCenter, LoadProgress, toolButton, useShowMore } from './ui'
+import { NaverJobMap } from './NaverJobMap'
+import { LoadGate, usePostings } from './ScreenParts'
+import { toolButton, useShowMore } from './ui'
 
 /**
  * 채용 지도예요. 화면을 나누지 않고 지도만 크게 띄워요. 네이버 지도 키가 있으면 네이버 지도(`NaverJobMap`), 없으면 SVG 지도(`KoreaMap`)예요. 공고의 근무지를 권역(수도권, 강원권, 충청권, 전라권, 경상권, 제주권)으로 묶어 지도에 놓아요.
@@ -36,7 +36,6 @@ const TEXT = messages({
     close: '닫기',
     pin: (place: string, count: number, companies: string) => `${place}, 공고 ${count}개, ${companies}`,
     empty: '이 조건에 맞는 공고가 없어요.',
-    diagnosed: '진단함',
     locate: '내 위치',
     pinTitle: (name: string, rest: number) => (rest > 0 ? `${name} 외 ${rest}곳` : name),
     locating: '위치 찾는 중',
@@ -54,7 +53,6 @@ const TEXT = messages({
     close: 'Close',
     pin: (place: string, count: number, companies: string) => `${place}, ${count} postings, ${companies}`,
     empty: 'No postings match these filters.',
-    diagnosed: 'Diagnosed',
     locate: 'My location',
     pinTitle: (name: string, rest: number) => (rest > 0 ? `${name} +${rest}` : name),
     locating: 'Locating',
@@ -64,8 +62,6 @@ const TEXT = messages({
     distance: (text: string) => `${text} away`,
   },
 })
-
-type Loaded = JobPosting[] | 'failed'
 
 type Spot = { lon: number; lat: number }
 
@@ -84,7 +80,6 @@ const distanceText = (km: number) => (km < 1 ? `${Math.max(10, Math.round((km * 
 export function JobMap({ onPick }: { onPick: (postingId: string) => void }) {
   const L = useMessages(TEXT)
   const resume = useResume()
-  const reports = useReports()
   const [company, setCompany] = useState<string | null>(null)
   /** 내 위치예요. "내 위치"를 눌러 브라우저에 물어본 뒤에만 있어요. */
   const [me, setMe] = useState<Spot | null>(null)
@@ -92,38 +87,20 @@ export function JobMap({ onPick }: { onPick: (postingId: string) => void }) {
   const [selection, setSelection] = useState<Selection | null>(null)
   /** 지도가 가운데에 꽉 차게 보여줄 칸이에요. 권역을 고르면 그 권역, 전국 보기면 없어요. */
   const [target, setTarget] = useState<MapBox | null>(null)
-  const [loaded, setLoaded] = useState<Loaded | undefined>(undefined)
-  const [attempt, setAttempt] = useState(0)
-  const load = useLoadProgress()
-
-  useEffect(() => {
-    let stale = false
-    setLoaded(undefined)
-    void fetchPostings({}, load.one()).then(
-      (list) => {
-        if (!stale) setLoaded(list)
-      },
-      () => {
-        if (!stale) setLoaded('failed')
-      },
-    )
-    return () => {
-      stale = true
-    }
-  }, [attempt, load.one])
-  const waiting = useLoadHold(loaded === undefined)
-
-  const diagnosed = useMemo(() => new Set(reports.map((report) => report.postingId)), [reports])
+  const { loaded, postings, waiting, percent, retry } = usePostings()
 
   // 공고마다 근무지를 찾아 둬요. 근무지를 하나도 모르면 지역 무관이에요.
-  const located = useMemo(() => (Array.isArray(loaded) ? loaded.map((posting) => ({ posting, places: placesOf(posting.location) })) : []), [loaded])
+  const located = useMemo(() => (postings ?? []).map((posting) => ({ posting, places: placesOf(posting.location) })), [postings])
 
-  const counts = useMemo(() => {
+  const { counts, anywhereCount } = useMemo(() => {
     const counts = Object.fromEntries(REGIONS.map((id) => [id, 0])) as Record<RegionId, number>
-    for (const { places } of located) for (const id of new Set(places.map((item) => item.region))) counts[id] += 1
-    return counts
+    let anywhereCount = 0
+    for (const { places } of located) {
+      if (places.length === 0) anywhereCount += 1
+      for (const id of new Set(places.map((item) => item.region))) counts[id] += 1
+    }
+    return { counts, anywhereCount }
   }, [located])
-  const anywhereCount = located.filter((item) => item.places.length === 0).length
 
   // 기업이 한 자리에 낸 공고마다 로고 핀을 하나씩 만들어요. 기업을 골랐으면 그 기업의 핀만이에요. 핀은 `spotOf`의 자리에 꽂아서, 확대하면 본사를 아는 기업은 실제 위치에 있어요.
   const pins = useMemo<MapPin[]>(() => {
@@ -143,12 +120,9 @@ export function JobMap({ onPick }: { onPick: (postingId: string) => void }) {
   // 고른 권역이나 핀의 공고예요.
   const selected = useMemo(() => {
     if (!selection) return []
+    const inPin = selection.kind === 'pin' ? new Set(selection.pin.postings) : null
     const match = ({ posting, places }: { posting: JobPosting; places: Place[] }) =>
-      selection.kind === 'anywhere'
-        ? places.length === 0
-        : selection.kind === 'region'
-          ? places.some((item) => item.region === selection.region)
-          : selection.pin.postings.includes(posting.id)
+      selection.kind === 'anywhere' ? places.length === 0 : selection.kind === 'region' ? places.some((item) => item.region === selection.region) : inPin!.has(posting.id)
     return located.filter(match).map(({ posting }) => posting)
   }, [located, selection])
 
@@ -164,7 +138,11 @@ export function JobMap({ onPick }: { onPick: (postingId: string) => void }) {
   // 칸의 공고예요. 기업을 골랐으면 그 기업 것만이에요. 내 위치를 켰으면 가까운 순서, 아니면 이력서가 있을 때 적합도순, 없으면 최근에 올라온 순서예요.
   const list = useMemo(() => {
     const picked = selected.filter((posting) => !company || posting.companyId === company)
-    if (me) return picked.sort((a, b) => (distanceOf(a) ?? Infinity) - (distanceOf(b) ?? Infinity))
+    if (me) {
+      // 거리는 공고마다 한 번만 재요. 정렬하면서 비교할 때마다 다시 재지 않아요.
+      const distances = new Map(picked.map((posting) => [posting.id, distanceOf(posting) ?? Infinity]))
+      return picked.sort((a, b) => distances.get(a.id)! - distances.get(b.id)!)
+    }
     return resume ? picked.sort((a, b) => (fitOf(b, resume) ?? 0) - (fitOf(a, resume) ?? 0)) : picked.sort((a, b) => b.postedAt.localeCompare(a.postedAt))
   }, [selected, company, resume, me, distanceOf])
   // 공고가 많아도 버벅이지 않게 칸의 목록은 조금씩 그려요. 자리나 기업을 바꾸면 처음부터예요.
@@ -250,16 +228,16 @@ export function JobMap({ onPick }: { onPick: (postingId: string) => void }) {
   const overlay = (
     <>
       {target && (
-        <button type="button" onClick={whole} className={`${toolButton} bg-white`}>
+        <button type="button" onClick={whole} className={toolButton}>
           {L.whole}
         </button>
       )}
-      <button type="button" onClick={locate} disabled={locating} aria-pressed={Boolean(me)} className={`${toolButton} gap-1.5 bg-white aria-pressed:border-brand aria-pressed:text-brand-hover`}>
+      <button type="button" onClick={locate} disabled={locating} aria-pressed={Boolean(me)} className={`${toolButton} gap-1.5 aria-pressed:border-brand aria-pressed:text-brand-hover`}>
         <CrosshairIcon className="size-4" />
         {locating ? L.locating : L.locate}
       </button>
       {anywhereCount > 0 && (
-        <button type="button" aria-pressed={selection?.kind === 'anywhere'} onClick={chooseAnywhere} className={`${toolButton} bg-white aria-pressed:border-brand aria-pressed:text-brand-hover`}>
+        <button type="button" aria-pressed={selection?.kind === 'anywhere'} onClick={chooseAnywhere} className={`${toolButton} aria-pressed:border-brand aria-pressed:text-brand-hover`}>
           {L.regionCount(L.anywhere, anywhereCount)}
         </button>
       )}
@@ -275,80 +253,78 @@ export function JobMap({ onPick }: { onPick: (postingId: string) => void }) {
         <PageHeader title={L.title} />
       </div>
       <div className="min-h-0 flex-1 px-6 pt-4 pb-6 md:px-10 md:pb-8">
-        {waiting || loaded === undefined ? (
-          <LoadProgress percent={load.percent} className={loadCenter} />
-        ) : loaded === 'failed' ? (
-          <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
-        ) : (
-          <div className="relative size-full min-h-[420px] overflow-hidden rounded-2xl bg-gray-50">
-            {useNaver ? (
-              <>
-                <NaverJobMap
+        <LoadGate waiting={waiting} failed={loaded === 'failed'} percent={percent} onRetry={retry}>
+          {() => (
+            <div className="relative size-full min-h-[420px] overflow-hidden rounded-2xl bg-gray-50">
+              {useNaver ? (
+                <>
+                  <NaverJobMap
+                    target={target}
+                    padRight={selection ? PANEL_WIDTH : 0}
+                    counts={counts}
+                    regionLabel={regionText}
+                    onRegion={chooseRegion}
+                    pins={pins}
+                    activePin={activePin}
+                    pinLabel={pinText}
+                    onPin={choosePin}
+                    onFail={() => setNaverFailed(true)}
+                    me={me}
+                    className="size-full"
+                  />
+                  <div className="absolute top-3 left-3 flex flex-wrap gap-2">{overlay}</div>
+                </>
+              ) : (
+                <KoreaMap
+                  interactive
                   target={target}
                   padRight={selection ? PANEL_WIDTH : 0}
                   counts={counts}
                   regionLabel={regionText}
                   onRegion={chooseRegion}
                   pins={pins}
+                  pinZoom={2.2}
                   activePin={activePin}
                   pinLabel={pinText}
                   onPin={choosePin}
-                  onFail={() => setNaverFailed(true)}
-                  me={me}
+                  markers={me ? [{ ...me, label: L.me }] : []}
+                  overlay={overlay}
                   className="size-full"
                 />
-                <div className="absolute top-3 left-3 flex flex-wrap gap-2">{overlay}</div>
-              </>
-            ) : (
-              <KoreaMap
-                interactive
-                target={target}
-                padRight={selection ? PANEL_WIDTH : 0}
-                counts={counts}
-                regionLabel={regionText}
-                onRegion={chooseRegion}
-                pins={pins}
-                pinZoom={2.2}
-                activePin={activePin}
-                pinLabel={pinText}
-                onPin={choosePin}
-                markers={me ? [{ ...me, label: L.me }] : []}
-                overlay={overlay}
-                className="size-full"
-              />
-            )}
+              )}
 
-            {/* 고른 자리의 기업과 공고예요. 지도 위 오른쪽에 떠 있고, 좁은 화면에서는 아래에서 올라와요. 안에서 스크롤해요. */}
-            {selection && (
-              <aside className="@container absolute inset-x-3 bottom-3 max-h-[60%] overflow-y-auto rounded-2xl bg-white p-4 ring-1 ring-gray-200 md:inset-x-auto md:top-3 md:right-3 md:max-h-none md:w-[372px]">
-                <div className="flex items-center justify-between gap-2">
-                  <h2 className="min-w-0 truncate text-[16px] font-semibold text-gray-900">
-                    {title} <span className="text-gray-400 tabular-nums">{total}</span>
-                  </h2>
-                  <CloseButton label={L.close} onClick={close} />
-                </div>
-                {selectedCompanies.length > 0 && (
-                  // 기업이 많아도 공고 목록이 밀리지 않게 이름표는 한 줄로 두고 옆으로 넘겨요.
-                  <p className="-mx-4 mt-3 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-                    {selectedCompanies.map(({ company: item, count }) => (
-                      <CompanyCount key={item.id} company={item} count={count} active={company === item.id} onClick={() => chooseCompany(company === item.id ? null : item.id)} />
-                    ))}
-                  </p>
-                )}
-                {list.length === 0 ? (
-                  <p className="mt-3 text-[13.5px] text-gray-500">{L.empty}</p>
-                ) : (
-                  <ul className="mt-4 flex flex-col gap-2">
-                    {list.slice(0, listMore.count).map((posting) => (
-                      <MapRow key={posting.id} posting={posting} fit={fitOf(posting, resume)} distance={distanceOf(posting)} diagnosed={diagnosed.has(posting.id)} onOpen={() => pick(posting)} />
-                    ))}
-                  </ul>
-                )}
-                {listMore.more}
-              </aside>
-            )}
-          </div>
-        )}
+              {/* 고른 자리의 기업과 공고예요. 지도 위 오른쪽에 떠 있고, 좁은 화면에서는 아래에서 올라와요. 안에서 스크롤해요. */}
+              {selection && (
+                <aside className="@container absolute inset-x-3 bottom-3 max-h-[60%] overflow-y-auto rounded-2xl bg-white p-4 ring-1 ring-gray-200 md:inset-x-auto md:top-3 md:right-3 md:max-h-none md:w-[372px]">
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 className="min-w-0 truncate text-[16px] font-semibold text-gray-900">
+                      {title} <span className="text-gray-400 tabular-nums">{total}</span>
+                    </h2>
+                    <CloseButton label={L.close} onClick={close} />
+                  </div>
+                  {selectedCompanies.length > 0 && (
+                    // 기업이 많아도 공고 목록이 밀리지 않게 이름표는 한 줄로 두고 옆으로 넘겨요.
+                    <p className="-mx-4 mt-3 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+                      {selectedCompanies.map(({ company: item, count }) => (
+                        <CompanyCount key={item.id} company={item} count={count} active={company === item.id} onClick={() => chooseCompany(company === item.id ? null : item.id)} />
+                      ))}
+                    </p>
+                  )}
+                  {list.length === 0 ? (
+                    <p className="mt-3 text-[13.5px] text-gray-500">{L.empty}</p>
+                  ) : (
+                    <ul className="mt-4 flex flex-col gap-2">
+                      {list.slice(0, listMore.count).map((posting) => (
+                        <MapRow key={posting.id} posting={posting} fit={fitOf(posting, resume)} distance={distanceOf(posting)} onOpen={() => pick(posting)} />
+                      ))}
+                    </ul>
+                  )}
+                  {listMore.more}
+                </aside>
+              )}
+            </div>
+          )}
+        </LoadGate>
       </div>
       {confirmPick.dialog}
     </main>
@@ -372,30 +348,20 @@ function CompanyCount({ company, count, active, onClick }: { company: Company; c
 }
 
 /** 고른 자리의 공고 한 줄이에요. 제목과 기업, 직군과 지역 아래에 마감까지 남은 날, 얼마나 맞는지, 진단했는지, 내 위치에서의 거리를 붙여요. */
-function MapRow({ posting, fit, distance, diagnosed, onOpen }: { posting: JobPosting; fit: number | null; distance: number | null; diagnosed: boolean; onOpen: () => void }) {
+function MapRow({ posting, fit, distance, onOpen }: { posting: JobPosting; fit: number | null; distance: number | null; onOpen: () => void }) {
   const L = useMessages(TEXT)
-  const company = companyOf(posting.companyId)
   return (
-    <li>
-      <button type="button" data-no-press onClick={onOpen} className="group flex w-full items-start gap-3.5 rounded-2xl bg-gray-50 px-4 py-3.5 text-left transition-colors hover:bg-gray-100">
-        <CompanyMark company={company} className="size-10 text-[15px]" />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-semibold text-gray-900 transition-colors group-hover:text-brand-hover">{posting.title}</span>
-          <PostingMeta posting={posting} className="mt-1" careerClass="hidden @xl:flex">
-            <span className="truncate font-medium text-gray-700">{company.name}</span>
-          </PostingMeta>
-          <span className="mt-2 flex flex-wrap items-center gap-1.5">
-            <DeadlineTag left={daysLeft(posting)} />
-            <FitTag fit={fit} />
-            {diagnosed && (
-              <Badge tone="brand" strong>
-                {L.diagnosed}
-              </Badge>
-            )}
-            {distance !== null && <span className="text-[12px] text-gray-500 tabular-nums">{L.distance(distanceText(distance))}</span>}
-          </span>
-        </span>
-      </button>
-    </li>
+    <PickRow
+      posting={posting}
+      onOpen={onOpen}
+      below={
+        <>
+          <DeadlineTag left={daysLeft(posting)} />
+          <FitTag fit={fit} />
+          <DiagnosedTag postingId={posting.id} />
+          {distance !== null && <span className="text-[12px] text-gray-500 tabular-nums">{L.distance(distanceText(distance))}</span>}
+        </>
+      }
+    />
   )
 }

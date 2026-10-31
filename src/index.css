@@ -10,7 +10,6 @@
 
   --tracking-base: -0.02em;
 
-  --animate-typing: typing 1.2s ease-in-out infinite;
   /* 움직임의 빠르기 두 가지예요. spring은 살짝 넘쳤다가 돌아오는 통통 튀는 느낌, smooth는 빠르게 나와서 부드럽게 멈추는 느낌이에요. */
   --ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
   --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
@@ -21,23 +20,7 @@
   --animate-slide-in-left: slide-in-left 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-fade: fade 0.2s ease-out both;
   --animate-grow: grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-shimmer: shimmer 1.8s linear infinite;
-  --animate-shake: shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
   --animate-word: word 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  --animate-draw: draw 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
-
-  @keyframes typing {
-    0%,
-    60%,
-    100% {
-      opacity: 0.3;
-      transform: translateY(0);
-    }
-    30% {
-      opacity: 1;
-      transform: translateY(-3px);
-    }
-  }
 
   @keyframes word {
     from {
@@ -52,42 +35,13 @@
     }
   }
 
-  @keyframes shake {
-    10%,
-    90% {
-      transform: translateX(-1px);
-    }
-    20%,
-    80% {
-      transform: translateX(3px);
-    }
-    30%,
-    50%,
-    70% {
-      transform: translateX(-6px);
-    }
-    40%,
-    60% {
-      transform: translateX(6px);
-    }
-  }
-
-  @keyframes shimmer {
-    from {
-      background-position: 100% 0;
-    }
-    to {
-      background-position: -100% 0;
-    }
-  }
-
-  /* 메뉴, 확인 창, 툴팁, 떠 있는 카드가 나타날 때 써요. 작게 시작해서 통 하고 커져요. 어디서 커질지는 origin-* 클래스로 정해요. */
+  /* 메뉴와 확인 창이 나타날 때 써요. 작게 시작해서 통 하고 커져요. 어디서 커질지는 origin-* 클래스로 정해요. */
   @keyframes pop {
     from {
       opacity: 0;
       scale: 0.92;
     }
-    /* 끝의 투명도는 적지 않아요. 흐리게 둔 것(맵에서 손대지 않은 폴더 등)이 제 투명도로 돌아가야 해요. */
+    /* 끝의 투명도는 적지 않아요. 흐리게 둔 것이 제 투명도로 돌아가야 해요. */
     to {
       scale: 1;
     }
@@ -130,16 +84,6 @@
     }
     to {
       scale: 1 1;
-    }
-  }
-
-  /* 테두리가 한 바퀴 그려지듯 나타나요. 그리는 도형에 pathLength="1"과 stroke-dasharray="1"을 같이 줘요. */
-  @keyframes draw {
-    from {
-      stroke-dashoffset: 1;
-    }
-    to {
-      stroke-dashoffset: 0;
     }
   }
 
@@ -241,118 +185,6 @@
 @keyframes interview-drift-b {
   50% {
     transform: translate(-12vmax, -8vmax) scale(0.9);
-  }
-}
-
-/* 질문 메뉴를 들고 있는 유리 방울. 가장자리가 흐물흐물 일렁이고, 안에서는 파란 빛이 천천히 떠다녀요. */
-.orb {
-  position: relative;
-  display: block;
-  width: 56px;
-  height: 56px;
-  overflow: hidden;
-  border: 1px solid rgb(46 144 250 / 0.22);
-  border-radius: 46% 54% 52% 48% / 50% 46% 54% 50%;
-  background: rgb(239 248 255 / 0.55);
-  backdrop-filter: blur(10px) saturate(1.4);
-  animation: orb-morph 7s ease-in-out infinite;
-  transition: transform 0.2s ease-out;
-}
-
-.orb:hover {
-  transform: scale(1.06);
-}
-
-.orb-blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(9px);
-}
-
-.orb-blob-a {
-  top: 18%;
-  left: 8%;
-  width: 60%;
-  height: 60%;
-  background: #2e90fa;
-  animation: orb-drift-a 6s ease-in-out infinite;
-}
-
-.orb-blob-b {
-  right: 2%;
-  bottom: 6%;
-  width: 52%;
-  height: 52%;
-  background: #7dd3fc;
-  animation: orb-drift-b 7.5s ease-in-out infinite;
-}
-
-.orb-blob-c {
-  top: 2%;
-  right: 12%;
-  width: 40%;
-  height: 40%;
-  background: #1570ef;
-  opacity: 0.7;
-  animation: orb-drift-c 9s ease-in-out infinite;
-}
-
-/* 유리 표면에 비친 빛 */
-.orb-shine {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 30% 24%, rgb(255 255 255 / 0.9), rgb(255 255 255 / 0) 42%),
-    radial-gradient(circle at 72% 82%, rgb(255 255 255 / 0.35), rgb(255 255 255 / 0) 38%);
-}
-
-@keyframes orb-morph {
-  0%,
-  100% {
-    border-radius: 46% 54% 52% 48% / 50% 46% 54% 50%;
-    rotate: 0deg;
-  }
-  25% {
-    border-radius: 56% 44% 46% 54% / 44% 56% 44% 56%;
-    rotate: 6deg;
-  }
-  50% {
-    border-radius: 44% 56% 58% 42% / 56% 44% 52% 48%;
-    rotate: -4deg;
-  }
-  75% {
-    border-radius: 52% 48% 42% 58% / 46% 54% 48% 52%;
-    rotate: 5deg;
-  }
-}
-
-@keyframes orb-drift-a {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 26% 20%;
-  }
-}
-
-@keyframes orb-drift-b {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: -32% -26%;
-  }
-}
-
-@keyframes orb-drift-c {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: -24% 46%;
   }
 }
 
@@ -467,48 +299,6 @@
   font-weight: 600;
   white-space: nowrap;
   color: var(--color-gray-900);
-}
-
-/* 모바일에서 아래에서 올라오는 시트 */
-.sheet {
-  animation: sheet-up 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-
-.sheet-backdrop {
-  animation: sheet-fade 0.2s ease-out both;
-}
-
-/* 닫아 둔 로그인 안내 아이콘이 둥둥 떠 있어요. */
-.nudge-float {
-  animation: nudge-float 2.4s ease-in-out infinite;
-}
-
-@keyframes nudge-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-7px);
-  }
-}
-
-@keyframes sheet-up {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
-
-@keyframes sheet-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
 
 /*
@@ -825,13 +615,6 @@ header[data-on-dark] .logo-mark {
   .lofy-script .lofy-trace {
     display: none;
   }
-
-  /* 끝없이 도는 방울 애니메이션은 아예 멈춰요. */
-  .nudge-float,
-  .orb,
-  .orb-blob {
-    animation: none;
-  }
 }
 
 /*
@@ -865,19 +648,6 @@ header[data-on-dark] .logo-mark {
   color: #fff;
 }
 
-.dark .text-white\/70 {
-  color: rgb(255 255 255 / 0.7);
-}
-
-/* 메인 컬러 바탕의 안내 카드(탐색의 동아리 안내)에서 닫기 버튼과 체크 칸도 흰색이에요. */
-.dark .hover\:bg-white\/15:hover {
-  background-color: rgb(255 255 255 / 0.15);
-}
-
-.dark .accent-white {
-  accent-color: #fff;
-}
-
 /* 확인 창 뒤를 가리는 막과 토스트는 다크 모드에서도 어두운 색이에요. */
 .dark .bg-gray-900\/25 {
   background-color: rgb(0 0 0 / 0.5);
@@ -908,11 +678,6 @@ header[data-on-dark] .logo-mark {
 
 .dark .text-amber-700 {
   color: #fbbf24;
-}
-
-/* 로고는 짙은 회색 그림이라 밝게 뒤집어요. */
-.dark img[src='/logo.svg'] {
-  filter: invert(1);
 }
 
 /* 색만 바뀌던 버튼도 누름 반응(scale)이 부드럽게 이어지게 해요. 색은 전처럼, 크기는 통 튀는 빠르기로 바뀌어요. */

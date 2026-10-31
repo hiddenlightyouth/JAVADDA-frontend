@@ -4,7 +4,7 @@ import { deleteAdminChat, fetchAdminChats, unshareAdminChat, type AdminChat, typ
 import { formatWhen } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { ConfirmDialog } from './Dialog'
-import { Empty, Failed, full, MoreButton, TableLoading, SearchBox, tableWrap, td, th, useDebounced, usePaged } from './AdminParts'
+import { full, MemberCell, PagedTable, SearchBox, td, th, useDebounced, usePaged } from './AdminParts'
 import { Segmented, ghostButton, ghostDangerButton, tag } from './ui'
 import { messages, pick, useMessages } from '../lib/i18n'
 
@@ -23,8 +23,6 @@ const TEXT = messages({
     created: '만든 때',
     manage: '관리',
     shared: '공유 중',
-    guest: '비회원',
-    removedUser: '지워진 회원',
     open: '열기',
     unshare: '공유 취소',
     remove: '지우기',
@@ -48,8 +46,6 @@ const TEXT = messages({
     created: 'Created',
     manage: 'Manage',
     shared: 'Shared',
-    guest: 'Guest',
-    removedUser: 'Deleted member',
     open: 'Open',
     unshare: 'Stop sharing',
     remove: 'Delete',
@@ -95,75 +91,56 @@ export function AdminChats({ onOpenChat }: { onOpenChat: (id: string) => void })
         <Segmented label={L.kind} options={L.filters} value={filter} onChange={setFilter} />
       </div>
 
-      {list.waiting ? (
-        <TableLoading percent={list.percent} />
-      ) : list.items === null ? (
-        <Failed message={list.error} onRetry={list.retry} />
-      ) : list.items.length === 0 ? (
-        <Empty>{L.empty}</Empty>
-      ) : (
-        <>
-          <div className={tableWrap}>
-            <table className="w-full min-w-[760px] text-[13px] text-gray-700 tabular-nums">
-              <thead>
-                <tr>
-                  <th className={th}>{L.repo}</th>
-                  <th className={th}>{L.member}</th>
-                  <th className={`${th} text-right`}>{L.messages}</th>
-                  <th className={th}>{L.updated}</th>
-                  <th className={th}>{L.created}</th>
-                  <th className={th}>
-                    <span className="sr-only">{L.manage}</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.items.map((chat) => (
-                  <tr key={chat.id} className="border-t border-gray-100">
-                    <td className={td}>
-                      <span className="flex items-center gap-2">
-                        <span className="max-w-[240px] truncate font-semibold text-gray-900">{chat.repoName}</span>
-                        {chat.shared && <span className={`${tag} shrink-0 text-brand-hover`}>{L.shared}</span>}
-                      </span>
-                    </td>
-                    <td className={td}>
-                      {chat.userId === null ? (
-                        <span className="text-gray-400">{L.guest}</span>
-                      ) : (
-                        <>
-                          <p className="max-w-[200px] truncate text-gray-900">{chat.userName ?? L.removedUser}</p>
-                          <p className="mt-0.5 max-w-[200px] truncate text-[12px] text-gray-400">{chat.userEmail ?? ''}</p>
-                        </>
-                      )}
-                    </td>
-                    <td className={`${td} text-right`}>{full(chat.messageCount)}</td>
-                    <td className={`${td} whitespace-nowrap text-gray-500`}>{formatWhen(chat.updatedAt)}</td>
-                    <td className={`${td} whitespace-nowrap text-gray-500`}>{formatWhen(chat.createdAt)}</td>
-                    <td className={td}>
-                      <span className="flex justify-end gap-0.5">
-                        {chat.shared && (
-                          <>
-                            <button type="button" onClick={() => onOpenChat(chat.id)} className={ghostButton}>
-                              {L.open}
-                            </button>
-                            <button type="button" onClick={() => setAsking({ chat, action: 'unshare' })} className={ghostButton}>
-                              {L.unshare}
-                            </button>
-                          </>
-                        )}
-                        <button type="button" onClick={() => setAsking({ chat, action: 'delete' })} className={`${ghostDangerButton}`}>
-                          {L.remove}
-                        </button>
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {list.hasNext && <MoreButton loading={list.loadingMore} percent={list.percent} onClick={() => void list.more()} />}
-        </>
-      )}
+      <PagedTable
+        list={list}
+        empty={L.empty}
+        head={
+          <>
+            <th className={th}>{L.repo}</th>
+            <th className={th}>{L.member}</th>
+            <th className={`${th} text-right`}>{L.messages}</th>
+            <th className={th}>{L.updated}</th>
+            <th className={th}>{L.created}</th>
+            <th className={th}>
+              <span className="sr-only">{L.manage}</span>
+            </th>
+          </>
+        }
+      >
+        {(chat) => (
+          <tr key={chat.id} className="border-t border-gray-100">
+            <td className={td}>
+              <span className="flex items-center gap-2">
+                <span className="max-w-[240px] truncate font-semibold text-gray-900">{chat.repoName}</span>
+                {chat.shared && <span className={`${tag} shrink-0 text-brand-hover`}>{L.shared}</span>}
+              </span>
+            </td>
+            <td className={td}>
+              <MemberCell userId={chat.userId} userName={chat.userName} userEmail={chat.userEmail} />
+            </td>
+            <td className={`${td} text-right`}>{full(chat.messageCount)}</td>
+            <td className={`${td} whitespace-nowrap text-gray-500`}>{formatWhen(chat.updatedAt)}</td>
+            <td className={`${td} whitespace-nowrap text-gray-500`}>{formatWhen(chat.createdAt)}</td>
+            <td className={td}>
+              <span className="flex justify-end gap-0.5">
+                {chat.shared && (
+                  <>
+                    <button type="button" onClick={() => onOpenChat(chat.id)} className={ghostButton}>
+                      {L.open}
+                    </button>
+                    <button type="button" onClick={() => setAsking({ chat, action: 'unshare' })} className={ghostButton}>
+                      {L.unshare}
+                    </button>
+                  </>
+                )}
+                <button type="button" onClick={() => setAsking({ chat, action: 'delete' })} className={ghostDangerButton}>
+                  {L.remove}
+                </button>
+              </span>
+            </td>
+          </tr>
+        )}
+      </PagedTable>
 
       {asking &&
         (asking.action === 'delete' ? (

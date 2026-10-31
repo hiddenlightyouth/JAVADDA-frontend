@@ -65,7 +65,7 @@ function readAi(value: unknown): AiConfig {
 }
 
 /** 서버가 어떤 기능을 지원하는지 물어봐요. 서버에 닿지 못하면 모두 꺼진 것으로 봐요. onLoad를 주면 받는 정도(0에서 1)를 알려요. */
-export async function fetchConfig(onLoad?: OnLoad): Promise<ServerConfig> {
+async function fetchConfig(onLoad?: OnLoad): Promise<ServerConfig> {
   try {
     const result = await readWithLoad<Partial<ServerConfig>>(await fetch(apiUrl('/config')), onLoad)
     if (!result.ok) return NONE

@@ -4,12 +4,14 @@ import { blogCompaniesOf, COLLECTED_AT, fetchBlogDigests, isStale, THEME_NAMES, 
 import { canEmbed, companyOf, POSTINGS } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
+import { isPlainClick } from '../lib/links'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
-import { CompanyFilter, CompanyMark, Failed, Notice } from './GapParts'
-import { PostingBrowser, SplitView, type BrowserPage } from './PostingBrowser'
 import { Modal } from './Dialog'
-import { Badge, Bullets, label, loadCenter, LoadProgress, primaryButton, quietButton, stagger, toolButton } from './ui'
+import { CompanyFilter, CompanyMark, Notice, SkillChip } from './GapParts'
+import { PostingBrowser, SplitView, type BrowserPage } from './PostingBrowser'
+import { LoadGate } from './ScreenParts'
+import { Badge, Bullets, label, primaryButton, quietButton, stagger, toolButton } from './ui'
 
 /**
  * 기술 블로그 화면이에요. 여러 기업 기술 블로그의 글을 최신 순서로 한데 늘어놓고, 기업과 주제로 걸러 봐요.
@@ -95,7 +97,7 @@ type Entry = BlogPost & { companyId: string }
  * 다른 서비스 안에 띄우는 것을 막아 둔 블로그(`canEmbed`)는 read가 외부 페이지로 간다고 알리고 3초 뒤에 새 탭으로 열어요.
  */
 const openIn = (read: (page: BrowserPage) => void, page: BrowserPage) => (event: MouseEvent) => {
-  if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
+  if (!isPlainClick(event)) return
   event.preventDefault()
   read(page)
 }
@@ -164,6 +166,8 @@ export function Blogs({ company, onCompany, onJobs }: {
     track('blog_theme_select', { theme: next ?? 'all', from })
     setTheme(next)
   }
+  // 고른 것이 바뀔 때만 갤러리 칸을 다시 만들어요. 미니 브라우저를 열고 닫을 때는 그대로 써요.
+  const trends = useMemo(() => (digests && !company && !theme ? themeTrends(digests).trends.slice(0, 6) : []), [digests, company, theme])
   const read = (page: BrowserPage) => {
     if (!canEmbed(page.url)) {
       track('blog_post_open', { company: page.companyId, from: 'tab' })
@@ -219,26 +223,17 @@ export function Blogs({ company, onCompany, onJobs }: {
         </div>
 
         <div className="mt-4">
-          {waiting || loaded === undefined ? (
-            <LoadProgress percent={load.percent} className={loadCenter} />
-          ) : loaded === 'failed' ? (
-            <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
-          ) : company && !digest ? (
-            <Notice title={L.missing} body={L.missingBody} action={L.missingAction} onAction={() => selectCompany(null)} className="mt-16" />
-          ) : shown.length === 0 ? (
-            <Notice title={L.none} action={L.noneAction} onAction={() => selectTheme(null, 'empty')} className="mt-16" />
-          ) : (
-            <Gallery
-              items={buildItems({
-                entries: shown,
-                digest,
-                trends: !company && !theme ? themeTrends(loaded).trends.slice(0, 6) : [],
-                onJobs,
-                onTheme: (item) => selectTheme(item, 'card'),
-                read,
-              })}
-            />
-          )}
+          <LoadGate waiting={waiting || loaded === undefined} failed={loaded === 'failed'} percent={load.percent} onRetry={() => setAttempt((value) => value + 1)}>
+            {() =>
+              company && !digest ? (
+                <Notice title={L.missing} body={L.missingBody} action={L.missingAction} onAction={() => selectCompany(null)} className="mt-16" />
+              ) : shown.length === 0 ? (
+                <Notice title={L.none} action={L.noneAction} onAction={() => selectTheme(null, 'empty')} className="mt-16" />
+              ) : (
+                <Gallery items={buildItems({ entries: shown, digest, trends, onJobs, onTheme: (item) => selectTheme(item, 'card'), read })} />
+              )
+            }
+          </LoadGate>
         </div>
         {leaving && <LeaveDialog page={leaving} onClose={() => setLeaving(null)} />}
       </ScrollPage>
@@ -383,9 +378,7 @@ function CompanyCard({ digest, onJobs }: { digest: BlogDigest; onJobs: (company:
       <h3 className={`mt-5 ${label}`}>{L.skillsTitle}</h3>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {topSkills(digest).map((skill) => (
-          <span key={skill} className="inline-flex h-7 items-center rounded-md bg-white px-2.5 text-[12.5px] text-gray-700">
-            {skill}
-          </span>
+          <SkillChip key={skill} name={skill} />
         ))}
       </div>
       <h3 className={`mt-5 ${label}`}>{L.interviewTitle}</h3>
@@ -448,7 +441,7 @@ function LeaveDialog({ page, onClose }: { page: BrowserPage; onClose: () => void
         <button type="button" onClick={onClose} className={quietButton}>
           {L.leaveCancel}
         </button>
-        <a href={page.url} target="_blank" rel="noopener noreferrer" onClick={onClose} className={`${primaryButton} inline-flex items-center`}>
+        <a href={page.url} target="_blank" rel="noopener noreferrer" onClick={onClose} className={primaryButton}>
           {L.leaveNow}
         </a>
       </div>

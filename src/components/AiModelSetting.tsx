@@ -4,6 +4,7 @@ import { refreshConfig, setAiModel, useAiModel, type AiConfig, type AiModel } fr
 import { messages, useMessages } from '../lib/i18n'
 import { useLoadProgress } from '../lib/load'
 import { Dropdown } from './Dropdown'
+import { SettingRow } from './SettingRow'
 
 const TEXT = messages({
   ko: {
@@ -29,12 +30,12 @@ const TEXT = messages({
 })
 
 /**
- * AI 모델 고르기예요. 설정 창과 내 정보 화면이 같이 써요. 줄의 모양은 화면마다 달라서 이름, 설명, 고르는 칸만 돌려줘요.
+ * AI 모델 고르기예요. 이름, 설명, 고르는 칸을 돌려주고, 설정 창과 내 정보 화면은 이것을 한 줄로 그린 `AiModelRow`를 써요.
  * 쓸 때마다 서버에 `/config`를 다시 물어서(`refreshConfig`), 화면을 연 뒤에 서버를 켰거나 키를 바꿔도 바로 맞춰요.
  * 드롭다운에는 늘 모델 이름을 보여줘요. 공급자(OpenAI, Claude)마다 묶어 서버에 키가 있는 모델만 늘어놓고, 서버의 기본 모델에는 "기본"을 옅게 붙여요.
  * 고른 것은 localStorage의 `whoisloafing:ai-model`에 두고, 서버의 기본 모델을 고르면 지워서 헤더를 보내지 않아요.
  */
-export function useAiModelSetting(align: 'left' | 'right' = 'right') {
+export function useAiModelSetting() {
   const text = useMessages(TEXT)
   // null은 아직 받는 중, 'offline'은 서버에 닿지 못했을 때예요.
   const [ai, setAi] = useState<AiConfig | 'offline' | null>(null)
@@ -66,12 +67,12 @@ export function useAiModelSetting(align: 'left' | 'right' = 'right') {
   const note = ai === 'offline' ? text.offline : ai && models.length === 0 ? text.noneNote : text.note
   const control =
     ai === null ? (
-      <Dropdown align={align} value={text.loading} groups={[{ items: [], progress: load.percent }]} />
+      <Dropdown align="right" value={text.loading} groups={[{ items: [], progress: load.percent }]} />
     ) : models.length === 0 ? (
       <span className="text-[13px] text-gray-400">{text.none}</span>
     ) : (
       <Dropdown
-        align={align}
+        align="right"
         value={current?.label}
         groups={providers.map((provider) => ({
           title: text.providers[provider],
@@ -88,4 +89,14 @@ export function useAiModelSetting(align: 'left' | 'right' = 'right') {
     )
 
   return { label: text.label, note, control }
+}
+
+/** AI 모델 고르기 한 줄이에요. 설정 창과 내 정보 화면의 `settingList` 안에 같은 모양으로 놓여요. */
+export function AiModelRow() {
+  const { label, note, control } = useAiModelSetting()
+  return (
+    <SettingRow label={label} note={note}>
+      {control}
+    </SettingRow>
+  )
 }

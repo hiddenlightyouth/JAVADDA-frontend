@@ -1,9 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { track } from '../lib/analytics'
 import { dayLabel, fetchOverview, type AdminOverview as Overview } from '../lib/admin'
-import { BarChart, card, Empty, Failed, full, sectionTitle, share, Stat } from './AdminParts'
+import { BarChart, card, cardTitle, Empty, Failed, full, sectionTitle, share, Stat, useAdminData } from './AdminParts'
 import { loadCenter, LoadProgress, Segmented } from './ui'
-import { useLoadHold, useLoadProgress } from '../lib/load'
 import { messages, useMessages } from '../lib/i18n'
 
 type Metric = 'chats' | 'signups'
@@ -73,35 +72,19 @@ const TEXT = messages({
   },
 })
 
-type Loaded = 'loading' | { overview: Overview } | { error: string }
-
 /** 관리자 화면의 현황 탭이에요. 회원, 사용 기기, 채팅의 합계와 날짜별 흐름, 많이 분석한 레포를 한눈에 보여줘요. */
 export function AdminOverview() {
   const L = useMessages(TEXT)
   const [period, setPeriod] = useState(30)
   const [metric, setMetric] = useState<Metric>('chats')
-  const [loaded, setLoaded] = useState<Loaded>('loading')
-  const [attempt, setAttempt] = useState(0)
-  const load = useLoadProgress()
-  const waiting = useLoadHold(loaded === 'loading')
+  // 기간만 바꿀 때는 보던 숫자를 그대로 두고 그래프만 바꿔요.
+  const state = useAdminData<Overview>((onLoad) => fetchOverview(period, onLoad), period, true)
 
-  useEffect(() => {
-    let stale = false
-    // 기간만 바꿀 때는 보던 숫자를 그대로 두고 그래프만 바꿔요.
-    setLoaded((prev) => (typeof prev === 'object' && 'overview' in prev ? prev : 'loading'))
-    void fetchOverview(period, load.one()).then((result) => {
-      if (stale) return
-      setLoaded(result.ok ? { overview: result.data } : { error: result.message })
-    })
-    return () => {
-      stale = true
-    }
-  }, [period, attempt, load.one])
+  if (state.waiting) return <LoadProgress percent={state.percent} className={loadCenter} />
+  if (state.error) return <Failed message={state.error} onRetry={state.reload} />
+  if (!state.data) return <LoadProgress percent={state.percent} className={loadCenter} />
 
-  if (waiting || loaded === 'loading') return <LoadProgress percent={load.percent} className={loadCenter} />
-  if ('error' in loaded) return <Failed message={loaded.error} onRetry={() => setAttempt((value) => value + 1)} />
-
-  const { users, devices, chats, daily, topRepos } = loaded.overview
+  const { users, devices, chats, daily, topRepos } = state.data
   const topCount = topRepos[0]?.chats ?? 0
 
   return (
@@ -132,7 +115,7 @@ export function AdminOverview() {
 
       <section className={`${card} mt-3`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-[13.5px] font-semibold text-gray-900">{L.daily}</h3>
+          <h3 className={cardTitle}>{L.daily}</h3>
           <div className="flex flex-wrap gap-2">
             <Segmented label={L.metric} options={L.metrics} value={metric} onChange={setMetric} />
             <Segmented
@@ -168,7 +151,7 @@ export function AdminOverview() {
               <span className="w-5 shrink-0 text-right text-gray-400 tabular-nums">{index + 1}</span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium text-gray-900">{repo.repoName}</span>
-                <span className="mt-1.5 block h-1 rounded-full bg-gray-100">
+                <span className="mt-1.5 block h-1 rounded-full bg-gray-200/70">
                   <span className="block h-1 origin-left animate-grow rounded-full bg-brand" style={{ width: `${(repo.chats / topCount) * 100}%` }} />
                 </span>
               </span>

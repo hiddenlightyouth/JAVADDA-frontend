@@ -1,16 +1,17 @@
 import { useState, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
-import { companyOf, daysLeft, type Company, type JobPosting, type Resume } from '../lib/gap'
+import { companyOf, daysLeft, fitOf, type Company, type JobPosting, type Resume } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { readItem, writeItem } from '../lib/storage'
-import { CardTag, CompanyMark, DiagnosedTag, FitBadge, FitTag, PostingMeta, SkillChip, skillTone, Tip } from './GapParts'
+import { CompanyMark, DeadlineTag, DiagnosedTag, FitBadge, FitTag, PostingMeta, SkillChip, skillTone, Tip } from './GapParts'
 import { ExternalLinkIcon, GridIcon, ListIcon } from './Icons'
 import { PostingBrowser } from './PostingBrowser'
-import { iconButton, Segmented, stagger } from './ui'
+import { shortDate } from './ScreenParts'
+import { iconButton, primaryButton, Segmented, stagger, useShowMore } from './ui'
 
 /**
- * 공고 탐색, 추천 공고, 새 진단 화면의 공고 줄이 같이 쓰는 공고 카드(갤러리형)와 줄(리스트형), 보기 방식 버튼, 미니 브라우저예요.
- * 세 화면이 같은 모양이라 여기 것만 고쳐요.
+ * 공고 탐색, 추천 공고, 새 진단 화면의 공고 줄이 같이 쓰는 공고 카드(갤러리형)와 줄(리스트형), 둘을 늘어놓는 목록(`PostingList`),
+ * 공고 수와 보기 방식 버튼 줄, 미니 브라우저, 마감 달력과 채용 지도의 공고 줄(`PickRow`)이에요. 여러 화면이 같은 모양이라 여기 것만 고쳐요.
  */
 
 const TEXT = messages({
@@ -22,7 +23,7 @@ const TEXT = messages({
     view: '채용 공고 열기',
     analyze: '분석하기',
     more: (count: number) => `외 ${count}개`,
-    dday: (days: number) => (days === 0 ? '오늘 마감' : `D-${days}`),
+    items: (count: number) => `${count}개의 공고`,
   },
   en: {
     companyInfo: (name: string) => `About ${name}`,
@@ -32,18 +33,15 @@ const TEXT = messages({
     view: 'Open posting',
     analyze: 'Analyze',
     more: (count: number) => `+${count} more`,
-    dday: (days: number) => (days === 0 ? 'Closes today' : `D-${days}`),
+    items: (count: number) => `${count} ${count === 1 ? 'posting' : 'postings'}`,
   },
 })
 
 /** 공고 카드는 넓은 화면에서 한 줄에 둘이나 셋씩 놓여요. */
 // 원문 칸이 열리면 목록 폭이 줄어서, 화면 폭이 아니라 목록 폭(@container)을 보고 칸 수를 정해요.
-export const jobsGrid = 'grid gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3'
+const jobsGrid = 'grid gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3'
 /** 리스트형은 한 줄에 공고 하나씩이에요. */
-export const jobsList = 'flex flex-col gap-2'
-/** 카드 맨 아래의 분석하기 버튼이에요. 메인 컬러로 눈에 띄게 둬요. */
-const cardPrimary =
-  'relative z-10 inline-flex h-8 shrink-0 items-center rounded-lg bg-brand px-2.5 text-[12.5px] font-medium text-white transition-colors hover:bg-brand-hover'
+const jobsList = 'flex flex-col gap-2'
 /** 카드에 보여주는 필수 역량 수예요. 나머지는 수만 적어요. */
 const SKILLS_SHOWN = 4
 
@@ -70,11 +68,24 @@ export function LayoutToggle({ value, onChange }: { value: Layout; onChange: (la
   )
 }
 
+/** 목록 위의 한 줄이에요. 왼쪽에 공고 수(받는 동안은 비워요), 오른쪽에 보기 방식 버튼이 있어요. 공고 탐색과 추천 공고가 같이 써요. */
+export function PostingCountBar({ count, layout, onLayout }: { count: number | null; layout: Layout; onLayout: (layout: Layout) => void }) {
+  const L = useMessages(TEXT)
+  return (
+    <div className="mt-4 flex h-8 items-center justify-between gap-3">
+      <p className="text-[13px] text-gray-500 tabular-nums">{count === null ? '' : L.items(count)}</p>
+      <LayoutToggle value={layout} onChange={onLayout} />
+    </div>
+  )
+}
+
+export type JobBrowser = { side: ReactNode; view: (posting: JobPosting) => void; viewCompany: (companyId: string) => void }
+
 /**
  * 카드에서 여는 미니 브라우저예요. 공고의 원문이나 기업 소개 사이트를 열어요.
  * 화면은 side를 `SplitView`에 넘기고, 카드에 view와 viewCompany를 이어요.
  */
-export function useJobBrowser(): { side: ReactNode; view: (posting: JobPosting) => void; viewCompany: (companyId: string) => void } {
+export function useJobBrowser(): JobBrowser {
   const [viewing, setViewing] = useState<{ posting: JobPosting } | { company: Company } | null>(null)
   const side =
     viewing &&
@@ -86,31 +97,72 @@ export function useJobBrowser(): { side: ReactNode; view: (posting: JobPosting) 
   return { side, view: (posting) => setViewing({ posting }), viewCompany: (companyId) => setViewing({ company: companyOf(companyId) }) }
 }
 
-/** 10.28 처럼 달과 날만 적어요. */
-const shortDate = (iso: string) => {
-  const date = new Date(iso)
-  return `${date.getMonth() + 1}.${String(date.getDate()).padStart(2, '0')}`
+/**
+ * 공고 탐색과 추천 공고의 목록이에요. 고른 보기 방식으로 카드나 줄을 늘어놓고, 카드를 누르면 원문을 미니 브라우저로 열어요.
+ * 공고가 수백, 수천 개여도 버벅이지 않게 처음에 24개만 그리고 목록 끝이 보이면 더 그려요(`useShowMore`). 목록이 바뀌면 처음부터예요.
+ * animateKey가 바뀌면(정렬 등) 카드를 새로 그려서 다시 떠올라요.
+ */
+export function PostingList({ postings, layout, resume, browser, onAnalyze, animateKey = '', className = '' }: {
+  postings: JobPosting[]
+  layout: Layout
+  resume: Resume | null
+  browser: JobBrowser
+  onAnalyze: (posting: JobPosting) => void
+  animateKey?: string
+  className?: string
+}) {
+  const { count, more } = useShowMore(postings.length, `${postings.length}:${postings[0]?.id ?? ''}:${postings.at(-1)?.id ?? ''}`)
+  return (
+    <>
+      <ul className={`${layout === 'gallery' ? jobsGrid : jobsList} ${className}`}>
+        {postings.slice(0, count).map((posting, order) => (
+          <JobItem
+            key={`${layout}:${animateKey}:${posting.id}`}
+            layout={layout}
+            posting={posting}
+            resume={resume}
+            fit={fitOf(posting, resume)}
+            order={order}
+            onOpen={() => browser.view(posting)}
+            onCompany={() => browser.viewCompany(posting.companyId)}
+            onAnalyze={() => onAnalyze(posting)}
+          />
+        ))}
+      </ul>
+      {more}
+    </>
+  )
+}
+
+/** 카드와 줄의 빈 자리를 누른 것이에요. 안쪽 버튼(기업, 채용 공고 열기, 분석하기)은 저마다 따로 받아요. */
+const onBlankClick = (open: () => void) => (event: { target: EventTarget }) => {
+  if (!(event.target as Element).closest('button, a')) open()
+}
+
+/** 채용 공고 열기 아이콘이에요. 원문을 앱 안의 미니 브라우저로 열어요. */
+function ViewButton({ onClick, className = 'inline-flex' }: { onClick: () => void; className?: string }) {
+  const L = useMessages(TEXT)
+  return (
+    <Tip text={L.view} className={className}>
+      <button type="button" onClick={onClick} aria-label={L.view} className={`${iconButton.md} hover:bg-gray-200/70`}>
+        <ExternalLinkIcon />
+      </button>
+    </Tip>
+  )
 }
 
 /**
  * 공고 탐색의 카드예요. 위에 기업과 적합도, 채용 공고 열기 아이콘(앱 안의 미니 브라우저), 가운데에 공고 제목과 필수 역량, 아래에 마감까지 남은 날과 모집 기간, 분석하기가 있어요.
  * 이력서가 있으면 필수 역량 이름표를 진단 시작 화면과 같은 기준으로 칠해서, 카드만 보고도 무엇이 비는지 보여요.
- * 카드의 나머지 자리를 누르면 해당 공고로 이동할지 한 번 더 묻고, 분석하기는 바로 진단해요.
+ * 카드의 나머지 자리를 누르면 원문을 미니 브라우저로 열고, 분석하기는 바로 진단해요.
  */
-export function JobCard({ posting, resume, fit, order, onOpen, onView, onAnalyze, onCompany }: JobItemProps) {
+export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onCompany }: JobItemProps) {
   const L = useMessages(TEXT)
   const company = companyOf(posting.companyId)
   const left = daysLeft(posting)
   return (
-    // 카드의 빈 자리를 누르면 이동할지 물어요. 안쪽 버튼(기업, 채용 공고 열기, 분석하기)은 저마다 따로 받아요.
     // 제목 버튼을 카드 전체에 늘여 덮으면, 누른 곳과 뗀 곳이 달라져 클릭이 한 번 씹혀서 카드가 직접 받아요.
-    <li
-      onClick={(event) => {
-        if (!(event.target as Element).closest('button, a')) onOpen()
-      }}
-      className="group relative flex animate-rise cursor-pointer flex-col rounded-2xl bg-gray-50 p-5 transition-colors hover:bg-gray-100"
-      style={stagger(order)}
-    >
+    <li onClick={onBlankClick(onOpen)} className="group flex animate-rise cursor-pointer flex-col rounded-2xl bg-gray-50 p-5 transition-colors hover:bg-gray-100" style={stagger(order)}>
       <div className="flex items-center gap-3">
         {/* 로고와 기업 이름을 누르면 기업 소개를 미니 브라우저로 열어요. */}
         <button type="button" onClick={onCompany} aria-label={L.companyInfo(company.name)} className="group/company -m-1 flex min-w-0 items-center gap-3 rounded-xl p-1 text-left">
@@ -123,11 +175,7 @@ export function JobCard({ posting, resume, fit, order, onOpen, onView, onAnalyze
         {/* 기업 옆에 적합도와, 원문을 앱 안의 미니 브라우저로 여는 아이콘을 둬요. */}
         <span className="ml-auto flex shrink-0 items-center gap-2">
           <FitBadge fit={fit} compact />
-          <Tip text={L.view}>
-            <button type="button" onClick={onView} aria-label={L.view} className={`${iconButton.md} relative z-10 hover:bg-gray-200/70`}>
-              <ExternalLinkIcon />
-            </button>
-          </Tip>
+          <ViewButton onClick={onOpen} />
         </span>
       </div>
 
@@ -156,7 +204,7 @@ export function JobCard({ posting, resume, fit, order, onOpen, onView, onAnalyze
         <span className="ml-1 min-w-0 flex-1 truncate text-[12.5px] text-gray-400 tabular-nums">
           {shortDate(posting.postedAt)} ~ {posting.deadline ? shortDate(posting.deadline) : L.always}
         </span>
-        <button type="button" onClick={onAnalyze} className={cardPrimary}>
+        <button type="button" onClick={onAnalyze} className={`${primaryButton} shrink-0`}>
           {L.analyze}
         </button>
       </div>
@@ -164,39 +212,22 @@ export function JobCard({ posting, resume, fit, order, onOpen, onView, onAnalyze
   )
 }
 
-/** 마감까지 남은 날이에요. 사흘 안으로 남으면 메인 컬러로 알려요. 채용 지도의 공고 줄도 같이 써요. */
-export function DeadlineTag({ left }: { left: number | null }) {
-  const L = useMessages(TEXT)
-  return (
-    <CardTag tone={left !== null && left <= 3 ? 'brand' : 'gray'}>
-      <span className="tabular-nums">{left === null ? L.always : L.dday(left)}</span>
-    </CardTag>
-  )
-}
-
-export type JobItemProps = { posting: JobPosting; resume: Resume | null; fit: number | null; order: number; onOpen: () => void; onView: () => void; onAnalyze: () => void; onCompany: () => void }
+export type JobItemProps = { posting: JobPosting; resume: Resume | null; fit: number | null; order: number; onOpen: () => void; onAnalyze: () => void; onCompany: () => void }
 
 /** 고른 보기 방식에 맞춰 카드나 줄로 그려요. */
-export function JobItem({ layout, ...props }: JobItemProps & { layout: Layout }) {
+function JobItem({ layout, ...props }: JobItemProps & { layout: Layout }) {
   return layout === 'gallery' ? <JobCard {...props} /> : <JobRow {...props} />
 }
 
 /**
  * 리스트형 보기의 한 줄이에요. 왼쪽에 기업 로고, 가운데에 공고 제목과 기업, 직군, 경력, 지역, 넓으면 필수 역량, 오른쪽에 마감까지 남은 날과 적합도, 채용 공고 열기 아이콘과 분석하기가 있어요.
- * 목록 폭이 좁으면 경력, 지역, 필수 역량, 적합도, 두 버튼을 차례로 숨겨요. 카드처럼 줄의 빈 자리를 누르면 이동할지 묻고, 로고를 누르면 기업 소개를 미니 브라우저로 열어요.
+ * 목록 폭이 좁으면 경력, 지역, 필수 역량, 두 버튼, 적합도를 차례로 숨겨요. 카드처럼 줄의 빈 자리를 누르면 원문을 열고, 로고를 누르면 기업 소개를 미니 브라우저로 열어요.
  */
-function JobRow({ posting, resume, fit, order, onOpen, onView, onAnalyze, onCompany }: JobItemProps) {
+function JobRow({ posting, resume, fit, order, onOpen, onAnalyze, onCompany }: JobItemProps) {
   const L = useMessages(TEXT)
   const company = companyOf(posting.companyId)
-  const left = daysLeft(posting)
   return (
-    <li
-      onClick={(event) => {
-        if (!(event.target as Element).closest('button, a')) onOpen()
-      }}
-      className="group flex animate-rise cursor-pointer items-center gap-4 rounded-2xl bg-gray-50 px-4 py-3.5 transition-colors hover:bg-gray-100"
-      style={stagger(order)}
-    >
+    <li onClick={onBlankClick(onOpen)} className="group flex animate-rise cursor-pointer items-center gap-4 rounded-2xl bg-gray-50 px-4 py-3.5 transition-colors hover:bg-gray-100" style={stagger(order)}>
       <button type="button" onClick={onCompany} aria-label={L.companyInfo(company.name)} className="shrink-0 rounded-xl transition-opacity hover:opacity-80">
         <CompanyMark company={company} className="size-10 text-[15px]" />
       </button>
@@ -220,17 +251,47 @@ function JobRow({ posting, resume, fit, order, onOpen, onView, onAnalyze, onComp
       <span className="hidden shrink-0 @md:inline-flex">
         <FitTag fit={fit} />
       </span>
-      <DeadlineTag left={left} />
+      <DeadlineTag left={daysLeft(posting)} />
       <span className="hidden shrink-0 @lg:inline-flex">
         <FitBadge fit={fit} compact />
       </span>
-      <Tip text={L.view} className="hidden shrink-0 @3xl:inline-flex">
-        <button type="button" onClick={onView} aria-label={L.view} className={`${iconButton.md} hover:bg-gray-200/70`}>
-          <ExternalLinkIcon />
-        </button>
-      </Tip>
-      <button type="button" onClick={onAnalyze} className={`${cardPrimary} hidden! @3xl:inline-flex!`}>
+      <ViewButton onClick={onOpen} className="hidden shrink-0 @3xl:inline-flex" />
+      <button type="button" onClick={onAnalyze} className={`${primaryButton} hidden! shrink-0 @3xl:inline-flex!`}>
         {L.analyze}
+      </button>
+    </li>
+  )
+}
+
+/**
+ * 마감 달력과 채용 지도의 공고 한 줄이에요. 리스트형 줄(`JobRow`)과 같은 모양이고, 줄 전체가 하나의 버튼이라 누르면 분석할지 물어요.
+ * 화면마다 다른 태그는 오른쪽(trailing)이나 제목 아래(below)에 붙여요. 좁으면 경력을, locationClass를 넘기면 지역도 숨겨요.
+ */
+export function PickRow({ posting, onOpen, locationClass = 'flex', trailing, below }: {
+  posting: JobPosting
+  onOpen: () => void
+  locationClass?: string
+  trailing?: ReactNode
+  below?: ReactNode
+}) {
+  const company = companyOf(posting.companyId)
+  return (
+    <li>
+      <button
+        type="button"
+        data-no-press
+        onClick={onOpen}
+        className={`group flex w-full gap-4 rounded-2xl bg-gray-50 px-4 py-3.5 text-left transition-colors hover:bg-gray-100 ${below ? 'items-start' : 'items-center'}`}
+      >
+        <CompanyMark company={company} className="size-10 text-[15px]" />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[15px] font-semibold text-gray-900 transition-colors group-hover:text-brand-hover">{posting.title}</span>
+          <PostingMeta posting={posting} className="mt-1 text-[12.5px]!" careerClass="hidden @xl:flex" locationClass={locationClass}>
+            <span className="truncate font-medium text-gray-700">{company.name}</span>
+          </PostingMeta>
+          {below && <span className="mt-2 flex flex-wrap items-center gap-1.5">{below}</span>}
+        </span>
+        {trailing}
       </button>
     </li>
   )

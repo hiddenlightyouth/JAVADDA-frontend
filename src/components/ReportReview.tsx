@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { track } from '../lib/analytics'
 import { docName, fetchQuestions, fetchReview, PROGRESS_START, recheckParagraph, regenerateReview, useReports, useResume, useResumeShelf, type InterviewQuestion, type DocType, type ProgressState, type DocumentReview, type ParagraphTag, type ReviewParagraph } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
@@ -16,8 +16,6 @@ const TEXT = messages({
     fitLabel: '부합도',
     verdict: (score: number): string => (score >= 70 ? '서류가 공고와 잘 이어져요!' : score >= 50 ? '좋아요! 몇 문단만 다듬으면 돼요.' : '공고에 맞춰 다시 써 볼까요?'),
     paragraphs: '원문과 코멘트',
-    filter: '코멘트 거르기',
-    all: '전체',
     appeal: '더 어필할 점',
     reviewedAt: (when: string) => `검증 ${when}`,
     tags: { good: '좋아요', fix: '고쳐요', missing: '빠졌어요', interview: '면접 예상' } as Record<ParagraphTag, string>,
@@ -46,8 +44,6 @@ const TEXT = messages({
     fitLabel: 'Match',
     verdict: (score: number): string => (score >= 70 ? 'Your document lines up well!' : score >= 50 ? 'Nice! Just polish a few paragraphs.' : 'Try rewriting it for this posting?'),
     paragraphs: 'Document and comments',
-    filter: 'Filter comments',
-    all: 'All',
     appeal: 'Worth adding',
     reviewedAt: (when: string) => `Reviewed ${when}`,
     tags: { good: 'Good', fix: 'Revise', missing: 'Missing', interview: 'Likely asked' },
@@ -205,6 +201,12 @@ function ParagraphEditor({ paragraph }: { paragraph: ReviewParagraph }) {
 
 /** 코멘트끼리 띄우는 간격이에요. */
 const NOTE_GAP = 12
+
+/** 그 태그가 붙은 문단 수예요. */
+const tagCount = (review: DocumentReview, tag: ParagraphTag) => review.paragraphs.filter((paragraph) => paragraph.tags.includes(tag)).length
+
+/** 문단 글을 맞춰 볼 수 있게 띄어쓰기와 줄바꿈을 하나로 모아요. */
+const normalize = (text: string) => text.replace(/\s+/g, ' ').trim()
 
 interface Layout {
   /** 코멘트마다 위에서 떨어진 거리 */
@@ -385,11 +387,9 @@ export function ReviewTab({ reportId, onQuestions }: { reportId: string; onQuest
   const latest = useRef(0)
   const [filter, setFilter] = useState<ParagraphTag | 'all'>('all')
   const review = reviews[doc]
-  const countOf = (tag: ParagraphTag) => review?.paragraphs.filter((paragraph) => paragraph.tags.includes(tag)).length ?? 0
   /** 재검증이나 고쳐 쓰기 전의 결과예요. 점수와 태그 수가 얼마나 바뀌었는지 보여줘요. 이번 접속 동안만 기억해요. */
   const [previous, setPrevious] = useState<Partial<Record<DocType, DocumentReview>>>({})
   const before = previous[doc]
-  const beforeCount = (tag: ParagraphTag) => before?.paragraphs.filter((paragraph) => paragraph.tags.includes(tag)).length ?? 0
   const [editing, setEditing] = useState<string | null>(null)
   const [checking, setChecking] = useState<string | null>(null)
   const [rechecked, setRechecked] = useState<Set<string>>(new Set())
@@ -422,13 +422,11 @@ export function ReviewTab({ reportId, onQuestions }: { reportId: string; onQuest
       stale = true
     }
   }, [reportId])
-  const normalize = (text: string) => text.replace(/\s+/g, ' ').trim()
+  // 원문 문단은 코멘트마다 다시 다듬지 않게 한 번만 다듬어 둬요.
+  const sources = useMemo(() => sourceParagraphs.map(normalize), [sourceParagraphs])
   function questionsOf(text: string) {
     const target = normalize(text)
-    const index = sourceParagraphs.findIndex((paragraph) => {
-      const source = normalize(paragraph)
-      return source === target || source.startsWith(target.slice(0, 40)) || target.startsWith(source.slice(0, 40))
-    })
+    const index = sources.findIndex((source) => source === target || source.startsWith(target.slice(0, 40)) || target.startsWith(source.slice(0, 40)))
     if (index < 0 || target.length < 20) return 0
     return questions.filter((question) => question.source.type === 'paragraph' && Number(/(\d+)\s*문단/.exec(question.source.label)?.[1]) === index + 1).length
   }
@@ -474,7 +472,7 @@ export function ReviewTab({ reportId, onQuestions }: { reportId: string; onQuest
               track('review_rerun', { doc })
               void load(doc, true)
             }}
-            className={`${toolButton} disabled:text-gray-400`}
+            className={toolButton}
           >
             <RefreshIcon />
             {L.rerun}
@@ -502,7 +500,8 @@ export function ReviewTab({ reportId, onQuestions }: { reportId: string; onQuest
           {/* 문단 요약이에요. 칸을 누르면 그 태그의 문단만 걸러 보고, 한 번 더 누르면 전체로 돌아가요. */}
           <section aria-label={L.summary} className="grid animate-rise grid-cols-2 gap-2 [animation-delay:40ms] lg:grid-cols-4">
             {SUMMARY_TAGS.map((tag) => {
-              const count = countOf(tag)
+              const count = tagCount(review, tag)
+              const change = before ? count - tagCount(before, tag) : 0
               const on = filter === tag
               return (
                 <button
@@ -520,10 +519,10 @@ export function ReviewTab({ reportId, onQuestions }: { reportId: string; onQuest
                   <span className={`mt-1.5 text-[26px] leading-none font-semibold tabular-nums ${SUMMARY_TONES[tag]}`}>
                     {count}
                     <span className="ml-0.5 text-[13px] font-medium text-gray-400">/ {review.paragraphs.length}</span>
-                    {before && count !== beforeCount(tag) && (
+                    {change !== 0 && (
                       <span className="ml-1.5 text-[12.5px] font-medium text-gray-500">
-                        {count > beforeCount(tag) ? '+' : ''}
-                        {count - beforeCount(tag)}
+                        {change > 0 ? '+' : ''}
+                        {change}
                       </span>
                     )}
                   </span>

@@ -36,16 +36,15 @@ function parse(path: string, raw: string): Article {
 const fileName = (path: string) => path.split('/').pop()!
 
 /** 파일 이름의 순서 숫자대로 정렬한 전체 아티클 */
-const korean: Article[] = Object.keys(files)
-  .sort()
-  .map((path) => parse(path, files[path]))
+const paths = Object.keys(files).sort()
+const korean: Article[] = paths.map((path) => parse(path, files[path]))
 
-const english: Article[] = Object.keys(files)
-  .sort()
-  .map((path) => {
-    const translated = Object.keys(enFiles).find((en) => fileName(en) === fileName(path))
-    return translated ? parse(translated, enFiles[translated]) : parse(path, files[path])
-  })
+const enByName = new Map(Object.keys(enFiles).map((path) => [fileName(path), path]))
+// 영어 글이 없는 주소는 이미 읽은 한국어 글을 그대로 써요. 같은 마크다운을 두 번 변환하지 않아요.
+const english: Article[] = paths.map((path, index) => {
+  const translated = enByName.get(fileName(path))
+  return translated ? parse(translated, enFiles[translated]) : korean[index]
+})
 
 /** 언어에 맞는 아티클 목록. 순서와 주소는 언어와 상관없이 같아요. */
 export const articlesFor = (lang: Lang): Article[] => (lang === 'en' ? english : korean)

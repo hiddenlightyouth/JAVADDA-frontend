@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useDismiss } from '../hooks/useDismiss'
 import { track } from '../lib/analytics'
 import { MAC_DOWNLOAD, MAC_DOWNLOAD_OPEN, MAC_SUPPORT } from '../lib/app'
 import { heroDark } from '../lib/hero'
 import { LANG_NAMES, localizePath, messages, pick, setLang, useLang, useMessages } from '../lib/i18n'
+import { followLink } from '../lib/links'
 import { useStore } from '../lib/store'
+import { ChevronDownIcon } from './Icons'
 import type { AccountPage } from './Account'
 import { Logo } from './Logo'
 
@@ -77,6 +79,8 @@ function LangSwitch({ className, onSwitch }: { className: string; onSwitch?: () 
 }
 
 const quiet = 'h-8 rounded-full px-3 text-[13px] font-medium transition-colors'
+/** 넓은 화면 헤더의 글자 링크예요. */
+const navLink = `${quiet} inline-flex items-center text-gray-600 hover:text-gray-900`
 
 export function Header({
   onHome,
@@ -115,27 +119,23 @@ export function Header({
       : ([['login', text.login]] as const)
     : []
 
-  function goAbout(event: MouseEvent<HTMLAnchorElement>) {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
-    event.preventDefault()
+  const goAbout = followLink(() => {
     setMenuOpen(false)
     setDownloadOpen(false)
     onAbout?.()
-  }
+  })
 
-  function goArticles(event: MouseEvent<HTMLAnchorElement>) {
-    event.preventDefault()
+  const goArticles = followLink(() => {
     setMenuOpen(false)
     onArticles?.()
-  }
+  })
 
-  function goAccount(event: MouseEvent<HTMLAnchorElement>, page: AccountPage) {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
-    event.preventDefault()
-    setMenuOpen(false)
-    track('account_nav_click', { page })
-    onAccount?.(page)
-  }
+  const goAccount = (page: AccountPage) =>
+    followLink(() => {
+      setMenuOpen(false)
+      track('account_nav_click', { page })
+      onAccount?.(page)
+    })
 
   function download() {
     setDownloadOpen(false)
@@ -165,7 +165,7 @@ export function Header({
         <div className="relative flex items-center gap-1 sm:gap-2">
           <nav className={app ? 'hidden' : 'hidden items-center gap-1 sm:flex sm:gap-2'}>
             {onAbout && (
-              <a href={localizePath('/about')} onClick={goAbout} className={`${quiet} inline-flex items-center text-gray-600 hover:text-gray-900`}>
+              <a href={localizePath('/about')} onClick={goAbout} className={navLink}>
                 {text.about}
               </a>
             )}
@@ -196,56 +196,13 @@ export function Header({
                   role="menu"
                   className="absolute top-full left-1/2 mt-2 w-52 -translate-x-1/2 origin-top animate-pop rounded-2xl border border-gray-200 bg-white/80 p-1.5 backdrop-blur-xl"
                 >
-                  {!MAC_DOWNLOAD_OPEN && (
-                    <div role="menuitem" aria-disabled="true" className="flex cursor-not-allowed items-center gap-2.5 rounded-xl px-3 py-2 text-gray-400">
-                      <AppleLogo />
-                      <span>
-                        <span className="block text-[13px] font-medium">macOS</span>
-                        <span className="block text-[11.5px]">{text.soon}</span>
-                      </span>
-                    </div>
-                  )}
-                  <a
-                    hidden={!MAC_DOWNLOAD_OPEN}
-                    href={MAC_DOWNLOAD}
-                    download
-                    role="menuitem"
-                    onClick={download}
-                    className="group flex items-center gap-2.5 rounded-xl px-3 py-2 text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
-                  >
-                    <AppleLogo />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[13px] font-medium">macOS</span>
-                      <span className="block text-[11.5px] text-gray-400">{MAC_SUPPORT}</span>
-                    </span>
-                    {/* 마우스를 올리거나 키보드로 고르면, 누르면 받는다는 것을 아이콘으로 알려줘요. */}
-                    <svg
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="size-4 shrink-0 text-gray-500 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
-                      aria-hidden="true"
-                    >
-                      <path d="M8 2.5v7.5M4.75 7L8 10.25 11.25 7M3 13.5h10" />
-                    </svg>
-                  </a>
-                  {/* 아직 받을 수 없어서 누를 수 없게 흐리게 둬요. */}
-                  <div role="menuitem" aria-disabled="true" className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-gray-400 cursor-not-allowed">
-                    <WindowsLogo />
-                    <span>
-                      <span className="block text-[13px] font-medium">Windows</span>
-                      <span className="block text-[11.5px]">{text.soon}</span>
-                    </span>
-                  </div>
+                  <Platforms variant="menu" onDownload={download} />
                 </div>
               )}
             </div>
 
             {onArticles && (
-              <a href={localizePath('/articles')} onClick={goArticles} className={`${quiet} inline-flex items-center text-gray-600 hover:text-gray-900`}>
+              <a href={localizePath('/articles')} onClick={goArticles} className={navLink}>
                 {text.articles}
               </a>
             )}
@@ -254,8 +211,8 @@ export function Header({
               <a
                 key={page}
                 href={`/${page}`}
-                onClick={(event) => goAccount(event, page)}
-                className={`${quiet} inline-flex items-center text-gray-600 hover:text-gray-900`}
+                onClick={goAccount(page)}
+                className={navLink}
               >
                 {label}
               </a>
@@ -313,29 +270,7 @@ export function Header({
             </button>
             {mobileDownloadOpen && (
               <div className="animate-rise pb-2 pl-3">
-                {!MAC_DOWNLOAD_OPEN && (
-                  <div aria-disabled="true" className="flex cursor-not-allowed items-center gap-2.5 py-2.5 text-gray-400">
-                    <AppleLogo />
-                    <span>
-                      <span className="block text-[15px]">macOS</span>
-                      <span className="block text-[12px]">{text.soon}</span>
-                    </span>
-                  </div>
-                )}
-                <a hidden={!MAC_DOWNLOAD_OPEN} href={MAC_DOWNLOAD} download onClick={download} className="flex items-center gap-2.5 py-2.5 text-gray-600 transition-colors hover:text-gray-900">
-                  <AppleLogo />
-                  <span>
-                    <span className="block text-[15px]">macOS</span>
-                    <span className="block text-[12px] text-gray-400">{MAC_SUPPORT}</span>
-                  </span>
-                </a>
-                <div aria-disabled="true" className="flex items-center gap-2.5 py-2.5 text-gray-400 cursor-not-allowed">
-                  <WindowsLogo />
-                  <span>
-                    <span className="block text-[15px]">Windows</span>
-                    <span className="block text-[12px]">{text.soon}</span>
-                  </span>
-                </div>
+                <Platforms variant="drawer" onDownload={download} />
               </div>
             )}
 
@@ -346,7 +281,7 @@ export function Header({
             )}
 
             {accountLinks.map(([page, label]) => (
-              <a key={page} href={`/${page}`} onClick={(event) => goAccount(event, page)} className={mobileItem}>
+              <a key={page} href={`/${page}`} onClick={goAccount(page)} className={mobileItem}>
                 {label}
               </a>
             ))}
@@ -379,18 +314,73 @@ export function AppleLogo() {
 const mobileItem = 'block w-full border-b border-gray-200/70 py-3.5 text-left text-[16px] font-medium text-gray-800 transition-colors hover:text-gray-950'
 
 function Caret({ open }: { open: boolean }) {
+  return <ChevronDownIcon className={`size-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+}
+
+const PLATFORM = {
+  /** 헤더의 앱 다운로드 메뉴 */
+  menu: { row: 'rounded-xl px-3 py-2', name: 'text-[13px] font-medium', note: 'text-[11.5px]' },
+  /** 모바일 메뉴 안에서 펼친 목록 */
+  drawer: { row: 'py-2.5', name: 'text-[15px]', note: 'text-[12px]' },
+}
+
+/**
+ * 앱 다운로드의 macOS와 Windows 줄이에요. 헤더의 메뉴와 모바일 메뉴가 같은 줄을 크기만 다르게 그려요.
+ * macOS는 `MAC_DOWNLOAD_OPEN`이 켜져 있을 때만 받을 수 있고, 아니면 Windows처럼 준비 중으로 흐리게 둬요.
+ */
+function Platforms({ variant, onDownload }: { variant: keyof typeof PLATFORM; onDownload: () => void }) {
+  const text = useMessages(TEXT)
+  const shape = PLATFORM[variant]
+  const menu = variant === 'menu'
+  // 아직 받을 수 없어서 누를 수 없게 흐리게 둬요.
+  const soon = (logo: ReactNode, name: string) => (
+    <div role={menu ? 'menuitem' : undefined} aria-disabled="true" className={`flex cursor-not-allowed items-center gap-2.5 text-gray-400 ${shape.row}`}>
+      {logo}
+      <span>
+        <span className={`block ${shape.name}`}>{name}</span>
+        <span className={`block ${shape.note}`}>{text.soon}</span>
+      </span>
+    </div>
+  )
+  return (
+    <>
+      {MAC_DOWNLOAD_OPEN ? (
+        <a
+          href={MAC_DOWNLOAD}
+          download
+          role={menu ? 'menuitem' : undefined}
+          onClick={onDownload}
+          className={`group flex items-center gap-2.5 transition-colors hover:text-gray-900 ${shape.row} ${menu ? 'text-gray-700 hover:bg-gray-100' : 'text-gray-600'}`}
+        >
+          <AppleLogo />
+          <span className="min-w-0 flex-1">
+            <span className={`block ${shape.name}`}>macOS</span>
+            <span className={`block text-gray-400 ${shape.note}`}>{MAC_SUPPORT}</span>
+          </span>
+          {menu && <DownloadMark />}
+        </a>
+      ) : (
+        soon(<AppleLogo />, 'macOS')
+      )}
+      {soon(<WindowsLogo />, 'Windows')}
+    </>
+  )
+}
+
+/** 마우스를 올리거나 키보드로 고르면, 누르면 받는다는 것을 아이콘으로 알려줘요. */
+function DownloadMark() {
   return (
     <svg
-      aria-hidden="true"
-      viewBox="0 0 10 6"
-      className={`h-1.5 w-2.5 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+      viewBox="0 0 16 16"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
+      className="size-4 shrink-0 text-gray-500 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+      aria-hidden="true"
     >
-      <path d="M1 1l4 4 4-4" />
+      <path d="M8 2.5v7.5M4.75 7L8 10.25 11.25 7M3 13.5h10" />
     </svg>
   )
 }

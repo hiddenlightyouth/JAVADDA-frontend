@@ -49,19 +49,12 @@ export function AppGate() {
         {waiting && <p className="mt-4 animate-rise break-keep text-[14px] leading-relaxed text-gray-500">{text.waiting}</p>}
 
         <div className="animate-rise" style={{ animationDelay: '240ms' }}>
-          <button
-            type="button"
-            disabled={working}
-            onClick={openBrowser}
-            className={`mt-8 ${primaryButtonLg}`}
-          >
+          <button type="button" disabled={working} onClick={openBrowser} className={`mt-8 ${primaryButtonLg}`}>
             {working ? text.working : waiting ? text.reopen : text.login}
           </button>
         </div>
 
-        {error && (
-          <FormError className="mt-3">{error}</FormError>
-        )}
+        <FormError className="mt-3">{error}</FormError>
       </div>
     </main>
   )

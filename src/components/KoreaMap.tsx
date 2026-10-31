@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Company } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { MAP_HEIGHT, MAP_WIDTH, METRO, project, PROVINCES, REGION_BOXES, RIVERS } from '../lib/koreaMap'
@@ -7,7 +7,7 @@ import { CompanyMark, Tip } from './GapParts'
 import { MinusIcon, PlusIcon } from './Icons'
 
 /**
- * 라이브러리 없이 SVG로 그린 우리나라 지도예요. 채용 지도와 기업 상세의 위치 칸이 같이 써요.
+ * 라이브러리 없이 SVG로 그린 우리나라 지도예요. 채용 지도가 네이버 지도를 쓸 수 없을 때(키가 없거나 인증에 실패하면) 써요.
  * 지도 칸의 크기를 재서 그 칸을 꽉 채워 그리고, interactive면 휠(트랙패드 두 손가락과 핀치 포함)로 확대하고 끌어서 옮겨요.
  * 칸(target)이 바뀌면 그 칸이 가운데에 꽉 차게 부드럽게 옮겨 가요.
  * 전국을 볼 때는 권역마다 공고 수 말풍선을, 어느 정도(pinZoom) 확대하면 동네마다 핀을 보여줘요. 핀과 말풍선은 확대해도 크기가 그대로이게 HTML로 올려요.
@@ -32,7 +32,7 @@ export interface PinGroup {
   name: string
 }
 
-/** 현위치처럼 파란 점으로 찍는 자리예요. 기업 상세의 본사 자리예요. */
+/** 현위치처럼 파란 점으로 찍는 자리예요. 채용 지도의 내 위치와 기업 상세의 본사 자리예요. */
 export interface MapMarker {
   lon: number
   lat: number
@@ -97,7 +97,6 @@ export function KoreaMap({
   pinLabel,
   onPin,
   markers = [],
-  labels = [],
   interactive = false,
   padRight = 0,
   overlay,
@@ -119,8 +118,6 @@ export function KoreaMap({
   pinLabel?: (pin: PinGroup) => string
   onPin?: (pin: PinGroup) => void
   markers?: MapMarker[]
-  /** 어디인지 알 수 있게 작게 적는 지명이에요. */
-  labels?: { name: string; lon: number; lat: number }[]
   /** 휠로 확대하고 끌어서 옮겨요. 확대와 축소 버튼도 생겨요. */
   interactive?: boolean
   /** 지도 오른쪽을 덮는 칸의 폭(px). 칸을 가운데에 놓을 때 이만큼 비켜요. 좁은 지도(768px 미만)에서는 칸이 아래에 떠서 비키지 않아요. */
@@ -201,6 +198,15 @@ export function KoreaMap({
     const [x, y] = project(lon, lat)
     return { left: x * view.scale + view.x, top: y * view.scale + view.y }
   }
+  // 겹침은 핀 사이의 거리만 보니 옮겨도(x, y) 그대로예요. 확대 정도가 바뀔 때만 다시 묶어서, 끄는 동안에는 묶지 않아요.
+  const groups = useMemo(() => {
+    if (!detail) return []
+    const toPixel = (lon: number, lat: number): [number, number] => {
+      const [x, y] = project(lon, lat)
+      return [x * view.scale, y * view.scale]
+    }
+    return groupPins(pins, toPixel, L.more)
+  }, [detail, pins, view.scale, L])
   const moving = smooth ? 'transition-[left,top] duration-500 ease-out' : ''
   const shaded = counts && !detail
   // 수가 많을수록 짙어요. 적은 권역도 보이게 제곱근으로 펴요.
@@ -291,12 +297,6 @@ export function KoreaMap({
         </g>
       </svg>
 
-      {labels.map((label) => (
-        <span key={label.name} style={at(label.lon, label.lat)} className={`pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 text-[12px] font-medium text-gray-400 ${moving}`}>
-          {label.name}
-        </span>
-      ))}
-
       {/* 전국을 볼 때는 권역마다 공고 수를 띄워요. */}
       {!detail &&
         counts &&
@@ -309,12 +309,10 @@ export function KoreaMap({
             <button
               key={region}
               type="button"
-              disabled={!onRegion || count === 0}
+              disabled={!onRegion}
               onClick={() => onRegion?.(region)}
               style={at(...REGION_LABEL[region])}
-              className={`absolute flex h-8 -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold whitespace-nowrap ring-1 transition-colors ${moving} ${
-                count > 0 ? 'bg-white text-gray-900 ring-gray-200 hover:text-brand-hover hover:ring-brand' : 'cursor-default bg-white/70 text-gray-400 ring-gray-200/70'
-              }`}
+              className={`absolute flex h-8 -translate-x-1/2 -translate-y-1/2 items-center gap-1.5 rounded-full bg-white px-3 text-[13px] font-semibold whitespace-nowrap text-gray-900 ring-1 ring-gray-200 transition-colors hover:text-brand-hover hover:ring-brand ${moving}`}
             >
               {regionLabel(region, count)}
             </button>
@@ -322,10 +320,7 @@ export function KoreaMap({
         })}
 
       {detail &&
-        groupPins(pins, (lon, lat) => {
-          const point = at(lon, lat)
-          return [point.left, point.top]
-        }, L.more).map((pin) => {
+        groups.map((pin) => {
           const active = activePin === pinKey(pin)
           return (
             <span key={pinKey(pin)} style={at(pin.places[0].lon, pin.places[0].lat)} className={`absolute -translate-x-1/2 -translate-y-1/2 ${moving} ${active ? 'z-10' : 'hover:z-10'}`}>

@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { articlesFor, findArticle, type Article } from '../lib/articles'
 import { track } from '../lib/analytics'
 import { localizePath, messages, useLang, useMessages } from '../lib/i18n'
+import { followLink } from '../lib/links'
 import { applyMeta, HOME_META, SITE_TITLE } from '../lib/meta'
 import { primaryButtonMd } from './ui'
 
@@ -44,27 +45,9 @@ export const ARTICLES_TEXT = messages({
 })
 
 /** 같은 페이지 안에서 화면만 바꾸는 링크. 새 탭으로 열기 같은 브라우저 기본 동작은 그대로 둬요. */
-function InnerLink({
-  href,
-  onNavigate,
-  className,
-  children,
-}: {
-  href: string
-  onNavigate: () => void
-  className?: string
-  children: React.ReactNode
-}) {
+function InnerLink({ href, onNavigate, className, children }: { href: string; onNavigate: () => void; className?: string; children: ReactNode }) {
   return (
-    <a
-      href={localizePath(href)}
-      onClick={(event) => {
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
-        event.preventDefault()
-        onNavigate()
-      }}
-      className={className}
-    >
+    <a href={localizePath(href)} onClick={followLink(onNavigate)} className={className}>
       {children}
     </a>
   )

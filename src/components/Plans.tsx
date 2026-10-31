@@ -46,7 +46,7 @@ const TEXT = messages({
   },
 })
 
-/** 요금제 세 개만 보여주는 창이에요. 계정 메뉴, 모델 메뉴, 말풍선의 플랜 변경 버튼으로 열어요. */
+/** 요금제 세 개만 보여주는 창이에요. 사이드바 계정 메뉴의 업그레이드 버튼으로 열어요. */
 export function PlansModal({ onClose }: { onClose: () => void }) {
   const L = useMessages(TEXT)
   const lang = useLang()
@@ -79,7 +79,8 @@ export function PlansModal({ onClose }: { onClose: () => void }) {
             <section
               key={plan.id}
               style={{ animationDelay: `${index * 60}ms` }}
-              className={`flex animate-rise flex-col rounded-2xl border p-5 ${current ? 'border-brand' : 'border-gray-200'}`}
+              // 앱의 다른 칸처럼 테두리 없이 옅은 회색이고, 쓰고 있는 요금제만 메인 컬러 테두리를 둘러요.
+              className={`flex animate-rise flex-col rounded-2xl border bg-gray-50 p-5 ${current ? 'border-brand' : 'border-transparent'}`}
             >
               <h3 className="text-[16px] font-semibold text-gray-900">{L.names[plan.id]}</h3>
               {/* 설명이 없거나 짧아도 두 줄 자리를 잡아서, 세 카드의 값이 같은 높이에 와요. */}
@@ -99,7 +100,7 @@ export function PlansModal({ onClose }: { onClose: () => void }) {
               <button
                 type="button"
                 disabled
-                className={`mt-6 h-10 rounded-full text-[13px] font-semibold ${current ? 'bg-brand-soft text-brand' : 'bg-gray-100 text-gray-400'}`}
+                className={`mt-6 h-10 rounded-full text-[13px] font-semibold ${current ? 'bg-brand-soft text-brand' : 'bg-gray-200/70 text-gray-400'}`}
               >
                 {current ? L.current : plan.id === 'FREE' ? L.base : L.soon}
               </button>

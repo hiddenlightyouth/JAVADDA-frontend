@@ -61,24 +61,24 @@ const showBoot = (percent: number) => {
 
 // 소개(브라우저의 메인 주소)와 아티클 주소로 들어오면 미리 그려 둔 화면이 이미 있어요. 그 화면의 코드를 먼저 받은 뒤에 그려서, 글이 잠깐 사라졌다 나타나지 않게 해요.
 const boot = () => {
-const path = currentPath()
-if (/^\/articles(\/|$)/.test(path)) void import('./components/Articles').finally(start)
-else if (aboutFromPath()) void import('./components/About').finally(start)
-else if (appShell) {
-  // 앱 화면은 기업과 공고를 받은 뒤에 그려요. 공고를 찾는 함수(postingOf, companyOf)가 바로 답할 수 있게요.
-  // 받는 동안은 가운데에 받은 정도(퍼센트)를 보여주고, 서버에 닿지 못하면 적어 둔 목록으로 그려요. 로그인해 있으면 이력서와 리포트도 같이 받기 시작해요.
-  // 막대가 보였으면(0.15초 넘게 걸렸으면) 100%를 0.2초 보여준 뒤에 그려요.
-  startAccountSync()
-  const began = performance.now()
-  showBoot(0)
-  void loadCatalog(createLoadTracker(showBoot)).finally(() => {
-    if (performance.now() - began < LOAD_SHOW_AFTER_MS) start()
-    else {
-      showBoot(100)
-      setTimeout(start, LOAD_HOLD_MS)
-    }
-  })
-} else start()
+  const path = currentPath()
+  if (/^\/articles(\/|$)/.test(path)) void import('./components/Articles').finally(start)
+  else if (aboutFromPath()) void import('./components/About').finally(start)
+  else if (appShell) {
+    // 앱 화면은 기업과 공고를 받은 뒤에 그려요. 공고를 찾는 함수(postingOf, companyOf)가 바로 답할 수 있게요.
+    // 받는 동안은 가운데에 받은 정도(퍼센트)를 보여주고, 서버에 닿지 못하면 적어 둔 목록으로 그려요. 로그인해 있으면 이력서와 리포트도 같이 받기 시작해요.
+    // 막대가 보였으면(0.15초 넘게 걸렸으면) 100%를 0.2초 보여준 뒤에 그려요.
+    startAccountSync()
+    const began = performance.now()
+    showBoot(0)
+    void loadCatalog(createLoadTracker(showBoot)).finally(() => {
+      if (performance.now() - began < LOAD_SHOW_AFTER_MS) start()
+      else {
+        showBoot(100)
+        setTimeout(start, LOAD_HOLD_MS)
+      }
+    })
+  } else start()
 }
 
 // 목 모드(내 컴퓨터의 .env.development.local에 VITE_MOCK=true)면 서버 대신 브라우저 안의 가짜 서버가 답해요(src/lib/mock.ts). 배포 빌드에는 들어가지 않아요.

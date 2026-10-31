@@ -1,15 +1,14 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useDismiss } from '../hooks/useDismiss'
 import { messages, useMessages } from '../lib/i18n'
 import { CloseButton } from './Icons'
+import { dangerButton, primaryButton, quietButton } from './ui'
 
 const TEXT = messages({
   ko: { cancel: '취소', working: '처리 중' },
   en: { cancel: 'Cancel', working: 'Working' },
 })
-
-import { dangerButton, primaryButton, quietButton } from './ui'
 
 /**
  * 화면을 흐리게 덮고 가운데에 뜨는 창이에요. 바깥을 누르거나 Esc를 누르면 닫혀요.
@@ -95,16 +94,10 @@ export function SidePanel({ onClose, closeLabel, labelledBy, label, header, dism
       aria-label={labelledBy ? undefined : label}
       className={`fixed inset-y-0 right-0 z-30 flex w-full animate-slide-in flex-col border-l border-gray-200 bg-white ${className}`}
     >
-      {header ? (
-        <div className="flex shrink-0 items-start justify-between gap-3 px-6 pt-6 pb-4">
-          <div className="min-w-0">{header}</div>
-          <CloseButton label={closeLabel} size="md" onClick={onClose} />
-        </div>
-      ) : (
-        <div className="flex h-14 shrink-0 items-center justify-end px-4">
-          <CloseButton label={closeLabel} size="md" onClick={onClose} />
-        </div>
-      )}
+      <div className={header ? 'flex shrink-0 items-start justify-between gap-3 px-6 pt-6 pb-4' : 'flex h-14 shrink-0 items-center justify-end px-4'}>
+        {header && <div className="min-w-0">{header}</div>}
+        <CloseButton label={closeLabel} size="md" onClick={onClose} />
+      </div>
       {children}
     </aside>,
     document.body,
@@ -122,9 +115,11 @@ export function ConfirmDialog({ title, body, confirm, danger = false, working = 
   onConfirm: () => void
 }) {
   const L = useMessages(TEXT)
+  // 확인 창이 둘 겹쳐도 제목 id가 겹치지 않게 창마다 따로 만들어요.
+  const titleId = useId()
   return (
-    <Modal onClose={onCancel} labelledBy="confirm-dialog-title" alert>
-      <h2 id="confirm-dialog-title" className="text-[15px] font-semibold text-gray-900">
+    <Modal onClose={onCancel} labelledBy={titleId} alert>
+      <h2 id={titleId} className="text-[15px] font-semibold text-gray-900">
         {title}
       </h2>
       <p className="mt-1.5 text-[13px] leading-relaxed break-keep text-gray-500 [overflow-wrap:anywhere]">{body}</p>

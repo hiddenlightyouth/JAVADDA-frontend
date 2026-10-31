@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react'
 import { track } from '../lib/analytics'
-import { useAiModelSetting } from './AiModelSetting'
-import { useVoiceSetting } from './VoiceSetting'
+import { AiModelRow } from './AiModelSetting'
+import { VoiceRow } from './VoiceSetting'
 import { Modal } from './Dialog'
 import { appAtLeast, appVersion, postToApp, type AppTheme } from '../lib/app'
 import { setShortcutHintsPinned, useShortcutHintsPinned } from '../lib/shortcuts'
 import { setAppShield, setAppTheme, useAppSettings } from '../lib/theme'
 import { LANG_NAMES, LANGS, messages, setLang, useLang, useMessages } from '../lib/i18n'
 import { CloseButton } from './Icons'
+import { settingList, SettingRow } from './SettingRow'
 import { label, Segmented, softButton } from './ui'
 
 const THEMES: AppTheme[] = ['system', 'light', 'dark']
@@ -56,21 +57,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-7 first:mt-0">
       <h3 className={label}>{title}</h3>
-      <dl className="mt-2 divide-y divide-gray-100 border-y border-gray-100 text-[14px]">{children}</dl>
+      <dl className={`mt-2 ${settingList}`}>{children}</dl>
     </section>
-  )
-}
-
-/** 설정 한 줄이에요. 왼쪽에 이름과 설명, 오른쪽에 고르는 칸이 있어요. */
-function Row({ label, note, children }: { label: string; note?: string; children: ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-6 py-3.5">
-      <dt className="min-w-0">
-        <span className="block text-gray-900">{label}</span>
-        {note && <span className="mt-0.5 block text-[12.5px] leading-relaxed break-keep text-gray-500">{note}</span>}
-      </dt>
-      <dd className="shrink-0">{children}</dd>
-    </div>
   )
 }
 
@@ -92,7 +80,7 @@ function Switch({ on, label, onChange }: { on: boolean; label: string; onChange:
 
 /**
  * 앱의 설정 창이에요. 보던 화면 위에 떠서, 앱이 어떻게 보이고 움직일지 정하는 것만 모아 둬요.
- * 이름, 이메일, 로그인한 기기처럼 계정에 딸린 것은 내 정보 화면에 있어요.
+ * 이름, 이메일, 로그인한 기기처럼 계정에 딸린 것은 내 정보 화면에 있어요. AI 모델과 면접관 목소리는 내 정보 화면에도 같은 줄이 있어요.
  * 바깥을 누르거나 Esc를 누르면 닫혀요. 바꾼 값은 바로 적용돼서 저장 버튼은 없어요.
  */
 export function Settings({ onClose }: { onClose: () => void }) {
@@ -100,8 +88,6 @@ export function Settings({ onClose }: { onClose: () => void }) {
   const hints = useShortcutHintsPinned()
   const lang = useLang()
   const text = useMessages(TEXT)
-  const aiModel = useAiModelSetting('right')
-  const voice = useVoiceSetting('right')
 
   return (
     <Modal onClose={onClose} labelledBy="settings-title" className="flex max-h-[85dvh] w-full max-w-lg flex-col">
@@ -112,96 +98,91 @@ export function Settings({ onClose }: { onClose: () => void }) {
         <CloseButton label={text.close} onClick={onClose} size="md" className="-mr-2" />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
-
-      <Section title={text.display}>
-        <Row label={text.theme}>
-          <Segmented
-            size="md"
-            label={text.theme}
-            value={theme}
-            options={THEMES.map((value) => [value, text.themes[value]])}
-            onChange={(value) => {
-              track('app_theme_change', { theme: value })
-              setAppTheme(value)
-            }}
-          />
-        </Row>
-        <Row label={text.language}>
-          <Segmented
-            size="md"
-            label={text.language}
-            value={lang}
-            options={LANGS.map((value) => [value, LANG_NAMES[value]])}
-            onChange={(value) => {
-              track('language_change', { lang: value, from: 'settings' })
-              setLang(value)
-            }}
-          />
-        </Row>
-        <Row label={text.hints} note={text.hintsNote}>
-          <Switch
-            on={hints}
-            label={text.hints}
-            onChange={(next) => {
-              track('app_shortcut_hints_change', { on: next })
-              setShortcutHintsPinned(next)
-            }}
-          />
-        </Row>
-      </Section>
-
-      {/* 고를 모델이 없어도 칸은 늘 보여주고, 왜 고를 수 없는지 알려요. */}
-      <Section title={text.ai}>
-        <Row label={aiModel.label} note={aiModel.note}>
-          {aiModel.control}
-        </Row>
-      </Section>
-
-      <Section title={text.practice}>
-        <Row label={voice.label} note={voice.note}>
-          {voice.control}
-        </Row>
-      </Section>
-
-      {/* 화면 공유를 알아채는 것은 앱 1.2부터라, 그보다 낮은 앱에서는 보여주지 않아요. */}
-      {appAtLeast('1.2') && (
-        <Section title={text.privacy}>
-          <Row label={text.shield} note={text.shieldNote}>
-            <Switch
-              on={shield}
-              label={text.shield}
-              onChange={(next) => {
-                track('app_shield_change', { on: next })
-                setAppShield(next)
+        <Section title={text.display}>
+          <SettingRow label={text.theme}>
+            <Segmented
+              size="md"
+              label={text.theme}
+              value={theme}
+              options={THEMES.map((value) => [value, text.themes[value]])}
+              onChange={(value) => {
+                track('app_theme_change', { theme: value })
+                setAppTheme(value)
               }}
             />
-          </Row>
+          </SettingRow>
+          <SettingRow label={text.language}>
+            <Segmented
+              size="md"
+              label={text.language}
+              value={lang}
+              options={LANGS.map((value) => [value, LANG_NAMES[value]])}
+              onChange={(value) => {
+                track('language_change', { lang: value, from: 'settings' })
+                setLang(value)
+              }}
+            />
+          </SettingRow>
+          <SettingRow label={text.hints} note={text.hintsNote}>
+            <Switch
+              on={hints}
+              label={text.hints}
+              onChange={(next) => {
+                track('app_shortcut_hints_change', { on: next })
+                setShortcutHintsPinned(next)
+              }}
+            />
+          </SettingRow>
         </Section>
-      )}
 
-      {/* 버전과 업데이트 확인은 macOS 앱에서만 보여줘요. 웹의 /app에는 버전이 없어요. */}
-      {appVersion && (
-      <Section title={text.app}>
-        <Row label={text.version}>
-          <span className="flex items-center gap-3">
-            <span className="font-medium text-gray-900 tabular-nums">{appVersion}</span>
-            {/* 예전 앱은 이 메시지를 받지 못해서, 받을 수 있는 버전에서만 버튼을 보여줘요. */}
-            {appAtLeast('1.1') && (
-              <button
-                type="button"
-                onClick={() => {
-                  track('app_update_check')
-                  postToApp({ type: 'update' })
+        {/* 고를 모델이 없어도 칸은 늘 보여주고, 왜 고를 수 없는지 알려요. */}
+        <Section title={text.ai}>
+          <AiModelRow />
+        </Section>
+
+        <Section title={text.practice}>
+          <VoiceRow />
+        </Section>
+
+        {/* 화면 공유를 알아채는 것은 앱 1.2부터라, 그보다 낮은 앱에서는 보여주지 않아요. */}
+        {appAtLeast('1.2') && (
+          <Section title={text.privacy}>
+            <SettingRow label={text.shield} note={text.shieldNote}>
+              <Switch
+                on={shield}
+                label={text.shield}
+                onChange={(next) => {
+                  track('app_shield_change', { on: next })
+                  setAppShield(next)
                 }}
-                className={softButton}
-              >
-                {text.update}
-              </button>
-            )}
-          </span>
-        </Row>
-      </Section>
-      )}
+              />
+            </SettingRow>
+          </Section>
+        )}
+
+        {/* 버전과 업데이트 확인은 macOS 앱에서만 보여줘요. 웹의 /app에는 버전이 없어요. */}
+        {appVersion && (
+          <Section title={text.app}>
+            <SettingRow label={text.version}>
+              <span className="flex items-center gap-3">
+                <span className="font-medium text-gray-900 tabular-nums">{appVersion}</span>
+                {/* 예전 앱은 이 메시지를 받지 못해서, 받을 수 있는 버전에서만 버튼을 보여줘요. */}
+                {appAtLeast('1.1') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      track('app_update_check')
+                      postToApp({ type: 'update' })
+                    }}
+                    className={softButton}
+                  >
+                    {text.update}
+                  </button>
+                )}
+              </span>
+            </SettingRow>
+          </Section>
+        )}
       </div>
     </Modal>
   )

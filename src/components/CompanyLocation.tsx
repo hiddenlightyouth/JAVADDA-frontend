@@ -7,6 +7,8 @@ import { placesOf } from '../lib/regions'
 import { Panel } from './GapParts'
 import { ExternalLinkIcon, MapPinIcon } from './Icons'
 import type { MapMarker } from './KoreaMap'
+import { LOCATION_DOT_HTML } from './mapDot'
+import { panelAction } from './ScreenParts'
 
 /**
  * 기업 상세의 위치 칸이에요. 본사 주소를 알면 작은 지도에 현위치처럼 파란 점을 찍고, 아래에 주소를 적어요.
@@ -64,7 +66,7 @@ export function CompanyLocation({ profile }: { profile: CompanyProfile }) {
           rel="noreferrer"
           aria-label={L.openNaverLabel(company.name)}
           onClick={() => track('company_map_open', { company: company.id })}
-          className="flex items-center gap-1 text-[12.5px] font-medium text-gray-500 transition-colors hover:text-gray-900"
+          className={panelAction}
         >
           {L.openNaver}
           <ExternalLinkIcon className="size-3.5" />
@@ -89,16 +91,6 @@ export function CompanyLocation({ profile }: { profile: CompanyProfile }) {
 }
 
 /**
- * 네이버 지도의 마커는 HTML 글자로 받아서, 현위치 같은 파란 점을 `LocationDot`과 같은 모양으로 직접 적어요.
- * 메인 컬러(#2E90FA)와 옅은 테(15%)예요.
- */
-const DOT_HTML =
-  '<div style="position:relative;width:40px;height:40px">' +
-  '<div style="position:absolute;inset:0;border-radius:9999px;background:rgba(46,144,250,.15)"></div>' +
-  '<div style="position:absolute;left:12px;top:12px;width:16px;height:16px;border-radius:9999px;background:#2E90FA;border:3px solid #fff;box-sizing:border-box"></div>' +
-  '</div>'
-
-/**
  * 네이버 지도를 작게 그리고 점을 찍어요. 휠로는 확대하지 않아서 화면을 스크롤하다 지도에 걸리지 않아요.
  * 점이 한 곳이면 그 둘레로(본사처럼 정확한 자리면 더 가까이), 여러 곳이면 모두 들어오게 맞춰요.
  */
@@ -116,12 +108,18 @@ function NaverMiniMap({ markers, exact, onFail }: { markers: MapMarker[]; exact:
       (maps) => {
         if (stale || !ref.current) return
         const points = markers.map((marker) => new maps.LatLng(marker.lat, marker.lon))
-        map = new maps.Map(ref.current, { center: points[0], zoom: exact ? 16 : 14, scrollWheel: false, scaleControl: false, mapDataControl: false, logoControl: true })
-        for (const [index, position] of points.entries()) new maps.Marker({ position, map, title: markers[index].label, icon: { content: DOT_HTML, anchor: new maps.Point(20, 20) } })
-        if (points.length > 1) {
-          const lats = markers.map((marker) => marker.lat)
-          const lons = markers.map((marker) => marker.lon)
-          map.fitBounds(new maps.LatLngBounds(new maps.LatLng(Math.min(...lats), Math.min(...lons)), new maps.LatLng(Math.max(...lats), Math.max(...lons))), { top: 40, right: 40, bottom: 40, left: 40 })
+        // 등록하지 않은 주소에서는 스크립트가 반쯤만 준비돼서 지도를 만들다 멈춰요. 그때도 불러오지 못했다고 적어요.
+        try {
+          map = new maps.Map(ref.current, { center: points[0], zoom: exact ? 16 : 14, scrollWheel: false, scaleControl: false, mapDataControl: false, logoControl: true })
+          for (const [index, position] of points.entries()) new maps.Marker({ position, map, title: markers[index].label, icon: { content: LOCATION_DOT_HTML, anchor: new maps.Point(20, 20) } })
+          if (points.length > 1) {
+            const lats = markers.map((marker) => marker.lat)
+            const lons = markers.map((marker) => marker.lon)
+            map.fitBounds(new maps.LatLngBounds(new maps.LatLng(Math.min(...lats), Math.min(...lons)), new maps.LatLng(Math.max(...lats), Math.max(...lons))), { top: 40, right: 40, bottom: 40, left: 40 })
+          }
+        } catch {
+          map = null
+          failRef.current()
         }
       },
       () => {
@@ -131,7 +129,12 @@ function NaverMiniMap({ markers, exact, onFail }: { markers: MapMarker[]; exact:
     return () => {
       stale = true
       stop()
-      map?.destroy()
+      // 인증에 실패하면 네이버 스크립트가 지도 속을 비워서, 지우다 멈추지 않게 감싸요.
+      try {
+        map?.destroy()
+      } catch {
+        // 이미 무너진 지도는 그대로 둬요.
+      }
     }
     // markers는 자리(key)로 봐요. 같은 자리를 새 배열로 넘겨도 지도를 다시 만들지 않아요.
     // eslint-disable-next-line react-hooks/exhaustive-deps

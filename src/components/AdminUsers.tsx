@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
 import {
   changeUserPlan,
@@ -20,9 +20,8 @@ import { describeDevice, useAuth } from '../lib/auth'
 import { formatDateTime, formatWhen } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { ConfirmDialog, SidePanel } from './Dialog'
-import { DeviceTags, Empty, Failed, full, MoreButton, TableLoading, SearchBox, tableWrap, td, th, useDebounced, usePaged } from './AdminParts'
-import { ghostButton, loadCenter, LoadProgress, Segmented, tag, toolButton, toolDangerButton } from './ui'
-import { useLoadHold, useLoadProgress } from '../lib/load'
+import { DeviceTags, full, InfoGrid, openableRow, PagedTable, PanelContent, SearchBox, td, th, useAdminData, useDebounced, usePaged } from './AdminParts'
+import { ghostButton, Segmented, tag, toolButton, toolDangerButton } from './ui'
 import { IpPlace } from './IpPlace'
 import { messages, pick, useMessages } from '../lib/i18n'
 
@@ -56,62 +55,50 @@ export function AdminUsers({ onOpenChat }: { onOpenChat: (id: string) => void })
         <Segmented label={L.kind} options={L.filters} value={filter} onChange={setFilter} />
       </div>
 
-      {list.waiting ? (
-        <TableLoading percent={list.percent} />
-      ) : list.items === null ? (
-        <Failed message={list.error} onRetry={list.retry} />
-      ) : list.items.length === 0 ? (
-        <Empty>{L.empty}</Empty>
-      ) : (
-        <>
-          <div className={tableWrap}>
-            <table className="w-full min-w-[760px] text-[13px] text-gray-700 tabular-nums">
-              <thead>
-                <tr>
-                  <th className={th}>{L.member}</th>
-                  <th className={th}>{L.status}</th>
-                  <th className={th}>{L.devices}</th>
-                  <th className={`${th} text-right`}>{L.chats}</th>
-                  <th className={th}>{L.lastLogin}</th>
-                  <th className={th}>{L.joined}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.items.map((user) => (
-                  <tr
-                    key={user.id}
-                    tabIndex={0}
-                    aria-label={L.manage(user.name)}
-                    onClick={() => {
-                      track('admin_user_open')
-                      setOpenId(user.id)
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') setOpenId(user.id)
-                    }}
-                    className={`cursor-pointer border-t border-gray-100 transition-colors hover:bg-gray-50 ${openId === user.id ? 'bg-gray-50' : ''}`}
-                  >
-                    <td className={td}>
-                      <p className="max-w-[220px] truncate font-semibold text-gray-900">{user.name}</p>
-                      <p className="mt-0.5 max-w-[220px] truncate text-[12px] text-gray-400">{user.email}</p>
-                    </td>
-                    <td className={td}>
-                      <StatusTags user={user} self={user.id === me?.id} />
-                    </td>
-                    <td className={td}>
-                      <DeviceTags app={user.usesApp} mobile={user.usesMobile} desktop={user.usesDesktop} />
-                    </td>
-                    <td className={`${td} text-right`}>{full(user.chatCount)}</td>
-                    <td className={`${td} whitespace-nowrap text-gray-500`}>{formatWhen(user.lastLoginAt) || L.none}</td>
-                    <td className={`${td} whitespace-nowrap text-gray-500`}>{formatWhen(user.registeredAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {list.hasNext && <MoreButton loading={list.loadingMore} percent={list.percent} onClick={() => void list.more()} />}
-        </>
-      )}
+      <PagedTable
+        list={list}
+        empty={L.empty}
+        head={
+          <>
+            <th className={th}>{L.member}</th>
+            <th className={th}>{L.status}</th>
+            <th className={th}>{L.devices}</th>
+            <th className={`${th} text-right`}>{L.chats}</th>
+            <th className={th}>{L.lastLogin}</th>
+            <th className={th}>{L.joined}</th>
+          </>
+        }
+      >
+        {(user) => (
+          <tr
+            key={user.id}
+            tabIndex={0}
+            aria-label={L.manage(user.name)}
+            onClick={() => {
+              track('admin_user_open')
+              setOpenId(user.id)
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') setOpenId(user.id)
+            }}
+            className={openableRow(openId === user.id)}
+          >
+            <td className={td}>
+              <p className="max-w-[220px] truncate font-semibold text-gray-900">{user.name}</p>
+              <p className="mt-0.5 max-w-[220px] truncate text-[12px] text-gray-400">{user.email}</p>
+            </td>
+            <td className={td}>
+              <StatusTags user={user} self={user.id === me?.id} />
+            </td>
+            <td className={td}>
+              <DeviceTags app={user.usesApp} mobile={user.usesMobile} desktop={user.usesDesktop} />
+            </td>
+            <td className={`${td} text-right`}>{full(user.chatCount)}</td>
+            <td className={`${td} whitespace-nowrap text-gray-500`}>{formatWhen(user.lastLoginAt) || L.none}</td>
+            <td className={`${td} whitespace-nowrap text-gray-500`}>{formatWhen(user.registeredAt)}</td>
+          </tr>
+        )}
+      </PagedTable>
 
       {openId !== null && (
         <UserPanel
@@ -329,6 +316,19 @@ const TEXT = messages({
 
 const heading = 'mt-7 text-[12.5px] font-medium text-gray-400'
 
+/** 상세 칸의 작은 묶음이에요. 제목 아래에 줄을 늘어놓고, 없으면 empty 문구를 적어요. */
+function Block({ title, empty, children }: { title: string; empty: string; children: ReactNode[] }) {
+  return (
+    <>
+      <h3 className={heading}>{title}</h3>
+      {children.length === 0 ? <p className="mt-2 text-[13px] text-gray-500">{empty}</p> : <ul className="mt-1">{children}</ul>}
+    </>
+  )
+}
+
+/** 묶음 안의 한 줄이에요. 줄 사이에 옅은 선이 있어요. */
+const blockRow = 'flex items-center gap-3 border-b border-gray-100 py-2.5 last:border-b-0'
+
 interface PanelProps {
   id: number
   selfId: number | null
@@ -342,28 +342,10 @@ interface PanelProps {
 /** 회원 한 명을 오른쪽에서 열어 보는 칸이에요. 로그인한 기기와 기록, 채팅을 보고 권한 변경, 정지, 로그아웃, 삭제를 해요. */
 function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: PanelProps) {
   const L = useMessages(TEXT)
-  const [detail, setDetail] = useState<AdminUserDetail | null>(null)
-  const [error, setError] = useState('')
-  const [version, setVersion] = useState(0)
+  // 관리 작업 뒤에 다시 받을 때는 보던 내용을 그대로 두고, 처음 받을 때만 진행 막대를 보여줘요.
+  const state = useAdminData<AdminUserDetail>((onLoad) => fetchAdminUser(id, onLoad), id, true)
   const [asking, setAsking] = useState<Action | null>(null)
   const [working, setWorking] = useState(false)
-  const load = useLoadProgress()
-  // 관리 작업 뒤에 다시 받을 때(version)는 보던 내용을 그대로 두고, 처음 받을 때만 진행 막대를 보여줘요.
-  const waiting = useLoadHold(!detail && !error)
-
-  useEffect(() => {
-    let stale = false
-    void fetchAdminUser(id, load.one()).then((result) => {
-      if (stale) return
-      if (result.ok) {
-        setError('')
-        setDetail(result.data)
-      } else setError(result.message)
-    })
-    return () => {
-      stale = true
-    }
-  }, [id, version, load.one])
 
   // 바깥을 누르거나 Esc를 누르면 닫는 것은 SidePanel이 맡아요.
   const cancel = useCallback(() => setAsking(null), [])
@@ -381,7 +363,7 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
     showToast(pick(TEXT).actions[action].done)
     if (action === 'delete') onDeleted()
     else {
-      setVersion((value) => value + 1)
+      state.reload()
       onChanged()
     }
   }
@@ -392,7 +374,7 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
     track('admin_user_action', { action: 'plan', plan, success: result.ok })
     showToast(result.ok ? pick(TEXT).planChanged(plan.charAt(0) + plan.slice(1).toLowerCase()) : result.message)
     if (!result.ok) return
-    setVersion((value) => value + 1)
+    state.reload()
     onChanged()
   }
 
@@ -400,83 +382,68 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
     const result = await revokeUserSession(id, sessionId)
     track('admin_user_action', { action: 'logout_device', success: result.ok })
     showToast(result.ok ? pick(TEXT).deviceLoggedOut : result.message)
-    setVersion((value) => value + 1)
+    state.reload()
   }
 
-  const user = detail?.user
+  const user = state.data?.user
   const self = id === selfId
 
   return (
     <>
       <SidePanel label={L.panel} closeLabel={L.close} onClose={onClose} dismissable={!asking} className="max-w-[440px]">
-
-        {waiting || (!detail && !error) ? (
-          <div className="px-6">
-            <LoadProgress percent={load.percent} className={loadCenter} />
-          </div>
-        ) : !detail || !user ? (
-          <Failed message={error} onRetry={() => setVersion((value) => value + 1)} />
-        ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8">
-            <h2 className="truncate text-[20px] leading-tight font-semibold text-gray-900">{user.name}</h2>
-            <p className="mt-1 truncate text-[13px] text-gray-500">{user.email}</p>
-            <div className="mt-3 flex flex-wrap gap-1">
-              <StatusTags user={user} self={self} />
-              <DeviceTags app={user.usesApp} mobile={user.usesMobile} desktop={user.usesDesktop} />
-            </div>
-
-            <dl className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 text-[13px]">
-              {[
-                [L.registeredAt, formatDateTime(user.registeredAt) || L.unknown],
-                [L.lastLogin, formatDateTime(user.lastLoginAt) || L.none],
-                [L.loginCount, L.times(full(user.loginCount))],
-                [L.chatCount, L.count(full(user.chatCount))],
-                [L.app, user.usesApp ? L.usedApp : L.noApp],
-                ...(user.suspended ? [[L.suspendedAt, formatDateTime(user.suspendedAt)]] : []),
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <dt className="text-[12px] text-gray-400">{label}</dt>
-                  <dd className="mt-0.5 text-gray-900 tabular-nums">{value}</dd>
-                </div>
-              ))}
-            </dl>
-
-            {user.plan && (
-              <>
-                <h3 className={heading}>{L.planTitle}</h3>
-                <div className="mt-2">
-                  <Segmented label={L.planTitle} options={L.plans} value={user.plan} onChange={(plan) => void changePlan(plan)} />
-                </div>
-              </>
-            )}
-
-            <h3 className={heading}>{L.manageTitle}</h3>
-            {self ? (
-              <p className="mt-2 text-[13px] leading-relaxed text-gray-500">{L.selfNote}</p>
-            ) : (
-              <div className="mt-2 flex flex-wrap gap-2">
-                <button type="button" onClick={() => setAsking(user.role === 'ADMIN' ? 'demote' : 'promote')} className={toolButton}>
-                  {user.role === 'ADMIN' ? L.actions.demote.confirm : L.actions.promote.confirm}
-                </button>
-                <button type="button" onClick={() => setAsking(user.suspended ? 'unsuspend' : 'suspend')} className={toolButton}>
-                  {user.suspended ? L.actions.unsuspend.confirm : L.actions.suspend.confirm}
-                </button>
-                <button type="button" disabled={detail.sessions.length === 0} onClick={() => setAsking('logout')} className={`${toolButton} disabled:text-gray-300 disabled:hover:border-gray-200`}>
-                  {L.logoutAll}
-                </button>
-                <button type="button" onClick={() => setAsking('delete')} className={`${toolDangerButton}`}>
-                  {L.actions.delete.confirm}
-                </button>
+        <PanelContent state={state}>
+          {({ user, sessions, logins, chats }) => (
+            <>
+              <h2 className="truncate text-[20px] leading-tight font-semibold text-gray-900">{user.name}</h2>
+              <p className="mt-1 truncate text-[13px] text-gray-500">{user.email}</p>
+              <div className="mt-3 flex flex-wrap gap-1">
+                <StatusTags user={user} self={self} />
+                <DeviceTags app={user.usesApp} mobile={user.usesMobile} desktop={user.usesDesktop} />
               </div>
-            )}
 
-            <h3 className={heading}>{L.sessions}</h3>
-            {detail.sessions.length === 0 ? (
-              <p className="mt-2 text-[13px] text-gray-500">{L.noSessions}</p>
-            ) : (
-              <ul className="mt-1">
-                {detail.sessions.map((session) => (
-                  <li key={session.sessionId} className="flex items-center gap-3 border-b border-gray-100 py-2.5 last:border-b-0">
+              <InfoGrid
+                rows={[
+                  [L.registeredAt, formatDateTime(user.registeredAt) || L.unknown],
+                  [L.lastLogin, formatDateTime(user.lastLoginAt) || L.none],
+                  [L.loginCount, L.times(full(user.loginCount))],
+                  [L.chatCount, L.count(full(user.chatCount))],
+                  [L.app, user.usesApp ? L.usedApp : L.noApp],
+                  ...(user.suspended ? [[L.suspendedAt, formatDateTime(user.suspendedAt)] as const] : []),
+                ]}
+              />
+
+              {user.plan && (
+                <>
+                  <h3 className={heading}>{L.planTitle}</h3>
+                  <div className="mt-2">
+                    <Segmented label={L.planTitle} options={L.plans} value={user.plan} onChange={(plan) => void changePlan(plan)} />
+                  </div>
+                </>
+              )}
+
+              <h3 className={heading}>{L.manageTitle}</h3>
+              {self ? (
+                <p className="mt-2 text-[13px] leading-relaxed text-gray-500">{L.selfNote}</p>
+              ) : (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setAsking(user.role === 'ADMIN' ? 'demote' : 'promote')} className={toolButton}>
+                    {user.role === 'ADMIN' ? L.actions.demote.confirm : L.actions.promote.confirm}
+                  </button>
+                  <button type="button" onClick={() => setAsking(user.suspended ? 'unsuspend' : 'suspend')} className={toolButton}>
+                    {user.suspended ? L.actions.unsuspend.confirm : L.actions.suspend.confirm}
+                  </button>
+                  <button type="button" disabled={sessions.length === 0} onClick={() => setAsking('logout')} className={toolButton}>
+                    {L.logoutAll}
+                  </button>
+                  <button type="button" onClick={() => setAsking('delete')} className={toolDangerButton}>
+                    {L.actions.delete.confirm}
+                  </button>
+                </div>
+              )}
+
+              <Block title={L.sessions} empty={L.noSessions}>
+                {sessions.map((session) => (
+                  <li key={session.sessionId} className={blockRow}>
                     <span className={tag}>{deviceLabels()[session.device]}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] text-gray-900">{session.deviceName || describeDevice(session.userAgent)}</span>
@@ -489,16 +456,11 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
                     )}
                   </li>
                 ))}
-              </ul>
-            )}
+              </Block>
 
-            <h3 className={heading}>{L.logins}</h3>
-            {detail.logins.length === 0 ? (
-              <p className="mt-2 text-[13px] text-gray-500">{L.noLogins}</p>
-            ) : (
-              <ul className="mt-1">
-                {detail.logins.map((login) => (
-                  <li key={login.id} className="flex items-center gap-3 border-b border-gray-100 py-2.5 last:border-b-0">
+              <Block title={L.logins} empty={L.noLogins}>
+                {logins.map((login) => (
+                  <li key={login.id} className={blockRow}>
                     <span className={tag}>{deviceLabels()[login.device]}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] text-gray-900">{login.deviceName || describeDevice(login.userAgent)}</span>
@@ -507,21 +469,14 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
                     <span className="shrink-0 text-[12px] text-gray-400 tabular-nums">{formatDateTime(login.loggedInAt)}</span>
                   </li>
                 ))}
-              </ul>
-            )}
+              </Block>
 
-            <h3 className={heading}>{L.recentChats}</h3>
-            {detail.chats.length === 0 ? (
-              <p className="mt-2 text-[13px] text-gray-500">{L.noChats}</p>
-            ) : (
-              <ul className="mt-1">
-                {detail.chats.map((chat) => (
-                  <li key={chat.id} className="flex items-center gap-3 border-b border-gray-100 py-2.5 last:border-b-0">
+              <Block title={L.recentChats} empty={L.noChats}>
+                {chats.map((chat) => (
+                  <li key={chat.id} className={blockRow}>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] text-gray-900">{chat.repoName}</span>
-                      <span className="block text-[12px] text-gray-400 tabular-nums">
-                        {L.chatMeta(full(chat.messageCount), formatDateTime(chat.updatedAt))}
-                      </span>
+                      <span className="block text-[12px] text-gray-400 tabular-nums">{L.chatMeta(full(chat.messageCount), formatDateTime(chat.updatedAt))}</span>
                     </span>
                     {chat.shared && (
                       <button type="button" onClick={() => onOpenChat(chat.id)} className={ghostButton}>
@@ -530,10 +485,10 @@ function UserPanel({ id, selfId, onClose, onChanged, onDeleted, onOpenChat }: Pa
                     )}
                   </li>
                 ))}
-              </ul>
-            )}
-          </div>
-        )}
+              </Block>
+            </>
+          )}
+        </PanelContent>
       </SidePanel>
 
       {asking && user && (

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
 import { loadConfig } from '../lib/api'
 import { isApp } from '../lib/app'
@@ -6,7 +6,7 @@ import { fetchSocialLinkTarget, type SocialLinkTarget } from '../lib/auth'
 import { appLinkFromLocation, finishAppLink, finishSocial, SOCIAL_LABELS, startSocial, startSocialFromApp, type SocialMode, type SocialProvider, type SocialResult } from '../lib/social'
 import { showToast } from '../lib/toast'
 import { messages, pick, useMessages } from '../lib/i18n'
-import { primaryButtonMd } from './ui'
+import { primaryButtonMd, quietButton } from './ui'
 
 const TEXT = messages({
   ko: {
@@ -81,7 +81,9 @@ function KakaoMark() {
   )
 }
 
-const base = 'flex h-12 w-full items-center justify-center gap-2.5 rounded-full text-[15px] font-semibold transition-colors disabled:opacity-60'
+const base = 'flex w-full items-center justify-center gap-2.5 rounded-full font-semibold transition-colors disabled:opacity-60'
+/** 로그인 화면은 큰 버튼(48px), 내 정보의 연결 버튼은 줄 안의 버튼(36px)이에요. */
+const SIZES = { lg: 'h-12 text-[15px]', sm: 'h-9 text-[13px]' }
 
 interface ButtonsProps {
   mode: SocialMode
@@ -91,13 +93,14 @@ interface ButtonsProps {
   only?: SocialProvider
   /** 버튼 글자. 넘기지 않으면 "GitHub로 계속하기"처럼 적어요. */
   label?: (name: string) => string
+  size?: keyof typeof SIZES
 }
 
 /**
  * GitHub와 카카오로 가는 버튼이에요. 서버가 켜 둔 서비스만 보여주고, 하나도 없으면 아무것도 그리지 않아요.
  * 카카오 버튼은 카카오의 안내대로 노란 바탕에 검은 글자예요. 메인 컬러 규칙의 예외예요.
  */
-export function SocialButtons({ mode, returnTo, only, label: customLabel }: ButtonsProps) {
+export function SocialButtons({ mode, returnTo, only, label: customLabel, size = 'lg' }: ButtonsProps) {
   const clients = useSocialClients()
   const text = useMessages(TEXT)
   const label = customLabel ?? text.continueWith
@@ -126,7 +129,7 @@ export function SocialButtons({ mode, returnTo, only, label: customLabel }: Butt
               showToast(opened ? pick(TEXT).finishInBrowser : pick(TEXT).startFailed)
             })
           }}
-          className={`${base} ${provider === 'kakao' ? '' : 'border border-gray-200 bg-white text-gray-900 hover:border-gray-300'}`}
+          className={`${base} ${SIZES[size]} ${provider === 'kakao' ? '' : 'border border-gray-200 bg-white text-gray-900 hover:border-gray-300'}`}
           style={provider === 'kakao' ? { background: '#FEE500', color: '#191919' } : undefined}
         >
           {provider === 'kakao' ? <KakaoMark /> : <GitHubMark />}
@@ -141,7 +144,29 @@ export function SocialButtons({ mode, returnTo, only, label: customLabel }: Butt
 let finishing: Promise<SocialResult> | null = null
 
 const shell = 'flex h-dvh items-center justify-center bg-white px-5'
-const primary = primaryButtonMd
+
+/** 돌아온 화면의 가운데 안내예요. 제목과 한 문단, 그 아래에 버튼을 둘 수 있어요. alert면 읽기 프로그램이 문단을 바로 읽어요. */
+function Message({ title, body, alert = false, children }: { title: string; body: string; alert?: boolean; children?: ReactNode }) {
+  return (
+    <>
+      <h1 className="text-[20px] font-semibold text-gray-900">{title}</h1>
+      <p role={alert ? 'alert' : undefined} className="mt-3 break-keep text-[14px] leading-relaxed text-gray-600">
+        {body}
+      </p>
+      {children}
+    </>
+  )
+}
+
+/** 받은 코드를 확인하는 동안 가운데에 한 줄로 알려요. */
+function Checking({ label }: { label: string }) {
+  const text = useMessages(TEXT)
+  return (
+    <main className={shell} aria-busy="true">
+      <p className="text-[14px] text-gray-500">{text.checking(label)}</p>
+    </main>
+  )
+}
 
 /**
  * 앱에서 시작한 계정 연결을 브라우저에서 마무리하는 화면이에요. 어느 계정에 연결하는지 보여주고, 버튼을 눌러야 연결해요.
@@ -176,13 +201,7 @@ function AppLink({ provider, ticket, code }: { provider: SocialProvider; ticket:
     }
   }
 
-  if (target === null) {
-    return (
-      <main className={shell} aria-busy="true">
-        <p className="text-[14px] text-gray-500">{text.checking(label)}</p>
-      </main>
-    )
-  }
+  if (target === null) return <Checking label={label} />
 
   const failed = error || (target === 'missing' ? text.expired : '')
 
@@ -190,35 +209,25 @@ function AppLink({ provider, ticket, code }: { provider: SocialProvider; ticket:
     <main className={shell}>
       <div className="w-full max-w-sm animate-rise text-center">
         {state === 'done' ? (
-          <>
-            <h1 className="text-[20px] font-semibold text-gray-900">{text.linked}</h1>
-            <p className="mt-3 break-keep text-[14px] leading-relaxed text-gray-600">{text.linkedBody(label)}</p>
-          </>
+          <Message title={text.linked} body={text.linkedBody(label)} />
         ) : failed ? (
-          <>
-            <h1 className="text-[20px] font-semibold text-gray-900">{text.linkFailed}</h1>
-            <p role="alert" className="mt-3 break-keep text-[14px] leading-relaxed text-gray-600">
-              {failed}
-            </p>
-          </>
+          <Message title={text.linkFailed} body={failed} alert />
         ) : (
           target !== 'missing' && (
-            <>
-              <h1 className="text-[20px] font-semibold text-gray-900">{text.linkTitle(label)}</h1>
-              <p className="mt-3 break-keep text-[14px] leading-relaxed text-gray-600">{text.linkBody(label)}</p>
-              <div className="mt-5 rounded-2xl border border-gray-200 px-4 py-3.5 text-left">
+            <Message title={text.linkTitle(label)} body={text.linkBody(label)}>
+              <div className="mt-5 rounded-2xl bg-gray-50 px-4 py-3.5 text-left">
                 <p className="truncate text-[14.5px] font-semibold text-gray-900">{target.name}</p>
                 <p className="mt-0.5 truncate text-[13px] text-gray-500">{target.email}</p>
               </div>
-              <div className="mt-7 flex justify-center gap-2">
-                <button type="button" onClick={() => window.location.replace('/')} className="h-11 rounded-full px-5 text-[14px] font-medium text-gray-600 transition-colors hover:text-gray-900">
+              <div className="mt-7 flex items-center justify-center gap-2">
+                <button type="button" onClick={() => window.location.replace('/')} className={quietButton}>
                   {text.cancel}
                 </button>
-                <button type="button" disabled={state === 'working'} onClick={() => void confirm()} className={primary}>
+                <button type="button" disabled={state === 'working'} onClick={() => void confirm()} className={primaryButtonMd}>
                   {state === 'working' ? text.working : text.link}
                 </button>
               </div>
-            </>
+            </Message>
           )
         )}
       </div>
@@ -251,31 +260,19 @@ function BrowserCallback({ provider }: { provider: SocialProvider }) {
     }
   }, [provider])
 
-  if (!failed) {
-    return (
-      <main className="flex h-dvh items-center justify-center bg-white px-5" aria-busy="true">
-        <p className="text-[14px] text-gray-500">{text.checking(SOCIAL_LABELS[provider])}</p>
-      </main>
-    )
-  }
+  if (!failed) return <Checking label={SOCIAL_LABELS[provider]} />
 
   // 앱 로그인을 하던 중이었으면 그 화면으로, 계정에 연결하던 중이었으면 내 정보로 돌아가요.
   const back = failed.mode === 'link' ? '/me' : failed.returnTo.startsWith('/app-login') ? failed.returnTo : '/login'
 
   return (
-    <main className="flex h-dvh items-center justify-center bg-white px-5">
+    <main className={shell}>
       <div className="w-full max-w-sm animate-rise text-center">
-        <h1 className="text-[20px] font-semibold text-gray-900">{failed.mode === 'link' ? text.linkFailed : text.loginFailed}</h1>
-        <p role="alert" className="mt-3 break-keep text-[14px] leading-relaxed text-gray-600">
-          {failed.outcome.ok ? '' : failed.outcome.message}
-        </p>
-        <button
-          type="button"
-          onClick={() => window.location.replace(back)}
-          className={`mt-7 ${primary}`}
-        >
-          {failed.mode === 'link' ? text.backToMe : text.backToLogin}
-        </button>
+        <Message title={failed.mode === 'link' ? text.linkFailed : text.loginFailed} body={failed.outcome.ok ? '' : failed.outcome.message} alert>
+          <button type="button" onClick={() => window.location.replace(back)} className={`mt-7 ${primaryButtonMd}`}>
+            {failed.mode === 'link' ? text.backToMe : text.backToLogin}
+          </button>
+        </Message>
       </div>
     </main>
   )
