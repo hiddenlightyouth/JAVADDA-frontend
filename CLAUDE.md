@@ -75,7 +75,7 @@ public/og.png         링크 미리보기 카드에 뜨는 대표 이미지 (120
 public/og-en.png      영어 주소의 미리보기 카드 이미지 (1200x630). 지금은 og.png와 같은 그림이에요.
 public/logos/         기업 로고. 기업 사이트의 아이콘을 받아 둔 거예요. 우아한형제들은 배민 아이콘이에요. 처음 열두 곳은 기업 아이디.png이고, 서버가 로고를 주지 않는 워크넷 기업은 아이디가 바뀔 수 있어서 `gap.ts`의 `LOGO_BY_NAME`이 기업 이름으로 붙여요. 계열사는 그룹 로고(SK, 롯데, BGF, GC, 두산, GS, 하나, KB, HD현대)를 같이 쓰고, 흐리거나 알아보기 어려운 아이콘은 넣지 않고 머리글자로 둬요.
 public/providers/     강의 플랫폼 로고 (인프런). `gap.ts`의 `PROVIDER_LOGOS`가 가리켜요.
-public/skills/        기술 스택 로고 (스킬마다 SVG). Devicon(MIT 라이선스)의 그림을 받아 둔 거예요. `gap.ts`의 `SKILL_LOGOS`가 스킬 이름과 파일을 잇고, `GapParts`의 `SkillMark`가 기업 로고처럼 흰 칸에 그려요. 로고가 없는 개념 스킬은 이름을 보고 뜻에 맞는 선 아이콘을 메인 컬러로 그려요(`CONCEPT_ICONS`: 테스트 비커, 네트워크 지구본, 운영체제 칩, 자료구조와 알고리즘 트리, 설계 겹친 판, MSA 상자 넷, LLM과 AI 반짝이, SQL과 데이터베이스 원통, 협업 사람). 맞는 것이 없으면 코드 괄호예요.
+public/skills/        기술 스택 로고 (스킬마다 SVG, 120개쯤). Devicon(MIT 라이선스)의 그림을 받아 둔 거예요. `gap.ts`의 `SKILL_LOGOS`가 스킬 이름과 파일을 잇고(대소문자, 띄어쓰기, 점과 줄표는 가리지 않아요. 적힌 이름, 사전의 이름, `Spring Cloud`나 `AWS Lambda` 같은 가족 순서로 찾아요), `GapParts`의 `SkillMark`가 기업 로고처럼 흰 칸에 그려요. 서버 스킬 사전(50개)은 모두 로고나 개념 아이콘이 있어요. 로고가 없는 스킬은 이름을 보고(`CONCEPT_RULES`) 두 톤 개념 아이콘(`Icons`의 `ConceptIcon`: 테스트 코드와 코딩 테스트 키보드, 보안, 알고리즘, AI, 분산 서비스, 설계, 운영체제, 네트워크, API, 데이터베이스, 데이터 분석, 클라우드, 배포, 모니터링, 성능, 모바일, 협업, 문서, 웹)을 메인 컬러로 그리고, 맞는 것이 없으면 코드 괄호예요.
 public/download/appcast.xml  macOS 앱이 새 버전이 있는지 읽어 가는 업데이트 목록. 지우지 않아요.
 public/download/WhoIsLoafing.dmg  macOS 앱 설치 파일. 앱 레포가 만들어서 넣어요.
 public/robots.txt     검색 로봇 안내 (API, /app 아래 주소, 리포트, 진단, 추천, 이력서, 기업 상세, 탐색, 내 정보와 내 리포트, 앱 로그인 화면, 관리자 화면은 막고, 사이트맵 위치를 알려줘요)

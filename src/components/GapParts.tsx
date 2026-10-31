@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { careerName, categoryName, COMPANY_CATEGORIES, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, skillLogoOf, useDiagnosed, type Company, type CompanyCategory, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { ConfirmDialog } from './Dialog'
-import { BeakerIcon, BoxesIcon, BriefcaseIcon, CheckIcon, ChipIcon, CloseIcon, CodeIcon, DatabaseIcon, GlobeIcon, LayersIcon, MapPinIcon, PersonIcon, SparkleIcon, TreeIcon, TriangleIcon } from './Icons'
+import { BriefcaseIcon, CheckIcon, CloseIcon, ConceptIcon, MapPinIcon, PersonIcon, TriangleIcon, type Concept } from './Icons'
 import { Badge, primaryButton, ProgressRing, stagger } from './ui'
 
 /**
@@ -123,33 +123,48 @@ export function CompanyMark({ company, className = 'size-12 text-[17px]' }: { co
   )
 }
 
-/** 로고가 없는 개념 스킬의 아이콘이에요. 스킬 이름에 들어 있는 말로 골라요. 위에서부터 먼저 맞는 것을 써요. */
-const CONCEPT_ICONS: [RegExp, typeof CodeIcon][] = [
-  [/테스트|test|tdd/i, BeakerIcon],
-  [/네트워크|network|http|tcp/i, GlobeIcon],
-  [/운영체제|컴퓨터 구조|\bos\b|linux/i, ChipIcon],
-  [/알고리즘|자료구조|algorithm/i, TreeIcon],
-  [/설계|아키텍처|architecture|design/i, LayersIcon],
-  [/msa|마이크로|micro/i, BoxesIcon],
-  [/llm|\bai\b|\brag\b|머신러닝|딥러닝|\bml\b/i, SparkleIcon],
-  [/sql|데이터베이스|database|db/i, DatabaseIcon],
-  [/협업|커뮤니케이션|collab/i, PersonIcon],
+/**
+ * 로고가 없는 스킬의 아이콘이에요. 스킬 이름에 들어 있는 말로 골라요. 위에서부터 먼저 맞는 것을 쓰고, 아무것도 맞지 않으면 코드 괄호예요.
+ * 서버 스킬 사전의 개념 스킬(테스트 코드, 자료구조와 알고리즘, 네트워크, 운영체제, 시스템 설계, MSA, LLM, SQL)과 서류나 공고에 자주 나오는 개념을 덮어요.
+ */
+const CONCEPT_RULES: [RegExp, Concept][] = [
+  [/테스트|test|tdd|\bqa\b|mock|e2e|코테|백준|프로그래머스|leetcode|코드 ?포스|codeforces/i, 'keyboard'],
+  [/보안|security|인증|인가|auth|jwt|암호|시큐어/i, 'security'],
+  [/알고리즘|자료구조|algorithm|data structure/i, 'algorithm'],
+  [/llm|\bai\b|\brag\b|머신 ?러닝|딥 ?러닝|\bml\b|gpt|프롬프트|prompt|\bnlp\b|인공지능|추천 시스템|에이전트|agent/i, 'ai'],
+  [/msa|마이크로|micro ?service|분산|distributed|이벤트|event|메시지 ?큐|message/i, 'services'],
+  [/설계|아키텍처|architecture|패턴|pattern|\bddd\b|객체 ?지향|\boop\b|클린|clean|리팩터|refactor/i, 'design'],
+  [/운영체제|컴퓨터 ?구조|\bos\b|linux|리눅스|unix|커널|kernel|메모리|스레드|thread|동시성|concurren|멀티/i, 'system'],
+  [/네트워크|network|http|tcp|\bdns\b|소켓|socket/i, 'network'],
+  [/api|rest|grpc|웹훅|webhook/i, 'api'],
+  [/sql|데이터베이스|database|\bdb\b|쿼리|query|\borm\b|인덱스|index|트랜잭션|transaction/i, 'database'],
+  [/데이터|data|분석|analytic|\betl\b|파이프라인|pipeline|통계|statistic|시각화|\bbi\b/i, 'data'],
+  [/클라우드|cloud|서버리스|serverless/i, 'cloud'],
+  [/ci ?\/ ?cd|cicd|\bci\b|배포|deploy|devops|자동화|automation|인프라|infra|컨테이너|container/i, 'deploy'],
+  [/모니터링|monitor|로그|logging|\blog\b|observab|관측|\bapm\b|장애|incident/i, 'monitoring'],
+  [/성능|perform|최적화|optimi|캐시|cache|대용량|트래픽|traffic|확장|scal/i, 'performance'],
+  [/모바일|mobile|앱 ?개발/i, 'mobile'],
+  [/협업|커뮤니케이션|communicat|collab|애자일|agile|스크럼|scrum|리더십|leader|코드 ?리뷰|review/i, 'people'],
+  [/문서|document|블로그|blog|글쓰기|writing|readme/i, 'docs'],
+  [/웹|web|프론트|front|\bui\b|\bux\b|반응형|responsive|접근성|accessib|브라우저|browser/i, 'web'],
 ]
+
+/** 스킬 이름에 맞는 개념 아이콘이에요. */
+export const conceptOf = (skill: string): Concept => CONCEPT_RULES.find(([pattern]) => pattern.test(skill))?.[1] ?? 'code'
 
 /**
  * 기술 스택 로고를 둥근 네모에 넣어요. 기업 로고처럼 다크 모드에서도 바탕은 흰색이에요.
- * 로고가 없는 개념 스킬(테스트 코드, 네트워크 등)은 뜻에 맞는 선 아이콘을, 맞는 것도 없으면 코드 괄호를 같은 칸에 메인 컬러로 그려요.
+ * 로고가 없는 개념 스킬(테스트 코드, 네트워크 등)은 뜻에 맞는 두 톤 아이콘(`ConceptIcon`)을 같은 칸에 메인 컬러로 그려요.
  */
 export function SkillMark({ skill, className = 'size-9' }: { skill: string; className?: string }) {
   const [broken, setBroken] = useState(false)
   const logo = skillLogoOf(skill)
-  const Concept = CONCEPT_ICONS.find(([pattern]) => pattern.test(skill))?.[1] ?? CodeIcon
   return (
     <span aria-hidden className={`flex shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-[#fff] p-1.5 ${className}`}>
       {logo && !broken ? (
         <img src={logo} alt="" loading="lazy" onError={() => setBroken(true)} className="size-full object-contain" />
       ) : (
-        <Concept className="size-[55%] text-[#2e90fa]" />
+        <ConceptIcon concept={conceptOf(skill)} className="size-[70%] text-[#2e90fa]" />
       )}
     </span>
   )

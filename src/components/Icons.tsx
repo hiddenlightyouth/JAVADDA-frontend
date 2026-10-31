@@ -302,96 +302,178 @@ export function SidebarIcon({ className = 'size-4', strokeWidth = 1.4, label }: 
   )
 }
 
-/*
- * 기술 로고가 없는 개념 스킬(테스트, 네트워크, 운영체제 등)의 아이콘이에요. 갭 카드의 `SkillMark`가 스킬 이름을 보고 골라 그려요.
+/** 개념 아이콘의 옅은 면이에요. 선과 같은 색을 14%만 깔아서 두 톤으로 보여요. */
+const SOFT = { fill: 'currentColor', fillOpacity: 0.14 } as const
+
+/**
+ * 기술 로고가 없는 개념 스킬(테스트, 네트워크, 운영체제 등)의 아이콘이에요. 24 격자에 옅은 면과 선을 겹친 두 톤이에요.
+ * 갭 카드의 `SkillMark`가 스킬 이름을 보고 고르고, 맞는 것이 없으면 `code`를 그려요.
  */
-
-/** 테스트 코드예요. 실험용 비커예요. */
-export function BeakerIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
-  return (
-    <Icon className={className} strokeWidth={strokeWidth} label={label}>
-      <path d="M5.5 2h5M6.5 2v4.2L3.2 12.6A1 1 0 0 0 4.1 14h7.8a1 1 0 0 0 .9-1.4L9.5 6.2V2M4.6 10h6.8" />
-    </Icon>
-  )
+const CONCEPTS = {
+  /** 네트워크: 지구본 */
+  network: (
+    <>
+      <circle cx="12" cy="12" r="9" {...SOFT} />
+      <path d="M12 3c2.5 2.4 3.8 5.4 3.8 9s-1.3 6.6-3.8 9c-2.5-2.4-3.8-5.4-3.8-9S9.5 5.4 12 3ZM3.6 9h16.8M3.6 15h16.8" />
+    </>
+  ),
+  /** 운영체제와 동시성: 칩 */
+  system: (
+    <>
+      <rect x="6" y="6" width="12" height="12" rx="2.2" {...SOFT} />
+      <rect x="9.5" y="9.5" width="5" height="5" rx="1" fill="currentColor" stroke="none" />
+      <path d="M9 2.5v3.5M15 2.5v3.5M9 18v3.5M15 18v3.5M2.5 9H6M2.5 15H6M18 9h3.5M18 15h3.5" />
+    </>
+  ),
+  /** 테스트 코드와 코딩 테스트: 키보드 */
+  keyboard: (
+    <>
+      <rect x="2" y="5.5" width="20" height="13" rx="2.6" {...SOFT} />
+      <g fill="currentColor" stroke="none">
+        <rect x="5" y="8.6" width="2.2" height="2" rx="0.5" />
+        <rect x="8.6" y="8.6" width="2.2" height="2" rx="0.5" />
+        <rect x="12.2" y="8.6" width="2.2" height="2" rx="0.5" />
+        <rect x="15.8" y="8.6" width="3.2" height="2" rx="0.5" />
+        <rect x="5" y="12" width="3.2" height="2" rx="0.5" />
+        <rect x="9.6" y="12" width="2.2" height="2" rx="0.5" />
+        <rect x="13.2" y="12" width="2.2" height="2" rx="0.5" />
+        <rect x="16.8" y="12" width="2.2" height="2" rx="0.5" />
+        <rect x="7.5" y="15.2" width="9" height="1.6" rx="0.8" />
+      </g>
+    </>
+  ),
+  /** 자료구조와 알고리즘: 갈라지는 트리 */
+  algorithm: (
+    <>
+      <path d="M10.9 7.3 7.1 15.7M13.1 7.3l3.8 8.4" />
+      <circle cx="12" cy="5" r="2.5" fill="currentColor" />
+      <circle cx="6" cy="18.5" r="2.5" {...SOFT} />
+      <circle cx="18" cy="18.5" r="2.5" {...SOFT} />
+    </>
+  ),
+  /** 시스템 설계와 아키텍처: 쌓인 판 */
+  design: (
+    <>
+      <path d="M12 3 21 7.5 12 12 3 7.5Z" {...SOFT} />
+      <path d="M3 12l9 4.5 9-4.5M3 16.5 12 21l9-4.5" />
+    </>
+  ),
+  /** MSA와 분산 시스템: 이어진 작은 서비스 넷 */
+  services: (
+    <>
+      <rect x="3" y="3" width="7.5" height="7.5" rx="2" fill="currentColor" fillOpacity={0.3} />
+      <rect x="13.5" y="3" width="7.5" height="7.5" rx="2" {...SOFT} />
+      <rect x="3" y="13.5" width="7.5" height="7.5" rx="2" {...SOFT} />
+      <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2" {...SOFT} />
+      <path d="M10.5 6.75h3M6.75 10.5v3M17.25 10.5v3M10.5 17.25h3" />
+    </>
+  ),
+  /** LLM과 AI: 반짝이 */
+  ai: (
+    <>
+      <path d="M10 3.5l1.7 4.6a2 2 0 0 0 1.2 1.2L17.5 11l-4.6 1.7a2 2 0 0 0-1.2 1.2L10 18.5l-1.7-4.6a2 2 0 0 0-1.2-1.2L2.5 11l4.6-1.7a2 2 0 0 0 1.2-1.2Z" {...SOFT} />
+      <path d="M18 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8Z" fill="currentColor" stroke="none" />
+      <circle cx="18.5" cy="4.5" r="1.1" fill="currentColor" stroke="none" />
+    </>
+  ),
+  /** SQL과 데이터베이스: 원통 */
+  database: (
+    <>
+      <path d="M4.5 5.5v13c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8v-13" {...SOFT} />
+      <ellipse cx="12" cy="5.5" rx="7.5" ry="2.8" />
+      <path d="M4.5 12c0 1.5 3.4 2.8 7.5 2.8s7.5-1.3 7.5-2.8" />
+    </>
+  ),
+  /** 협업과 커뮤니케이션: 두 사람 */
+  people: (
+    <>
+      <circle cx="9" cy="8" r="3.2" {...SOFT} />
+      <path d="M3 19.5c.6-3.2 3-5 6-5s5.4 1.8 6 5" />
+      <circle cx="16.8" cy="8.8" r="2.5" />
+      <path d="M16.2 14.4c2.5 0 4.3 1.7 4.8 4.6" />
+    </>
+  ),
+  /** 보안과 인증: 체크가 있는 방패 */
+  security: (
+    <>
+      <path d="M12 3 19.5 6v5.5c0 4.6-3.1 8.2-7.5 9.5-4.4-1.3-7.5-4.9-7.5-9.5V6Z" {...SOFT} />
+      <path d="m8.8 12.2 2.2 2.2 4.3-4.6" />
+    </>
+  ),
+  /** 클라우드와 서버리스: 구름 */
+  cloud: <path d="M7 19h10.5a4.5 4.5 0 0 0 .6-8.96A6 6 0 0 0 6.6 9.1 5 5 0 0 0 7 19Z" {...SOFT} />,
+  /** 데이터 분석과 파이프라인: 막대그래프 */
+  data: (
+    <>
+      <rect x="6.5" y="12" width="3.2" height="7.5" rx="0.9" {...SOFT} />
+      <rect x="11.5" y="8" width="3.2" height="11.5" rx="0.9" fill="currentColor" fillOpacity={0.3} />
+      <rect x="16.5" y="4.5" width="3.2" height="15" rx="0.9" {...SOFT} />
+      <path d="M3.5 3.5v16.5h17" />
+    </>
+  ),
+  /** 모바일: 휴대전화 */
+  mobile: (
+    <>
+      <rect x="6.5" y="2.5" width="11" height="19" rx="2.6" {...SOFT} />
+      <path d="M10.5 18.3h3" />
+    </>
+  ),
+  /** 배포와 CI/CD: 로켓 */
+  deploy: (
+    <>
+      <path d="M12 2.5c3.3 1.8 5 5.2 5 9.5l-2.2 3.5H9.2L7 12c0-4.3 1.7-7.7 5-9.5Z" {...SOFT} />
+      <circle cx="12" cy="9.5" r="1.8" />
+      <path d="M7.4 13.2 4.5 16v2.6l4.3-1.3M16.6 13.2l2.9 2.8v2.6l-4.3-1.3M10.6 18.6l1.4 2.9 1.4-2.9" />
+    </>
+  ),
+  /** 모니터링과 로그: 맥박 */
+  monitoring: (
+    <>
+      <rect x="2.5" y="4" width="19" height="16" rx="2.6" {...SOFT} />
+      <path d="M6 13h2.8l1.9-4.2 2.6 7 1.9-3.3H18" />
+    </>
+  ),
+  /** 성능과 캐시: 번개 */
+  performance: <path d="M13 2.5 4.8 13.5h6.2l-1 8 8.2-11h-6.2Z" {...SOFT} />,
+  /** API: 플러그 */
+  api: (
+    <>
+      <path d="M6.5 7h11v3.5a5.5 5.5 0 0 1-11 0Z" {...SOFT} />
+      <path d="M9.5 2.5V7M14.5 2.5V7M12 16v5.5" />
+    </>
+  ),
+  /** 웹과 화면: 브라우저 창 */
+  web: (
+    <>
+      <rect x="2.5" y="4" width="19" height="16" rx="2.6" {...SOFT} />
+      <path d="M2.5 8.5h19M6.5 12.5h6.5M6.5 15.8h10" />
+      <circle cx="5.5" cy="6.25" r="0.8" fill="currentColor" stroke="none" />
+      <circle cx="8" cy="6.25" r="0.8" fill="currentColor" stroke="none" />
+    </>
+  ),
+  /** 문서와 글쓰기: 접힌 종이 */
+  docs: (
+    <>
+      <path d="M6.5 2.5h7l5 5V20a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 20V4a1.5 1.5 0 0 1 1.5-1.5Z" {...SOFT} />
+      <path d="M13.5 2.5v5h5M8.5 12h7M8.5 15.5h7" />
+    </>
+  ),
+  /** 그 밖의 기술: 코드 괄호 */
+  code: (
+    <>
+      <rect x="2.5" y="3.5" width="19" height="17" rx="3.5" {...SOFT} stroke="none" />
+      <path d="M8.5 8.5 5 12l3.5 3.5M15.5 8.5 19 12l-3.5 3.5M13.3 6.8l-2.6 10.4" />
+    </>
+  ),
 }
 
-/** 네트워크예요. 지구본이에요. */
-export function GlobeIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
-  return (
-    <Icon className={className} strokeWidth={strokeWidth} label={label}>
-      <circle cx="8" cy="8" r="6" />
-      <path d="M2 8h12M8 2c1.7 1.6 2.5 3.6 2.5 6S9.7 12.4 8 14c-1.7-1.6-2.5-3.6-2.5-6S6.3 3.6 8 2Z" />
-    </Icon>
-  )
-}
+export type Concept = keyof typeof CONCEPTS
 
-/** 운영체제와 컴퓨터 구조예요. 칩이에요. */
-export function ChipIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
+/** 개념 스킬 아이콘이에요. 색은 className의 글자색을 따라요. */
+export function ConceptIcon({ concept, className = 'size-5', label }: { concept: Concept; className?: string; label?: string }) {
   return (
-    <Icon className={className} strokeWidth={strokeWidth} label={label}>
-      <rect x="4.5" y="4.5" width="7" height="7" rx="1" />
-      <path d="M6.5 6.5h3v3h-3zM6.5 2.5v2M9.5 2.5v2M6.5 11.5v2M9.5 11.5v2M2.5 6.5h2M2.5 9.5h2M11.5 6.5h2M11.5 9.5h2" />
-    </Icon>
-  )
-}
-
-/** 자료구조와 알고리즘이에요. 나뭇가지처럼 갈라지는 트리예요. */
-export function TreeIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
-  return (
-    <Icon className={className} strokeWidth={strokeWidth} label={label}>
-      <circle cx="8" cy="3.5" r="1.5" />
-      <circle cx="4" cy="12.5" r="1.5" />
-      <circle cx="12" cy="12.5" r="1.5" />
-      <path d="M7.3 4.8 4.7 11.2M8.7 4.8l2.6 6.4" />
-    </Icon>
-  )
-}
-
-/** 시스템 설계와 아키텍처예요. 겹겹이 쌓인 판이에요. */
-export function LayersIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
-  return (
-    <Icon className={className} strokeWidth={strokeWidth} label={label}>
-      <path d="M8 2.5 14 5.5 8 8.5 2 5.5ZM2 8.3l6 3 6-3M2 11l6 3 6-3" />
-    </Icon>
-  )
-}
-
-/** MSA예요. 작은 서비스 네 개예요. */
-export function BoxesIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
-  return (
-    <Icon className={className} strokeWidth={strokeWidth} label={label}>
-      <rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1" />
-      <rect x="9" y="2.5" width="4.5" height="4.5" rx="1" />
-      <rect x="2.5" y="9" width="4.5" height="4.5" rx="1" />
-      <rect x="9" y="9" width="4.5" height="4.5" rx="1" />
-    </Icon>
-  )
-}
-
-/** LLM과 AI예요. 반짝이는 별이에요. */
-export function SparkleIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
-  return (
-    <Icon className={className} strokeWidth={strokeWidth} label={label}>
-      <path d="M7 2.5 8.3 6l3.2 1.3-3.2 1.3L7 12l-1.3-3.4L2.5 7.3 5.7 6ZM12 10.5l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6Z" />
-    </Icon>
-  )
-}
-
-/** SQL과 데이터베이스예요. 원통이에요. */
-export function DatabaseIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
-  return (
-    <Icon className={className} strokeWidth={strokeWidth} label={label}>
-      <ellipse cx="8" cy="4" rx="5" ry="1.8" />
-      <path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8" />
-    </Icon>
-  )
-}
-
-/** 그 밖의 개념 스킬이에요. 코드 괄호예요. */
-export function CodeIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
-  return (
-    <Icon className={className} strokeWidth={strokeWidth} label={label}>
-      <path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5M9 3 7 13" />
+    <Icon className={className} strokeWidth={1.6} label={label} viewBox="0 0 24 24">
+      {CONCEPTS[concept]}
     </Icon>
   )
 }
