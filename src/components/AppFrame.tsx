@@ -108,6 +108,7 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
       {...sidebar}
       onNew={closing(sidebar.onNew)!}
       onOpenReport={closing(sidebar.onOpenReport)!}
+      onHistory={closing(sidebar.onHistory)!}
       onMe={closing(sidebar.onMe)!}
       onLogin={closing(sidebar.onLogin)}
       onResume={closing(sidebar.onResume)!}

@@ -4,16 +4,15 @@ import { isWebApp } from '../lib/app'
 import { track } from '../lib/analytics'
 import { signOut, useAuth, type Me } from '../lib/auth'
 import { openBugReport, useFeedback } from '../lib/feedback'
-import { formatWhen } from '../lib/format'
 import { companyOf, postingOf, useReports, useResume, type Report } from '../lib/gap'
-import { DeleteReportDialog, removeReport, REPORT_LIST_TEXT } from './History'
+import { byUrgency, DeleteReportDialog, removeReport, REPORT_LIST_TEXT, UrgencyLabel, type Urgency } from './History'
 import { Kbd } from './Shortcuts'
 import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
 import { BookIcon, BugIcon, CheckIcon, ChevronUpDownIcon, DocumentIcon, DotsIcon, PersonIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
-import { Tip } from './GapParts'
+import { fitColor, Tip } from './GapParts'
 
 const TEXT = messages({
   ko: {
@@ -33,7 +32,6 @@ const TEXT = messages({
     settings: '설정',
     bug: '버그 신고',
     login: '로그인',
-    pending: (progress: number) => `진단 중 ${progress}%`,
   },
   en: {
     new: 'New diagnosis',
@@ -53,7 +51,6 @@ const TEXT = messages({
     settings: 'Settings',
     bug: 'Report a bug',
     login: 'Sign in',
-    pending: (progress: number) => `Analyzing ${progress}%`,
   },
 })
 
@@ -65,7 +62,10 @@ function resetLeft(value: string): { days: number; hours: number } | null {
   return { days: hours >= 24 ? Math.ceil(ms / 86_400_000) : 0, hours }
 }
 
-type SidebarPage = 'explore' | 'recommend' | 'resume' | 'blogs' | 'articles' | 'me' | 'admin' | null
+type SidebarPage = 'explore' | 'recommend' | 'resume' | 'blogs' | 'articles' | 'me' | 'history' | 'admin' | null
+
+/** 사이드바에 보여줄 리포트 수예요. 나머지는 내 리포트 화면에서 봐요. */
+const SIDEBAR_REPORTS = 5
 
 interface Props {
   /** 지금 열려 있는 리포트. 목록에서 강조해요. */
@@ -79,6 +79,8 @@ interface Props {
   /** 기술 블로그 요약을 열어요. */
   onBlogs: () => void
   onOpenReport: (id: string) => void
+  /** 내 리포트 화면(전체 목록)을 열어요. */
+  onHistory: () => void
   /** 목록에서 리포트를 지웠을 때 불러요. 열려 있는 리포트면 화면도 맞춰요. */
   onReportDeleted: (id: string) => void
   onMe: () => void
@@ -100,8 +102,9 @@ const sideIconButton = 'flex size-9 shrink-0 items-center justify-center rounded
 
 const plain = (event: MouseEvent) => !(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)
 
-function ReportRow({ report, active, menuOpen, onOpen, onToggleMenu, onCloseMenu, onDelete }: {
+function ReportRow({ report, urgency, active, menuOpen, onOpen, onToggleMenu, onCloseMenu, onDelete }: {
   report: Report
+  urgency: Urgency
   active: boolean
   menuOpen: boolean
   onOpen: () => void
@@ -111,14 +114,13 @@ function ReportRow({ report, active, menuOpen, onOpen, onToggleMenu, onCloseMenu
 }) {
   const menuRef = useRef<HTMLLIElement>(null)
   const list = useMessages(REPORT_LIST_TEXT)
-  const text = useMessages(TEXT)
   const company = companyOf(report.companyId)
   const posting = postingOf(report.postingId)
 
   useDismiss(menuOpen, menuRef, onCloseMenu)
 
   return (
-    <li ref={menuRef} className={`group relative flex items-center rounded-xl transition-colors ${tone(active || menuOpen)}`}>
+    <li ref={menuRef} className={`group relative flex items-center rounded-xl transition-colors ${tone(active || menuOpen)} ${urgency.kind === 'closed' && !active ? 'opacity-60' : ''}`}>
       <a
         href={`/r/${report.id}`}
         aria-current={active ? 'page' : undefined}
@@ -131,11 +133,12 @@ function ReportRow({ report, active, menuOpen, onOpen, onToggleMenu, onCloseMenu
       >
         <p className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-900">
           <span className="min-w-0 truncate">{company.name}</span>
-          {report.status === 'done' && <span className="shrink-0 text-[12px] font-medium text-brand tabular-nums">{report.fitScore}%</span>}
+          {report.status === 'done' && <span className={`shrink-0 text-[12px] font-medium tabular-nums ${fitColor(report.fitScore).text}`}>{report.fitScore}%</span>}
         </p>
         <p className="mt-0.5 flex items-center justify-between gap-2 text-xs text-gray-400">
           <span className="min-w-0 truncate">{posting?.title ?? ''}</span>
-          <span className="shrink-0 tabular-nums">{report.status === 'pending' ? text.pending(report.progress ?? 0) : formatWhen(report.createdAt)}</span>
+          {/* 만든 때 대신 마감까지 남은 날을 적어서, 무엇부터 챙길지 바로 보여요. */}
+          <UrgencyLabel report={report} urgency={urgency} />
         </p>
       </a>
 
@@ -198,11 +201,16 @@ function NavLink({ href, active, onClick, icon, label, shortcut, locked }: { hre
 }
 
 /** 앱 화면 왼쪽의 사이드바예요. 새 진단, 공고 탐색, 추천 공고, 기술 블로그, 내 이력서, 내 리포트 목록과 관리, 내 정보로 가는 링크가 있어요. */
-export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onResume, onBlogs, onOpenReport, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, signedIn, onLogin }: Props) {
+export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onResume, onBlogs, onOpenReport, onHistory, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, signedIn, onLogin }: Props) {
   const { me } = useAuth()
   const list = useMessages(REPORT_LIST_TEXT)
   const text = useMessages(TEXT)
   const reports = useReports()
+  const ranked = byUrgency(reports)
+  // 챙길 것 몇 개만 보여줘요. 지금 연 리포트가 그 밖에 있으면 끝에 붙여서 어디를 보고 있는지 놓치지 않게 해요.
+  const shown = ranked.slice(0, SIDEBAR_REPORTS)
+  const opened = ranked.find((item) => item.report.id === activeReportId)
+  if (opened && !shown.includes(opened)) shown.push(opened)
   const resume = useResume()
   const [menuFor, setMenuFor] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<Report | null>(null)
@@ -296,17 +304,35 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
         </a>
       </div>
 
-      <h2 className="mt-5 px-6 text-xs font-medium text-gray-400">{list.title}</h2>
+      <div className="mt-5 flex items-center justify-between px-6">
+        <h2 className="text-xs font-medium text-gray-400">{list.title}</h2>
+        {reports.length > 0 && (
+          <a
+            href="/history"
+            aria-current={page === 'history' ? 'page' : undefined}
+            onClick={(event) => {
+              if (!plain(event)) return
+              event.preventDefault()
+              track('history_open', { from: 'sidebar' })
+              onHistory()
+            }}
+            className={`text-xs font-medium transition-colors ${page === 'history' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}
+          >
+            {list.all}
+          </a>
+        )}
+      </div>
 
       <nav className="mt-1.5 min-h-0 flex-1 overflow-y-auto px-3 pb-3">
         {reports.length === 0 ? (
           <p className="px-3 py-2 text-[13px] leading-relaxed text-gray-500">{list.none}</p>
         ) : (
           <ul className="space-y-0.5">
-            {reports.map((report) => (
+            {shown.map(({ report, urgency }) => (
               <ReportRow
                 key={report.id}
                 report={report}
+                urgency={urgency}
                 active={report.id === activeReportId}
                 menuOpen={menuFor === report.id}
                 onOpen={() => onOpenReport(report.id)}
@@ -318,6 +344,20 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
                 }}
               />
             ))}
+            {reports.length > shown.length && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    track('history_open', { from: 'sidebar-more' })
+                    onHistory()
+                  }}
+                  className="w-full rounded-xl px-3 py-2 text-left text-xs text-gray-500 transition-colors hover:bg-gray-200/50 hover:text-gray-900"
+                >
+                  {list.allCount(reports.length)}
+                </button>
+              </li>
+            )}
           </ul>
         )}
       </nav>

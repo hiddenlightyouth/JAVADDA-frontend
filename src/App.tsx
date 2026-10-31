@@ -255,8 +255,8 @@ export default function App() {
         page:
           page?.kind === 'explore' || page?.kind === 'recommend' || page?.kind === 'resume' || page?.kind === 'blogs' || page?.kind === 'admin'
             ? page.kind
-            : account === 'me'
-              ? 'me'
+            : account === 'me' || account === 'history'
+              ? account
               : article
                 ? 'articles'
                 : null,
@@ -268,6 +268,9 @@ export default function App() {
         onOpenReport: (id) => {
           track('history_report_open', { from: 'sidebar' })
           openReport(id)
+        },
+        onHistory: () => {
+          if (account !== 'history') go('history')
         },
         onReportDeleted: (id) => {
           // 열려 있던 리포트를 지웠으면 새 진단 화면으로 가요.
