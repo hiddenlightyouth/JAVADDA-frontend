@@ -80,8 +80,8 @@ function search(query: string): JobPosting[] {
   })
 }
 
-/** 공고가 하나라도 있는 기업이에요. */
-const BROWSE_COMPANIES = COMPANIES.filter((company) => POSTINGS.some((posting) => posting.companyId === company.id))
+/** 공고가 하나라도 있고 로고가 있는 기업이에요. 머리글자만 있는 기업은 둘러보기 줄을 어수선하게 해서 빼요. */
+const BROWSE_COMPANIES = COMPANIES.filter((company) => company.logo && POSTINGS.some((posting) => posting.companyId === company.id))
 
 export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   const L = useMessages(TEXT)
