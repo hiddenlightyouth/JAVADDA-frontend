@@ -192,7 +192,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 스킬 이름은 `canonical`로 하나의 표기로 모아요(Spring Boot, 스프링부트, springboot는 모두 Spring Boot). 별칭 표(`ALIASES`)에 더해요. 스킬마다 레이더의 축(`axisOf`: 언어, 프레임워크, 데이터베이스, 인프라, 협업, CS 기초)이 있어요. 역량 더하기의 추천(`suggestSkills`)도 이 표와 받아 둔 공고에서 찾아요.
 - 이력서는 PDF 파일(POST /resumes, `file` 칸)이나 GitHub, 노션 링크(POST /resumes/link)로 올려요. 서버가 AI로 읽어서 1분 가까이 걸릴 수 있고, 그동안 진행 막대(`AiProgress`)로 몇 퍼센트까지 왔는지 보여줘요(아래의 AI 진행 상황). 서류는 여러 개 올려 두고 그중 하나를 대표 이력서로 정해요(PUT /resumes/{id}/primary). 대표는 서버가 정해서, 새로 올린 서류는 대표가 없을 때만 대표가 되고 대표를 지우면 남은 것 중 가장 최근 것이 대표예요. 올리거나 대표를 바꾸거나 지우면 목록(GET /resumes)을 다시 받아요. 역량은 내 이력서 화면에서 고쳐요(PUT /resumes/{id}/skills, 화면에는 바로 보이고 서버의 답으로 맞춰요). 적합도와 추천과 진단은 대표 이력서로 해요.
 - 서버의 이력서와 리포트 아이디는 숫자라서, 받을 때 글자로 바꿔 두고(`String`) 보낼 때 다시 숫자로 바꿔요(`Number`). 기업과 공고 아이디는 원래 글자예요.
-- 적합도(`fitOf`)는 필수 역량 60%, 우대 역량 25%, 역량 폭 15%예요. 역량마다 숙련도 3을 채우면 1점이에요. 이력서가 없으면 null이고 화면에 보이지 않아요. 서류는 고칠 때마다 새 객체라, 서류마다 숙련도 표와 공고별 적합도를 한 번만 계산해 기억해요(`levelOf`, WeakMap). 서버가 공고에 붙여 주는 `fitScore`는 쓰지 않고 화면에서 다시 계산해요.
+- 적합도(`fitOf`)는 필수 역량 60%, 우대 역량 25%, 역량 폭 15%예요. 우대 역량을 적지 않은 공고는 우대 점수를 필수 점수와 같게 두고(만점으로 두지 않아요), 공고에 적힌 역량이 넷보다 적으면 근거가 약해서 조금 깎아요(하나뿐이면 85%까지). 역량마다 숙련도 3을 채우면 1점이에요. 이력서가 없으면 null이고 화면에 보이지 않아요. 서류는 고칠 때마다 새 객체라, 서류마다 숙련도 표와 공고별 적합도를 한 번만 계산해 기억해요(`levelOf`, WeakMap). 서버가 공고에 붙여 주는 `fitScore`는 쓰지 않고 화면에서 다시 계산해요.
 - 리포트(`startDiagnosis`)는 POST /reports {postingId}가 202로 바로 돌려줘요. 만드는 중(pending)이거나, 같은 공고를 이미 진단한 리포트예요. 만드는 중인 리포트가 저장소에 있으면 다 될 때까지(done이나 failed) 1초마다 GET /reports/{id}로 물어요. 리포트에는 만드는 정도(`progress`, 0에서 100)와 단계(`stage`)가 있어서(없으면 0과 queued, 다 됐으면 100), 리포트 화면의 진행 막대와 사이드바의 "진단 중 42%"가 이 값으로 움직여요. 숫자는 뒤로 가지 않게 지금까지 본 것 중 큰 값을 둬요. 화면을 옮겨도 계속 물어서 사이드바가 끝까지 바뀌어요. 목록(GET /reports)은 요약만 있어서, 리포트 화면을 열면 상세를 한 번 받아요(`useReport`, 받는 동안은 undefined예요. AI를 기다리는 게 아니라 자료를 받는 것이라, 두 번째 인자로 받은 바이트를 알려서 리포트와 면접 연습 화면이 `LoadProgress`로 퍼센트를 보여줘요). 만들지 못한(failed) 리포트는 안내와 다시 진단 버튼을 보여줘요.
 - 다시 진단(`rerunReport`)은 POST /reports/{id}/rerun이에요. 서버가 새 아이디로 만들고 예전 리포트를 지워요. 예전 아이디는 새 아이디로 이어 둬서(`replacedBy`) 예전 주소로 보던 화면이 따라가요. 지우기는 DELETE /reports/{id}예요.
 - 서류 검증(`fetchReview`, GET /reports/{id}/reviews/{coverLetter, resume, portfolio}), 예상 질문(`fetchQuestions`, GET /reports/{id}/questions), 연습 피드백(`submitAnswer(리포트, 질문, 답)`, POST /reports/{id}/questions/{질문}/answers)은 AI가 만들어서 5초에서 1분쯤 걸려요. 리포트가 아직 만드는 중이면 서버가 409(C4092)로 답해요.
@@ -212,6 +212,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 ## 화면 규칙
 
+- 실제로 모은 공고에는 개발이 아닌 직무(기타)가 섞여서, 새 진단 화면의 나와 잘 맞는 공고와 추천 공고는 처음에 기타를 빼요. 추천 공고는 직군 메뉴(개발 직군 전체, 백엔드, …, 기타)로 고를 수 있어요. 공고 카드와 진단 시작, 미니 브라우저는 소개가 제목을 그대로 되풀이하면 소개 줄을 두지 않아요. 채용 지도는 공고가 없는 권역의 이름표를 두지 않아요. 기업 상세의 주로 뽑는 직군은 공고가 많은 순서이고 기타는 맨 뒤, 근무지는 영어 도시 이름(Seoul 등)을 한글로 맞춰 한 번만 적어요.
 - 공고가 수백, 수천 개로 늘어도 버벅이지 않게, 공고 목록(공고 탐색, 추천 공고, 채용 지도의 칸, 마감 달력의 오른쪽 목록)은 처음에 24개만 그리고 목록 끝이 화면에 들어오면 24개씩 더 그려요(`ui`의 `useShowMore`). 끝에는 "24개 더 보기" 버튼도 있고, 검색어나 필터가 바뀌면 처음부터예요. 기업 상세의 채용 중인 공고는 6개씩이에요. 새 목록도 같은 부품을 써요.
 - 기업 분류(`CategoryFilter`, `COMPANY_CATEGORIES`, `categoryName`): 기업이 쉰 곳이 넘어서 공고 탐색과 마감 달력은 네카라쿠배당토와 유명 기업(`majorCompanies`)만 로고 버튼(`CompanyFilter`의 `oneLine`, 목록 폭에 들어가는 만큼 앞에서부터 보여주고 그 줄의 버튼이 늘어나 양 끝까지 채워요)으로 두고, 그 아래 사업 분류(자체 서비스, B2B SaaS, 커머스, 핀테크와 금융, AI와 데이터, IT 서비스와 SI, 제조와 산업, 공공기관, 기타)로 골라요. 값은 서버의 `company.category`이고, 받은 공고에 있는 분류만 보여줘요. 다시 누르면 풀려요. 기업과 분류는 같이 고르지 않아요. 하나를 고르면 다른 하나는 풀려요. 이 버튼에 없는 기업을 골라 들어오면(`?company=`) 분류 줄 앞에 그 기업 이름이 붙고 누르면 풀려요. 기술 블로그는 기업이 열한 곳이라 기업 버튼 줄(`CompanyFilter`)을 그대로 써요.
 
@@ -472,6 +473,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `jobs_filter_reset` | 공고 탐색에서 맞는 공고가 없을 때 조건 초기화를 눌렀을 때 | |
 | `jobs_layout_change` | 공고 탐색에서 보기 방식을 바꿨을 때 | `layout`(gallery, list) |
 | `jobs_suggestion_use` | 공고 탐색의 빈 검색창에서 Enter로 추천 검색어를 썼을 때 | `query` |
+| `recommend_family_change` | 추천 공고에서 직군을 골랐을 때 | `family`(dev, backend, …) |
 | `recommend_sort_change`, `recommend_threshold_change` | 추천 공고에서 정렬과 적합도 기준을 바꿨을 때 | `sort`, `threshold` |
 | `resume_upload` | 이력서를 올렸을 때 | `source`(pdf, github, notion), `skills` |
 | `resume_skills_edit` | 읽은 역량을 고쳤을 때 | `count` |

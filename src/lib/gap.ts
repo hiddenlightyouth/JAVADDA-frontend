@@ -1654,9 +1654,12 @@ export function fitOf(posting: JobPosting, resume: Resume | null): number | null
   if (cached !== undefined) return cached
   const score = (skills: string[]) => (skills.length === 0 ? 1 : skills.reduce((sum, skill) => sum + Math.min(1, levelOf(resume, skill) / 3), 0) / skills.length)
   const required = score(posting.required)
-  const preferred = score(posting.preferred)
+  // 우대 역량을 적지 않은 공고는 우대 점수를 만점으로 두지 않고 필수 점수를 따라가요. 역량이 하나뿐인 공고가 100%로 뜨지 않게요.
+  const preferred = posting.preferred.length === 0 ? required : score(posting.preferred)
   const breadth = Math.min(1, resume.skills.length / 10)
-  const fit = Math.round((required * 0.6 + preferred * 0.25 + breadth * 0.15) * 100)
+  // 공고에 적힌 역량이 적을수록(넷 미만) 판단 근거가 약해서 조금 깎아요. 하나뿐이면 85%까지예요.
+  const confidence = Math.min(1, 0.8 + (posting.required.length + posting.preferred.length) * 0.05)
+  const fit = Math.round((required * 0.6 + preferred * 0.25 + breadth * 0.15) * confidence * 100)
   table.set(posting.id, fit)
   return fit
 }

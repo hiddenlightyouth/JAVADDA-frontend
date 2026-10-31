@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
-import { fetchPostings, fitOf, RECOMMEND_MIN_FIT, sortPostings, useResume, type JobPosting, type PostingSort } from '../lib/gap'
+import { familyName, fetchPostings, fitOf, RECOMMEND_MIN_FIT, sortPostings, useResume, type JobFamily, type JobPosting, type PostingSort } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
@@ -20,6 +20,9 @@ import { loadCenter, LoadProgress, useShowMore } from './ui'
 
 const SORTS: PostingSort[] = ['fit', 'recent', 'deadline']
 
+/** 추천 공고의 직군 메뉴예요. 맨 앞의 개발 직군 전체 다음에 놓여요. */
+const FAMILIES: JobFamily[] = ['backend', 'frontend', 'mobile', 'data', 'devops', 'other']
+
 const TEXT = messages({
   ko: {
     title: '추천 공고',
@@ -27,6 +30,8 @@ const TEXT = messages({
     sorts: { fit: '유사도순', recent: '최신순', deadline: '마감 임박순' } as Record<PostingSort, string>,
     threshold: '적합도',
     thresholds: { 50: '50% 이상', 70: '70% 이상' } as Record<number, string>,
+    family: '직군',
+    devAll: '개발 직군 전체',
     items: (count: number) => `${count}개의 공고`,
     noResume: '이력서를 올리면 공고를 추천해요',
     noResumeBody: '이력서나 포트폴리오를 올리면 역량을 읽어서, 지금 역량과 가까운 공고를 유사도 순서로 보여줘요.',
@@ -42,6 +47,8 @@ const TEXT = messages({
     sorts: { fit: 'Most similar', recent: 'Newest', deadline: 'Closing soon' },
     threshold: 'Fit',
     thresholds: { 50: '50% and up', 70: '70% and up' },
+    family: 'Role',
+    devAll: 'All dev roles',
     items: (count: number) => `${count} ${count === 1 ? 'posting' : 'postings'}`,
     noResume: 'Upload a resume to get recommendations',
     noResumeBody: 'Once we read the skills in your resume or portfolio, we rank postings by how close they are to what you have now.',
@@ -66,6 +73,9 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
   const resume = useResume()
   const [sort, setSort] = useState<PostingSort>('fit')
   const [threshold, setThreshold] = useState(RECOMMEND_MIN_FIT)
+  // 직군이에요. null은 개발 직군 전체라 기타(개발이 아닌 직무)는 처음에 빠져요. 고르면 그 직군만 봐요.
+  const [family, setFamily] = useState<JobFamily | null>(null)
+  const matchesFamily = (posting: JobPosting) => (family ? posting.family === family : posting.family !== 'other')
   const [loaded, setLoaded] = useState<Loaded | undefined>(undefined)
   const [attempt, setAttempt] = useState(0)
   const load = useLoadProgress()
@@ -88,8 +98,9 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
   }, [attempt, load.one])
 
   const list = useMemo(
-    () => (Array.isArray(loaded) && resume ? sortPostings(loaded, sort, resume).filter((posting) => (fitOf(posting, resume) ?? 0) >= threshold) : loaded),
-    [loaded, sort, resume, threshold],
+    () => (Array.isArray(loaded) && resume ? sortPostings(loaded, sort, resume).filter((posting) => matchesFamily(posting) && (fitOf(posting, resume) ?? 0) >= threshold) : loaded),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [loaded, sort, resume, threshold, family],
   )
   // 공고가 많아도 버벅이지 않게 조금씩 그려요. 검색어나 필터가 바뀌면 처음부터예요.
   const items = Array.isArray(list) ? list : []
@@ -100,10 +111,11 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
       Array.isArray(loaded) && resume
         ? sortPostings(loaded, 'fit', resume).filter((posting) => {
             const fit = fitOf(posting, resume) ?? 0
-            return fit >= NEAR_MIN_FIT && fit < threshold
+            return matchesFamily(posting) && fit >= NEAR_MIN_FIT && fit < threshold
           })
         : [],
-    [loaded, resume, threshold],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [loaded, resume, threshold, family],
   )
   const waiting = useLoadHold(list === undefined)
   const browser = useJobBrowser()
@@ -151,6 +163,23 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
                   onSelect: () => {
                     track('recommend_sort_change', { sort: value })
                     setSort(value)
+                  },
+                })),
+              },
+            ]}
+          />
+          <Dropdown
+            size="lg"
+            label={L.family}
+            value={family ? familyName(family) : L.devAll}
+            groups={[
+              {
+                items: [null, ...FAMILIES].map((value) => ({
+                  label: value ? familyName(value) : L.devAll,
+                  checked: family === value,
+                  onSelect: () => {
+                    track('recommend_family_change', { family: value ?? 'dev' })
+                    setFamily(value)
                   },
                 })),
               },

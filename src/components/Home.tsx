@@ -151,7 +151,7 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   const closing = useMemo(() => sortPostings(POSTINGS.filter((posting) => posting.deadline), 'deadline', null).slice(0, ROW_SIZE), [])
   // 나와 잘 맞는 공고는 추천 공고와 같이 적합도 50% 이상만이에요. 낮음은 이 줄에 넣지 않아요.
   const fit = useMemo(
-    () => (resume ? sortPostings(POSTINGS, 'fit', resume).filter((posting) => (fitOf(posting, resume) ?? 0) >= RECOMMEND_MIN_FIT).slice(0, ROW_SIZE) : []),
+    () => (resume ? sortPostings(POSTINGS, 'fit', resume).filter((posting) => posting.family !== 'other' && (fitOf(posting, resume) ?? 0) >= RECOMMEND_MIN_FIT).slice(0, ROW_SIZE) : []),
     [resume],
   )
   /** 진단해 둔 공고 중 적합도가 낮았던 것. 보완한 뒤에 다시 보라고 보여줘요. */
