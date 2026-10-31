@@ -1,4 +1,4 @@
-import { VOICES, voiceOf } from '../../shared/voices'
+import { DEFAULT_VOICE, VOICES, voiceOf } from '../../shared/voices'
 import { track } from '../lib/analytics'
 import { messages, useLang, useMessages } from '../lib/i18n'
 import { canSpeak, setPracticeVoice, usePracticeVoice, useSpeak } from '../lib/speech'
@@ -30,7 +30,7 @@ export function useVoiceSetting(align: 'left' | 'right' = 'right') {
   const lang = useLang()
   const chosen = usePracticeVoice()
   const voice = useSpeak()
-  const current = voiceOf(chosen ?? '') ?? VOICES[0]
+  const current = voiceOf(chosen ?? '') ?? DEFAULT_VOICE
 
   const control = (
     <Dropdown
