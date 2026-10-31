@@ -3,6 +3,7 @@ import { track } from '../lib/analytics'
 import {
   companyOf,
   postingOf,
+  useReportPosting,
   PROVIDER_LOGOS,
   rerunReport,
   saveNote,
@@ -540,7 +541,7 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
   const report = useReport(id, load.one)
   const waiting = useLoadHold(report === undefined)
   const resume = useResume()
-  const posting = report ? postingOf(report.postingId) : null
+  const posting = useReportPosting(report?.postingId)
   const company = report ? companyOf(report.companyId) : null
   const [gap, setGap] = useState<SkillGap | null>(null)
   const [deleting, setDeleting] = useState(false)

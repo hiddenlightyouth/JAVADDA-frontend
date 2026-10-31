@@ -4,7 +4,7 @@ import { isWebApp } from '../lib/app'
 import { track } from '../lib/analytics'
 import { signOut, useAuth, type Me } from '../lib/auth'
 import { openBugReport, useFeedback } from '../lib/feedback'
-import { companyOf, postingOf, useReports, useResume, type Report } from '../lib/gap'
+import { companyOf, useReportPosting, useReports, useResume, type Report } from '../lib/gap'
 import { byUrgency, DeleteReportDialog, removeReport, REPORT_LIST_TEXT, UrgencyLabel, type Urgency } from './History'
 import { Kbd } from './Shortcuts'
 import { ScriptMark } from './LofyScript'
@@ -119,7 +119,7 @@ function ReportRow({ report, urgency, active, menuOpen, onOpen, onToggleMenu, on
   const menuRef = useRef<HTMLLIElement>(null)
   const list = useMessages(REPORT_LIST_TEXT)
   const company = companyOf(report.companyId)
-  const posting = postingOf(report.postingId)
+  const posting = useReportPosting(report.postingId)
 
   useDismiss(menuOpen, menuRef, onCloseMenu)
 

@@ -176,7 +176,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 계산과 생성은 서버가 맡고, 화면은 `src/lib/gap.ts`가 받아 온 값을 그려요. 화면에서 직접 계산하는 것은 적합도(`fitOf`)와 스킬 이름 정규화뿐이에요.
 
-- 기업(`COMPANIES`)과 공고(`POSTINGS`)는 앱 화면을 처음 그리기 전에 `loadCatalog`가 GET /companies, GET /postings로 받아 배열 속을 바꿔요. 받는 동안은 화면 가운데에 받은 정도(`LoadProgress`, 두 요청의 바이트)를 보여주고, 8초 안에 받지 못하거나 서버에 닿지 못하면 `gap.ts`에 적어 둔 기업 12곳과 공고 22개(`FALLBACK_COMPANIES`, `FALLBACK_POSTINGS`)로 그려요. `postingOf`와 `companyOf`는 받아 둔 목록에서 바로 찾아요. 공고에는 필수(`required`)와 우대(`preferred`) 역량, 직군(`family`), 경력(`career`), 마감(`deadline`)이 있어요. 마감이 없으면(서버는 null) 상시 채용이에요.
+- 기업(`COMPANIES`)과 공고(`POSTINGS`)는 앱 화면을 처음 그리기 전에 `loadCatalog`가 GET /companies, GET /postings로 받아 배열 속을 바꿔요. 받는 동안은 화면 가운데에 받은 정도(`LoadProgress`, 두 요청의 바이트)를 보여주고, 8초 안에 받지 못하거나 서버에 닿지 못하면 `gap.ts`에 적어 둔 기업 12곳과 공고 22개(`FALLBACK_COMPANIES`, `FALLBACK_POSTINGS`)로 그려요. `postingOf`와 `companyOf`는 받아 둔 목록에서 바로 찾아요. 서버는 마감된 공고를 지우지 않고 닫기만 해서(`closedAt`), 열린 목록에 없는 공고를 가리키는 리포트(사이드바, 내 리포트, 리포트, 면접 연습)는 `useReportPosting`으로 GET /postings/{id}를 한 번 받아 공고 이름을 보여줘요. 받은 닫힌 공고는 열린 목록에 넣지 않아서 추천이나 다른 공고에는 나오지 않고, 마감 표시는 그대로 마감이에요. 공고에는 필수(`required`)와 우대(`preferred`) 역량, 직군(`family`), 경력(`career`), 마감(`deadline`)이 있어요. 마감이 없으면(서버는 null) 상시 채용이에요.
 - 스킬 이름은 `canonical`로 하나의 표기로 모아요(Spring Boot, 스프링부트, springboot는 모두 Spring Boot). 별칭 표(`ALIASES`)에 더해요. 스킬마다 레이더의 축(`axisOf`: 언어, 프레임워크, 데이터베이스, 인프라, 협업, CS 기초)이 있어요. 역량 더하기의 추천(`suggestSkills`)도 이 표와 받아 둔 공고에서 찾아요.
 - 이력서는 PDF 파일(POST /resumes, `file` 칸)이나 GitHub, 노션 링크(POST /resumes/link)로 올려요. 서버가 AI로 읽어서 1분 가까이 걸릴 수 있고, 그동안 진행 막대(`AiProgress`)로 몇 퍼센트까지 왔는지 보여줘요(아래의 AI 진행 상황). 서류는 여러 개 올려 두고 그중 하나를 대표 이력서로 정해요(PUT /resumes/{id}/primary). 대표는 서버가 정해서, 새로 올린 서류는 대표가 없을 때만 대표가 되고 대표를 지우면 남은 것 중 가장 최근 것이 대표예요. 올리거나 대표를 바꾸거나 지우면 목록(GET /resumes)을 다시 받아요. 역량은 내 이력서 화면에서 고쳐요(PUT /resumes/{id}/skills, 화면에는 바로 보이고 서버의 답으로 맞춰요). 적합도와 추천과 진단은 대표 이력서로 해요.
 - 서버의 이력서와 리포트 아이디는 숫자라서, 받을 때 글자로 바꿔 두고(`String`) 보낼 때 다시 숫자로 바꿔요(`Number`). 기업과 공고 아이디는 원래 글자예요.
@@ -473,7 +473,6 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 ## 남은 작업
 
 - 서버가 공고에 붙여 주는 적합도(`fitScore`)와 화면의 `fitOf` 중 하나로 맞추기
-- 카탈로그에서 빠진(마감된) 공고의 리포트는 공고 제목을 찾지 못해요. 리포트 목록의 `postingTitle`, `companyName`을 쓰게 바꾸기
 - 서버에 리포트 API가 생기면 관리자 화면의 채팅 탭을 리포트 탭으로 바꾸고, 현황의 채팅 수치도 리포트로 바꿔요.
 - 아티클 글을 새 서비스에 맞게 다시 써요. 지금은 레포 분석 시절의 글이에요.
 - 목 자료의 한국어 조사("을(를)", "이(가)")를 서버가 글을 만들 때 자연스럽게 고쳐요.

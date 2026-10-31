@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useDismiss } from '../hooks/useDismiss'
 import { track } from '../lib/analytics'
-import { companyOf, daysLeft, deleteReport, postingOf, useReports, type Report } from '../lib/gap'
+import { companyOf, daysLeft, deleteReport, postingOf, useReportPosting, useReports, type Report } from '../lib/gap'
 import { formatWhen } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { pageFrame, PageHeader } from './AppPage'
@@ -114,7 +114,7 @@ export function UrgencyLabel({ report, urgency, className = '' }: { report: Repo
 export function DeleteReportDialog({ report, onCancel, onConfirm }: { report: Report; onCancel: () => void; onConfirm: () => void }) {
   const text = useMessages(REPORT_LIST_TEXT)
   const company = companyOf(report.companyId)
-  const posting = postingOf(report.postingId)
+  const posting = useReportPosting(report.postingId)
   return <ConfirmDialog title={text.deleteTitle} body={text.deleteBody(company.name, posting?.title ?? '')} confirm={text.delete} danger onCancel={onCancel} onConfirm={onConfirm} />
 }
 
@@ -131,7 +131,7 @@ function Row({ report, urgency, onOpen, onDelete }: { report: Report; urgency: U
   const ref = useRef<HTMLLIElement>(null)
   useDismiss(menuOpen, ref, () => setMenuOpen(false))
   const company = companyOf(report.companyId)
-  const posting = postingOf(report.postingId)
+  const posting = useReportPosting(report.postingId)
   return (
     <li ref={ref} className={`relative flex items-center gap-3 rounded-2xl px-3 transition-colors hover:bg-gray-50 ${urgency.kind === 'closed' ? 'opacity-60' : ''}`}>
       <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left">

@@ -787,6 +787,33 @@ const postingById = new Map(POSTINGS.map((posting) => [posting.id, posting]))
 
 export const postingOf = (id: string): JobPosting | null => postingById.get(id) ?? null
 
+/**
+ * 마감되어 닫힌 공고예요. 열린 목록(`POSTINGS`)에는 없지만 서버는 공고를 지우지 않고 닫기만 해서, 리포트가 가리키는 공고를 하나씩 받아 둬요(GET /postings/{id}).
+ * 열린 공고를 찾는 곳(추천, 다른 공고, 진단, 마감 표시)은 postingOf를 그대로 쓰고, 리포트의 공고 이름을 보여주는 곳만 useReportPosting을 써요.
+ */
+const closedPostings = createStore<ReadonlyMap<string, JobPosting>>(new Map())
+/** 이미 물어본 공고예요. 받지 못한 공고를 그릴 때마다 다시 묻지 않게 해요. */
+const requestedPostings = new Set<string>()
+
+function loadClosedPosting(id: string) {
+  if (!catalogLive || requestedPostings.has(id)) return
+  requestedPostings.add(id)
+  void call<ServerPosting>(`/postings/${encodeURIComponent(id)}`).then((result) => {
+    if (!result.ok || !result.data) return
+    closedPostings.set(new Map(closedPostings.get()).set(id, toPosting(result.data)))
+  })
+}
+
+/** 리포트가 가리키는 공고예요. 열린 목록에 없으면(마감되어 닫힌 공고) 서버에서 받아 와요. 받는 동안은 null이에요. */
+export function useReportPosting(id: string | null | undefined): JobPosting | null {
+  const open = id ? postingOf(id) : null
+  const closed = useStore(closedPostings, (map) => (id ? (map.get(id) ?? null) : null))
+  useEffect(() => {
+    if (id && !open) loadClosedPosting(id)
+  }, [id, open])
+  return open ?? closed
+}
+
 // ---------- 서버 요청 ----------
 
 const ERRORS = messages<Record<string, string>>({
