@@ -1,4 +1,5 @@
 import { track } from './analytics'
+import { loadConfig } from './api'
 import { authFetch } from './auth'
 import { createStore, useStore } from './store'
 
@@ -27,10 +28,11 @@ interface Usage {
 const usage = createStore<Usage | null>(null)
 let loading: Promise<Usage | null> | null = null
 
-/** 이번 주 사용량을 새로 받아요. 서버에 사용량 API가 없거나 받지 못하면 null이에요. */
+/** 이번 주 사용량을 새로 받아요. 서버에 사용량 API가 없거나(`/config`의 usage) 받지 못하면 null이에요. */
 export function refreshUsage(): Promise<Usage | null> {
-  loading ??= authFetch<Usage>('/usage')
-    .then((result) => (result.ok && result.data ? result.data : null))
+  loading ??= loadConfig()
+    .then((config) => (config.usage ? authFetch<Usage>('/usage') : null))
+    .then((result) => (result?.ok && result.data ? result.data : null))
     .catch(() => null)
     .then((next) => {
       loading = null

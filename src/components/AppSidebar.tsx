@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type HTMLAttributes, type MouseEvent } from 'react'
 import { useDismiss } from '../hooks/useDismiss'
 import { isWebApp } from '../lib/app'
 import { track } from '../lib/analytics'
 import { signOut, useAuth, type Me } from '../lib/auth'
 import { openBugReport, useFeedback } from '../lib/feedback'
-import { companyOf, useReportPosting, useReports, useResume, type Report } from '../lib/gap'
-import { byUrgency, DeleteReportDialog, removeReport, REPORT_LIST_TEXT, UrgencyLabel, type Urgency } from './History'
+import { companyOf, useReportPosting, useReports, useResume, useResumeShelf, type Report } from '../lib/gap'
+import { byResume, byUrgency, DeleteReportDialog, removeReport, REPORT_LIST_TEXT, UrgencyLabel, type ResumeGroup, type Urgency } from './History'
 import { Kbd } from './Shortcuts'
 import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
+import { readJson, writeJson } from '../lib/storage'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
-import { BookIcon, BugIcon, CalendarIcon, CheckIcon, ChevronUpDownIcon, DocumentIcon, DotsIcon, PersonIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
+import { BookIcon, BugIcon, CalendarIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DotsIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { fitColor, Tip } from './GapParts'
 
@@ -66,8 +67,12 @@ function resetLeft(value: string): { days: number; hours: number } | null {
 
 type SidebarPage = 'explore' | 'recommend' | 'calendar' | 'resume' | 'blogs' | 'articles' | 'me' | 'history' | 'admin' | null
 
-/** 사이드바에 보여줄 리포트 수예요. 나머지는 내 리포트 화면에서 봐요. */
-const SIDEBAR_REPORTS = 5
+/** 접어 둔 이력서 폴더의 아이디예요. 이 기기에 기억해요. */
+const CLOSED_FOLDERS_KEY = 'whoisloafing:sidebar-closed-resumes'
+/** 폴더마다 끌어 옮겨 정한 리포트 순서예요. 서버에는 순서를 두지 않아서 이 기기에 기억해요. */
+const REPORT_ORDER_KEY = 'whoisloafing:sidebar-report-order'
+/** 고정한 리포트의 아이디예요. 고정한 리포트는 폴더 맨 위에 와요. 이 기기에 기억해요. */
+const PINNED_REPORTS_KEY = 'whoisloafing:sidebar-pinned-reports'
 
 interface Props {
   /** 지금 열려 있는 리포트. 목록에서 강조해요. */
@@ -106,14 +111,23 @@ const sideIconButton = 'flex size-9 shrink-0 items-center justify-center rounded
 
 const plain = (event: MouseEvent) => !(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)
 
-function ReportRow({ report, urgency, active, menuOpen, onOpen, onToggleMenu, onCloseMenu, onDelete }: {
+/** 리포트 줄을 끌어 옮길 때 놓일 자리예요. 위로 옮기면 그 줄의 위, 아래로 옮기면 아래에 메인 컬러 선이 생겨요. */
+type DropMark = 'before' | 'after' | null
+
+function ReportRow({ report, urgency, active, menuOpen, pinned, drag, dragging, mark, onOpen, onToggleMenu, onCloseMenu, onTogglePin, onDelete }: {
   report: Report
   urgency: Urgency
   active: boolean
   menuOpen: boolean
+  pinned: boolean
+  /** 끌어 옮기기에 쓰는 이벤트예요. */
+  drag: HTMLAttributes<HTMLLIElement>
+  dragging: boolean
+  mark: DropMark
   onOpen: () => void
   onToggleMenu: () => void
   onCloseMenu: () => void
+  onTogglePin: () => void
   onDelete: () => void
 }) {
   const menuRef = useRef<HTMLLIElement>(null)
@@ -124,7 +138,14 @@ function ReportRow({ report, urgency, active, menuOpen, onOpen, onToggleMenu, on
   useDismiss(menuOpen, menuRef, onCloseMenu)
 
   return (
-    <li ref={menuRef} className={`group relative flex items-center rounded-xl transition-colors ${tone(active || menuOpen)} ${urgency.kind === 'closed' && !active ? 'opacity-60' : ''}`}>
+    <li
+      ref={menuRef}
+      draggable
+      {...drag}
+      className={`group relative flex items-center rounded-xl transition-colors ${tone(active || menuOpen)} ${dragging ? 'opacity-40' : urgency.kind === 'closed' && !active ? 'opacity-60' : ''} ${
+        mark ? `before:absolute before:inset-x-2 before:h-0.5 before:rounded-full before:bg-brand ${mark === 'before' ? 'before:-top-px' : 'before:-bottom-px'}` : ''
+      }`}
+    >
       <a
         href={`/r/${report.id}`}
         aria-current={active ? 'page' : undefined}
@@ -136,6 +157,7 @@ function ReportRow({ report, urgency, active, menuOpen, onOpen, onToggleMenu, on
         className="min-w-0 flex-1 px-3 py-2"
       >
         <p className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-900">
+          {pinned && <PinIcon className="size-3 shrink-0 text-gray-400" label={list.pinned} />}
           <span className="min-w-0 truncate">{company.name}</span>
           {report.status === 'done' && <span className={`shrink-0 text-[12px] font-medium tabular-nums ${fitColor(report.fitScore).text}`}>{report.fitScore}%</span>}
         </p>
@@ -166,12 +188,36 @@ function ReportRow({ report, urgency, active, menuOpen, onOpen, onToggleMenu, on
 
       {menuOpen && (
         <div role="menu" className={`absolute top-full right-1 z-10 -mt-1 w-36 origin-top-right ${menuPanel}`}>
+          <button type="button" role="menuitem" onClick={onTogglePin} className={menuRow}>
+            {pinned ? list.unpin : list.pin}
+          </button>
           <button type="button" role="menuitem" onClick={onDelete} className={menuDangerItem}>
             {list.delete}
           </button>
         </div>
       )}
     </li>
+  )
+}
+
+/** 이력서 폴더의 머리 줄이에요. 서류 아이콘과 이름, 대표 이력서면 메인 컬러 별, 리포트 수가 있고, 누르면 접고 펴요. */
+function ResumeFolder({ group, open, onToggle }: { group: ResumeGroup; open: boolean; onToggle: () => void }) {
+  const list = useMessages(REPORT_LIST_TEXT)
+  const name = group.resume?.name ?? list.deletedResume
+  return (
+    <button
+      type="button"
+      aria-expanded={open}
+      aria-label={list.toggle(name)}
+      onClick={onToggle}
+      className="flex h-8 w-full items-center gap-1.5 rounded-xl px-2 text-left text-[12.5px] font-medium text-gray-600 transition-colors hover:bg-gray-200/50 hover:text-gray-900"
+    >
+      <ChevronDownIcon className={`size-3 shrink-0 text-gray-400 transition-transform ${open ? '' : '-rotate-90'}`} />
+      <DocumentIcon className="size-3.5 shrink-0 text-gray-400" />
+      <span className="min-w-0 flex-1 truncate">{name}</span>
+      {group.primary && <StarIcon filled className="size-3 shrink-0 text-brand" />}
+      <span className="shrink-0 text-[11.5px] text-gray-400 tabular-nums">{group.items.length}</span>
+    </button>
   )
 }
 
@@ -210,11 +256,53 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
   const list = useMessages(REPORT_LIST_TEXT)
   const text = useMessages(TEXT)
   const reports = useReports()
-  const ranked = byUrgency(reports)
-  // 챙길 것 몇 개만 보여줘요. 지금 연 리포트가 그 밖에 있으면 끝에 붙여서 어디를 보고 있는지 놓치지 않게 해요.
-  const shown = ranked.slice(0, SIDEBAR_REPORTS)
-  const opened = ranked.find((item) => item.report.id === activeReportId)
-  if (opened && !shown.includes(opened)) shown.push(opened)
+  // 리포트를 만든 이력서마다 폴더로 묶어서 전부 보여줘요. 길어지면 폴더를 접어요.
+  const shelf = useResumeShelf()
+  const folders = byResume(byUrgency(reports), shelf)
+  const [closed, setClosed] = useState<string[]>(() => readJson<string[]>(CLOSED_FOLDERS_KEY, []))
+  function toggleFolder(id: string) {
+    const next = closed.includes(id) ? closed.filter((each) => each !== id) : [...closed, id]
+    track('sidebar_folder_toggle', { open: closed.includes(id) })
+    setClosed(next)
+    writeJson(CLOSED_FOLDERS_KEY, next)
+  }
+  // 리포트를 열면 그 리포트가 든 폴더를 한 번 펼쳐요. 그 뒤로는 다시 접을 수 있어요.
+  const activeFolder = folders.find((group) => group.items.some((item) => item.report.id === activeReportId))?.id
+  useEffect(() => {
+    if (!activeFolder) return
+    setClosed((list) => {
+      if (!list.includes(activeFolder)) return list
+      const next = list.filter((each) => each !== activeFolder)
+      writeJson(CLOSED_FOLDERS_KEY, next)
+      return next
+    })
+  }, [activeReportId, activeFolder])
+  // 폴더 안에서 리포트를 끌어 순서를 바꿔요. 옮긴 적 없는 새 리포트는 맨 위에 마감이 가까운 순서로 와요.
+  const [order, setOrder] = useState<Record<string, string[]>>(() => readJson<Record<string, string[]>>(REPORT_ORDER_KEY, {}))
+  const [drag, setDrag] = useState<{ folder: string; id: string; over: string | null } | null>(null)
+  const [pinned, setPinned] = useState<string[]>(() => readJson<string[]>(PINNED_REPORTS_KEY, []))
+  function togglePin(id: string) {
+    const next = pinned.includes(id) ? pinned.filter((each) => each !== id) : [...pinned, id]
+    track('sidebar_report_pin', { pinned: !pinned.includes(id) })
+    setPinned(next)
+    writeJson(PINNED_REPORTS_KEY, next)
+  }
+  function arranged(group: ResumeGroup) {
+    const rank = new Map((order[group.id] ?? []).map((id, index) => [id, index]))
+    const pin = (id: string) => (pinned.includes(id) ? 0 : 1)
+    return [...group.items].sort((a, b) => pin(a.report.id) - pin(b.report.id) || (rank.get(a.report.id) ?? -1) - (rank.get(b.report.id) ?? -1))
+  }
+  function move(group: ResumeGroup, id: string, target: string) {
+    const ids = arranged(group).map((item) => item.report.id)
+    const from = ids.indexOf(id)
+    const to = ids.indexOf(target)
+    if (from < 0 || to < 0 || from === to) return
+    ids.splice(to, 0, ...ids.splice(from, 1))
+    const next = { ...order, [group.id]: ids }
+    track('sidebar_report_move', {})
+    setOrder(next)
+    writeJson(REPORT_ORDER_KEY, next)
+  }
   const resume = useResume()
   const [menuFor, setMenuFor] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<Report | null>(null)
@@ -342,37 +430,67 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
         {reports.length === 0 ? (
           <p className="px-3 py-2 text-[13px] leading-relaxed text-gray-500">{list.none}</p>
         ) : (
-          <ul className="space-y-0.5">
-            {shown.map(({ report, urgency }) => (
-              <ReportRow
-                key={report.id}
-                report={report}
-                urgency={urgency}
-                active={report.id === activeReportId}
-                menuOpen={menuFor === report.id}
-                onOpen={() => onOpenReport(report.id)}
-                onToggleMenu={() => setMenuFor((open) => (open === report.id ? null : report.id))}
-                onCloseMenu={() => setMenuFor(null)}
-                onDelete={() => {
-                  setMenuFor(null)
-                  setDeleting(report)
-                }}
-              />
-            ))}
-            {reports.length > shown.length && (
-              <li>
-                <button
-                  type="button"
-                  onClick={() => {
-                    track('history_open', { from: 'sidebar-more' })
-                    onHistory()
-                  }}
-                  className="w-full rounded-xl px-3 py-2 text-left text-xs text-gray-500 transition-colors hover:bg-gray-200/50 hover:text-gray-900"
-                >
-                  {list.allCount(reports.length)}
-                </button>
-              </li>
-            )}
+          <ul className="space-y-1">
+            {folders.map((group) => {
+              const open = !closed.includes(group.id)
+              return (
+                <li key={group.id}>
+                  <ResumeFolder group={group} open={open} onToggle={() => toggleFolder(group.id)} />
+                  {open && (
+                    <ul className="mt-0.5 ml-[18px] space-y-0.5 border-l border-gray-200 pl-1">
+                      {arranged(group).map(({ report, urgency }, index, list) => (
+                        <ReportRow
+                          key={report.id}
+                          report={report}
+                          urgency={urgency}
+                          active={report.id === activeReportId}
+                          menuOpen={menuFor === report.id}
+                          pinned={pinned.includes(report.id)}
+                          dragging={drag?.id === report.id}
+                          mark={
+                            drag && drag.folder === group.id && drag.over === report.id && drag.id !== report.id
+                              ? list.findIndex((item) => item.report.id === drag.id) < index
+                                ? 'after'
+                                : 'before'
+                              : null
+                          }
+                          drag={{
+                            onDragStart: (event) => {
+                              event.dataTransfer.effectAllowed = 'move'
+                              setMenuFor(null)
+                              setDrag({ folder: group.id, id: report.id, over: null })
+                            },
+                            // 다른 이력서 폴더로는 옮기지 않아요.
+                            onDragOver: (event) => {
+                              if (drag?.folder !== group.id) return
+                              event.preventDefault()
+                              if (drag.over !== report.id) setDrag({ ...drag, over: report.id })
+                            },
+                            onDrop: (event) => {
+                              event.preventDefault()
+                              if (drag?.folder === group.id) move(group, drag.id, report.id)
+                              setDrag(null)
+                            },
+                            onDragEnd: () => setDrag(null),
+                          }}
+                          onOpen={() => onOpenReport(report.id)}
+                          onToggleMenu={() => setMenuFor((value) => (value === report.id ? null : report.id))}
+                          onCloseMenu={() => setMenuFor(null)}
+                          onTogglePin={() => {
+                            setMenuFor(null)
+                            togglePin(report.id)
+                          }}
+                          onDelete={() => {
+                            setMenuFor(null)
+                            setDeleting(report)
+                          }}
+                        />
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         )}
       </nav>

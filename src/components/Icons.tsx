@@ -272,6 +272,109 @@ export function SidebarIcon({ className = 'size-4', strokeWidth = 1.4, label }: 
   )
 }
 
+/*
+ * 기술 로고가 없는 개념 스킬(테스트, 네트워크, 운영체제 등)의 아이콘이에요. 갭 카드의 `SkillMark`가 스킬 이름을 보고 골라 그려요.
+ */
+
+/** 테스트 코드예요. 실험용 비커예요. */
+export function BeakerIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M5.5 2h5M6.5 2v4.2L3.2 12.6A1 1 0 0 0 4.1 14h7.8a1 1 0 0 0 .9-1.4L9.5 6.2V2M4.6 10h6.8" />
+    </Icon>
+  )
+}
+
+/** 네트워크예요. 지구본이에요. */
+export function GlobeIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <circle cx="8" cy="8" r="6" />
+      <path d="M2 8h12M8 2c1.7 1.6 2.5 3.6 2.5 6S9.7 12.4 8 14c-1.7-1.6-2.5-3.6-2.5-6S6.3 3.6 8 2Z" />
+    </Icon>
+  )
+}
+
+/** 운영체제와 컴퓨터 구조예요. 칩이에요. */
+export function ChipIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <rect x="4.5" y="4.5" width="7" height="7" rx="1" />
+      <path d="M6.5 6.5h3v3h-3zM6.5 2.5v2M9.5 2.5v2M6.5 11.5v2M9.5 11.5v2M2.5 6.5h2M2.5 9.5h2M11.5 6.5h2M11.5 9.5h2" />
+    </Icon>
+  )
+}
+
+/** 자료구조와 알고리즘이에요. 나뭇가지처럼 갈라지는 트리예요. */
+export function TreeIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <circle cx="8" cy="3.5" r="1.5" />
+      <circle cx="4" cy="12.5" r="1.5" />
+      <circle cx="12" cy="12.5" r="1.5" />
+      <path d="M7.3 4.8 4.7 11.2M8.7 4.8l2.6 6.4" />
+    </Icon>
+  )
+}
+
+/** 시스템 설계와 아키텍처예요. 겹겹이 쌓인 판이에요. */
+export function LayersIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M8 2.5 14 5.5 8 8.5 2 5.5ZM2 8.3l6 3 6-3M2 11l6 3 6-3" />
+    </Icon>
+  )
+}
+
+/** MSA예요. 작은 서비스 네 개예요. */
+export function BoxesIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1" />
+      <rect x="9" y="2.5" width="4.5" height="4.5" rx="1" />
+      <rect x="2.5" y="9" width="4.5" height="4.5" rx="1" />
+      <rect x="9" y="9" width="4.5" height="4.5" rx="1" />
+    </Icon>
+  )
+}
+
+/** LLM과 AI예요. 반짝이는 별이에요. */
+export function SparkleIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M7 2.5 8.3 6l3.2 1.3-3.2 1.3L7 12l-1.3-3.4L2.5 7.3 5.7 6ZM12 10.5l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6Z" />
+    </Icon>
+  )
+}
+
+/** SQL과 데이터베이스예요. 원통이에요. */
+export function DatabaseIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <ellipse cx="8" cy="4" rx="5" ry="1.8" />
+      <path d="M3 4v8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8V4M3 8c0 1 2.2 1.8 5 1.8s5-.8 5-1.8" />
+    </Icon>
+  )
+}
+
+/** 그 밖의 개념 스킬이에요. 코드 괄호예요. */
+export function CodeIcon({ className = 'size-4', strokeWidth = 1.5, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5M9 3 7 13" />
+    </Icon>
+  )
+}
+
+/** 압정이에요. 사이드바에서 고정한 리포트에 붙여요. */
+export function PinIcon({ className = 'size-3.5 shrink-0', strokeWidth = 1.5, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M6 2h4M7 2v4L4.5 9h7L9 6V2M8 9v5" />
+    </Icon>
+  )
+}
+
 /** 점 세 개예요. 줄의 관리 메뉴를 여는 버튼에 써요. */
 export function DotsIcon({ className = 'size-4', label }: Omit<IconProps, 'strokeWidth'>) {
   return (

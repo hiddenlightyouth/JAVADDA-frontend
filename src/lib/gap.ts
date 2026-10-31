@@ -85,6 +85,75 @@ export interface Course {
 /** 강의 플랫폼의 로고예요. public/providers에 받아 둔 아이콘이에요. */
 export const PROVIDER_LOGOS: Record<Course['provider'], string> = { 인프런: '/providers/inflearn.png' }
 
+/**
+ * 기술 스택의 로고 파일 이름이에요(`public/skills`, Devicon의 그림, MIT 라이선스). 스킬 이름은 `canonical`로 모은 이름이에요.
+ * 로고가 없는 스킬(CS 기초, MSA 같은 개념)은 `SkillMark`가 뜻에 맞는 선 아이콘을 그려요. 새 스킬을 더하면 그림을 받아 두고 여기에 적어요.
+ */
+const SKILL_LOGOS: Record<string, string> = {
+  AWS: 'amazonwebservices',
+  Docker: 'docker',
+  Elasticsearch: 'elasticsearch',
+  Figma: 'figma',
+  GCP: 'googlecloud',
+  Git: 'git',
+  GitHub: 'github',
+  'GitHub Actions': 'githubactions',
+  Go: 'go',
+  GraphQL: 'graphql',
+  JPA: 'hibernate',
+  Hibernate: 'hibernate',
+  Java: 'java',
+  JavaScript: 'javascript',
+  Kafka: 'apachekafka',
+  Kotlin: 'kotlin',
+  Kubernetes: 'kubernetes',
+  MongoDB: 'mongodb',
+  MySQL: 'mysql',
+  'Next.js': 'nextjs',
+  'Node.js': 'nodejs',
+  PostgreSQL: 'postgresql',
+  pgvector: 'postgresql',
+  Python: 'python',
+  React: 'react',
+  'React Native': 'react',
+  Redis: 'redis',
+  'Spring Boot': 'spring',
+  'Spring Batch': 'spring',
+  'Spring Security': 'spring',
+  Swift: 'swift',
+  Tailwind: 'tailwindcss',
+  Terraform: 'terraform',
+  TypeScript: 'typescript',
+  Vite: 'vitejs',
+  Vue: 'vuejs',
+  Webpack: 'webpack',
+  gRPC: 'grpc',
+  Jenkins: 'jenkins',
+  Nginx: 'nginx',
+  Gradle: 'gradle',
+  JUnit: 'junit',
+  Jest: 'jest',
+  Flutter: 'flutter',
+  Android: 'android',
+  Django: 'django',
+  FastAPI: 'fastapi',
+  Oracle: 'oracle',
+  Azure: 'azure',
+  Firebase: 'firebase',
+  RabbitMQ: 'rabbitmq',
+  Prometheus: 'prometheus',
+  Grafana: 'grafana',
+  HTML: 'html5',
+  CSS: 'css3',
+  Redux: 'redux',
+}
+
+/** 스킬의 로고 주소예요. 없으면 null이에요. */
+export const skillLogoOf = (skill: string): string | null => {
+  const file = SKILL_LOGOS[canonical(skill)] ?? SKILL_LOGOS[skill]
+  return file ? `/skills/${file}.svg` : null
+}
+
 export interface SkillGap {
   skill: string
   kind: GapKind
@@ -826,6 +895,12 @@ const ERRORS = messages<Record<string, string>>({
     C4003: '역량이 비어 있어요. 내 이력서에서 역량을 하나 이상 더해 주세요.',
     C4043: '이력서를 찾지 못했어요. 이력서를 먼저 올려 주세요.',
     C4092: '리포트를 아직 만들고 있어요. 잠시 뒤에 다시 시도해 주세요.',
+    C4042: '공고를 찾지 못했어요. 마감되어 내려간 공고일 수 있어요.',
+    C4044: '리포트를 찾지 못했어요. 지운 리포트일 수 있어요.',
+    C4045: '면접 질문을 찾지 못했어요. 예상 질문을 다시 불러와 주세요.',
+    C4004: '고른 AI 모델을 지금 쓸 수 없어요. 설정에서 다른 모델을 골라 주세요.',
+    C002: '보낸 내용을 확인하지 못했어요. 다시 시도해 주세요.',
+    C403: '이 계정으로는 볼 수 없어요.',
     login: '로그인이 필요해요. 다시 로그인해 주세요.',
     network: '서버와 연결하지 못했어요. 잠시 뒤에 다시 시도해 주세요.',
     unknown: '문제가 생겼어요. 잠시 뒤에 다시 시도해 주세요.',
@@ -839,6 +914,12 @@ const ERRORS = messages<Record<string, string>>({
     C4003: 'No skills yet. Add at least one skill in My resume.',
     C4043: "We couldn't find your resume. Please upload one first.",
     C4092: 'The report is still being made. Please try again in a moment.',
+    C4042: "We couldn't find this posting. It may have closed.",
+    C4044: "We couldn't find this report. It may have been deleted.",
+    C4045: "We couldn't find this question. Please reload the expected questions.",
+    C4004: "The AI model you picked isn't available. Choose another one in Settings.",
+    C002: "We couldn't read what was sent. Please try again.",
+    C403: "This account can't view this.",
     login: 'Please sign in again.',
     network: "Couldn't reach the server. Please try again in a moment.",
     unknown: 'Something went wrong. Please try again in a moment.',
@@ -1205,7 +1286,7 @@ export async function fetchCompany(id: string): Promise<CompanyProfile | null> {
 // ---------- 저장소 ----------
 
 /** 올려 둔 서류 목록과, 진단과 추천에 쓰는 대표 서류의 아이디예요. */
-interface ResumeShelf {
+export interface ResumeShelf {
   list: Resume[]
   primaryId: string | null
 }

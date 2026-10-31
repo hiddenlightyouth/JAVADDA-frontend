@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { careerName, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, useDiagnosed, type Company, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
+import { careerName, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, skillLogoOf, useDiagnosed, type Company, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { ConfirmDialog } from './Dialog'
-import { BriefcaseIcon, CheckIcon, CloseIcon, MapPinIcon, PersonIcon, TriangleIcon } from './Icons'
+import { BeakerIcon, BoxesIcon, BriefcaseIcon, CheckIcon, ChipIcon, CloseIcon, CodeIcon, DatabaseIcon, GlobeIcon, LayersIcon, MapPinIcon, PersonIcon, SparkleIcon, TreeIcon, TriangleIcon } from './Icons'
 import { Badge, primaryButton, ProgressRing, stagger } from './ui'
 
 /**
@@ -119,6 +119,38 @@ export function CompanyMark({ company, className = 'size-12 text-[17px]' }: { co
   return (
     <span aria-hidden className={`flex shrink-0 items-center justify-center rounded-xl bg-gray-100 font-semibold text-gray-700 ${className}`}>
       {company.initial}
+    </span>
+  )
+}
+
+/** 로고가 없는 개념 스킬의 아이콘이에요. 스킬 이름에 들어 있는 말로 골라요. 위에서부터 먼저 맞는 것을 써요. */
+const CONCEPT_ICONS: [RegExp, typeof CodeIcon][] = [
+  [/테스트|test|tdd/i, BeakerIcon],
+  [/네트워크|network|http|tcp/i, GlobeIcon],
+  [/운영체제|컴퓨터 구조|\bos\b|linux/i, ChipIcon],
+  [/알고리즘|자료구조|algorithm/i, TreeIcon],
+  [/설계|아키텍처|architecture|design/i, LayersIcon],
+  [/msa|마이크로|micro/i, BoxesIcon],
+  [/llm|\bai\b|\brag\b|머신러닝|딥러닝|\bml\b/i, SparkleIcon],
+  [/sql|데이터베이스|database|db/i, DatabaseIcon],
+  [/협업|커뮤니케이션|collab/i, PersonIcon],
+]
+
+/**
+ * 기술 스택 로고를 둥근 네모에 넣어요. 기업 로고처럼 다크 모드에서도 바탕은 흰색이에요.
+ * 로고가 없는 개념 스킬(테스트 코드, 네트워크 등)은 뜻에 맞는 선 아이콘을, 맞는 것도 없으면 코드 괄호를 같은 칸에 메인 컬러로 그려요.
+ */
+export function SkillMark({ skill, className = 'size-9' }: { skill: string; className?: string }) {
+  const [broken, setBroken] = useState(false)
+  const logo = skillLogoOf(skill)
+  const Concept = CONCEPT_ICONS.find(([pattern]) => pattern.test(skill))?.[1] ?? CodeIcon
+  return (
+    <span aria-hidden className={`flex shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-[#fff] p-1.5 ${className}`}>
+      {logo && !broken ? (
+        <img src={logo} alt="" loading="lazy" onError={() => setBroken(true)} className="size-full object-contain" />
+      ) : (
+        <Concept className="size-[55%] text-[#2e90fa]" />
+      )}
     </span>
   )
 }

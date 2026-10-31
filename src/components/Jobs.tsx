@@ -32,6 +32,7 @@ const TEXT = messages({
     items: (count: number) => `${count}개의 공고`,
     none: '맞는 공고가 없어요.',
     noneBody: '검색어나 걸러 둔 조건을 바꿔 보세요.',
+    reset: '조건 초기화',
     location: '지역',
     company: '기업',
   },
@@ -46,6 +47,7 @@ const TEXT = messages({
     items: (count: number) => `${count} ${count === 1 ? 'posting' : 'postings'}`,
     none: 'No postings match.',
     noneBody: 'Try a different search or filter.',
+    reset: 'Clear filters',
     location: 'Location',
     company: 'Company',
   },
@@ -220,7 +222,19 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
           ) : list === 'failed' ? (
             <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
           ) : list.length === 0 ? (
-            <Notice title={L.none} body={L.noneBody} className="mt-16" />
+            <Notice
+              title={L.none}
+              body={L.noneBody}
+              action={query || family || career || company ? L.reset : undefined}
+              onAction={() => {
+                track('jobs_filter_reset')
+                setQuery('')
+                setFamily(null)
+                setCareer(null)
+                setCompany(null)
+              }}
+              className="mt-16"
+            />
           ) : (
             <ul className={layout === 'gallery' ? jobsGrid : jobsList}>
               {list.map((posting, order) => (
