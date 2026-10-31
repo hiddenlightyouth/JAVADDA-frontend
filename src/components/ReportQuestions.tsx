@@ -457,9 +457,10 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
               )
             })}
           </div>
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-[12.5px] text-gray-500 tabular-nums">{practiced.length > 0 ? L.progressCount(practiced.length, questions.length) : L.notYet}</span>
-            {practiced.length > 0 && <span className="text-[12.5px] font-medium text-brand tabular-nums">{L.average(average)}</span>}
+          {/* 좁으면 아래 줄로 내려가요. 버튼 글자는 꺾이지 않게 해요. */}
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+            <span className="whitespace-nowrap text-[12.5px] text-gray-500 tabular-nums">{practiced.length > 0 ? L.progressCount(practiced.length, questions.length) : L.notYet}</span>
+            {practiced.length > 0 && <span className="whitespace-nowrap text-[12.5px] font-medium text-brand tabular-nums">{L.average(average)}</span>}
             <span className="h-1.5 w-20 overflow-hidden rounded-full bg-gray-200/70" aria-label={L.progress}>
               <span className="block h-full rounded-full bg-brand transition-[width]" style={{ width: `${(practiced.length / Math.max(1, questions.length)) * 100}%` }} />
             </span>
@@ -469,13 +470,13 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
                 track('questions_history_open', { count: allRecords.length })
                 setShowPast(true)
               }}
-              className={toolButton}
+              className={`${toolButton} whitespace-nowrap`}
             >
               <ClockIcon />
               {L.pastRecords}
               {allRecords.length > 0 && <span className="text-gray-400 tabular-nums">{allRecords.length}</span>}
             </button>
-            <button type="button" onClick={() => askRegenerate('header')} className={toolButton}>
+            <button type="button" onClick={() => askRegenerate('header')} className={`${toolButton} whitespace-nowrap`}>
               <RefreshIcon />
               {L.regenerate}
             </button>
@@ -485,7 +486,7 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
                 track('practice_start', { from: 'all' })
                 onPractice()
               }}
-              className={primaryButton}
+              className={`${primaryButton} whitespace-nowrap`}
             >
               {L.practiceAll}
             </button>

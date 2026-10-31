@@ -138,7 +138,8 @@ function JobCard({ posting, resume, fit, order, onOpen, onView, onAnalyze, onCom
       </h3>
       {/* 직군, 경력, 지역은 아이콘을 붙여 한 줄에 늘어놓아서, 훑어볼 때 바로 눈에 들어와요. */}
       <PostingMeta posting={posting} size="md" className="mt-2" />
-      <p className="mt-3 line-clamp-2 text-[13px] leading-relaxed text-gray-500">{posting.summary}</p>
+      {/* 소개가 제목을 그대로 되풀이하면(규칙으로 읽은 공고) 줄을 두지 않아요. */}
+      {posting.summary.trim() !== posting.title.trim() && <p className="mt-3 line-clamp-2 text-[13px] leading-relaxed text-gray-500">{posting.summary}</p>}
 
       <div className="mt-4 flex flex-1 flex-wrap content-start gap-1.5">
         {posting.required.slice(0, SKILLS_SHOWN).map((skill) => (

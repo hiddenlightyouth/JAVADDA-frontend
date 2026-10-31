@@ -303,6 +303,8 @@ export function KoreaMap({
         regionLabel &&
         (Object.keys(REGION_LABEL) as RegionId[]).map((region) => {
           const count = counts[region] ?? 0
+          // 공고가 없는 권역은 이름표를 두지 않아요. 0이 지도를 덮어요.
+          if (count === 0) return null
           return (
             <button
               key={region}

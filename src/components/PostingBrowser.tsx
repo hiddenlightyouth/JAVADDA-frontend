@@ -256,7 +256,7 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
                   </div>
                 </div>
                 <h2 className="mt-4 text-[18px] leading-snug font-semibold text-gray-900">{posting.title}</h2>
-                <p className="mt-2 text-[13.5px] leading-relaxed text-gray-600">{posting.summary}</p>
+                {posting.summary.trim() !== posting.title.trim() && <p className="mt-2 text-[13.5px] leading-relaxed text-gray-600">{posting.summary}</p>}
                 <h3 className={`mt-5 ${label}`}>{L.required}</h3>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {posting.required.map((skill) => (

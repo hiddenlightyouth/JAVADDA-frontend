@@ -159,6 +159,8 @@ export function NaverJobMap({
     if (map.getZoom() < pinZoom) {
       for (const region of Object.keys(REGION_LABEL) as RegionId[]) {
         const count = counts[region] ?? 0
+        // 공고가 없는 권역은 이름표를 두지 않아요. 0이 지도를 덮어요.
+        if (count === 0) continue
         const [lon, lat] = REGION_LABEL[region]
         add(lat, lon, regionHtml(regionLabel(region, count), count > 0), count > 0 ? () => handlers.current.onRegion(region) : null, [0, 0])
       }

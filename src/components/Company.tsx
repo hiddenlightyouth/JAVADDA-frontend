@@ -1,7 +1,7 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import { track } from '../lib/analytics'
 import { fetchBlogDigests, isStale, type BlogDigest } from '../lib/blogs'
-import { canEmbed, companyOf, familyName, fetchCompany, sortPostings, useResume, type CompanyProfile, type QuestionCategory, type Resume } from '../lib/gap'
+import { canEmbed, companyOf, familyName, fetchCompany, sortPostings, useResume, type CompanyProfile, type QuestionCategory, type Resume, type JobFamily } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
@@ -181,6 +181,22 @@ export function Company({ id, onBack, onPick, onPostings, onBlogs }: {
 /** 기업 상세에서 한 번에 보여줄 공고 수예요. 더 있으면 "6개 더 보기"로 이어 그려요. */
 const COMPANY_POSTINGS = 6
 
+/** 채용 페이지가 영어로 적은 도시 이름을 한글로 맞춰요. 근무지가 "서울"과 "Seoul"로 따로 보이지 않게요. */
+const PLACE_NAMES: [RegExp, string][] = [
+  [/seoul/i, '서울'],
+  [/seongnam|pangyo/i, '경기 성남'],
+  [/busan/i, '부산'],
+  [/incheon/i, '인천'],
+  [/daejeon/i, '대전'],
+  [/daegu/i, '대구'],
+  [/gwangju/i, '광주'],
+  [/jeju/i, '제주'],
+]
+const koreanPlace = (location: string) => {
+  const trimmed = location.replace(/,?\s*(south\s+)?korea$/i, '').trim()
+  return PLACE_NAMES.find(([pattern]) => pattern.test(trimmed))?.[1] ?? trimmed
+}
+
 function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead }: {
   profile: CompanyProfile
   digest: BlogDigest | null
@@ -193,8 +209,15 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
 }) {
   const L = useMessages(TEXT)
   const { postings, stack } = profile
-  const families = [...new Set(postings.map((posting) => familyName(posting.family)).filter(Boolean))]
-  const locations = [...new Set(postings.map((posting) => posting.location))]
+  // 공고가 많은 직군부터 적고, 기타(개발이 아닌 직무)는 맨 뒤로 보내요.
+  const familyCounts = new Map<JobFamily, number>()
+  for (const posting of postings) familyCounts.set(posting.family, (familyCounts.get(posting.family) ?? 0) + 1)
+  const families = [...familyCounts.entries()]
+    .sort((a, b) => Number(a[0] === 'other') - Number(b[0] === 'other') || b[1] - a[1])
+    .map(([family]) => familyName(family))
+    .filter(Boolean)
+  // 근무지는 영어 도시 이름을 한글로 맞추고 같은 곳은 한 번만 적어요(Seoul과 서울).
+  const locations = [...new Set(postings.map((posting) => koreanPlace(posting.location)))]
   const sorted = resume ? sortPostings(postings, 'fit', resume) : postings
   // 기업 공고가 많아도 칸이 끝없이 길어지지 않게 여섯 개씩 보여줘요.
   const postingMore = useShowMore(sorted.length, profile.company.id, COMPANY_POSTINGS)

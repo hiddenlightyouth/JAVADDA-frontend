@@ -573,16 +573,19 @@ function FitTab({ report, onPick }: { report: ReportData; onPick: (postingId: st
         {/* 막대 하나를 비중만큼 나누고, 칸마다 받은 점수만큼 채워요. */}
         <div className="mt-4 flex gap-1" aria-hidden>
           {items.map((item) => (
-            <div key={item.key} className="min-w-0" style={{ flexGrow: item.weight, flexBasis: 0 }}>
-              <div className="h-2.5 overflow-hidden rounded-full bg-gray-200/70">
-                <div className="h-full origin-left animate-grow rounded-full bg-brand" style={{ width: `${item.score}%` }} />
-              </div>
-              <p className="mt-1.5 truncate text-[11.5px] text-gray-500">
-                {L.items[item.key]} <span className="tabular-nums">{L.earned(item.got, item.max)}</span>
-              </p>
+            <div key={item.key} className="h-2.5 min-w-0 overflow-hidden rounded-full bg-gray-200/70" style={{ flexGrow: item.weight, flexBasis: 0 }}>
+              <div className="h-full origin-left animate-grow rounded-full bg-brand" style={{ width: `${item.score}%` }} />
             </div>
           ))}
         </div>
+        {/* 칸 이름과 받은 몫은 막대 아래 한 줄에 따로 적어요. 칸 밑에 두면 비중이 작은 칸의 글자가 잘려요. 좁으면 다음 줄로 넘어가요. */}
+        <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-gray-500">
+          {items.map((item) => (
+            <span key={item.key} className="whitespace-nowrap">
+              {L.items[item.key]} <span className="font-medium text-gray-700 tabular-nums">{L.earned(item.got, item.max)}</span>
+            </span>
+          ))}
+        </p>
         <ul className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           {items.map((item, order) => (
             <li key={item.key} className="flex animate-rise flex-col rounded-xl bg-white p-4" style={stagger(order)}>

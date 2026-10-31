@@ -122,7 +122,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
               <p className="text-[13px] text-gray-500">
                 {posting.location}, {familyName(posting.family)}, {careerName(posting.career)}, {left !== null ? L.deadline(left) : L.always}
               </p>
-              <p className="mt-2 text-[13.5px] leading-relaxed text-gray-700">{posting.summary}</p>
+              {posting.summary.trim() !== posting.title.trim() && <p className="mt-2 text-[13.5px] leading-relaxed text-gray-700">{posting.summary}</p>}
               <div className="mt-5 space-y-4">
                 {(['required', 'preferred'] as const).map((kind) => (
                   <div key={kind}>
