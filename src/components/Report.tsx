@@ -29,12 +29,12 @@ import { useLoadHold, useLoadProgress } from '../lib/load'
 import { showToast } from '../lib/toast'
 import { pageFrame, PageHeader } from './AppPage'
 import { panelBody, SidePanel } from './Dialog'
-import { AiProgress, CheckMark, CompanyMark, SkillMark, Delta, FitBadge, KindLabel, Meter, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreHero, ScoreRing, Sparkline, Tip, percent } from './GapParts'
+import { AiProgress, CheckMark, CompanyMark, SkillMark, Delta, FitBadge, KindLabel, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreHero, Sparkline, Tip, percent } from './GapParts'
 import { DeleteReportDialog, removeReport } from './History'
 import { AlertIcon, CheckIcon, ClockIcon, LevelIcon, RefreshIcon, TrashIcon } from './Icons'
 import { ReviewTab } from './ReportReview'
 import { QuestionsTab } from './ReportQuestions'
-import { Bullets, label, loadCenter, LoadProgress, NumberedList, primaryButton, Segmented, stagger, Tabs, textArea, toolButton, toolDangerButton } from './ui'
+import { Badge, Bullets, label, loadCenter, LoadProgress, NumberedList, primaryButton, Segmented, stagger, Tabs, textArea, toolButton, toolDangerButton } from './ui'
 
 /** 리포트의 탭이에요. 요약, 적합도 설명, 서류 검증, 예상 면접 질문 순서예요. */
 export type ReportTab = 'summary' | 'fit' | 'review' | 'questions'
@@ -90,6 +90,15 @@ const TEXT = messages({
     items: { required: '필수 역량', preferred: '우대 역량', experience: '프로젝트 경험', recency: '기술 최신성' } as Record<ScoreItem['key'], string>,
     weight: (value: number) => `비중 ${value}%`,
     checks: '필수와 우대 역량 점검',
+    breakdownLead: '네 항목의 점수에 비중을 곱해서 더한 값이 적합도예요.',
+    points: (value: number) => `${value}점`,
+    earned: (got: number, max: number) => `${got} / ${max}`,
+    weakest: '가장 많이 놓쳤어요',
+    requiredChecks: '필수 역량',
+    preferredChecks: '우대 역량',
+    checkSummary: (met: number, total: number) => `${total}개 중 ${met}개 충분해요`,
+    noChecks: '공고에 적힌 역량이 없어요.',
+    statuses: { met: '충분해요', partial: '근거가 약해요', missing: '보이지 않아요' } as Record<RequirementCheck['status'], string>,
     alternatives: '더 잘 맞는 다른 공고',
     noAlternatives: '지금 이력서로는 이 공고가 같은 직군에서 가장 잘 맞아요.',
     share: (value: string) => `같은 직군 공고의 ${value}가 요구`,
@@ -158,6 +167,15 @@ const TEXT = messages({
     items: { required: 'Required skills', preferred: 'Preferred skills', experience: 'Project evidence', recency: 'Recency' },
     weight: (value: number) => `${value}% weight`,
     checks: 'Required and preferred skills',
+    breakdownLead: 'Your fit is the four scores multiplied by their weights and added up.',
+    points: (value: number) => `${value} pts`,
+    earned: (got: number, max: number) => `${got} / ${max}`,
+    weakest: 'Lost the most here',
+    requiredChecks: 'Required skills',
+    preferredChecks: 'Preferred skills',
+    checkSummary: (met: number, total: number) => `${met} of ${total} look solid`,
+    noChecks: 'The posting lists no skills here.',
+    statuses: { met: 'Solid', partial: 'Weak evidence', missing: 'Not found' },
     alternatives: 'Postings that fit better',
     noAlternatives: 'With your current resume this is the best fit in its job family.',
     share: (value: string) => `Listed in ${value} of postings in this family`,
@@ -533,51 +551,98 @@ function SummaryTab({ report, onOpenGap, onPick }: { report: ReportData; onOpenG
   )
 }
 
+/**
+ * 적합도 설명 탭이에요. 맨 위에 네 항목이 적합도에 보탠 몫을 비중만큼 나눈 막대 하나로 보여주고, 그 아래 항목마다 점수와 설명 카드를 놓아요.
+ * 가장 많이 놓친 항목(비중 x 못 받은 점수가 가장 큰 것)에는 이름표를 붙여요. 그 아래에 필수와 우대 역량을 기술 로고와 함께 점검하고, 맨 아래에 더 잘 맞는 다른 공고가 있어요.
+ */
 function FitTab({ report, onPick }: { report: ReportData; onPick: (postingId: string) => void }) {
   const L = useMessages(TEXT)
-  const groups: RequirementCheck['requirement'][] = ['required', 'preferred']
+  const items = report.breakdown.map((item) => {
+    const max = Math.round(item.weight * 100)
+    return { ...item, max, got: Math.round((item.score * max) / 100), lost: item.weight * (100 - item.score) }
+  })
+  const weakest = items.reduce<(typeof items)[number] | null>((worst, item) => (item.lost > 0 && (!worst || item.lost > worst.lost) ? item : worst), null)
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="flex min-w-0 flex-col gap-4">
-        <Panel title={L.breakdown}>
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-            <ScoreRing score={report.fitScore} />
-            <div className="min-w-0 flex-1 space-y-4">
-              {report.breakdown.map((item) => (
-                <Meter key={item.key} label={L.items[item.key]} value={item.score} display={`${item.score}`} note={`${L.weight(Math.round(item.weight * 100))}. ${item.note}`} />
-              ))}
+    <div className="space-y-4">
+      <Panel title={L.breakdown} action={<span className="text-[12.5px] text-gray-500 tabular-nums">{L.points(report.fitScore)}</span>}>
+        <p className="text-[13.5px] leading-relaxed text-gray-600">{L.breakdownLead}</p>
+        {/* 막대 하나를 비중만큼 나누고, 칸마다 받은 점수만큼 채워요. */}
+        <div className="mt-4 flex gap-1" aria-hidden>
+          {items.map((item) => (
+            <div key={item.key} className="min-w-0" style={{ flexGrow: item.weight, flexBasis: 0 }}>
+              <div className="h-2.5 overflow-hidden rounded-full bg-gray-200/70">
+                <div className="h-full origin-left animate-grow rounded-full bg-brand" style={{ width: `${item.score}%` }} />
+              </div>
+              <p className="mt-1.5 truncate text-[11.5px] text-gray-500">
+                {L.items[item.key]} <span className="tabular-nums">{L.earned(item.got, item.max)}</span>
+              </p>
             </div>
-          </div>
-          <p className="mt-5 text-[13.5px] leading-relaxed text-gray-700">{report.summary}</p>
-        </Panel>
-
-        <Panel title={L.alternatives}>
-          {report.alternatives.length === 0 ? (
-            <p className="text-[13.5px] text-gray-500">{L.noAlternatives}</p>
-          ) : (
-            <Alternatives ids={report.alternatives} onPick={onPick} />
-          )}
-        </Panel>
-      </div>
-
-      <Panel title={L.checks}>
-        <div className="space-y-5">
-          {groups.map((requirement) => (
-            <section key={requirement}>
-              <h3 className={label}>{requirement === 'required' ? L.items.required : L.items.preferred}</h3>
-              <ul className="mt-2 divide-y divide-gray-200">
-                {report.checks
-                  .filter((check) => check.requirement === requirement)
-                  .map((check) => (
-                    <li key={check.skill} className="flex items-center gap-3 py-2">
-                      <CheckMark status={check.status} />
-                      <span className={`flex-1 text-[13.5px] ${check.status === 'missing' ? 'text-gray-400' : 'text-gray-900'}`}>{check.skill}</span>
-                    </li>
-                  ))}
-              </ul>
-            </section>
           ))}
         </div>
+        <ul className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          {items.map((item, order) => (
+            <li key={item.key} className="flex animate-rise flex-col rounded-xl bg-white p-4" style={stagger(order)}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate text-[13px] font-medium text-gray-900">{L.items[item.key]}</span>
+                <span className="shrink-0 text-[11.5px] text-gray-400 tabular-nums">{L.weight(item.max)}</span>
+              </div>
+              <p className="mt-2 text-[24px] leading-none font-semibold text-gray-900 tabular-nums">
+                {item.score}
+                <span className="ml-0.5 text-[13px] font-medium text-gray-400">/ 100</span>
+              </p>
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-200/70" aria-hidden>
+                <div className="h-full origin-left animate-grow rounded-full bg-brand" style={{ width: `${Math.max(1.5, item.score)}%` }} />
+              </div>
+              <p className="mt-3 flex-1 text-[12.5px] leading-relaxed text-gray-500">{item.note}</p>
+              {weakest?.key === item.key && (
+                <Badge tone="brand" strong className="mt-3 self-start">
+                  {L.weakest}
+                </Badge>
+              )}
+            </li>
+          ))}
+        </ul>
+      </Panel>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {(['required', 'preferred'] as const).map((requirement) => {
+          const checks = report.checks.filter((check) => check.requirement === requirement)
+          const met = checks.filter((check) => check.status === 'met').length
+          return (
+            <Panel
+              key={requirement}
+              title={requirement === 'required' ? L.requiredChecks : L.preferredChecks}
+              action={checks.length > 0 && <span className="text-[12.5px] text-gray-500 tabular-nums">{L.checkSummary(met, checks.length)}</span>}
+            >
+              {checks.length === 0 ? (
+                <p className="py-4 text-center text-[13.5px] text-gray-500">{L.noChecks}</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {checks.map((check, order) => (
+                    <li key={check.skill} className="flex animate-rise items-center gap-3 rounded-xl bg-white px-3 py-2.5" style={stagger(order)}>
+                      <SkillMark skill={check.skill} className="size-8 p-1" />
+                      <span className={`min-w-0 flex-1 truncate text-[13.5px] font-medium ${check.status === 'missing' ? 'text-gray-500' : 'text-gray-900'}`}>{check.skill}</span>
+                      <span
+                        className={`inline-flex shrink-0 items-center gap-1.5 text-[12.5px] ${check.status === 'met' ? 'text-brand' : check.status === 'partial' ? 'text-gray-600' : 'text-gray-400'}`}
+                      >
+                        <CheckMark status={check.status} />
+                        {L.statuses[check.status]}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+          )
+        })}
+      </div>
+
+      <Panel title={L.alternatives}>
+        {report.alternatives.length === 0 ? (
+          <p className="text-[13.5px] text-gray-500">{L.noAlternatives}</p>
+        ) : (
+          <Alternatives ids={report.alternatives} onPick={onPick} />
+        )}
       </Panel>
     </div>
   )
