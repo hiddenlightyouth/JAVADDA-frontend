@@ -230,7 +230,8 @@ export function History({ onOpenReport, onHome }: { onOpenReport: (id: string) =
   // 이력서를 여러 개로 진단했으면 이력서 메뉴로 하나만 골라 봐요. 고른 이력서가 사라지면 전체로 돌아가요.
   const [resumeId, setResumeId] = useState<string | null>(null)
   const picked = resumeGroups.find((group) => group.id === resumeId) ?? null
-  const ranked = picked ? picked.items : resumeGroups.flatMap((group) => group.items)
+  // 전체를 볼 때는 이력서와 상관없이 마감이 가까운 순서예요.
+  const ranked = picked ? picked.items : byUrgency(reports)
   const nameOf = (group: ResumeGroup) => group.resume?.name ?? text.deletedResume
   const [deleting, setDeleting] = useState<Report | null>(null)
 

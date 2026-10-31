@@ -80,6 +80,7 @@ const TEXT = messages({
     kinds: { missing: '부족', partial: '보완', strength: '강점' } as Record<SkillGap['kind'], string>,
     kindCount: (kind: string, count: number) => `${kind} ${count}`,
     weeks: (weeks: number) => `약 ${weeks}주`,
+    noGaps: '이 공고와 비교해 찾은 갭이 없어요.',
     trends: '시장 요구 변화',
     trendColumns: { skill: '역량', weeks: '최근 12주', share: '공고 비중', change: '6개월 변화' },
     changeTip: '지난 6개월 사이 이 역량을 적은 공고 비율이 얼마나 바뀌었는지예요.',
@@ -147,6 +148,7 @@ const TEXT = messages({
     kinds: { missing: 'Missing', partial: 'Weak', strength: 'Strengths' },
     kindCount: (kind: string, count: number) => `${kind} ${count}`,
     weeks: (weeks: number) => `About ${weeks} wk`,
+    noGaps: 'No gaps found against this posting.',
     trends: 'Market demand',
     trendColumns: { skill: 'Skill', weeks: 'Last 12 weeks', share: 'Share', change: '6-month change' },
     changeTip: 'How much the share of postings listing this skill moved over the last 6 months.',
@@ -468,7 +470,9 @@ function SummaryTab({ report, onOpenGap, onPick }: { report: ReportData; onOpenG
   // 고른 묶음이 이 리포트에 없으면(다른 리포트로 옮겼을 때) 첫 묶음을 보여줘요.
   const kind = picked && kinds.includes(picked) ? picked : kinds[0]
   const gaps = report.gaps.filter((gap) => gap.kind === kind)
-  const bottom = [report.trends.length > 0, report.courses.length > 0, report.alternatives.length > 0].filter(Boolean).length
+  // 더 잘 맞는 공고 중 마감되어 목록에서 빠진 것은 빼요. 다 빠지면 그 칸을 두지 않아요.
+  const alternatives = report.alternatives.filter((id) => postingOf(id))
+  const bottom = [report.trends.length > 0, report.courses.length > 0, alternatives.length > 0].filter(Boolean).length
   return (
     <div className="space-y-4">
       <ScoreHero score={report.fitScore} label={L.fitTitle} meta={L.createdAt(formatDateTime(report.createdAt))} title={L.verdict(report.fitScore)} body={report.summary} />
@@ -490,6 +494,7 @@ function SummaryTab({ report, onOpenGap, onPick }: { report: ReportData; onOpenG
             )
           }
         >
+          {gaps.length === 0 && <p className="py-6 text-center text-[13.5px] text-gray-500">{L.noGaps}</p>}
           <ul key={kind} className="grid gap-2 sm:grid-cols-2">
             {gaps.map((gap, order) => (
               <GapTile key={gap.skill} gap={gap} order={order} inPlan={plans.includes(gap.skill)} onOpen={() => onOpenGap(gap)} />
@@ -517,9 +522,9 @@ function SummaryTab({ report, onOpenGap, onPick }: { report: ReportData; onOpenG
               </ul>
             </Panel>
           )}
-          {report.alternatives.length > 0 && (
+          {alternatives.length > 0 && (
             <Panel title={L.alternatives}>
-              <AlternativeList ids={report.alternatives} onPick={onPick} />
+              <AlternativeList ids={alternatives} onPick={onPick} />
             </Panel>
           )}
         </div>
