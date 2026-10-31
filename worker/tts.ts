@@ -19,8 +19,8 @@ const DEFAULT_BASE_URL = 'https://api.elevenlabs.io'
 /** 한국어를 지원하는 모델 중 가장 자연스러워요. 최신 v4는 이 API로 쓸 수 없어요. */
 const DEFAULT_MODEL_ID = 'eleven_multilingual_v2'
 const OUTPUT_FORMAT = 'mp3_44100_128'
-/** 면접관답게 흔들림 없이 말해요. 한국어는 빠르게 읽히면 음절이 뭉개져서 보통 빠르기로 두고, stability를 조금 높여 억양이 튀지 않게 해요. style은 0이어야 또렷해요. */
-const VOICE_SETTINGS = { stability: 0.6, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: 1.0 }
+/** 면접관답게 흔들림 없이 말해요. 한국어는 빠르게 읽히면 음절이 뭉개져서 보통 빠르기로 두고, stability를 조금 높여 억양과 숨 쉬는 자리가 튀지 않게 해요. style은 0이어야 또렷해요. */
+const VOICE_SETTINGS = { stability: 0.65, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: 1.0 }
 
 /**
  * 한국어 문장 속 영어 기술 용어를 한국어 발음으로 바꿔 읽혀요. 그대로 두면 영어 억양으로 튀거나 글자를 이상하게 끊어 읽어요.
@@ -66,12 +66,33 @@ function piecesOf(text: string): Piece[] {
     const index = match.index ?? 0
     if (index > last) pieces.push({ shown: text.slice(last, index), spoken: text.slice(last, index) })
     const shown = match[0]
-    const spoken = shown === '+' ? ' 플러스 ' : shown.replace(/#$/, '').split('.').map(pronounce).join('') + (shown.endsWith('#') ? '샵' : '')
+    const spoken = shown === '+' ? '플러스' : shown.replace(/#$/, '').split('.').map(pronounce).join('') + (shown.endsWith('#') ? '샵' : '')
     pieces.push({ shown, spoken })
     last = index + shown.length
   }
   if (last < text.length) pieces.push({ shown: text.slice(last), spoken: text.slice(last) })
-  return pieces
+  return text.length >= PAUSE_MIN_CHARS ? pieces.flatMap(withPauses) : pieces
+}
+
+/** 이보다 짧은 문장은 쉼표 없이도 한 호흡에 자연스럽게 읽어요. */
+const PAUSE_MIN_CHARS = 30
+/**
+ * 쉼표 없이 긴 문장을 주면 모델이 엉뚱한 자리에서 숨을 쉬어요. 절이 이어지는 어미(~는데, ~면서, ~하고) 뒤에 읽기용 쉼표를 넣어 사람이 쉬는 자리에서 쉬게 해요.
+ * 화면 글자에는 없는 쉼표라 보이는 글자 수가 0인 조각으로 넣고, 글자 시각을 되돌릴 때 건너뛰어요.
+ */
+const PAUSE_AFTER = /(?:는데|은데|면서|지만|했고|하고|되고|있고|다면|려면|어서|아서|해서|었는데|했는데)(?= )/g
+
+function withPauses(piece: Piece): Piece[] {
+  if (piece.shown !== piece.spoken) return [piece]
+  const out: Piece[] = []
+  let last = 0
+  for (const match of piece.shown.matchAll(PAUSE_AFTER)) {
+    const end = (match.index ?? 0) + match[0].length
+    out.push({ shown: piece.shown.slice(last, end), spoken: piece.shown.slice(last, end) }, { shown: '', spoken: ',' })
+    last = end
+  }
+  out.push({ shown: piece.shown.slice(last), spoken: piece.shown.slice(last) })
+  return out
 }
 
 export interface TtsEnv {
@@ -124,8 +145,8 @@ function timingOf(alignment: Timestamped['alignment'], pieces: Piece[]): string 
 const reply = (status: number, code: string) => new Response(JSON.stringify({ code }), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
 
 async function cacheKey(voice: string, model: string, text: string) {
-  // 글자 시각을 함께 담기 시작하면서(v2), 영어 용어를 한국어 발음으로 읽고 설정을 바꾸면서(v3) 예전 음성과 섞이지 않게 열쇠를 바꿨어요.
-  const bytes = new TextEncoder().encode(`v3\n${voice}\n${model}\n${text}`)
+  // 글자 시각을 함께 담기 시작하면서(v2), 영어 용어를 한국어 발음으로 읽고 설정을 바꾸면서(v3), 숨 쉬는 자리를 넣으면서(v4) 예전 음성과 섞이지 않게 열쇠를 바꿨어요.
+  const bytes = new TextEncoder().encode(`v4\n${voice}\n${model}\n${text}`)
   const hash = await crypto.subtle.digest('SHA-256', bytes)
   const name = [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
   return new Request(`https://tts.cache/${name}`)
