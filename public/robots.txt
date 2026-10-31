@@ -9,6 +9,7 @@ Disallow: /auth/
 Disallow: /diagnose
 Disallow: /recommend
 Disallow: /resume
+Disallow: /company
 Disallow: /explore
 Disallow: /admin
 Disallow: /app/
