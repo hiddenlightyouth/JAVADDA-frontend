@@ -146,7 +146,8 @@ function ReportRow({ report, urgency, active, menuOpen, pinned, drag, dragging, 
       ref={menuRef}
       draggable
       {...drag}
-      className={`group relative flex items-center rounded-xl transition-colors ${tone(active || menuOpen)} ${dragging ? 'opacity-40' : urgency.kind === 'closed' && !active ? 'opacity-60' : ''} ${
+      // 마감된 줄은 글자만 흐리게 해요. 줄 전체를 흐리게 하면 그 안의 메뉴까지 흐려지고 아래 줄에 가려져요. 메뉴가 열린 줄은 위로 올려요.
+      className={`group relative flex items-center rounded-xl transition-colors ${tone(active || menuOpen)} ${dragging ? 'opacity-40' : ''} ${menuOpen ? 'z-20' : ''} ${
         mark ? `before:absolute before:inset-x-2 before:h-0.5 before:rounded-full before:bg-brand ${mark === 'before' ? 'before:-top-px' : 'before:-bottom-px'}` : ''
       }`}
     >
@@ -158,7 +159,7 @@ function ReportRow({ report, urgency, active, menuOpen, pinned, drag, dragging, 
           event.preventDefault()
           onOpen()
         }}
-        className="min-w-0 flex-1 px-3 py-2"
+        className={`min-w-0 flex-1 px-3 py-2 ${urgency.kind === 'closed' && !active ? 'opacity-60' : ''}`}
       >
         <p className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-900">
           {pinned && <PinIcon className="size-3 shrink-0 text-gray-400" label={list.pinned} />}

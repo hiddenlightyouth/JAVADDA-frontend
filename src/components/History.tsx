@@ -174,8 +174,9 @@ function Row({ report, urgency, onOpen, onDelete }: { report: Report; urgency: U
   const company = companyOf(report.companyId)
   const posting = useReportPosting(report.postingId)
   return (
-    <li ref={ref} className={`relative flex items-center gap-3 rounded-2xl px-3 transition-colors hover:bg-gray-50 ${urgency.kind === 'closed' ? 'opacity-60' : ''}`}>
-      <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left">
+    // 마감된 줄은 내용만 흐리게 해요. 줄 전체를 흐리게 하면 그 안의 메뉴까지 흐려지고 아래 줄에 가려져요. 메뉴가 열린 줄은 위로 올려요.
+    <li ref={ref} className={`relative flex items-center gap-3 rounded-2xl px-3 transition-colors hover:bg-gray-50 ${menuOpen ? 'z-20' : ''}`}>
+      <button type="button" onClick={onOpen} className={`flex min-w-0 flex-1 items-center gap-3 py-3 text-left ${urgency.kind === 'closed' ? 'opacity-60' : ''}`}>
         <CompanyMark company={company} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[14px] font-semibold text-gray-900">{posting?.title ?? report.postingId}</span>
