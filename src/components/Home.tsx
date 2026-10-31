@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEven
 import { track } from '../lib/analytics'
 import { COMPANIES, companyOf, fitOf, POSTINGS, postingOf, RECOMMEND_MIN_FIT, SEARCH_SUGGESTIONS, sortPostings, SUGGEST_MS, useReports, useResume, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
-import { cardsRow, CompanyMark, DiagnosedTag, FitBadge, PostingTile } from './GapParts'
+import { CompanyMark, DiagnosedTag, FitBadge } from './GapParts'
+import { JobCard, useJobBrowser } from './JobCard'
+import { SplitView } from './PostingBrowser'
 import { ChevronRightIcon, SearchIcon } from './Icons'
 import { stagger } from './ui'
 import { LofyScript } from './LofyScript'
@@ -38,6 +40,8 @@ const TEXT = messages({
 
 const WORD_STAGGER_MS = 80
 const ROW_SIZE = 8
+/** 공고 줄은 공고 탐색과 같은 카드를 화면 폭에 들어가는 만큼만 한 줄로 늘어놓아요. 넘치는 카드는 아래 줄로 가서 가려져요. */
+const cardsLine = 'grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] auto-rows-[0px] grid-rows-[auto] gap-x-4 overflow-hidden'
 
 /** 타이틀을 어절 단위로 나눠요. 어절이 하나씩 흐릿하게 떠오르며 나타나요. */
 function Title({ text }: { text: string }) {
@@ -83,6 +87,7 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   const L = useMessages(TEXT)
   const resume = useResume()
   const reports = useReports()
+  const browser = useJobBrowser()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [suggestion, setSuggestion] = useState(0)
@@ -174,150 +179,162 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   ]
 
   return (
-    <main className="relative flex-1 overflow-hidden">
-      <div className="relative h-full overflow-y-auto px-6 pb-10 md:px-10">
-        <div className="mx-auto w-full max-w-lg pt-[max(6rem,16vh)] pb-14">
-          <LofyScript className="mx-auto mb-5 h-16 w-auto sm:h-20" />
-          <Title text={L.title} />
-          <p className="mt-3 mb-7 animate-rise text-balance break-keep text-center text-[13px] leading-relaxed text-gray-500 sm:mb-8 sm:text-[14px]" style={{ animationDelay: '250ms' }}>
-            {resume ? L.description : L.descriptionNoResume}
-          </p>
-          {/* 검색 결과가 아래의 공고 줄 위로 펼쳐지게, 검색창 덩어리를 한 칸 앞에 둬요. */}
-          <div className="relative z-10 animate-rise" style={{ animationDelay: '350ms' }}>
-            <form
-              onSubmit={submit}
-              role="search"
-              className="relative flex h-[52px] w-full items-center rounded-full border border-gray-200/90 bg-white/55 pr-5 pl-5 backdrop-blur-md"
-            >
-              <SearchIcon className="mr-2.5 size-4 shrink-0 text-gray-400" />
-              <input
-                ref={inputRef}
-                type="search"
-                autoComplete="off"
-                spellCheck={false}
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value)
-                  setActive(-1)
-                  setOpen(true)
-                }}
-                onKeyDown={moveActive}
-                onFocus={() => setOpen(true)}
-                data-search-input
-                aria-label={L.label}
-                role="combobox"
-                aria-controls="home-search-results"
-                aria-expanded={open && query.trim().length > 0}
-                aria-activedescendant={open && active >= 0 && results[active] ? `home-result-${results[active].id}` : undefined}
-                // 모바일에서 글자가 16px보다 작으면 입력창을 누를 때 화면이 확대돼서, 모바일에서는 16px로 둬요.
-                className="h-full min-w-0 flex-1 bg-transparent text-base text-gray-900 outline-none placeholder:text-gray-400 sm:text-[14px] [&::-webkit-search-cancel-button]:hidden"
-              />
-              {/* 추천 검색어는 자리표시 글자처럼 옅게 보여서, 이런 걸 쳐 볼 수 있다는 것만 슬쩍 알려요. */}
-              {!query && (
-                <span aria-hidden className="pointer-events-none absolute inset-y-0 left-[46px] right-5 flex items-center overflow-hidden text-base whitespace-nowrap text-gray-400 sm:text-[14px]">
-                  <span key={suggestion} className="animate-rise">
-                    {SEARCH_SUGGESTIONS[suggestion]}
+    <SplitView side={browser.side}>
+      <main className="relative flex-1 overflow-hidden">
+        <div className="relative h-full overflow-y-auto px-6 pb-10 md:px-10">
+          <div className="mx-auto w-full max-w-lg pt-[max(6rem,16vh)] pb-14">
+            <LofyScript className="mx-auto mb-5 h-16 w-auto sm:h-20" />
+            <Title text={L.title} />
+            <p className="mt-3 mb-7 animate-rise text-balance break-keep text-center text-[13px] leading-relaxed text-gray-500 sm:mb-8 sm:text-[14px]" style={{ animationDelay: '250ms' }}>
+              {resume ? L.description : L.descriptionNoResume}
+            </p>
+            {/* 검색 결과가 아래의 공고 줄 위로 펼쳐지게, 검색창 덩어리를 한 칸 앞에 둬요. */}
+            <div className="relative z-10 animate-rise" style={{ animationDelay: '350ms' }}>
+              <form
+                onSubmit={submit}
+                role="search"
+                className="relative flex h-[52px] w-full items-center rounded-full border border-gray-200/90 bg-white/55 pr-5 pl-5 backdrop-blur-md"
+              >
+                <SearchIcon className="mr-2.5 size-4 shrink-0 text-gray-400" />
+                <input
+                  ref={inputRef}
+                  type="search"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value)
+                    setActive(-1)
+                    setOpen(true)
+                  }}
+                  onKeyDown={moveActive}
+                  onFocus={() => setOpen(true)}
+                  data-search-input
+                  aria-label={L.label}
+                  role="combobox"
+                  aria-controls="home-search-results"
+                  aria-expanded={open && query.trim().length > 0}
+                  aria-activedescendant={open && active >= 0 && results[active] ? `home-result-${results[active].id}` : undefined}
+                  // 모바일에서 글자가 16px보다 작으면 입력창을 누를 때 화면이 확대돼서, 모바일에서는 16px로 둬요.
+                  className="h-full min-w-0 flex-1 bg-transparent text-base text-gray-900 outline-none placeholder:text-gray-400 sm:text-[14px] [&::-webkit-search-cancel-button]:hidden"
+                />
+                {/* 추천 검색어는 자리표시 글자처럼 옅게 보여서, 이런 걸 쳐 볼 수 있다는 것만 슬쩍 알려요. */}
+                {!query && (
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-[46px] right-5 flex items-center overflow-hidden text-base whitespace-nowrap text-gray-400 sm:text-[14px]">
+                    <span key={suggestion} className="animate-rise">
+                      {SEARCH_SUGGESTIONS[suggestion]}
+                    </span>
                   </span>
-                </span>
-              )}
-              {query && <span className="shrink-0 text-[12px] text-gray-400 tabular-nums">{L.results(results.length)}</span>}
-            </form>
+                )}
+                {query && <span className="shrink-0 text-[12px] text-gray-400 tabular-nums">{L.results(results.length)}</span>}
+              </form>
 
-            {open && query.trim() && (
-              <>
-                <div aria-hidden className="fixed inset-0 z-0" onClick={() => setOpen(false)} />
-                <ul ref={listRef} id="home-search-results" role="listbox" className="absolute top-full right-0 left-0 z-10 mt-2 max-h-[52dvh] origin-top animate-pop overflow-y-auto rounded-2xl border border-gray-200 bg-white p-1.5">
-                  {results.length === 0 ? (
-                    <li className="px-3 py-3 text-[13px] text-gray-500">{L.noResult(query.trim())}</li>
-                  ) : (
-                    results.map((posting, index) => {
-                      const company = companyOf(posting.companyId)
-                      return (
-                        <li key={posting.id}>
-                          {/* 스크롤로 목록이 마우스 아래를 지나갈 때는 고른 줄이 바뀌지 않게, 마우스를 실제로 움직였을 때만 따라가요. */}
-                          <button
-                            type="button"
-                            role="option"
-                            id={`home-result-${posting.id}`}
-                            data-index={index}
-                            aria-selected={index === active}
-                            onClick={() => pick(posting)}
-                            onMouseMove={() => index !== active && setActive(index)}
-                            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${index === active ? 'bg-gray-100' : ''}`}
-                          >
-                            <CompanyMark company={company} className="size-9 text-[13px]" />
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[13.5px] font-medium text-gray-900">{posting.title}</span>
-                              <span className="block truncate text-[12px] text-gray-400">
-                                {company.name}, {posting.location}
+              {open && query.trim() && (
+                <>
+                  <div aria-hidden className="fixed inset-0 z-0" onClick={() => setOpen(false)} />
+                  <ul ref={listRef} id="home-search-results" role="listbox" className="absolute top-full right-0 left-0 z-10 mt-2 max-h-[52dvh] origin-top animate-pop overflow-y-auto rounded-2xl border border-gray-200 bg-white p-1.5">
+                    {results.length === 0 ? (
+                      <li className="px-3 py-3 text-[13px] text-gray-500">{L.noResult(query.trim())}</li>
+                    ) : (
+                      results.map((posting, index) => {
+                        const company = companyOf(posting.companyId)
+                        return (
+                          <li key={posting.id}>
+                            {/* 스크롤로 목록이 마우스 아래를 지나갈 때는 고른 줄이 바뀌지 않게, 마우스를 실제로 움직였을 때만 따라가요. */}
+                            <button
+                              type="button"
+                              role="option"
+                              id={`home-result-${posting.id}`}
+                              data-index={index}
+                              aria-selected={index === active}
+                              onClick={() => pick(posting)}
+                              onMouseMove={() => index !== active && setActive(index)}
+                              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${index === active ? 'bg-gray-100' : ''}`}
+                            >
+                              <CompanyMark company={company} className="size-9 text-[13px]" />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-[13.5px] font-medium text-gray-900">{posting.title}</span>
+                                <span className="block truncate text-[12px] text-gray-400">
+                                  {company.name}, {posting.location}
+                                </span>
                               </span>
-                            </span>
-                            <DiagnosedTag postingId={posting.id} />
-                            <FitBadge fit={fitOf(posting, resume)} compact />
-                          </button>
-                        </li>
-                      )
-                    })
+                              <DiagnosedTag postingId={posting.id} />
+                              <FitBadge fit={fitOf(posting, resume)} compact />
+                            </button>
+                          </li>
+                        )
+                      })
+                    )}
+                  </ul>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="flex animate-rise flex-col gap-9" style={{ animationDelay: '450ms' }}>
+            {rows.map(({ key, list, more }) => (
+              <section key={key} aria-labelledby={`home-${key}`}>
+                <div className="flex items-center justify-between gap-4">
+                  <h2 id={`home-${key}`} className="text-[15px] font-semibold text-gray-900">
+                    {key === 'companies' ? L.companies : L.rows[key]}
+                  </h2>
+                  {more && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        track('home_more_click', { row: key })
+                        more()
+                      }}
+                      className="inline-flex h-8 items-center gap-1 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand"
+                    >
+                      {L.seeAll}
+                      <ChevronRightIcon className="size-3.5" />
+                    </button>
                   )}
-                </ul>
-              </>
-            )}
+                </div>
+                {key === 'companies' ? (
+                  // 기업을 누르면 그 기업 공고만 골라 둔 채로 공고 탐색을 열어요.
+                  // 테두리 없이 로고와 이름만 늘어놓아서, 공고 카드 사이에서 가볍게 보여요.
+                  <ul className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-1">
+                    {BROWSE_COMPANIES.map((company, order) => (
+                      <li key={company.id} className="animate-rise" style={stagger(order)}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            track('home_company_select', { company: company.id })
+                            onCompany(company.id)
+                          }}
+                          className="group flex w-full flex-col items-center gap-2 rounded-2xl px-2 py-3 transition-colors hover:bg-gray-50"
+                        >
+                          <CompanyMark company={company} className="size-12 rounded-2xl! text-[17px]" />
+                          <span className="w-full truncate text-center text-[12.5px] text-gray-700 transition-colors group-hover:text-gray-950">{company.name}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <ul className={`mt-3 ${cardsLine}`}>
+                    {/* 모든 줄이 공고 탐색과 같은 카드를 써요. 카드를 누르면 원문을 옆에 열고, 분석하기는 바로 진단해요. */}
+                    {list.map((posting, order) => (
+                      <JobCard
+                        key={posting.id}
+                        posting={posting}
+                        resume={resume}
+                        fit={fitOf(posting, resume)}
+                        order={order}
+                        onOpen={() => browser.view(posting)}
+                        onView={() => browser.view(posting)}
+                        onCompany={() => browser.viewCompany(posting.companyId)}
+                        onAnalyze={() => pick(posting)}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </section>
+            ))}
           </div>
         </div>
-
-        <div className="flex animate-rise flex-col gap-9" style={{ animationDelay: '450ms' }}>
-          {rows.map(({ key, list, more }) => (
-            <section key={key} aria-labelledby={`home-${key}`}>
-              <div className="flex items-center justify-between gap-4">
-                <h2 id={`home-${key}`} className="text-[15px] font-semibold text-gray-900">
-                  {key === 'companies' ? L.companies : L.rows[key]}
-                </h2>
-                {more && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      track('home_more_click', { row: key })
-                      more()
-                    }}
-                    className="inline-flex h-8 items-center gap-1 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand"
-                  >
-                    {L.seeAll}
-                    <ChevronRightIcon className="size-3.5" />
-                  </button>
-                )}
-              </div>
-              {key === 'companies' ? (
-                // 기업을 누르면 그 기업 공고만 골라 둔 채로 공고 탐색을 열어요.
-                // 테두리 없이 로고와 이름만 늘어놓아서, 공고 카드 사이에서 가볍게 보여요.
-                <ul className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-1">
-                  {BROWSE_COMPANIES.map((company, order) => (
-                    <li key={company.id} className="animate-rise" style={stagger(order)}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          track('home_company_select', { company: company.id })
-                          onCompany(company.id)
-                        }}
-                        className="group flex w-full flex-col items-center gap-2 rounded-2xl px-2 py-3 transition-colors hover:bg-gray-50"
-                      >
-                        <CompanyMark company={company} className="size-12 rounded-2xl! text-[17px]" />
-                        <span className="w-full truncate text-center text-[12.5px] text-gray-700 transition-colors group-hover:text-gray-950">{company.name}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <ul className={`mt-3 ${cardsRow}`}>
-                  {/* 모든 줄이 같은 카드를 쓰고, 왼쪽 위 태그만 줄에 맞게 달라요. 올라온 때, 마감까지 남은 날, 얼마나 맞는지예요. */}
-                  {list.map((posting, order) => (
-                    <PostingTile key={posting.id} posting={posting} resume={resume} tag={key === 'recent' ? 'posted' : key === 'closing' ? 'deadline' : 'fit'} order={order} onOpen={pick} />
-                  ))}
-                </ul>
-              )}
-            </section>
-          ))}
-        </div>
-      </div>
-    </main>
+      </main>
+    </SplitView>
   )
 }

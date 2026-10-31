@@ -9,8 +9,8 @@ import { PostingBrowser } from './PostingBrowser'
 import { iconButton, Segmented, stagger } from './ui'
 
 /**
- * 공고 탐색과 추천 공고가 같이 쓰는 공고 카드(갤러리형)와 줄(리스트형), 보기 방식 버튼, 미니 브라우저예요.
- * 두 화면이 같은 모양이라 여기 것만 고쳐요.
+ * 공고 탐색, 추천 공고, 새 진단 화면의 공고 줄이 같이 쓰는 공고 카드(갤러리형)와 줄(리스트형), 보기 방식 버튼, 미니 브라우저예요.
+ * 세 화면이 같은 모양이라 여기 것만 고쳐요.
  */
 
 const TEXT = messages({
@@ -97,7 +97,7 @@ const shortDate = (iso: string) => {
  * 이력서가 있으면 필수 역량 이름표를 진단 시작 화면과 같은 기준으로 칠해서, 카드만 보고도 무엇이 비는지 보여요.
  * 카드의 나머지 자리를 누르면 해당 공고로 이동할지 한 번 더 묻고, 분석하기는 바로 진단해요.
  */
-function JobCard({ posting, resume, fit, order, onOpen, onView, onAnalyze, onCompany }: JobItemProps) {
+export function JobCard({ posting, resume, fit, order, onOpen, onView, onAnalyze, onCompany }: JobItemProps) {
   const L = useMessages(TEXT)
   const company = companyOf(posting.companyId)
   const left = daysLeft(posting)
@@ -174,7 +174,7 @@ export function DeadlineTag({ left }: { left: number | null }) {
   )
 }
 
-type JobItemProps = { posting: JobPosting; resume: Resume | null; fit: number | null; order: number; onOpen: () => void; onView: () => void; onAnalyze: () => void; onCompany: () => void }
+export type JobItemProps = { posting: JobPosting; resume: Resume | null; fit: number | null; order: number; onOpen: () => void; onView: () => void; onAnalyze: () => void; onCompany: () => void }
 
 /** 고른 보기 방식에 맞춰 카드나 줄로 그려요. */
 export function JobItem({ layout, ...props }: JobItemProps & { layout: Layout }) {
