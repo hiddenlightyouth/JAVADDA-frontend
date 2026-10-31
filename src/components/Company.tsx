@@ -192,7 +192,7 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
 }) {
   const L = useMessages(TEXT)
   const { postings, stack } = profile
-  const families = [...new Set(postings.map((posting) => familyName(posting.family)))]
+  const families = [...new Set(postings.map((posting) => familyName(posting.family)).filter(Boolean))]
   const locations = [...new Set(postings.map((posting) => posting.location))]
   const sorted = resume ? sortPostings(postings, 'fit', resume) : postings
   const facts = [
