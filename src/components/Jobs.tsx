@@ -5,7 +5,7 @@ import { messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
-import { CategoryFilter, CompanyFilter, Failed, Notice, usePickConfirm } from './GapParts'
+import { CategoryFilter, CompanyFilter, Failed, Notice } from './GapParts'
 import { SearchIcon } from './Icons'
 import { JobItem, jobsGrid, jobsList, LayoutToggle, readLayout, useJobBrowser, type Layout } from './JobCard'
 import { SplitView } from './PostingBrowser'
@@ -73,8 +73,6 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   const browser = useJobBrowser()
   const [layout, setLayout] = useState<Layout>(readLayout)
   const load = useLoadProgress()
-  // 카드를 누르면 한 번 더 묻고, 분석 시작하기는 바로 진단해요.
-  const confirmPick = usePickConfirm()
   function analyze(posting: JobPosting) {
     track('posting_select', { posting: posting.id, from: 'explore' })
     onPick(posting.id)
@@ -274,7 +272,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
                   onCompany={() => browser.viewCompany(posting.companyId)}
                   fit={fitOf(posting, resume)}
                   order={order}
-                  onOpen={() => confirmPick.ask(posting, () => browser.view(posting), 'view')}
+                  onOpen={() => browser.view(posting)}
                   onAnalyze={() => analyze(posting)}
                 />
               ))}
@@ -283,7 +281,6 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
             </>
           )}
         </div>
-        {confirmPick.dialog}
       </ScrollPage>
     </SplitView>
   )

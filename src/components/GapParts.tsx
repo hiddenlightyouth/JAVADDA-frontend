@@ -35,9 +35,6 @@ const TEXT = messages({
     wanted: '공고',
     failed: '불러오지 못했어요. 잠시 뒤에 다시 시도해 주세요.',
     retry: '다시 시도하기',
-    pickTitle: '해당 공고로 이동할까요?',
-    pickBody: (company: string, title: string) => `${company}의 ${title} 공고 원문을 열어요.`,
-    pickGo: '이동하기',
     analyzeTitle: (diagnosed: boolean): string => (diagnosed ? '이 공고의 리포트를 볼까요?' : '이 공고를 분석할까요?'),
     analyzeBody: (company: string, title: string, diagnosed: boolean) => `${company}의 ${title} 공고를 ${diagnosed ? '분석한 리포트로 가요.' : '대표 이력서로 분석해요.'}`,
     analyzeGo: (diagnosed: boolean): string => (diagnosed ? '리포트 보기' : '분석하기'),
@@ -82,9 +79,6 @@ const TEXT = messages({
     wanted: 'Posting',
     failed: "Couldn't load. Please try again in a moment.",
     retry: 'Try again',
-    pickTitle: 'Go to this posting?',
-    pickBody: (company: string, title: string) => `Opens the original posting for ${title} at ${company}.`,
-    pickGo: 'Go',
     analyzeTitle: (diagnosed: boolean) => (diagnosed ? 'See the report for this posting?' : 'Analyze this posting?'),
     analyzeBody: (company: string, title: string, diagnosed: boolean) => `${title} at ${company}: ${diagnosed ? 'opens the report you made.' : 'analyzes it with your primary resume.'}`,
     analyzeGo: (diagnosed: boolean) => (diagnosed ? 'See report' : 'Analyze'),
@@ -825,19 +819,15 @@ export const number = (value: number) => value.toLocaleString(getLang() === 'ko'
 /** 퍼센트(0에서 1)를 "49%"처럼 적어요. */
 export const percent = (value: number) => `${Math.round(value * 100)}%`
 
-/** 공고를 눌렀을 때 무엇을 할지예요. view는 공고 원문을 열고, analyze는 진단해서 리포트로 가요. */
-type PickMode = 'view' | 'analyze'
-
 /**
- * 공고를 눌렀을 때 바로 가지 않고 한 번 더 물어요. 공고 탐색과 추천 공고는 카드를 누르면 원문을 열고(view, 분석은 카드의 분석하기 버튼으로 해요),
- * 마감 달력은 진단해요(analyze). ask(공고, 갈 때 할 일, 할 일의 종류)로 창을 열고, 화면은 돌려준 dialog를 그려요.
+ * 공고를 눌렀을 때 바로 진단으로 가지 않고 한 번 더 물어요. 마감 달력과 채용 지도가 써요. 공고 탐색과 추천 공고의 카드는 묻지 않고 원문을 옆에 열어요.
+ * ask(공고, 갈 때 할 일)로 창을 열고, 화면은 돌려준 dialog를 그려요.
  */
 export function usePickConfirm() {
-  const [asking, setAsking] = useState<{ posting: JobPosting; go: () => void; mode: PickMode } | null>(null)
+  const [asking, setAsking] = useState<{ posting: JobPosting; go: () => void } | null>(null)
   const dialog = asking && (
     <PickConfirm
       posting={asking.posting}
-      mode={asking.mode}
       onCancel={() => setAsking(null)}
       onConfirm={() => {
         setAsking(null)
@@ -845,16 +835,19 @@ export function usePickConfirm() {
       }}
     />
   )
-  return { ask: (posting: JobPosting, go: () => void, mode: PickMode) => setAsking({ posting, go, mode }), dialog }
+  return { ask: (posting: JobPosting, go: () => void) => setAsking({ posting, go }), dialog }
 }
 
-function PickConfirm({ posting, mode, onCancel, onConfirm }: { posting: JobPosting; mode: PickMode; onCancel: () => void; onConfirm: () => void }) {
+function PickConfirm({ posting, onCancel, onConfirm }: { posting: JobPosting; onCancel: () => void; onConfirm: () => void }) {
   const L = useMessages(TEXT)
   const diagnosed = Boolean(useDiagnosed(posting.id))
-  const company = companyOf(posting.companyId).name
-  return mode === 'view' ? (
-    <ConfirmDialog title={L.pickTitle} body={L.pickBody(company, posting.title)} confirm={L.pickGo} onCancel={onCancel} onConfirm={onConfirm} />
-  ) : (
-    <ConfirmDialog title={L.analyzeTitle(diagnosed)} body={L.analyzeBody(company, posting.title, diagnosed)} confirm={L.analyzeGo(diagnosed)} onCancel={onCancel} onConfirm={onConfirm} />
+  return (
+    <ConfirmDialog
+      title={L.analyzeTitle(diagnosed)}
+      body={L.analyzeBody(companyOf(posting.companyId).name, posting.title, diagnosed)}
+      confirm={L.analyzeGo(diagnosed)}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    />
   )
 }

@@ -5,7 +5,7 @@ import { messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
-import { Failed, Notice, usePickConfirm } from './GapParts'
+import { Failed, Notice } from './GapParts'
 import { JobItem, jobsGrid, jobsList, LayoutToggle, readLayout, useJobBrowser, type Layout } from './JobCard'
 import { SplitView } from './PostingBrowser'
 import { loadCenter, LoadProgress, useShowMore } from './ui'
@@ -106,8 +106,6 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
     [loaded, resume, threshold],
   )
   const waiting = useLoadHold(list === undefined)
-  // 카드를 누르면 바로 가지 않고 한 번 더 묻고, 분석하기는 바로 진단해요.
-  const confirmPick = usePickConfirm()
   const browser = useJobBrowser()
   const [layout, setLayout] = useState<Layout>(readLayout)
   function analyze(posting: JobPosting, from: string) {
@@ -124,7 +122,7 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
       order={order}
       onView={() => browser.view(posting)}
       onCompany={() => browser.viewCompany(posting.companyId)}
-      onOpen={() => confirmPick.ask(posting, () => browser.view(posting), 'view')}
+      onOpen={() => browser.view(posting)}
       onAnalyze={() => analyze(posting, from)}
     />
   )
@@ -205,7 +203,6 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
             <ul className={`mt-4 ${layout === 'gallery' ? jobsGrid : jobsList}`}>{near.map((posting, order) => item(posting, order, 'recommend-near'))}</ul>
           </section>
         )}
-        {confirmPick.dialog}
       </ScrollPage>
     </SplitView>
   )

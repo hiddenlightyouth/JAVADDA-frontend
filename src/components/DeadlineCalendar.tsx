@@ -190,7 +190,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
     confirmPick.ask(posting, () => {
       track('posting_select', { posting: posting.id, from: `calendar-${from}` })
       onPick(posting.id)
-    }, 'analyze')
+    })
   }
 
   return (
