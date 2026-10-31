@@ -651,7 +651,8 @@ export const categoryName = (category: CompanyCategory) => (getLang() === 'en' ?
 const FAMILY_NAMES: Record<JobFamily, string> = { backend: '백엔드', frontend: '프론트엔드', mobile: '모바일', data: '데이터', devops: 'DevOps', other: '기타' }
 const FAMILY_NAMES_EN: Record<JobFamily, string> = { backend: 'Backend', frontend: 'Frontend', mobile: 'Mobile', data: 'Data', devops: 'DevOps', other: 'Other' }
 
-export const familyName = (family: JobFamily) => (getLang() === 'en' ? FAMILY_NAMES_EN[family] : FAMILY_NAMES[family])
+/** 직군 이름이에요. 서버가 나중에 모르는 직군을 보내도 빈칸이 되지 않게 받은 값을 그대로 적어요. */
+export const familyName = (family: JobFamily) => (getLang() === 'en' ? FAMILY_NAMES_EN[family] : FAMILY_NAMES[family]) ?? family
 
 const CAREER_NAMES: Record<CareerLevel, { ko: string; en: string }> = {
   entry: { ko: '신입', en: 'Entry level' },
