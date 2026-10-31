@@ -197,8 +197,8 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
       {dragging && <div className="fixed inset-0 z-50 cursor-col-resize" />}
 
       {/* 주소 줄처럼 생긴 머리글이에요. 어느 사이트를 보고 있는지 알 수 있게 주소를 적어요. */}
+      {/* 닫기는 다른 칸(갭 상세, 서류 상세)처럼 오른쪽 끝에 둬요. */}
       <div className="flex h-14 shrink-0 items-center gap-2 border-b border-gray-200 px-3">
-        <CloseButton label={L.close} size="md" onClick={onClose} />
         <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg bg-gray-100 px-3">
           <CompanyMark company={company} className="size-5 rounded-md! text-[9px]" />
           <span className="truncate text-[13px] text-gray-600">{host}</span>
@@ -220,6 +220,7 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
         <a href={url} target="_blank" rel="noopener noreferrer" aria-label={L.external} title={L.external} className={toolbarButton}>
           <ExternalLinkIcon strokeWidth={1.5} />
         </a>
+        <CloseButton label={L.close} size="md" onClick={onClose} />
       </div>
 
       {embeddable ? (
