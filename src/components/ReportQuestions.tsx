@@ -3,9 +3,9 @@ import { track } from '../lib/analytics'
 import { fetchAnswers, fetchQuestions, PROGRESS_START, type InterviewQuestion, type PracticeRecord, type ProgressState, type QuestionCategory } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
-import { Dropdown } from './Dropdown'
-import { AiProgress, Failed, Notice } from './GapParts'
-import { Bullets, ghostButton, label, loadCenter, primaryButton, stagger, tag, toolButton } from './ui'
+import { AiProgress, Failed, Notice, Tip } from './GapParts'
+import { MicIcon } from './Icons'
+import { Bullets, ghostButton, label, loadCenter, primaryButton, stagger } from './ui'
 
 const CATEGORIES: QuestionCategory[] = ['tech', 'project', 'cs', 'culture']
 
@@ -30,6 +30,13 @@ export const QUESTION_TEXT = messages({
     modelAnswer: '이렇게 답했으면 좋았어요',
     rephrase: '이렇게 말해 보세요',
     score: (value: number) => `${value}점`,
+    practiced: (value: number) => `연습함 ${value}점`,
+    likelihood: '나올 확률',
+    percent: (value: number) => `${value}%`,
+    progress: '연습 현황',
+    progressCount: (done: number, total: number) => `${total}개 중 ${done}개 연습했어요`,
+    average: (value: number) => `평균 ${value}점`,
+    notYet: '아직 연습한 질문이 없어요',
   },
   en: {
     categories: { tech: 'Technical', project: 'Project', cs: 'CS basics', culture: 'Culture fit' },
@@ -51,6 +58,13 @@ export const QUESTION_TEXT = messages({
     rephrase: 'Try saying it like this',
     score: (value: number) => `${value} pts`,
     count: (count: number) => `${count} ${count === 1 ? 'question' : 'questions'}`,
+    practiced: (value: number) => `Practiced ${value} pts`,
+    likelihood: 'Likelihood',
+    percent: (value: number) => `${value}%`,
+    progress: 'Practice progress',
+    progressCount: (done: number, total: number) => `${done} of ${total} practiced`,
+    average: (value: number) => `Avg ${value} pts`,
+    notYet: 'No practice yet',
   },
 })
 
@@ -125,34 +139,58 @@ function PastAnswers({ records }: { records: PracticeRecord[] }) {
   )
 }
 
-function Card({ question, order, records, onPractice }: { question: InterviewQuestion; order: number; records: PracticeRecord[]; onPractice: () => void }) {
+/**
+ * 질문 한 줄이에요. 프로그래머스나 LeetCode의 문제 목록처럼 왼쪽에 연습 상태(체크와 점수), 가운데에 질문과 출처, 오른쪽에 유형, 나올 확률, 연습 버튼을 한 줄에 둬요.
+ * 줄을 누르면 그 자리에서 의도, 답변 포인트, 꼬리 질문과 지난 답변이 펼쳐져요.
+ */
+function Row({ question, index, order, records, onPractice }: { question: InterviewQuestion; index: number; order: number; records: PracticeRecord[]; onPractice: () => void }) {
   const L = useMessages(QUESTION_TEXT)
   const [open, setOpen] = useState(false)
   const [history, setHistory] = useState(false)
+  const last = records[0]
   return (
-    <li className="animate-rise rounded-2xl bg-gray-50 p-5" style={stagger(order)}>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <Probability value={question.probability} />
-        <span className={tag}>{L.categories[question.category]}</span>
-        <span className="text-[12px] text-gray-400">{L.source(question.source.label)}</span>
-      </div>
-      <p className="mt-3 text-[15px] leading-relaxed font-semibold text-gray-900">{question.question}</p>
-      {open && <QuestionDetail question={question} className="mt-4" />}
-      {history && <PastAnswers records={records} />}
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="-ml-2 flex items-center gap-1">
-          <button
-            type="button"
-            aria-expanded={open}
-            onClick={() => {
-              if (!open) track('question_expand', { id: question.id })
-              setOpen((value) => !value)
-            }}
-            className={ghostButton}
-          >
-            {open ? L.hide : L.show}
+    <li className="animate-rise" style={stagger(order)}>
+      <div className={`group flex items-start gap-3 px-4 py-3.5 transition-colors ${open ? 'bg-gray-50' : 'hover:bg-gray-50'}`}>
+        {/* 왼쪽은 번호예요. 연습한 질문은 메인 컬러 체크와 가장 최근 점수로 바뀌어요. */}
+        <span className="flex w-9 shrink-0 flex-col items-center gap-0.5 pt-0.5" aria-label={last ? L.practiced(last.feedback.score) : undefined}>
+          {last ? (
+            <>
+              <span className="flex size-6 items-center justify-center rounded-full bg-brand text-white" aria-hidden>
+                <svg viewBox="0 0 16 16" className="size-3" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m3.5 8.5 3 3 6-7" />
+                </svg>
+              </span>
+              <span className="text-[11px] font-medium text-brand tabular-nums">{L.score(last.feedback.score)}</span>
+            </>
+          ) : (
+            <span className="flex size-6 items-center justify-center rounded-full bg-gray-100 text-[12px] font-semibold text-gray-500 tabular-nums">{index}</span>
+          )}
+        </span>
+        {/* 질문 글은 읽기 좋은 폭(약 70자)에서 줄을 바꿔요. 화면 끝까지 늘어지면 눈이 길을 잃어요. */}
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => {
+            if (!open) track('question_expand', { id: question.id })
+            setOpen((value) => !value)
+          }}
+          className="min-w-0 flex-1 text-left"
+        >
+          <span className="block max-w-[68ch] text-[14.5px] leading-relaxed text-gray-900 transition-colors group-hover:text-brand">{question.question}</span>
+          <span className="mt-1 block max-w-[68ch] truncate text-[12px] text-gray-400">{question.source.label}</span>
+        </button>
+        <Tip text={L.likelihood} className="mt-1 hidden shrink-0 sm:inline-flex">
+          <span className="w-10 text-right text-[13px] font-medium text-gray-500 tabular-nums">{L.percent(Math.round(question.probability * 100))}</span>
+        </Tip>
+        <Tip text={L.practiceOne} className="inline-flex shrink-0">
+          <button type="button" onClick={onPractice} aria-label={L.practiceOne} className="flex size-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-brand-soft hover:text-brand">
+            <MicIcon className="size-4" />
           </button>
-          {/* 이 질문에 답한 적이 있을 때만 지난 답변을 펼칠 수 있어요. */}
+        </Tip>
+      </div>
+      {open && (
+        <div className="bg-gray-50 px-4 pb-4 pl-[4.75rem]">
+          <QuestionDetail question={question} />
           {records.length > 0 && (
             <button
               type="button"
@@ -161,16 +199,14 @@ function Card({ question, order, records, onPractice }: { question: InterviewQue
                 if (!history) track('practice_history_open', { count: records.length })
                 setHistory((value) => !value)
               }}
-              className={ghostButton}
+              className={`${ghostButton} -ml-2 mt-2`}
             >
               {history ? L.hideHistory : L.history(records.length)}
             </button>
           )}
-        </span>
-        <button type="button" onClick={onPractice} className={toolButton}>
-          {L.practiceOne}
-        </button>
-      </div>
+          {history && <PastAnswers records={records} />}
+        </div>
+      )}
     </li>
   )
 }
@@ -215,39 +251,57 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
   }, [reportId])
 
   const list = questions ? questions.filter((question) => !category || question.category === category) : []
+  // 연습한 질문과 질문마다 가장 최근 점수의 평균이에요. 답변 기록은 최근 것부터 와요.
+  const practiced = questions ? questions.filter((question) => (records[question.id]?.length ?? 0) > 0) : []
+  const average = practiced.length === 0 ? 0 : Math.round(practiced.reduce((sum, question) => sum + records[question.id][0].feedback.score, 0) / practiced.length)
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Dropdown
-          label={L.type}
-          value={category ? L.categories[category] : L.all}
-          groups={[
-            {
-              items: [null, ...CATEGORIES].map((value) => ({
-                label: value ? L.categories[value] : L.all,
-                checked: category === value,
-                onSelect: () => {
-                  track('questions_filter', { category: value ?? 'all' })
-                  setCategory(value)
-                },
-              })),
-            },
-          ]}
-        />
-        {questions && <span className="text-[13px] text-gray-500 tabular-nums">{L.count(list.length)}</span>}
-        <button
-          type="button"
-          disabled={!questions}
-          onClick={() => {
-            track('practice_start', { from: 'all' })
-            onPractice()
-          }}
-          className={`${primaryButton} ml-auto`}
-        >
-          {L.practiceAll}
-        </button>
-      </div>
+      {/* 맨 위 한 줄에 유형 탭(수와 함께)과 연습 현황, 전체 연습 버튼을 둬요. 질문을 받기 전에는 비워 둬요. */}
+      {questions && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+          <div role="radiogroup" aria-label={L.type} className="flex flex-wrap gap-1.5">
+            {[null, ...CATEGORIES].map((value) => {
+              const count = value ? questions.filter((question) => question.category === value).length : questions.length
+              const on = category === value
+              return (
+                <button
+                  key={value ?? 'all'}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  disabled={count === 0}
+                  onClick={() => {
+                    track('questions_filter', { category: value ?? 'all' })
+                    setCategory(value)
+                  }}
+                  className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition-colors disabled:opacity-40 ${on ? 'bg-brand-soft text-brand-hover' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                >
+                  {value ? L.categories[value] : L.all}
+                  <span className="tabular-nums opacity-60">{count}</span>
+                </button>
+              )
+            })}
+          </div>
+          <div className="ml-auto flex items-center gap-3">
+            <span className="text-[12.5px] text-gray-500 tabular-nums">{practiced.length > 0 ? L.progressCount(practiced.length, questions.length) : L.notYet}</span>
+            {practiced.length > 0 && <span className="text-[12.5px] font-medium text-brand tabular-nums">{L.average(average)}</span>}
+            <span className="h-1.5 w-20 overflow-hidden rounded-full bg-gray-200/70" aria-label={L.progress}>
+              <span className="block h-full rounded-full bg-brand transition-[width]" style={{ width: `${(practiced.length / Math.max(1, questions.length)) * 100}%` }} />
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                track('practice_start', { from: 'all' })
+                onPractice()
+              }}
+              className={primaryButton}
+            >
+              {L.practiceAll}
+            </button>
+          </div>
+        </div>
+      )}
 
       {questions === undefined ? (
         // AI가 질문을 만드는 동안은 진행 정도를 막대로 보여줘요. 이미 만들어 둔 질문이면 금방 지나가요.
@@ -255,20 +309,36 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
       ) : questions === null ? (
         <Failed onRetry={() => void load()} className="mt-16" />
       ) : (
-        <ul className="space-y-3">
-          {list.map((question, order) => (
-            <Card
-              key={question.id}
-              question={question}
-              order={order}
-              records={records[question.id] ?? []}
-              onPractice={() => {
-                track('practice_start', { from: 'question' })
-                onPractice(question.id)
-              }}
-            />
-          ))}
-        </ul>
+        // 유형별로 묶어 묶음 제목만 두고, 줄에는 유형 이름표를 되풀이하지 않아요. 묶음 안은 나올 확률이 높은 것부터예요.
+        <div className="space-y-5">
+          {CATEGORIES.filter((value) => list.some((question) => question.category === value)).map((value) => {
+            const group = list.filter((question) => question.category === value)
+            return (
+              <section key={value}>
+                <h3 className="mb-2 flex items-center gap-2 px-1 text-[13px] font-semibold text-gray-800">
+                  {L.categories[value]}
+                  <span className="font-normal text-gray-400 tabular-nums">{group.length}</span>
+                  <span className="ml-auto text-[11.5px] font-normal text-gray-400">{L.likelihood}</span>
+                </h3>
+                <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-100">
+                  {group.map((question, index) => (
+                    <Row
+                      key={question.id}
+                      question={question}
+                      index={index + 1}
+                      order={index}
+                      records={records[question.id] ?? []}
+                      onPractice={() => {
+                        track('practice_start', { from: 'question' })
+                        onPractice(question.id)
+                      }}
+                    />
+                  ))}
+                </ul>
+              </section>
+            )
+          })}
+        </div>
       )}
       {questions && list.length === 0 && <Notice title={L.count(0)} className="mt-16" />}
     </div>
