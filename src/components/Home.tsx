@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
-import { COMPANIES, companyOf, fitOf, POSTINGS, postingOf, RECOMMEND_MIN_FIT, SEARCH_SUGGESTIONS, sortPostings, SUGGEST_MS, useReports, useResume, type JobPosting } from '../lib/gap'
+import { companyOf, featuredCompanies, fitOf, POSTINGS, postingOf, RECOMMEND_MIN_FIT, SEARCH_SUGGESTIONS, sortPostings, SUGGEST_MS, useReports, useResume, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { cardsRow, CompanyMark, DiagnosedTag, FitBadge, PostingTile } from './GapParts'
 import { ChevronRightIcon, SearchIcon } from './Icons'
@@ -77,7 +77,7 @@ function search(query: string): JobPosting[] {
 }
 
 /** 공고가 하나라도 있는 기업이에요. */
-const BROWSE_COMPANIES = COMPANIES.filter((company) => POSTINGS.some((posting) => posting.companyId === company.id))
+const BROWSE_COMPANIES = featuredCompanies().filter((company) => POSTINGS.some((posting) => posting.companyId === company.id))
 
 export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   const L = useMessages(TEXT)

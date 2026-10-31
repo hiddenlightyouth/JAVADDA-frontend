@@ -29,6 +29,8 @@ export interface Company {
   site: string
   /** 기업 기술 블로그 주소. 요구 스택의 변화를 읽는 자료이고, 요약은 `blogs.ts`에 있어요. */
   techBlog?: string
+  /** false면 고용24처럼 공고와 함께 들어온 기업이라 기업 버튼 줄에 보여주지 않아요. */
+  featured?: boolean
 }
 
 export interface JobPosting {
@@ -247,6 +249,9 @@ const FALLBACK_COMPANIES: Company[] = [
 export const COMPANIES: Company[] = [...FALLBACK_COMPANIES]
 
 const companyById = new Map(COMPANIES.map((company) => [company.id, company]))
+
+/** 기업 버튼 줄과 기업으로 둘러보기에 보여줄 기업이에요. 공고가 들어오며 늘어나는 기업은 공고에서만 보여요. */
+export const featuredCompanies = () => COMPANIES.filter((company) => company.featured !== false)
 
 export const companyOf = (id: string): Company => companyById.get(id) ?? { id, name: id, initial: id[0]?.toUpperCase() ?? '?', industry: '', site: '' }
 

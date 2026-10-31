@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
-import { careerName, COMPANIES, companyOf, type Company, daysLeft, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, type Resume, SEARCH_SUGGESTIONS, SUGGEST_MS } from '../lib/gap'
+import { careerName, companyOf, type Company, daysLeft, familyName, featuredCompanies, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, type Resume, SEARCH_SUGGESTIONS, SUGGEST_MS } from '../lib/gap'
 import { getLang, localizePath, messages, pick, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { pathOf } from '../lib/routes'
@@ -238,7 +238,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
         {/* 기업도 로고를 보고 한 번에 골라요. 다시 누르면 풀려요. */}
         <div className="mt-3">
           <CompanyFilter
-            companies={COMPANIES}
+            companies={featuredCompanies()}
             value={company}
             label={L.company}
             onChange={(next) => {
