@@ -1233,6 +1233,11 @@ const LOGO_BY_NAME: Record<string, string> = {
   한국교육과정평가원: '/logos/kice.png',
   세아특수강: '/logos/seah.png',
   산업연구원: '/logos/kiet.png',
+  한온시스템: '/logos/hanon.svg',
+  한전KDN: '/logos/kdn.svg',
+  국방기술품질원: '/logos/dtaq.svg',
+  한국원자력의학원: '/logos/kirams.svg',
+  현대종합금속: '/logos/hyundaiweld.svg',
 }
 
 /**
