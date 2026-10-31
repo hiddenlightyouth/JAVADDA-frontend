@@ -485,6 +485,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `gap_plan_toggle` | 갭 상세에서 보완 계획에 넣거나 뺐을 때 | `skill`, `added` |
 | `gap_note_save` | 강점 상세에서 면접 노트를 저장했을 때 | `skill` |
 | `review_view`, `review_rerun` | 서류 검증 탭에서 서류 종류를 보거나 재검증했을 때 | `doc`(coverLetter, resume, portfolio) |
+| `review_filter` | 서류 검증의 문단 요약 칸을 눌러 걸렀을 때 | `tag` |
 | `questions_filter`, `question_expand` | 예상 질문에서 유형을 고르거나 답변 포인트를 펼쳤을 때 | `category`, `id` |
 | `practice_start` | 면접 연습을 시작했을 때 | `from`(all, question) |
 | `practice_submit`, `practice_next`, `practice_finish` | 답을 보내고, 다음 질문으로 가고, 연습을 마쳤을 때 | `score`, `voice`(말로 답했는지), `average`, `count` |

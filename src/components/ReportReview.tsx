@@ -5,7 +5,7 @@ import { formatDateTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
 import { AiProgress, Failed, Panel, ScoreHero } from './GapParts'
 import { RefreshIcon } from './Icons'
-import { Badge, loadCenter, NumberBadge, NumberedList, Segmented, toolButton } from './ui'
+import { Badge, loadCenter, NumberBadge, Segmented, stagger, toolButton } from './ui'
 
 const DOCS: DocType[] = ['coverLetter', 'resume', 'portfolio']
 
@@ -21,6 +21,15 @@ const TEXT = messages({
     appeal: '더 어필할 점',
     reviewedAt: (when: string) => `검증 ${when}`,
     tags: { good: '좋아요', fix: '고쳐요', missing: '빠졌어요', interview: '면접 예상' } as Record<ParagraphTag, string>,
+    tagHints: {
+      good: '공고와 잘 이어지는 문단',
+      fix: '조금 다듬으면 좋은 문단',
+      missing: '공고가 원하는데 빠진 내용',
+      interview: '면접에서 물어볼 만한 문단',
+    } as Record<ParagraphTag, string>,
+    summary: '문단 요약',
+    showAll: '전체 보기',
+    count: (count: number) => `${count}개`,
   },
   en: {
     docs: 'Document type',
@@ -33,13 +42,25 @@ const TEXT = messages({
     appeal: 'Worth adding',
     reviewedAt: (when: string) => `Reviewed ${when}`,
     tags: { good: 'Good', fix: 'Revise', missing: 'Missing', interview: 'Likely asked' },
+    tagHints: {
+      good: 'Lines up with the posting',
+      fix: 'Worth polishing',
+      missing: 'Wanted but not there',
+      interview: 'Likely to come up in interviews',
+    },
+    summary: 'Paragraph summary',
+    showAll: 'Show all',
+    count: (count: number) => `${count}`,
   },
 })
 
 /** 서류 검증 태그의 색이에요. 좋아요는 메인 컬러, 면접 예상은 메인 컬러 테두리, 고쳐요는 회색, 빠졌어요는 옅은 회색이에요. */
 const TAG_TONES = { good: 'brand', fix: 'gray', missing: 'muted', interview: 'outline' } as const satisfies Record<ParagraphTag, string>
 
-const chip = 'flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition-colors'
+/** 문단 요약 칸의 순서예요. 좋은 것, 고칠 것, 빠진 것, 면접에서 나올 것 순서로 읽혀요. */
+const SUMMARY_TAGS: ParagraphTag[] = ['good', 'fix', 'missing', 'interview']
+/** 문단 요약 칸의 숫자 색이에요. 좋아요와 면접 예상만 메인 컬러이고 나머지는 회색이에요. */
+const SUMMARY_TONES: Record<ParagraphTag, string> = { good: 'text-brand', interview: 'text-brand', fix: 'text-gray-900', missing: 'text-gray-900' }
 
 /** 문단 왼쪽의 세로 막대 색이에요. 좋은 문단은 메인 컬러, 고칠 문단은 짙은 회색, 빠진 내용은 점선이에요. */
 const BARS: Record<ParagraphTag, string> = {
@@ -259,9 +280,7 @@ export function ReviewTab({ reportId }: { reportId: string }) {
   const latest = useRef(0)
   const [filter, setFilter] = useState<ParagraphTag | 'all'>('all')
   const review = reviews[doc]
-  const counts = (Object.keys(L.tags) as ParagraphTag[])
-    .map((tag) => ({ tag, count: review?.paragraphs.filter((paragraph) => paragraph.tags.includes(tag)).length ?? 0 }))
-    .filter((item) => item.count > 0)
+  const countOf = (tag: ParagraphTag) => review?.paragraphs.filter((paragraph) => paragraph.tags.includes(tag)).length ?? 0
 
   async function load(target: DocType) {
     const request = ++latest.current
@@ -311,31 +330,61 @@ export function ReviewTab({ reportId }: { reportId: string }) {
         <>
           <ScoreHero score={review.fitScore} label={L.fitLabel} title={L.verdict(review.fitScore)} body={review.summary} />
 
-          <section className="animate-rise [animation-delay:60ms]">
+          {/* 문단 요약이에요. 칸을 누르면 그 태그의 문단만 걸러 보고, 한 번 더 누르면 전체로 돌아가요. */}
+          <section aria-label={L.summary} className="grid animate-rise grid-cols-2 gap-2 [animation-delay:40ms] lg:grid-cols-4">
+            {SUMMARY_TAGS.map((tag) => {
+              const count = countOf(tag)
+              const on = filter === tag
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  aria-pressed={on}
+                  disabled={count === 0}
+                  onClick={() => {
+                    track('review_filter', { tag: on ? 'all' : tag })
+                    setFilter(on ? 'all' : tag)
+                  }}
+                  className={`flex flex-col items-start rounded-2xl p-4 text-left transition-colors disabled:cursor-default disabled:opacity-50 ${on ? 'bg-brand-soft' : 'bg-gray-50 hover:bg-gray-100'}`}
+                >
+                  <span className={`text-[13px] font-medium ${on ? 'text-brand-hover' : 'text-gray-700'}`}>{L.tags[tag]}</span>
+                  <span className={`mt-1.5 text-[26px] leading-none font-semibold tabular-nums ${SUMMARY_TONES[tag]}`}>
+                    {count}
+                    <span className="ml-0.5 text-[13px] font-medium text-gray-400">/ {review.paragraphs.length}</span>
+                  </span>
+                  <span className="mt-2 text-[12px] text-gray-500">{L.tagHints[tag]}</span>
+                </button>
+              )
+            })}
+          </section>
+
+          <section className="animate-rise [animation-delay:80ms]">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-1">
-              <h2 className="text-[15px] font-semibold text-gray-900">{L.paragraphs}</h2>
-              <div role="radiogroup" aria-label={L.filter} className="flex flex-wrap gap-1.5">
-                {[{ tag: 'all' as const, count: review.paragraphs.length }, ...counts].map((item) => (
-                  <button
-                    key={item.tag}
-                    type="button"
-                    role="radio"
-                    aria-checked={filter === item.tag}
-                    onClick={() => setFilter(item.tag)}
-                    className={`${chip} ${filter === item.tag ? 'bg-brand-soft text-brand-hover' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
-                  >
-                    {item.tag === 'all' ? L.all : L.tags[item.tag]}
-                    <span className="tabular-nums opacity-60">{item.count}</span>
-                  </button>
-                ))}
-              </div>
+              <h2 className="text-[15px] font-semibold text-gray-900">
+                {L.paragraphs}
+                {filter !== 'all' && <span className="ml-2 text-[13px] font-medium text-brand">{L.tags[filter]}</span>}
+              </h2>
+              {filter !== 'all' && (
+                <button type="button" onClick={() => setFilter('all')} className="text-[13px] font-medium text-gray-500 transition-colors hover:text-gray-900">
+                  {L.showAll}
+                </button>
+              )}
             </div>
             <DocumentView title={docName(doc)} owner={resume?.name} paragraphs={review.paragraphs} filter={filter} />
           </section>
 
-          <Panel title={L.appeal} className="animate-rise [animation-delay:120ms]">
-            <NumberedList items={review.appealMore} onGray />
-          </Panel>
+          {review.appealMore.length > 0 && (
+            <Panel title={L.appeal} action={<span className="text-[12.5px] text-gray-500 tabular-nums">{L.count(review.appealMore.length)}</span>} className="animate-rise [animation-delay:120ms]">
+              <ol className="grid gap-2 md:grid-cols-2">
+                {review.appealMore.map((item, index) => (
+                  <li key={item} className="flex animate-rise gap-3 rounded-xl bg-white p-4" style={stagger(index)}>
+                    <NumberBadge n={index + 1} tone="brand" />
+                    <p className="min-w-0 flex-1 text-[13.5px] leading-relaxed text-gray-700">{item}</p>
+                  </li>
+                ))}
+              </ol>
+            </Panel>
+          )}
         </>
       )}
     </div>
