@@ -55,6 +55,8 @@ const TEXT = messages({
     siblingTitle: '대표 이력서로 만든 리포트도 있어요',
     siblingBody: '같은 공고를 지금 대표 이력서로 진단한 리포트예요.',
     siblingAction: '그 리포트 보기',
+    closedTitle: '이력서 업데이트를 감지했어요',
+    closedBody: '이 공고는 마감되어 대표 이력서로 새로 진단할 수 없어요. 공고 탐색에서 비슷한 공고를 찾아봐요.',
     delete: '삭제',
     missing: '이 리포트를 찾을 수 없어요.',
     missingBody: '지웠거나 다른 계정에서 만든 리포트예요.',
@@ -132,6 +134,8 @@ const TEXT = messages({
     siblingTitle: 'There is a report with your primary resume',
     siblingBody: 'The same posting, diagnosed with your current primary resume.',
     siblingAction: 'Open that report',
+    closedTitle: 'Your resume has changed',
+    closedBody: 'This posting has closed, so it cannot be diagnosed again. Look for similar postings in Explore.',
     delete: 'Delete',
     missing: "Couldn't find this report.",
     missingBody: 'It may have been deleted or created with another account.',
@@ -718,7 +722,9 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
   // 이 리포트를 만든 서류와 지금 별을 누른 대표 이력서가 다르면, 대표 이력서로도 진단해 보자고 알려요. 이 리포트는 지우지 않아요.
   // 대표 이력서로 만든 리포트가 이미 있으면 그 리포트로 가자고 알려요.
   const outdated = done && !!resume && report.resumeId !== resume.id
-  const sibling = outdated && reports.some((item) => item.postingId === report.postingId && item.resumeId === resume.id && item.status !== 'failed')
+  const sibling = outdated ? reports.find((item) => item.postingId === report.postingId && item.resumeId === resume.id && item.status !== 'failed') : undefined
+  // 마감되어 공고 목록에서 빠진 공고는 새로 진단할 수 없어요. 대표 이력서로 만든 리포트가 없으면 안내만 해요.
+  const closed = !postingOf(report.postingId)
 
   return (
     <main className={pageFrame}>
@@ -768,20 +774,24 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
             <AlertIcon className="size-5 shrink-0 text-brand" />
             {/* 제목과 설명은 두 줄로 나눠 적어요. 한 줄에 이어 붙이면 문장 두 개가 한 문장처럼 읽혀요. */}
             <div className="min-w-0 flex-1 text-[13.5px] leading-relaxed">
-              <p className="font-semibold text-gray-900">{sibling ? L.siblingTitle : L.staleTitle}</p>
-              <p className="mt-0.5 text-gray-700">{sibling ? L.siblingBody : L.staleBody}</p>
+              <p className="font-semibold text-gray-900">{sibling ? L.siblingTitle : closed ? L.closedTitle : L.staleTitle}</p>
+              <p className="mt-0.5 text-gray-700">{sibling ? L.siblingBody : closed ? L.closedBody : L.staleBody}</p>
             </div>
-            {/* 공고 카드를 누른 것과 같아요. 대표 이력서로 만든 리포트가 있으면 열고, 없으면 새로 만들어요. */}
-            <button
-              type="button"
-              onClick={() => {
-                track('report_resume_diagnose', { existing: sibling })
-                onPick(report.postingId)
-              }}
-              className={primaryButton}
-            >
-              {sibling ? L.siblingAction : L.staleAction}
-            </button>
+            {/* 대표 이력서로 만든 리포트가 있으면 그 리포트로 바로 가요. 없으면 공고 카드를 누른 것처럼 새로 진단해요. */}
+            {(sibling || !closed) && (
+              <button
+                type="button"
+                onClick={() => {
+                  track('report_resume_diagnose', { existing: Boolean(sibling) })
+                  if (!sibling) return onPick(report.postingId)
+                  window.history.pushState(null, '', window.location.pathname.replace(`/r/${id}`, `/r/${sibling.id}`))
+                  window.dispatchEvent(new PopStateEvent('popstate'))
+                }}
+                className={primaryButton}
+              >
+                {sibling ? L.siblingAction : L.staleAction}
+              </button>
+            )}
           </div>
         )}
         {failed ? (

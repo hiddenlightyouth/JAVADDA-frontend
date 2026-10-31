@@ -1976,6 +1976,16 @@ export async function fetchReview(reportId: string, docType: DocType, onProgress
   return { ...result.data, paragraphs: result.data.paragraphs ?? [], appealMore: result.data.appealMore ?? [] }
 }
 
+/** 서류 검증을 다시 해요(POST /reports/{id}/reviews/{docType}/regenerate). 저장된 결과를 지우고 AI가 새로 읽어요. 실패하면 토스트로 알리고 null이에요. */
+export async function regenerateReview(reportId: string, docType: DocType, onProgress?: OnProgress): Promise<DocumentReview | null> {
+  const result = await withProgress(onProgress, (headers) => call<DocumentReview>(`/reports/${Number(currentId(reportId))}/reviews/${docType}/regenerate`, { method: 'POST' }, true, headers))
+  if (!result.ok || !result.data) {
+    fail(result)
+    return null
+  }
+  return { ...result.data, paragraphs: result.data.paragraphs ?? [], appealMore: result.data.appealMore ?? [] }
+}
+
 // ---------- 예상 면접 질문 ----------
 
 /** 예상 면접 질문이에요(GET /reports/{id}/questions). 나올 확률 순서예요. onProgress를 주면 진행 상황을 알려줘요. 실패하면 토스트로 알리고 빈 목록이에요. */

@@ -383,6 +383,7 @@ async function handle(path: string, query: URLSearchParams, method: string, body
     if (Date.now() < report.readyAt && sub) return fail(409, 'C4092')
     if (sub === 'reviews') {
       const key = `${report.id}:${extra}`
+      if (last === 'regenerate') delete state.reviews[key]
       if (!state.reviews[key]) {
         await wait(1000)
         state.reviews[key] = buildReview(report, extra as DocType)

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { track } from '../lib/analytics'
-import { docName, fetchReview, PROGRESS_START, useResume, type DocType, type ProgressState, type DocumentReview, type ParagraphTag, type ReviewParagraph } from '../lib/gap'
+import { docName, fetchReview, PROGRESS_START, regenerateReview, useResume, type DocType, type ProgressState, type DocumentReview, type ParagraphTag, type ReviewParagraph } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
 import { AiProgress, Failed, Panel, ScoreHero } from './GapParts'
@@ -282,13 +282,15 @@ export function ReviewTab({ reportId }: { reportId: string }) {
   const review = reviews[doc]
   const countOf = (tag: ParagraphTag) => review?.paragraphs.filter((paragraph) => paragraph.tags.includes(tag)).length ?? 0
 
-  async function load(target: DocType) {
+  /** 서류 검증을 받아요. fresh(재검증)면 저장된 결과를 지우고 다시 읽어요. */
+  async function load(target: DocType, fresh = false) {
     const request = ++latest.current
     setLoading(true)
     setProgress(PROGRESS_START)
-    const result = await fetchReview(reportId, target, (next) => {
+    const onProgress = (next: ProgressState) => {
       if (request === latest.current) setProgress(next)
-    })
+    }
+    const result = fresh ? await regenerateReview(reportId, target, onProgress) : await fetchReview(reportId, target, onProgress)
     setReviews((prev) => ({ ...prev, [target]: result }))
     if (request === latest.current) setLoading(false)
   }
@@ -311,7 +313,7 @@ export function ReviewTab({ reportId }: { reportId: string }) {
             disabled={loading}
             onClick={() => {
               track('review_rerun', { doc })
-              void load(doc)
+              void load(doc, true)
             }}
             className={`${toolButton} disabled:text-gray-400`}
           >
