@@ -44,7 +44,7 @@ export function Account({ page, onNavigate, onSignedIn, notice, returnTo, onOpen
   const text = useMessages(TEXT)
 
   useEffect(() => {
-    applyMeta({ ...HOME_META[lang], title: `${TEXT[lang].titles[page]} | ${SITE_TITLE}` }, lang, `/${page}`)
+    applyMeta({ ...HOME_META[lang], title: `${TEXT[lang].titles[page]} | ${SITE_TITLE[lang]}` }, lang, `/${page}`)
     return () => applyMeta(HOME_META[lang], lang, '/')
   }, [lang, page])
 
