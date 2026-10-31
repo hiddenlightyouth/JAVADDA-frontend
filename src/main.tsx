@@ -60,6 +60,7 @@ const showBoot = (percent: number) => {
 }
 
 // 소개(브라우저의 메인 주소)와 아티클 주소로 들어오면 미리 그려 둔 화면이 이미 있어요. 그 화면의 코드를 먼저 받은 뒤에 그려서, 글이 잠깐 사라졌다 나타나지 않게 해요.
+const boot = () => {
 const path = currentPath()
 if (/^\/articles(\/|$)/.test(path)) void import('./components/Articles').finally(start)
 else if (aboutFromPath()) void import('./components/About').finally(start)
@@ -78,3 +79,8 @@ else if (appShell) {
     }
   })
 } else start()
+}
+
+// 목 모드(내 컴퓨터의 .env.development.local에 VITE_MOCK=true)면 서버 대신 브라우저 안의 가짜 서버가 답해요(src/lib/mock.ts). 배포 빌드에는 들어가지 않아요.
+if (import.meta.env.DEV && import.meta.env.VITE_MOCK === 'true') void import('./lib/mock').then((mock) => mock.installMock()).finally(boot)
+else boot()

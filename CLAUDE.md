@@ -177,6 +177,8 @@ src/
 
 `.env.example`에 정리되어 있어요. `.env`는 절대 커밋하지 않아요. `.env.production`은 브라우저에 공개되는 값만 담아서 저장소에 포함해요.
 
+- 목 모드: 백엔드 없이 프론트만 볼 때 `.env.development.local`(커밋하지 않아요)에 `VITE_MOCK=true`를 적고 개발 서버를 다시 켜요. `src/lib/mock.ts`가 브라우저 안에서 `/api/v1` 요청을 가로채 서버 대신 답해요(로그인, 공고, 이력서, 리포트, 서류 검증, 예상 질문, 답변. 계산은 서버 연결 전의 프론트 코드예요). 자료는 localStorage의 `whoisloafing:mock:v1`에 두고, 콘솔에서 `mockReset()`으로 지워요. 개발 서버에서만 켜지고 배포 빌드에는 들어가지 않아요.
+
 ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사, 커밋하지 않아요)에 넣고, 배포에는 `npx wrangler secret put ELEVENLABS_API_KEY`로 넣어요.
 
 - 로컬 개발(`npm run dev`)은 로컬 백엔드를 써요. `.env.development`의 `VITE_API_BASE_URL`이 비어 있어서 요청이 `/api/v1`로 가고, `vite.config.ts`의 proxy가 `http://localhost:8080`(JAVADDA-server를 `./gradlew bootRun`으로 띄운 곳)으로 넘겨요. 같은 주소라 CORS 설정이 필요 없어요. 다른 서버를 보려면 커밋하지 않는 `.env.development.local`에 주소를 적어요.
