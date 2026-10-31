@@ -824,7 +824,7 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
           report={report}
           onCancel={() => setDeleting(false)}
           onConfirm={() => {
-            removeReport(report, 'history')
+            removeReport(report, 'report')
             setDeleting(false)
             onBack()
           }}

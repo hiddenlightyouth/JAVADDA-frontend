@@ -152,7 +152,7 @@ export function DeleteReportDialog({ report, onCancel, onConfirm }: { report: Re
 }
 
 /** 리포트를 지우고 토스트로 알려줘요. */
-export function removeReport(report: Report, from: 'sidebar' | 'history') {
+export function removeReport(report: Report, from: 'sidebar' | 'history' | 'report') {
   deleteReport(report.id)
   track('report_delete', { from })
   showToast(pick(REPORT_LIST_TEXT).deleted)
