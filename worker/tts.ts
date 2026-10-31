@@ -7,6 +7,11 @@
 import { VOICES, voiceOf } from '../shared/voices'
 
 export const TTS_PATH = '/tts'
+/**
+ * 글자마다 읽기 시작하는 때를 담은 응답 헤더예요. 화면이 노래방 자막처럼 읽는 글자를 칠할 때 써요(`src/lib/speech.ts`).
+ * 값은 글자 순서대로 시작 시각을 1/100초 단위 정수로 쉼표로 이은 것이고, 맨 끝에 마지막 글자가 끝나는 시각이 하나 더 붙어요.
+ */
+export const TTS_TIMING_HEADER = 'X-TTS-Timing'
 
 /** 질문 하나의 길이를 넉넉히 잡았어요. 다른 글을 읽히는 데 쓰이지 않게 막아요. */
 const MAX_CHARS = 300
@@ -33,10 +38,25 @@ export interface TtsOptions {
   defer?: (work: Promise<unknown>) => void
 }
 
+/** with-timestamps의 응답이에요. 음성은 base64로, 시각은 글자마다 초 단위로 와요. */
+interface Timestamped {
+  audio_base64?: string
+  alignment?: { characters?: string[]; character_start_times_seconds?: number[]; character_end_times_seconds?: number[] } | null
+}
+
+/** 글자 시각을 헤더 값으로 줄여요. 보낸 글과 글자 수가 다르면(맞출 수 없으면) 보내지 않아요. */
+function timingOf(alignment: Timestamped['alignment'], text: string): string | null {
+  const starts = alignment?.character_start_times_seconds
+  const ends = alignment?.character_end_times_seconds
+  if (!starts?.length || !ends?.length || starts.length !== text.length) return null
+  return [...starts, ends[ends.length - 1]].map((second) => Math.round(second * 100)).join(',')
+}
+
 const reply = (status: number, code: string) => new Response(JSON.stringify({ code }), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
 
 async function cacheKey(voice: string, model: string, text: string) {
-  const bytes = new TextEncoder().encode(`${voice}\n${model}\n${text}`)
+  // 글자 시각을 함께 담기 시작하면서(v2) 예전 음성과 섞이지 않게 열쇠를 바꿨어요.
+  const bytes = new TextEncoder().encode(`v2\n${voice}\n${model}\n${text}`)
   const hash = await crypto.subtle.digest('SHA-256', bytes)
   const name = [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
   return new Request(`https://tts.cache/${name}`)
@@ -65,7 +85,8 @@ export async function handleTts(request: Request, env: TtsEnv, options: TtsOptio
   if (options.allow && !(await options.allow(request))) return reply(429, 'rate_limited')
 
   const base = (env.ELEVENLABS_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, '')
-  const upstream = await fetch(`${base}/v1/text-to-speech/${encodeURIComponent(voice)}?output_format=${OUTPUT_FORMAT}`, {
+  // with-timestamps는 음성과 함께 글자마다 읽는 시각을 돌려줘요. 화면의 자막을 소리와 맞추는 데 써요.
+  const upstream = await fetch(`${base}/v1/text-to-speech/${encodeURIComponent(voice)}/with-timestamps?output_format=${OUTPUT_FORMAT}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'xi-api-key': env.ELEVENLABS_API_KEY },
     // v3는 설정의 허용 범위가 달라서 목소리에 저장된 값을 그대로 써요.
@@ -76,8 +97,16 @@ export async function handleTts(request: Request, env: TtsEnv, options: TtsOptio
     return reply(502, 'upstream_failed')
   }
 
-  const audio = await upstream.arrayBuffer()
-  const response = new Response(audio, { headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=2592000' } })
+  const data = (await upstream.json().catch(() => null)) as Timestamped | null
+  if (!data?.audio_base64) {
+    console.error('ElevenLabs response had no audio')
+    return reply(502, 'upstream_failed')
+  }
+  const audio = Uint8Array.from(atob(data.audio_base64), (char) => char.charCodeAt(0))
+  const headers: Record<string, string> = { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=2592000' }
+  const timing = timingOf(data.alignment, text)
+  if (timing) headers[TTS_TIMING_HEADER] = timing
+  const response = new Response(audio, { headers })
   if (key) options.defer?.(options.cache?.put(key, response.clone()) ?? Promise.resolve())
   return response
 }

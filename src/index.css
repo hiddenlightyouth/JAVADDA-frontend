@@ -205,6 +205,45 @@
   }
 }
 
+/* 면접 연습의 검은 화면 뒤에서 천천히 떠다니는 흐린 빛이에요. 애플 뮤직의 가사 화면처럼 배경이 은은하게 움직여요. */
+.interview-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(110px);
+  pointer-events: none;
+  transition: opacity 1.2s ease;
+}
+
+.interview-glow-a {
+  top: -18%;
+  left: -12%;
+  width: 62vmax;
+  height: 62vmax;
+  background: rgb(21 112 239 / 0.42);
+  animation: interview-drift-a 18s ease-in-out infinite;
+}
+
+.interview-glow-b {
+  right: -16%;
+  bottom: -22%;
+  width: 56vmax;
+  height: 56vmax;
+  background: rgb(125 211 252 / 0.22);
+  animation: interview-drift-b 22s ease-in-out infinite;
+}
+
+@keyframes interview-drift-a {
+  50% {
+    transform: translate(14vmax, 9vmax) scale(1.12);
+  }
+}
+
+@keyframes interview-drift-b {
+  50% {
+    transform: translate(-12vmax, -8vmax) scale(0.9);
+  }
+}
+
 /* 질문 메뉴를 들고 있는 유리 방울. 가장자리가 흐물흐물 일렁이고, 안에서는 파란 빛이 천천히 떠다녀요. */
 .orb {
   position: relative;

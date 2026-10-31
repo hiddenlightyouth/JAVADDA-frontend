@@ -22,6 +22,7 @@ import { isApp } from '../lib/app'
 import { SOCIAL_LABELS, type SocialProvider } from '../lib/social'
 import { IpPlace } from './IpPlace'
 import { useAiModelSetting } from './AiModelSetting'
+import { useVoiceSetting } from './VoiceSetting'
 import { SocialButtons, useSocialClients } from './Social'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
@@ -52,6 +53,7 @@ const TEXT = messages({
     email: '이메일',
     joined: '가입한 날',
     ai: 'AI',
+    practice: '면접 연습',
     devices: '로그인한 기기',
     history: '로그인 기록',
     withdraw: '회원탈퇴',
@@ -83,6 +85,7 @@ const TEXT = messages({
     email: 'Email',
     joined: 'Joined',
     ai: 'AI',
+    practice: 'Interview practice',
     devices: 'Signed-in devices',
     history: 'Sign-in history',
     withdraw: 'Delete account',
@@ -386,6 +389,7 @@ export function MyPage({ onSignedOut }: Props) {
 
   const registered = parseServerTime(me?.registeredAt)
   const aiModel = useAiModelSetting('right')
+  const voice = useVoiceSetting('right')
 
   return (
     <main className={pageFrame}>
@@ -433,6 +437,19 @@ export function MyPage({ onSignedOut }: Props) {
                 <span className="mt-0.5 block text-[12.5px] leading-relaxed break-keep text-gray-500">{aiModel.note}</span>
               </dt>
               <dd className="shrink-0">{aiModel.control}</dd>
+            </div>
+          </dl>
+        </Section>
+
+        {/* 설정 창과 같은 면접관 목소리 고르기예요. */}
+        <Section title={text.practice}>
+          <dl className="divide-y divide-gray-100 border-y border-gray-100 text-[14px]">
+            <div className="flex items-center justify-between gap-6 py-3.5">
+              <dt className="min-w-0">
+                <span className="block text-gray-900">{voice.label}</span>
+                <span className="mt-0.5 block text-[12.5px] leading-relaxed break-keep text-gray-500">{voice.note}</span>
+              </dt>
+              <dd className="shrink-0">{voice.control}</dd>
             </div>
           </dl>
         </Section>
