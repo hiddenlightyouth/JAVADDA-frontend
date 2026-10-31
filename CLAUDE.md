@@ -73,7 +73,7 @@ public/logo.svg       예전 로고 (중절모와 서비스명). 지금은 화�
 public/favicon.svg    파비콘 (로고의 중절모만 따온 그림)
 public/og.png         링크 미리보기 카드에 뜨는 대표 이미지 (1200x630). 흰 바탕 한가운데에 손글씨 Javadda만 있어요. `LofyScript`의 글자 도형으로 다시 그려요.
 public/og-en.png      영어 주소의 미리보기 카드 이미지 (1200x630). 지금은 og.png와 같은 그림이에요.
-public/logos/         기업 로고. 기업 사이트의 아이콘을 받아 둔 거예요. 우아한형제들은 배민 아이콘이에요. 처음 열두 곳은 기업 아이디.png이고, 서버가 로고를 주지 않는 워크넷 기업은 아이디가 바뀔 수 있어서 `gap.ts`의 `LOGO_BY_NAME`이 기업 이름으로 붙여요. 계열사는 그룹 로고(SK, 롯데, BGF, GC, 두산, GS, 하나, KB, HD현대)를 같이 쓰고, 흐리거나 알아보기 어려운 아이콘은 넣지 않고 머리글자로 둬요. 로고가 없는 공공기관과 공기업은 정부 상징(`gov.svg`, 위키미디어 공용)을 붙여요. 고용24가 공공기관으로 보내는 국립대 병원과 대학은 서버가 업종을 병원, 대학으로 바꿔 보내서 정부 상징이 붙지 않아요.
+public/logos/         기업 로고. 기업 사이트의 아이콘을 받아 둔 거예요. 우아한형제들은 배민 아이콘이에요. 처음 열두 곳은 기업 아이디.png이고, 서버가 로고를 주지 않는 워크넷 기업은 아이디가 바뀔 수 있어서 `gap.ts`의 `LOGO_BY_NAME`이 기업 이름으로 붙여요. 계열사는 그룹 로고(SK, 롯데, BGF, GC, 두산, GS, 하나, KB, HD현대)를 같이 쓰고, 흐리거나 알아보기 어려운 아이콘은 넣지 않고 회색 건물 아이콘으로 둬요. 로고가 없는 공공기관과 공기업은 정부 상징(`gov.svg`, 위키미디어 공용)을 붙여요. 고용24가 공공기관으로 보내는 국립대 병원과 대학은 서버가 업종을 병원, 대학으로 바꿔 보내서 정부 상징이 붙지 않아요.
 public/providers/     강의 플랫폼 로고 (인프런). `gap.ts`의 `PROVIDER_LOGOS`가 가리켜요.
 public/skills/        기술 스택 로고 (스킬마다 SVG, 120개쯤). Devicon(MIT 라이선스)의 그림을 받아 둔 거예요. `gap.ts`의 `SKILL_LOGOS`가 스킬 이름과 파일을 잇고(대소문자, 띄어쓰기, 점과 줄표는 가리지 않아요. 적힌 이름, 사전의 이름, `Spring Cloud`나 `AWS Lambda` 같은 가족 순서로 찾아요), `GapParts`의 `SkillMark`가 기업 로고처럼 흰 칸에 그려요. 서버 스킬 사전(50개)은 모두 로고나 개념 아이콘이 있어요. 로고가 없는 스킬은 이름을 보고(`CONCEPT_RULES`) 두 톤 개념 아이콘(`Icons`의 `ConceptIcon`: 테스트 코드와 코딩 테스트 키보드, 보안, 알고리즘, AI, 분산 서비스, 설계, 운영체제, 네트워크, API, 데이터베이스, 데이터 분석, 클라우드, 배포, 모니터링, 성능, 모바일, 협업, 문서, 웹)을 메인 컬러로 그리고, 맞는 것이 없으면 코드 괄호예요.
 public/download/appcast.xml  macOS 앱이 새 버전이 있는지 읽어 가는 업데이트 목록. 지우지 않아요.
@@ -147,7 +147,7 @@ src/
   components/ReportReview.tsx   리포트의 서류 검증 탭
   components/ReportQuestions.tsx 리포트의 예상 질문 탭
   components/Practice.tsx    면접 연습 (/r/아이디/practice). 질문에 글이나 말로 답하면 피드백을 줘요
-  components/GapParts.tsx    진단 화면이 같이 쓰는 부품. 기업 로고(CompanyMark, 로고가 없거나 못 불러오면 머리글자), 적합도(FitBadge, ScoreRing, 점수 머리말 ScoreHero), 짧은 설명 말풍선(Tip), 스킬 이름표(SkillChip), 공고의 직군과 경력과 지역 한 줄(PostingMeta), 기업 고르는 버튼 줄(CompanyFilter, 공고 탐색과 기술 블로그), 카드 태그(CardTag), 이미 진단한 공고의 태그(DiagnosedTag), AI를 기다리는 동안의 진행 막대(AiProgress, 단계 문장 useStageText, 모양은 ui의 ProgressBar), 부족과 보완과 강점 이름표(KindLabel), 체크 표시(CheckMark), 공고 카드(PostingTile), 회색 칸(Panel), 안내(Notice, Failed), 막대(Meter), 레이더(Radar), 작은 막대 그래프(Sparkline), 변화량(Delta)
+  components/GapParts.tsx    진단 화면이 같이 쓰는 부품. 기업 로고(CompanyMark, 로고가 없거나 못 불러오면 회색 칸에 건물 아이콘), 적합도(FitBadge, ScoreRing, 점수 머리말 ScoreHero), 짧은 설명 말풍선(Tip), 스킬 이름표(SkillChip), 공고의 직군과 경력과 지역 한 줄(PostingMeta), 기업 고르는 버튼 줄(CompanyFilter, 공고 탐색과 기술 블로그), 카드 태그(CardTag), 이미 진단한 공고의 태그(DiagnosedTag), AI를 기다리는 동안의 진행 막대(AiProgress, 단계 문장 useStageText, 모양은 ui의 ProgressBar), 부족과 보완과 강점 이름표(KindLabel), 체크 표시(CheckMark), 공고 카드(PostingTile), 회색 칸(Panel), 안내(Notice, Failed), 막대(Meter), 레이더(Radar), 작은 막대 그래프(Sparkline), 변화량(Delta)
   components/History.tsx     내 리포트 화면(/history)과, 사이드바가 같이 쓰는 리포트 지우기 창과 문구
   components/AppPage.tsx     앱 화면이 같이 쓰는 틀. 바깥 틀(pageFrame), 제목 줄(PageHeader), 제목 줄 아래 바탕(canvas), 제목 줄만 고정하고 아래를 스크롤하는 화면(ScrollPage, 공고 탐색, 추천 공고, 면접 연습), 복사(copyText)
   components/ui.tsx          기본 모양을 한 곳에서 정해요. 버튼(primaryButton, primaryButtonMd, primaryButtonLg, quietButton, dangerButton, softButton, softDangerButton, toolButton, 화면 맨 위 거르는 줄의 큰 도구 버튼 toolButtonLg, toolDangerButton, ghostButton, ghostDangerButton, iconButton), 메뉴(menuPanel, menuItem, menuDangerItem), 입력칸(fieldBase, textField, textFieldSm, textArea, 좁은 화면에서는 16px), 작은 제목(label), 이름표(tag), 테두리 없는 작은 이름표(Badge, gray, muted, brand, outline, red, white), 오류 문구(FormError), 고르는 칸(Segmented, sm과 md), 밑줄 탭(Tabs), 점 목록(Bullets), 번호(NumberBadge, NumberedList), 퍼센트 진행 막대(ProgressBar, 자료를 받는 동안의 LoadProgress와 가운데 자리 loadCenter), 카드 떠오르는 순서(stagger). 새 화면은 같은 모양을 다시 적지 않고 여기 것을 써요
@@ -240,7 +240,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 진단에 쓰는 자료와 API는 모두 `src/lib/gap.ts`에 있어요. 화면은 이 파일의 함수와 저장소만 보고, 요청 모양은 위의 진단 자료와 계산 규칙 절에 있어요. 타입은 서버의 응답 모양을 따라요(숫자 아이디만 글자로 바꿔요).
 
-- 기업마다 로고(`logo`, `public/logos`)와 기업 소개 사이트(`site`)가 있고, 다크 모드에서도 로고 칸의 바탕은 흰색이에요. 로고가 없는 기업(고용24, 공공기관에서 온 중소기업 등)은 이름에서 "주식회사", "(주)" 같은 회사 형태를 뗀 머리글자를, 기업 이름마다 정해진 연한 색(8가지, `MARK_TONES`) 위에 보여줘요. 공고마다 직군(백엔드, 프론트엔드, 모바일, 데이터, DevOps, 개발이 아닌 직무인 개발 외 직무 `other`. 서버가 모르는 직군을 보내면 받은 값을 그대로 적어요), 경력(신입, 주니어, 경력 무관), 지역, 올린 날과 마감, 필수와 우대 역량, 한 줄 소개, 출처(워크넷, 기업 채용 페이지)가 있어요. 서버에 닿지 못할 때 보여줄 공고의 올린 날과 마감은 오늘을 기준으로 계산해요.
+- 기업마다 로고(`logo`, `public/logos`)와 기업 소개 사이트(`site`)가 있고, 다크 모드에서도 로고 칸의 바탕은 흰색이에요. 로고가 없는 기업(고용24, 공공기관에서 온 중소기업 등)은 링크드인처럼 옅은 회색 칸에 건물 아이콘(`BuildingIcon`)을 보여줘요. 공공기관과 공기업은 건물 대신 정부 상징이에요. 기업마다 색을 달리한 머리글자는 수십 곳이 모이면 알록달록해 보여서 쓰지 않아요. 공고마다 직군(백엔드, 프론트엔드, 모바일, 데이터, DevOps, 개발이 아닌 직무인 개발 외 직무 `other`. 서버가 모르는 직군을 보내면 받은 값을 그대로 적어요), 경력(신입, 주니어, 경력 무관), 지역, 올린 날과 마감, 필수와 우대 역량, 한 줄 소개, 출처(워크넷, 기업 채용 페이지)가 있어요. 서버에 닿지 못할 때 보여줄 공고의 올린 날과 마감은 오늘을 기준으로 계산해요.
 - 공고 검색(`fetchPostings`)은 GET /postings?query=&family=&career=예요. 서버에 닿지 못해 적어 둔 목록을 쓰고 있으면 그 목록에서 찾아요. 정렬(`sortPostings`)은 화면에서 해요.
 - 서버 시각은 시간대 없는 ISO 글자(한국 시각)로 와서, 브라우저가 그 기기의 시각으로 읽어요(`format.ts`, `daysLeft`, `daysSince`).
 - 로그인 상태가 바뀌면(`onSignedInChange`) 로그인할 때 이력서, 리포트, 보완 계획, 면접 노트를 받고, 로그아웃할 때 비워요(`startAccountSync`). 로그아웃 전에 보낸 요청의 답은 버려요.
@@ -253,9 +253,9 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 새 진단 (`Home`, 앱의 메인 주소)
 
-- 손글씨 Javadda, "어떤 기업에 맞춰 볼까요?" 타이틀, 설명 한 줄, 검색창이 위쪽에 있어요. 검색어를 적으면 기업 이름, 공고 제목, 지역, 스킬에서 찾아 그 아래로 목록이 펼쳐지고, 줄마다 기업 머리글자, 공고 제목, 기업과 지역, 적합도가 보여요. 결과가 하나뿐일 때 Enter를 누르면 바로 고른 것으로 쳐요. 바깥을 누르거나 Esc를 누르면 닫혀요.
+- 손글씨 Javadda, "어떤 기업에 맞춰 볼까요?" 타이틀, 설명 한 줄, 검색창이 위쪽에 있어요. 검색어를 적으면 기업 이름, 공고 제목, 지역, 스킬에서 찾아 그 아래로 목록이 펼쳐지고, 줄마다 기업 로고, 공고 제목, 기업과 지역, 적합도가 보여요. 결과가 하나뿐일 때 Enter를 누르면 바로 고른 것으로 쳐요. 바깥을 누르거나 Esc를 누르면 닫혀요.
 - 검색창이 비어 있는 동안에는 공고 탐색처럼 추천 검색어(`SEARCH_SUGGESTIONS`, `src/lib/gap.ts`)가 자리표시 글자처럼 옅게 돌아가며 바뀌고, Enter를 누르면 그 검색어로 찾아요.
-- 검색창 아래에는 공고 줄이 한 줄씩 있어요. 이력서를 올려 두었으면 "나와 잘 맞는 공고"(적합도순, 전체 보기는 추천 공고로)가 맨 위에 오고, 그다음 "기업으로 둘러보기"(공고가 있고 로고가 있는 기업의 로고와 이름을 테두리 없이 늘어놓고(머리글자만 있는 기업은 빼요), 마우스를 올리면 옅은 회색 바탕이 깔려요. 누르면 그 기업의 기업 상세 `/company/기업아이디`로 가요. 공고 수는 적지 않아요), "따끈따끈 공고", "마감이 가까운 공고"(전체 보기는 공고 탐색으로), 진단해 둔 공고 중 적합도가 70% 아래였던 "다시 볼 공고"가 이어져요. 줄마다 카드는 화면 폭에 들어가는 만큼만 보여요.
+- 검색창 아래에는 공고 줄이 한 줄씩 있어요. 이력서를 올려 두었으면 "나와 잘 맞는 공고"(적합도순, 전체 보기는 추천 공고로)가 맨 위에 오고, 그다음 "기업으로 둘러보기"(공고가 있는 기업을 유명 기업, 로고가 있는 기업, 로고가 없는 기업 순서로, 같은 묶음 안에서는 공고가 많은 순서로 테두리 없이 늘어놓고 화면 폭에 들어가는 한 줄만 보여줘요. 공공기관과 중소기업이 수백 곳이어도 화면을 덮지 않아요. 마우스를 올리면 옅은 회색 바탕이 깔려요. 누르면 그 기업의 기업 상세 `/company/기업아이디`로 가고, 전체 보기는 공고 탐색으로 가요. 공고 수는 적지 않아요), "따끈따끈 공고", "마감이 가까운 공고"(전체 보기는 공고 탐색으로), 진단해 둔 공고 중 적합도가 70% 아래였던 "다시 볼 공고"가 이어져요. 줄마다 카드는 화면 폭에 들어가는 만큼만 보여요.
 - 공고 카드는 공고 탐색의 카드(`JobCard`)와 같아요. 이력서가 없으면 적합도 자리와 얼마나 맞는지 태그는 비워 둬요. 카드를 누르면 원문을 옆에 열고, 분석하기를 누르면 바로 진단해요.
 
 공고 탐색 (`Jobs`, `/explore`, 단축키 T)
@@ -448,7 +448,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | --- | --- | --- |
 | `page_view` | 화면이 바뀔 때 | `screen`(home, explore, recommend, calendar, map, resume, blogs, company, diagnose, report, practice, about, articles, article, login, signup, me, history, app-login, admin), `posting`, `tab`, `slug` |
 | `posting_select` | 공고 카드나 검색 결과를 눌러 진단 시작으로 갔을 때 | `posting`, `from`(home, explore, recommend, company, map, calendar-cell, calendar-list), `query` |
-| `home_more_click` | 새 진단 화면의 공고 줄에서 전체 보기를 눌렀을 때 | `row`(fit, recent, closing) |
+| `home_more_click` | 새 진단 화면의 공고 줄에서 전체 보기를 눌렀을 때 | `row`(fit, companies, recent, closing) |
 | `home_company_select` | 새 진단 화면의 기업으로 둘러보기에서 기업을 눌렀을 때 | `company` |
 | `home_suggestion_use` | 새 진단 화면의 빈 검색창에서 Enter로 추천 검색어를 썼을 때 | `query` |
 | `calendar_open` | 사이드바에서 마감 달력을 눌렀을 때 | `from`(sidebar) |

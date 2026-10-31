@@ -107,6 +107,15 @@ export function BriefcaseIcon({ className = 'size-3.5 shrink-0 text-gray-400', s
   )
 }
 
+/** 로고가 없는 기업 자리에 넣는 건물이에요. */
+export function BuildingIcon({ className = 'size-4 shrink-0 text-gray-400', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M3 14V3a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v11M10 6.5h2a1 1 0 0 1 1 1V14M1.75 14h12.5M5.5 5h2M5.5 8h2M5.5 11h2" />
+    </Icon>
+  )
+}
+
 /** 강의 난이도를 나타내는 세 칸 막대예요. */
 export function LevelIcon({ className = 'size-3.5 shrink-0 text-gray-400', strokeWidth = 1.4, label }: IconProps) {
   return (

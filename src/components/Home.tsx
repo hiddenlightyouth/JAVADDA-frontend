@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
-import { COMPANIES, companyOf, fitOf, POSTINGS, postingOf, RECOMMEND_MIN_FIT, SEARCH_SUGGESTIONS, sortPostings, SUGGEST_MS, useReports, useResume, type JobPosting } from '../lib/gap'
+import { COMPANIES, companyOf, fitOf, majorCompanies, POSTINGS, postingOf, RECOMMEND_MIN_FIT, SEARCH_SUGGESTIONS, sortPostings, SUGGEST_MS, useReports, useResume, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { CompanyMark, DiagnosedTag, FitBadge } from './GapParts'
 import { JobCard, useJobBrowser } from './JobCard'
@@ -80,8 +80,19 @@ function search(query: string): JobPosting[] {
   })
 }
 
-/** 공고가 하나라도 있고 로고가 있는 기업이에요. 머리글자만 있는 기업은 둘러보기 줄을 어수선하게 해서 빼요. */
-const BROWSE_COMPANIES = COMPANIES.filter((company) => company.logo && POSTINGS.some((posting) => posting.companyId === company.id))
+/**
+ * 기업으로 둘러보기에 놓을 기업이에요. 공고가 있는 기업을 유명 기업, 로고가 있는 기업, 로고가 없는 기업 순서로 두고
+ * 같은 묶음 안에서는 공고가 많은 순서예요. 공공기관과 중소기업이 수백 곳이 되어도 화면에는 한 줄만 보여요.
+ */
+function browseCompanies() {
+  const counts = new Map<string, number>()
+  for (const posting of POSTINGS) counts.set(posting.companyId, (counts.get(posting.companyId) ?? 0) + 1)
+  const majors = majorCompanies().filter((company) => counts.has(company.id))
+  const rest = COMPANIES.filter((company) => counts.has(company.id) && !majors.includes(company)).sort(
+    (a, b) => Number(!!b.logo) - Number(!!a.logo) || (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0),
+  )
+  return [...majors, ...rest]
+}
 
 export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   const L = useMessages(TEXT)
@@ -152,6 +163,7 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   }
 
   // 올라온 순서와 마감 순서는 이력서와 상관없어서 처음 한 번만 정해요.
+  const browse = useMemo(browseCompanies, [])
   const recent = useMemo(() => sortPostings(POSTINGS, 'recent', null).slice(0, ROW_SIZE), [])
   const closing = useMemo(() => sortPostings(POSTINGS.filter((posting) => posting.deadline), 'deadline', null).slice(0, ROW_SIZE), [])
   // 나와 잘 맞는 공고는 추천 공고와 같이 적합도 50% 이상만이에요. 낮음은 이 줄에 넣지 않아요.
@@ -172,7 +184,7 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
 
   const rows: { key: keyof typeof L.rows | 'companies'; list: JobPosting[]; more?: () => void }[] = [
     ...(fit.length > 0 ? [{ key: 'fit' as const, list: fit, more: onRecommend }] : []),
-    { key: 'companies', list: [] },
+    { key: 'companies', list: [], more: onExplore },
     { key: 'recent', list: recent, more: onExplore },
     { key: 'closing', list: closing, more: onExplore },
     ...(again.length > 0 ? [{ key: 'again' as const, list: again }] : []),
@@ -295,8 +307,9 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
                 {key === 'companies' ? (
                   // 기업을 누르면 그 기업 공고만 골라 둔 채로 공고 탐색을 열어요.
                   // 테두리 없이 로고와 이름만 늘어놓아서, 공고 카드 사이에서 가볍게 보여요.
-                  <ul className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-1">
-                    {BROWSE_COMPANIES.map((company, order) => (
+                  // 공고 카드 줄처럼 한 줄만 보여주고, 둘째 줄부터는 잘라요. 나머지 기업은 전체 보기(공고 탐색)에서 골라요.
+                  <ul className="mt-2 grid auto-rows-[0px] grid-cols-[repeat(auto-fill,minmax(88px,1fr))] grid-rows-[auto] gap-x-1 overflow-hidden">
+                    {browse.map((company, order) => (
                       <li key={company.id} className="animate-rise" style={stagger(order)}>
                         <button
                           type="button"

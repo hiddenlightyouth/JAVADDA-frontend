@@ -27,12 +27,16 @@ const escape = (text: string) => text.replace(/[&<>"']/g, (char) => `&#${char.ch
 const BRAND = '#2E90FA'
 const FONT = "font-family:Pretendard,system-ui,sans-serif;letter-spacing:-0.02em"
 
-/** `CompanyMark`와 같은 모양의 둥근 로고(없으면 머리글자)예요. */
+/** `CompanyMark`의 건물 아이콘(`BuildingIcon`)과 같은 그림이에요. */
+const BUILDING_SVG =
+  '<svg viewBox="0 0 16 16" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14V3a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v11M10 6.5h2a1 1 0 0 1 1 1V14M1.75 14h12.5M5.5 5h2M5.5 8h2M5.5 11h2"/></svg>'
+
+/** `CompanyMark`와 같은 모양의 둥근 로고(없으면 회색 칸에 건물)예요. */
 function markHtml(company: Company) {
   const box = 'display:flex;width:36px;height:36px;align-items:center;justify-content:center;overflow:hidden;border-radius:9999px;box-sizing:border-box'
   return company.logo
     ? `<span style="${box};border:1px solid #e5e7eb;background:#fff"><img src="${escape(company.logo)}" alt="" style="width:100%;height:100%;object-fit:contain;display:block"></span>`
-    : `<span style="${box};background:#f3f4f6;color:#374151;font-size:13px;font-weight:600;${FONT}">${escape(company.initial)}</span>`
+    : `<span style="${box};background:#f3f4f6;color:#9ca3af">${BUILDING_SVG}</span>`
 }
 
 /** `LogoPin`과 같은 모양의 핀이에요. 둘 이상 묶였으면 오른쪽 위에 기업 수를 적어요. */
