@@ -10,7 +10,7 @@ import { Kbd } from './Shortcuts'
 import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
-import { BookIcon, BugIcon, CheckIcon, ChevronUpDownIcon, DocumentIcon, DotsIcon, PersonIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
+import { BookIcon, BugIcon, CalendarIcon, CheckIcon, ChevronUpDownIcon, DocumentIcon, DotsIcon, PersonIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { fitColor, Tip } from './GapParts'
 
@@ -18,6 +18,7 @@ const TEXT = messages({
   ko: {
     new: '새 진단',
     explore: '공고 탐색',
+    calendar: '마감 달력',
     recommend: '추천 공고',
     recommendLocked: '이력서를 먼저 등록하세요',
     resume: '내 이력서',
@@ -36,6 +37,7 @@ const TEXT = messages({
   en: {
     new: 'New diagnosis',
     explore: 'Explore jobs',
+    calendar: 'Deadlines',
     recommend: 'Recommended',
     recommendLocked: 'Upload your resume first',
     resume: 'My resume',
@@ -62,7 +64,7 @@ function resetLeft(value: string): { days: number; hours: number } | null {
   return { days: hours >= 24 ? Math.ceil(ms / 86_400_000) : 0, hours }
 }
 
-type SidebarPage = 'explore' | 'recommend' | 'resume' | 'blogs' | 'articles' | 'me' | 'history' | 'admin' | null
+type SidebarPage = 'explore' | 'recommend' | 'calendar' | 'resume' | 'blogs' | 'articles' | 'me' | 'history' | 'admin' | null
 
 /** 사이드바에 보여줄 리포트 수예요. 나머지는 내 리포트 화면에서 봐요. */
 const SIDEBAR_REPORTS = 5
@@ -75,6 +77,8 @@ interface Props {
   onNew: () => void
   onExplore: () => void
   onRecommend: () => void
+  /** 마감 달력을 열어요. */
+  onCalendar: () => void
   onResume: () => void
   /** 기술 블로그 요약을 열어요. */
   onBlogs: () => void
@@ -201,7 +205,7 @@ function NavLink({ href, active, onClick, icon, label, shortcut, locked }: { hre
 }
 
 /** 앱 화면 왼쪽의 사이드바예요. 새 진단, 공고 탐색, 추천 공고, 기술 블로그, 내 이력서, 내 리포트 목록과 관리, 내 정보로 가는 링크가 있어요. */
-export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onResume, onBlogs, onOpenReport, onHistory, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, signedIn, onLogin }: Props) {
+export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onCalendar, onResume, onBlogs, onOpenReport, onHistory, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, signedIn, onLogin }: Props) {
   const { me } = useAuth()
   const list = useMessages(REPORT_LIST_TEXT)
   const text = useMessages(TEXT)
@@ -272,6 +276,17 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           icon={
 <StarIcon className="size-4 shrink-0" />
           }
+        />
+        <NavLink
+          href="/calendar"
+          active={page === 'calendar'}
+          onClick={() => {
+            track('calendar_open', { from: 'sidebar' })
+            onCalendar()
+          }}
+          label={text.calendar}
+          shortcut="D"
+          icon={<CalendarIcon className="size-4 shrink-0" />}
         />
         <NavLink
           href="/blogs"

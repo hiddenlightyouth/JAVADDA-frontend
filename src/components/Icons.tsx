@@ -186,6 +186,16 @@ export function StarIcon({ className = 'size-4', strokeWidth = 1.4, label, fille
   )
 }
 
+/** 마감 달력의 달력이에요. */
+export function CalendarIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <rect x="2.5" y="3.5" width="11" height="10" rx="2" />
+      <path d="M2.5 6.8h11M5.5 2v2.6M10.5 2v2.6" />
+    </Icon>
+  )
+}
+
 /** 찾기 칸의 돋보기예요. */
 export function SearchIcon({ className = 'size-4 shrink-0 text-gray-400', strokeWidth = 1.5, label }: IconProps) {
   return (

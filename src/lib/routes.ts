@@ -31,6 +31,8 @@ const EXPLORE_PATH = /^\/explore\/?$/
 
 const RECOMMEND_PATH = /^\/recommend\/?$/
 
+const CALENDAR_PATH = /^\/calendar\/?$/
+
 const RESUME_PATH = /^\/resume\/?$/
 
 const BLOGS_PATH = /^\/blogs(?:\/([^/]+))?\/?$/
@@ -64,6 +66,7 @@ export type Page =
   | { kind: 'app-login' }
   | { kind: 'explore'; company?: string }
   | { kind: 'recommend' }
+  | { kind: 'calendar' }
   | { kind: 'resume' }
   | { kind: 'blogs'; company?: string }
   | { kind: 'company'; id: string }
@@ -74,10 +77,11 @@ export type Page =
   | { kind: 'account'; page: AccountPage }
   | { kind: 'article'; slug: string | null }
 
-/** 공고 탐색, 추천 공고, 내 이력서, 기술 블로그, 기업 상세, 진단, 리포트, 면접 연습, 관리자 화면은 앱 화면(macOS 앱, 웹의 /app)에서만 써요. */
+/** 공고 탐색, 추천 공고, 마감 달력, 내 이력서, 기술 블로그, 기업 상세, 진단, 리포트, 면접 연습, 관리자 화면은 앱 화면(macOS 앱, 웹의 /app)에서만 써요. */
 export const isAppOnly = (page: Page) =>
   page.kind === 'explore' ||
   page.kind === 'recommend' ||
+  page.kind === 'calendar' ||
   page.kind === 'resume' ||
   page.kind === 'blogs' ||
   page.kind === 'company' ||
@@ -94,6 +98,7 @@ export function pageFromPath(): Page | null {
   // 공고 탐색은 ?company=기업아이디로 그 기업 공고만 골라 둔 채 열 수 있어요.
   if (EXPLORE_PATH.test(path)) return { kind: 'explore', company: new URLSearchParams(window.location.search).get('company') ?? undefined }
   if (RECOMMEND_PATH.test(path)) return { kind: 'recommend' }
+  if (CALENDAR_PATH.test(path)) return { kind: 'calendar' }
   if (RESUME_PATH.test(path)) return { kind: 'resume' }
   // 기술 블로그는 /blogs/기업아이디로 그 기업의 분석을 바로 열어요.
   const blogs = BLOGS_PATH.exec(path)
@@ -130,6 +135,8 @@ export function pathOf(page: Page | null): string {
       return `/explore${page.company ? `?company=${encodeURIComponent(page.company)}` : ''}`
     case 'recommend':
       return '/recommend'
+    case 'calendar':
+      return '/calendar'
     case 'resume':
       return '/resume'
     case 'blogs':

@@ -128,6 +128,8 @@ src/
   components/Blogs.tsx       기술 블로그 (/blogs, /blogs/기업). 모든 기업의 글을 기업과 주제로 걸러 보는 갤러리, 많이 다룬 주제 칸, 기업을 고르면 그 기업의 요즘 고민과 면접에서 쓸 점. 글은 미니 브라우저로 열어요
   components/Recommend.tsx   추천 공고 (/recommend). 정렬, 적합도 메뉴 한 줄과 공고 탐색과 같은 카드
   components/Company.tsx     기업 상세 (/company/기업아이디). 소개와 훑어보는 정보, 채용 중인 공고, 자주 나오는 면접 질문, 기술 스택, 기술 블로그 요약(`blogs.ts`). 기업 사이트는 미니 브라우저로 열어요
+  components/DeadlineCalendar.tsx 마감 달력 (/calendar). 공고의 마감일을 달력에 놓고, 고른 날짜의 마감 공고와 그날 열려 있던 상시 채용 공고를 아래에 보여줘요
+  lib/holidays.ts     우리나라 공휴일(양력 공휴일과, 해마다 적는 음력 명절, 대체공휴일, 선거일). 마감 달력이 써요
   components/JobCard.tsx     공고 탐색과 추천 공고가 같이 쓰는 카드(JobCard)와 줄(JobRow), 둘을 고르는 JobItem, 보기 방식 버튼(LayoutToggle), 카드에서 여는 미니 브라우저(useJobBrowser)
   components/MyResume.tsx    내 이력서 (/resume). 서류 카드 목록(ResumeCard), 오른쪽에서 여는 서류 상세 칸(ResumeSheet), 서류 추가 창, PDF 끌어다 놓기와 링크로 올리기(ResumeUploader), 읽은 역량 고치기(SkillEditor)
   components/PostingBrowser.tsx 공고 원문, 기업 소개 사이트, 기술 블로그 글을 새 탭 대신 앱 안에서 보는 미니 브라우저. 화면을 가리지 않고 오른쪽에 나란히 붙고(`SplitView`), 폭을 끌어서 바꿔요. 막아 둔 사이트는 공고 요약을 보여줘요
@@ -249,6 +251,14 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 - 이력서가 없으면 사이드바의 추천 공고가 흐리게 잠기고 눌리지 않아요. 마우스를 올리면 메뉴 오른쪽에 왼쪽으로 꼬리가 달린 "이력서를 먼저 등록하세요" 말풍선(`Tip`의 `side="right"`)이 뜨고, 단축키 R도 받지 않아요. 주소로 바로 들어오면 올리라는 안내와 버튼만 보여줘요. 있으면 맨 위 한 줄에 정렬(유사도순, 최신순, 마감 임박순)과 적합도(50% 이상, 70% 이상, 처음은 50% 이상) 메뉴(`Dropdown`), 그 아래에 공고 수와 보기 방식 버튼이 있고, 공고 탐색과 같은 카드와 줄(`JobCard`)이 와요. 미니 브라우저도 같아요. 추천은 늘 대표 이력서로 해서 기준 서류를 고르는 메뉴는 없어요. 적합도가 50%(`RECOMMEND_MIN_FIT`) 아래인 공고는 낮음이라 추천에 넣지 않아요. 새 진단 화면의 나와 잘 맞는 공고 줄도 같아요. 맞는 공고가 없으면 역량을 보완하거나 공고 탐색에서 둘러보라고 안내해요.
 
+마감 달력 (`DeadlineCalendar`, `/calendar`, 단축키 D)
+
+- 공고의 마감일을 한 달 달력(일요일부터, 늘 6주)에 놓아서 어느 기업의 어떤 공고가 언제 마감인지 한눈에 봐요. 맨 위에 공고 탐색과 같은 기업 버튼 줄, 그 아래 한 줄에 이전 달과 다음 달, 오늘 버튼, 오른쪽에 전체 공고와 진단한 공고를 고르는 버튼이 있어요. 처음 열면 오늘부터 가장 가까운 마감이 있는 달과 날짜를 골라 둬요.
+- 요일 머리와 날짜 숫자는 일요일과 공휴일이 빨간색, 토요일이 메인 컬러예요. 공휴일(`holidays.ts`)은 넓은 화면에서 날짜 옆에 이름을 작게 적어요(한국어 화면만). 음력 명절과 대체공휴일은 해마다 적어 두어서, 해가 바뀌면 다음 해를 더해요. 지난 날은 흐리게 둬요.
+- 날짜 칸에는 그날 마감하는 공고를 기업 로고와 제목으로 셋까지 적고 나머지는 수만 적어요. 좁은 화면에서는 점과 수만 보여요. 진단한 공고는 연한 메인 컬러예요.
+- 상시 채용(마감 없음)은 올라온 날부터 계속 열려 있는 것으로 쳐서, 날짜 칸 오른쪽 위에 그날 열려 있던 수를 작게 적어요("37개의 상시 채용", 좁으면 "상시 37"). 누르면 그 날짜를 고르고 아래의 상시 채용 목록으로 내려가요.
+- 날짜를 고르면 아래에 "11월 1일 마감" 목록(없으면 "정보를 찾을 수 없음")과 "11월 1일 상시 채용" 목록이 차례로 와요. 그달에 마감이 하나도 없으면 마감 목록은 두지 않아요. 공고를 누르면 이동할지 묻고 진단으로 가요.
+
 기술 블로그 (`Blogs`, `/blogs`, 기업은 `/blogs/기업아이디`, 단축키 G)
 
 - 기업 기술 블로그의 대표 글을 요약하고, 요즘 어떤 고민을 하는지 분석해서 보여줘요. 서버가 각 블로그의 RSS를 모아 요약하고, 화면은 GET /blogs로 받아요(`fetchBlogDigests`). 기업 버튼 줄은 받은 요약이 있는 기업만 기업 목록 순서로 보여줘요(`blogCompaniesOf`). 멈춘 블로그를 세는 기준일(`COLLECTED_AT`)은 오늘이에요. 서버에 닿지 못하면 `src/lib/blogs.ts`에 적어 둔 글(2026년 10월 29일에 모은 기업 열한 곳의 글)을 보여주고, 그때 기준일은 그 날이에요.
@@ -363,7 +373,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 - 글자를 입력하는 중이거나, 보조 키를 누르고 있거나, 확인 창이 떠 있을 때는 받지 않아요.
 - 글자가 아니라 키의 자리(`event.code`)로 알아봐서, 한글 자판 상태에서도 그대로 동작해요.
-- 어디서나: N 새 진단, / 검색창으로. 앱에서는 T 공고 탐색, R 추천 공고, G 기술 블로그, B 사이드바 접기와 펴기도 있어요.
+- 어디서나: N 새 진단, / 검색창으로. 앱에서는 T 공고 탐색, R 추천 공고, D 마감 달력, G 기술 블로그, B 사이드바 접기와 펴기도 있어요.
 - 관리자 화면: 1부터 5까지 탭 바꾸기.
 - 리포트: 1부터 4까지 탭 바꾸기. 갭 상세 칸이나 확인 창이 열려 있으면 받지 않아요.
 - 어떤 키를 누르면 되는지는 평소에는 숨겨 두고, Option(Alt)을 누르고 있는 동안에만 화면에 자판 모양(`Kbd`)으로 보여줘요(`useShortcutHints`). 앱 사이드바의 새 진단과 공고 탐색과 추천 공고, 리포트의 탭 옆에 나와요. 줄 안에 넣은 것은 자리를 미리 차지하고, 탭에는 오른쪽 위 모서리에 얹어서(`corner`), 나타나도 화면이 밀리지 않아요. Option을 누른 채로 키를 눌러도 단축키가 동작해요.
@@ -400,11 +410,13 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 | 이벤트 | 언제 | 주요 값 |
 | --- | --- | --- |
-| `page_view` | 화면이 바뀔 때 | `screen`(home, explore, recommend, resume, blogs, company, diagnose, report, practice, about, articles, article, login, signup, me, history, app-login, admin), `posting`, `tab`, `slug` |
+| `page_view` | 화면이 바뀔 때 | `screen`(home, explore, recommend, calendar, resume, blogs, company, diagnose, report, practice, about, articles, article, login, signup, me, history, app-login, admin), `posting`, `tab`, `slug` |
 | `posting_select` | 공고 카드나 검색 결과를 눌러 진단 시작으로 갔을 때 | `posting`, `from`(home, explore, recommend, company), `query` |
 | `home_more_click` | 새 진단 화면의 공고 줄에서 전체 보기를 눌렀을 때 | `row`(fit, recent, closing) |
 | `home_company_select` | 새 진단 화면의 기업으로 둘러보기에서 기업을 눌렀을 때 | `company` |
 | `home_suggestion_use` | 새 진단 화면의 빈 검색창에서 Enter로 추천 검색어를 썼을 때 | `query` |
+| `calendar_open` | 사이드바에서 마감 달력을 눌렀을 때 | `from`(sidebar) |
+| `calendar_month_change` | 마감 달력에서 달을 넘겼을 때 | `step` |
 | `explore_open`, `recommend_open`, `resume_open`, `blogs_open` | 사이드바에서 공고 탐색, 추천 공고, 내 이력서, 기술 블로그를 눌렀을 때 | `from`(sidebar) |
 | `blog_company_select` | 기술 블로그에서 기업을 고르거나 전체로 돌아갔을 때 | `company`, `from`(chips) |
 | `blog_theme_select` | 기술 블로그에서 주제를 고르거나 풀었을 때 | `theme`, `from`(menu, card, empty) |
