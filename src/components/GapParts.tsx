@@ -105,6 +105,26 @@ const TEXT = messages({
   },
 })
 
+/** 로고가 없는 기업의 머리글자 칸 색이에요(바탕, 글자). 로고처럼 다크 모드에서도 그대로 써요. */
+const MARK_TONES: [string, string][] = [
+  ['#EFF8FF', '#1570EF'],
+  ['#ECFDF3', '#067647'],
+  ['#FEF6EE', '#B93815'],
+  ['#F4F3FF', '#5925DC'],
+  ['#FDF2FA', '#C11574'],
+  ['#F0F9FF', '#026AA2'],
+  ['#FFFAEB', '#B54708'],
+  ['#F2F4F7', '#344054'],
+]
+
+const hashOf = (text: string) => [...text].reduce((hash, char) => (hash * 31 + char.charCodeAt(0)) >>> 0, 7)
+
+/** 머리글자예요. "주식회사", "(주)" 같은 회사 형태는 떼고 첫 글자를 써요. */
+const markInitial = (company: Company) => {
+  const name = company.name.replace(/^\s*(주식회사|유한회사|재단법인|사단법인|\(주\)|\(유\)|㈜)\s*/, '').replace(/\s*(주식회사|\(주\)|㈜)\s*$/, '').trim()
+  return (name[0] ?? company.initial ?? '?').toUpperCase()
+}
+
 /** 기업 로고를 둥근 네모에 넣어요. 로고가 없거나 불러오지 못하면 기업 이름의 머리글자를 대신 넣어요. */
 export function CompanyMark({ company, className = 'size-12 text-[17px]' }: { company: Company; className?: string }) {
   const [broken, setBroken] = useState(false)
@@ -116,9 +136,11 @@ export function CompanyMark({ company, className = 'size-12 text-[17px]' }: { co
       </span>
     )
   }
+  // 로고가 없는 기업(고용24, 공공기관에서 온 중소기업 등)은 이름에서 뽑은 머리글자를 기업마다 정해진 연한 색 위에 그려요. 같은 기업은 늘 같은 색이에요.
+  const tone = MARK_TONES[hashOf(company.name) % MARK_TONES.length]
   return (
-    <span aria-hidden className={`flex shrink-0 items-center justify-center rounded-xl bg-gray-100 font-semibold text-gray-700 ${className}`}>
-      {company.initial}
+    <span aria-hidden className={`flex shrink-0 items-center justify-center rounded-xl font-semibold ${className}`} style={{ backgroundColor: tone[0], color: tone[1] }}>
+      {markInitial(company)}
     </span>
   )
 }
