@@ -445,9 +445,11 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `resume_primary_change` | 대표 이력서를 바꿨을 때 | `count`(올린 서류 수) |
 | `diagnose_start` | 공고를 눌러(또는 서류를 올려) 진단을 시작했을 때 | `posting`, `reused`(이미 만든 리포트를 열었는지) |
 | `report_tab_view` | 리포트의 탭을 눌렀을 때 | `tab`(summary, fit, review, questions) |
-| `report_rerun` | 리포트를 다시 진단했을 때 | `from`(button, outdated) |
+| `report_rerun` | 리포트를 다시 진단했을 때 | `from`(button) |
+| `report_resume_diagnose` | 리포트의 이력서 업데이트 칸에서 대표 이력서로 진단하거나 그 리포트로 갔을 때 | `existing` |
 | `report_delete` | 리포트를 지웠을 때 | `from`(sidebar, history) |
 | `gap_open` | 갭 카드를 눌러 상세 칸을 열었을 때 | `skill`, `kind` |
+| `gap_group_select` | 리포트 탭에서 갭 묶음(부족, 보완, 강점)을 골랐을 때 | `kind` |
 | `gap_plan_toggle` | 갭 상세에서 보완 계획에 넣거나 뺐을 때 | `skill`, `added` |
 | `gap_note_save` | 강점 상세에서 면접 노트를 저장했을 때 | `skill` |
 | `review_view`, `review_rerun` | 서류 검증 탭에서 서류 종류를 보거나 재검증했을 때 | `doc`(coverLetter, resume, portfolio) |
