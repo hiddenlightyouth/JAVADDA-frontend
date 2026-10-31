@@ -428,7 +428,7 @@ const FALLBACK_COMPANIES: Company[] = [
   { id: 'miso', name: '미소', initial: '미', logo: '/logos/miso.png', industry: '홈서비스', site: 'https://www.miso.kr', category: 'service' },
   { id: 'kurly', name: '컬리', initial: '컬', logo: '/logos/kurly.png', industry: '식품 커머스', site: 'https://kurly.career.greetinghr.com', category: 'commerce' },
   { id: 'myrealtrip', name: '마이리얼트립', initial: '마', logo: '/logos/myrealtrip.png', industry: '여행 플랫폼', site: 'https://myrealtrip.career.greetinghr.com', category: 'service' },
-  { id: 'krafton', name: '크래프톤', initial: '크', industry: '게임', site: 'https://www.krafton.com', category: 'service' },
+  { id: 'krafton', name: '크래프톤', initial: '크', logo: '/logos/krafton.png', industry: '게임', site: 'https://www.krafton.com', category: 'service' },
 ]
 
 /** 기업 목록이에요. 처음 그리기 전에 `loadCatalog`가 서버의 목록으로 채워요(배열은 그대로 두고 속만 바꿔요). */
@@ -1228,6 +1228,11 @@ const LOGO_BY_NAME: Record<string, string> = {
   국립공원공단: '/logos/knps.png',
   한국교통안전공단: '/logos/kotsa.png',
   이엔에프테크놀로지: '/logos/enf.png',
+  크래프톤: '/logos/krafton.png',
+  한국보훈복지의료공단: '/logos/bohun.png',
+  한국교육과정평가원: '/logos/kice.png',
+  세아특수강: '/logos/seah.png',
+  산업연구원: '/logos/kiet.png',
 }
 
 /**
