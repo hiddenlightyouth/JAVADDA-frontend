@@ -8,7 +8,7 @@ import { Dropdown } from './Dropdown'
 import { Failed, Notice, usePickConfirm } from './GapParts'
 import { JobItem, jobsGrid, jobsList, LayoutToggle, readLayout, useJobBrowser, type Layout } from './JobCard'
 import { SplitView } from './PostingBrowser'
-import { loadCenter, LoadProgress } from './ui'
+import { loadCenter, LoadProgress, useShowMore } from './ui'
 
 /**
  * 추천 공고 화면이에요. 올려 둔 이력서의 역량과 가까운 공고를 적합도 순서로 보여줘요.
@@ -91,6 +91,9 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
     () => (Array.isArray(loaded) && resume ? sortPostings(loaded, sort, resume).filter((posting) => (fitOf(posting, resume) ?? 0) >= threshold) : loaded),
     [loaded, sort, resume, threshold],
   )
+  // 공고가 많아도 버벅이지 않게 조금씩 그려요. 검색어나 필터가 바뀌면 처음부터예요.
+  const items = Array.isArray(list) ? list : []
+  const { count: shownCount, more: showMore } = useShowMore(items.length, `${items.length}:${items[0]?.id ?? ''}:${items.at(-1)?.id ?? ''}`)
   // 추천 기준에 조금 못 미치는 공고예요. 추천이 비거나 적어도 무엇을 채우면 될지 보이게 아래에 따로 둬요. 늘 적합도가 높은 것부터예요.
   const near = useMemo(
     () =>
@@ -188,7 +191,10 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
             // 아래에 조금 더 채우면 맞는 공고가 있으면 안내를 짧게 두고, 없으면 화면 가운데에 크게 둬요.
             <Notice title={L.none} body={L.noneBody} className={near.length > 0 ? 'mt-6' : 'mt-16'} />
           ) : (
-            <ul className={layout === 'gallery' ? jobsGrid : jobsList}>{list.map((posting, order) => item(posting, order, 'recommend'))}</ul>
+            <>
+              <ul className={layout === 'gallery' ? jobsGrid : jobsList}>{list.slice(0, shownCount).map((posting, order) => item(posting, order, 'recommend'))}</ul>
+              {showMore}
+            </>
           )}
         </div>
 

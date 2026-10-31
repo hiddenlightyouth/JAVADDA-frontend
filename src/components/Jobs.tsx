@@ -9,7 +9,7 @@ import { CategoryFilter, CompanyFilter, Failed, Notice, usePickConfirm } from '.
 import { SearchIcon } from './Icons'
 import { JobItem, jobsGrid, jobsList, LayoutToggle, readLayout, useJobBrowser, type Layout } from './JobCard'
 import { SplitView } from './PostingBrowser'
-import { loadCenter, LoadProgress } from './ui'
+import { loadCenter, LoadProgress, useShowMore } from './ui'
 
 /**
  * 공고 탐색 화면이에요. 공고를 화면 가득 펼쳐 놓고 직군과 경력으로 걸러 보다가, 눌러서 진단을 시작해요.
@@ -115,6 +115,9 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
             sort, resume) : loaded),
     [loaded, company, category, sort, resume],
   )
+  // 공고가 많아도 버벅이지 않게 조금씩 그려요. 검색어나 필터가 바뀌면 처음부터예요.
+  const items = Array.isArray(list) ? list : []
+  const { count: shownCount, more: showMore } = useShowMore(items.length, `${items.length}:${items[0]?.id ?? ''}:${items.at(-1)?.id ?? ''}`)
   const waiting = useLoadHold(list === undefined)
 
   return (
@@ -259,8 +262,9 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
               className="mt-16"
             />
           ) : (
+            <>
             <ul className={layout === 'gallery' ? jobsGrid : jobsList}>
-              {list.map((posting, order) => (
+              {list.slice(0, shownCount).map((posting, order) => (
                 <JobItem
                   key={`${layout}:${sort}:${posting.id}`}
                   layout={layout}
@@ -275,6 +279,8 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
                 />
               ))}
             </ul>
+            {showMore}
+            </>
           )}
         </div>
         {confirmPick.dialog}

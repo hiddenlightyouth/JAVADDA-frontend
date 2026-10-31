@@ -8,7 +8,7 @@ import { PageHeader, ScrollPage } from './AppPage'
 import { CompanyLocation } from './CompanyLocation'
 import { CompanyMark, Failed, Notice, Panel, PostingTile, SkillChip, skillTone, Tip } from './GapParts'
 import { PostingBrowser, SplitView, type BrowserPage } from './PostingBrowser'
-import { loadCenter, LoadProgress, toolButton } from './ui'
+import { loadCenter, LoadProgress, toolButton, useShowMore } from './ui'
 
 /**
  * 기업 상세 화면이에요. 기업 소개와 열린 공고, 위치, 이 기업 공고에 적힌 기술 스택, 면접 질문, 기술 블로그 글을 한 화면에 모아요.
@@ -178,6 +178,9 @@ export function Company({ id, onBack, onPick, onPostings, onBlogs }: {
   )
 }
 
+/** 기업 상세에서 한 번에 보여줄 공고 수예요. 더 있으면 "6개 더 보기"로 이어 그려요. */
+const COMPANY_POSTINGS = 6
+
 function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead }: {
   profile: CompanyProfile
   digest: BlogDigest | null
@@ -193,6 +196,8 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
   const families = [...new Set(postings.map((posting) => familyName(posting.family)).filter(Boolean))]
   const locations = [...new Set(postings.map((posting) => posting.location))]
   const sorted = resume ? sortPostings(postings, 'fit', resume) : postings
+  // 기업 공고가 많아도 칸이 끝없이 길어지지 않게 여섯 개씩 보여줘요.
+  const postingMore = useShowMore(sorted.length, profile.company.id, COMPANY_POSTINGS)
   const facts = [
     { label: L.facts.industry, value: profile.company.industry },
     { label: L.facts.open, value: L.openCount(postings.length) },
@@ -238,7 +243,7 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
               <p className="text-[13px] text-gray-500">{L.noPostings}</p>
             ) : (
               <ul className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
-                {sorted.map((posting, order) => (
+                {sorted.slice(0, postingMore.count).map((posting, order) => (
                   <PostingTile
                     key={posting.id}
                     posting={posting}
@@ -254,6 +259,7 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
                 ))}
               </ul>
             )}
+            {sorted.length > 0 && postingMore.more}
           </Panel>
 
           {profile.questions.length > 0 && (

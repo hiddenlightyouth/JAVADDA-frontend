@@ -7,7 +7,7 @@ import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
 import { CategoryFilter, CompanyFilter, CompanyMark, Failed, FitTag, PostingMeta, usePickConfirm } from './GapParts'
 import { ChevronRightIcon } from './Icons'
-import { Badge, iconButton, loadCenter, LoadProgress, Segmented, toolButton } from './ui'
+import { Badge, iconButton, loadCenter, LoadProgress, Segmented, toolButton, useShowMore } from './ui'
 
 /**
  * 마감 달력이에요. 공고의 마감일을 달력에 놓아서, 어느 기업의 어떤 공고가 언제 마감인지 한눈에 봐요.
@@ -150,7 +150,10 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
   const alwaysOn = (key: string) => always.filter((item) => item.from <= key).map((item) => item.posting)
   const selectedDate = new Date(`${selected}T00:00:00`)
   const selectedList = byDay.get(selected) ?? []
+  // 오른쪽 목록은 공고가 많아도 버벅이지 않게 조금씩 그려요. 날짜를 바꾸면 처음부터예요.
+  const dayMore = useShowMore(selectedList.length, `${selected}:${selectedList.length}`)
   const selectedAlways = alwaysOn(selected)
+  const alwaysMore = useShowMore(selectedAlways.length, `${selected}:${selectedAlways.length}`)
   // 상시 채용 수를 누르면 그 날짜를 고르고 아래의 상시 채용 목록으로 내려가요.
   const alwaysRef = useRef<HTMLElement>(null)
 
@@ -336,11 +339,12 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
                     <p className="mt-3 text-[13.5px] text-gray-500">{L.dayEmpty}</p>
                   ) : (
                     <ul className="mt-3 flex flex-col gap-2">
-                      {selectedList.map((posting) => (
+                      {selectedList.slice(0, dayMore.count).map((posting) => (
                         <DayRow key={posting.id} posting={posting} fit={fitOf(posting, resume)} diagnosed={diagnosed.has(posting.id)} onOpen={() => pick(posting, 'list')} />
                       ))}
                     </ul>
                   )}
+                  {dayMore.more}
                 </section>
               )}
 
@@ -351,10 +355,11 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
                     {L.alwaysTitle(selectedDate.getMonth(), selectedDate.getDate())} <span className="text-gray-400 tabular-nums">{selectedAlways.length}</span>
                   </h2>
                   <ul className="mt-3 flex flex-col gap-2">
-                    {selectedAlways.map((posting) => (
+                    {selectedAlways.slice(0, alwaysMore.count).map((posting) => (
                       <DayRow key={posting.id} posting={posting} fit={fitOf(posting, resume)} diagnosed={diagnosed.has(posting.id)} onOpen={() => pick(posting, 'list')} />
                     ))}
                   </ul>
+                  {alwaysMore.more}
                 </section>
               )}
             </div>

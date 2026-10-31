@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type CSSProperties, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { messages, useMessages } from '../lib/i18n'
 import { LOAD_SHOW_AFTER_MS } from '../lib/load'
 import { Kbd } from './Shortcuts'
@@ -12,9 +12,45 @@ const AiLoader = lazy(() => import('./AiLoader'))
  */
 
 const TEXT = messages({
-  ko: { loading: '불러오고 있어요', progress: '진행 정도' },
-  en: { loading: 'Loading', progress: 'Progress' },
+  ko: { loading: '불러오고 있어요', progress: '진행 정도', more: (count: number) => `${count}개 더 보기` },
+  en: { loading: 'Loading', progress: 'Progress', more: (count: number) => `Show ${count} more` },
 })
+
+// ── 긴 목록 ────────────────────────────────────────────
+
+/** 긴 목록을 처음에 그리는 수이자, 더 그릴 때마다 늘리는 수예요. */
+export const SHOW_STEP = 24
+
+/**
+ * 공고가 수백, 수천 개로 늘어도 화면이 버벅이지 않게 긴 목록을 조금씩 그려요. 처음에 step개만 그리고,
+ * 목록 끝(`more`)이 화면에 들어오면 저절로 step개씩 더 그려요. 끝에는 "N개 더 보기" 버튼도 있어요. reset이 바뀌면(검색어, 필터) 처음 수로 돌아가요.
+ * 화면은 `items.slice(0, count)`만 그리고 목록 아래에 `more`를 둬요. 다 그렸으면 more는 아무것도 그리지 않아요.
+ */
+export function useShowMore(total: number, reset: unknown, step = SHOW_STEP): { count: number; more: ReactNode } {
+  const L = useMessages(TEXT)
+  const [count, setCount] = useState(step)
+  const sentinel = useRef<HTMLDivElement>(null)
+  useEffect(() => setCount(step), [reset, step])
+  const left = Math.max(0, total - count)
+  useEffect(() => {
+    const node = sentinel.current
+    if (!node || left === 0) return
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) setCount((value) => value + step)
+    }, { rootMargin: '400px' })
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [left, step])
+  const more =
+    left > 0 ? (
+      <div ref={sentinel} className="mt-6 flex justify-center">
+        <button type="button" onClick={() => setCount((value) => value + step)} className={toolButton}>
+          {L.more(Math.min(step, left))}
+        </button>
+      </div>
+    ) : null
+  return { count, more }
+}
 
 // ── 버튼 ───────────────────────────────────────────────
 

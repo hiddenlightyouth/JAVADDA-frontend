@@ -12,7 +12,7 @@ import { DeadlineTag } from './JobCard'
 import { NaverJobMap } from './NaverJobMap'
 import { showToast } from '../lib/toast'
 import { boxAround, KoreaMap, pinKey, regionBox, type MapBox, type MapPin, type PinGroup } from './KoreaMap'
-import { Badge, loadCenter, LoadProgress, toolButton } from './ui'
+import { Badge, loadCenter, LoadProgress, toolButton, useShowMore } from './ui'
 
 /**
  * 채용 지도예요. 화면을 나누지 않고 지도만 크게 띄워요. 네이버 지도 키가 있으면 네이버 지도(`NaverJobMap`), 없으면 SVG 지도(`KoreaMap`)예요. 공고의 근무지를 권역(수도권, 강원권, 충청권, 전라권, 경상권, 제주권)으로 묶어 지도에 놓아요.
@@ -167,6 +167,8 @@ export function JobMap({ onPick }: { onPick: (postingId: string) => void }) {
     if (me) return picked.sort((a, b) => (distanceOf(a) ?? Infinity) - (distanceOf(b) ?? Infinity))
     return resume ? picked.sort((a, b) => (fitOf(b, resume) ?? 0) - (fitOf(a, resume) ?? 0)) : picked.sort((a, b) => b.postedAt.localeCompare(a.postedAt))
   }, [selected, company, resume, me, distanceOf])
+  // 공고가 많아도 버벅이지 않게 칸의 목록은 조금씩 그려요. 자리나 기업을 바꾸면 처음부터예요.
+  const listMore = useShowMore(list.length, `${list.length}:${list[0]?.id ?? ''}:${list.at(-1)?.id ?? ''}`)
 
   // 고른 자리에 공고를 낸 기업이에요. 공고가 많은 순서예요.
   const selectedCompanies = useMemo(() => {
@@ -337,11 +339,12 @@ export function JobMap({ onPick }: { onPick: (postingId: string) => void }) {
                   <p className="mt-3 text-[13.5px] text-gray-500">{L.empty}</p>
                 ) : (
                   <ul className="mt-4 flex flex-col gap-2">
-                    {list.map((posting) => (
+                    {list.slice(0, listMore.count).map((posting) => (
                       <MapRow key={posting.id} posting={posting} fit={fitOf(posting, resume)} distance={distanceOf(posting)} diagnosed={diagnosed.has(posting.id)} onOpen={() => pick(posting)} />
                     ))}
                   </ul>
                 )}
+                {listMore.more}
               </aside>
             )}
           </div>
