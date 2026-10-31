@@ -201,8 +201,10 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
         ) : loaded === 'failed' ? (
           <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
         ) : (
-          <>
-            <div className="overflow-hidden rounded-2xl border border-gray-200">
+          // 넓은 화면에서는 달력을 왼쪽에 두고, 고른 날짜의 공고를 오른쪽 칸에 나란히 둬요. 좁으면 달력 아래로 내려가요.
+          // 달력과 오른쪽 칸은 저마다 @container라, 안의 칸과 줄은 화면 폭이 아니라 자기 폭을 보고 글자를 줄여요.
+          <div className="grid gap-8 @5xl:grid-cols-[minmax(0,1fr)_360px] @5xl:items-start @7xl:grid-cols-[minmax(0,1fr)_420px]">
+            <div className="@container overflow-hidden rounded-2xl border border-gray-200">
               <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
                 {L.weekdays.map((name, index) => (
                   <span key={name} className={`py-2 text-center text-[12px] font-medium ${index === 0 ? 'text-red-500' : index === 6 ? 'text-brand' : 'text-gray-500'}`}>
@@ -248,9 +250,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
                         >
                           {day.getDate()}
                         </span>
-                        {holiday && inMonth && getLang() === 'ko' && (
-                          <span className={`hidden min-w-0 truncate text-[10.5px] text-red-400 @3xl:inline ${past ? 'opacity-50' : ''}`}>{holiday}</span>
-                        )}
+                        {holiday && inMonth && getLang() === 'ko' && <span className={`hidden min-w-0 truncate text-[10.5px] text-red-400 @3xl:inline ${past ? 'opacity-50' : ''}`}>{holiday}</span>}
                         {/* 그날 열려 있던 상시 채용 수예요. 누르면 아래에 그 공고들이 나와요. */}
                         {alwaysCount > 0 && (
                           <button
@@ -262,8 +262,8 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
                               requestAnimationFrame(() => alwaysRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
                             }}
                             className={`ml-auto min-w-0 shrink-0 rounded px-0.5 text-[10px] whitespace-nowrap tabular-nums @3xl:px-1 @3xl:text-[10.5px] transition-colors ${
-                              isSelected ? 'text-brand-hover' : 'text-gray-400 hover:text-gray-700'} ${past ? 'opacity-50' : ''
-                            }`}
+                              isSelected ? 'text-brand-hover' : 'text-gray-400 hover:text-gray-700'
+                            } ${past ? 'opacity-50' : ''}`}
                           >
                             <span className="@3xl:hidden">{L.alwaysShort(alwaysCount)}</span>
                             <span className="hidden @3xl:inline">{L.always(alwaysCount)}</span>
@@ -305,36 +305,39 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
               </div>
             </div>
 
-            {/* 고른 날짜에 마감하는 공고예요. 그달에 마감이 하나도 없으면 칸째 두지 않아요. */}
-            {monthCount > 0 && (
-              <section className="mt-8">
-                <h2 className="text-[16px] font-semibold text-gray-900">{L.day(selectedDate.getMonth(), selectedDate.getDate())}</h2>
-                {selectedList.length === 0 ? (
-                  <p className="mt-3 text-[13.5px] text-gray-500">{L.dayEmpty}</p>
-                ) : (
+            {/* 오른쪽 칸은 달력 옆에 멈춰 있고, 공고가 많으면 칸 안에서 스크롤해요. */}
+            <div className="@container flex flex-col gap-8 @5xl:sticky @5xl:top-0 @5xl:max-h-[calc(100dvh-10rem)] @5xl:overflow-y-auto">
+              {/* 고른 날짜에 마감하는 공고예요. 그달에 마감이 하나도 없으면 칸째 두지 않아요. */}
+              {monthCount > 0 && (
+                <section>
+                  <h2 className="text-[16px] font-semibold text-gray-900">{L.day(selectedDate.getMonth(), selectedDate.getDate())}</h2>
+                  {selectedList.length === 0 ? (
+                    <p className="mt-3 text-[13.5px] text-gray-500">{L.dayEmpty}</p>
+                  ) : (
+                    <ul className="mt-3 flex flex-col gap-2">
+                      {selectedList.map((posting) => (
+                        <DayRow key={posting.id} posting={posting} fit={fitOf(posting, resume)} diagnosed={diagnosed.has(posting.id)} onOpen={() => pick(posting, 'list')} />
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              )}
+
+              {/* 고른 날짜에 열려 있던 상시 채용 공고예요. */}
+              {selectedAlways.length > 0 && (
+                <section ref={alwaysRef} className="scroll-mt-4">
+                  <h2 className="text-[16px] font-semibold text-gray-900">
+                    {L.alwaysTitle(selectedDate.getMonth(), selectedDate.getDate())} <span className="text-gray-400 tabular-nums">{selectedAlways.length}</span>
+                  </h2>
                   <ul className="mt-3 flex flex-col gap-2">
-                    {selectedList.map((posting) => (
+                    {selectedAlways.map((posting) => (
                       <DayRow key={posting.id} posting={posting} fit={fitOf(posting, resume)} diagnosed={diagnosed.has(posting.id)} onOpen={() => pick(posting, 'list')} />
                     ))}
                   </ul>
-                )}
-              </section>
-            )}
-
-            {/* 고른 날짜에 열려 있던 상시 채용 공고예요. */}
-            {selectedAlways.length > 0 && (
-              <section ref={alwaysRef} className="mt-8 scroll-mt-4">
-                <h2 className="text-[16px] font-semibold text-gray-900">
-                  {L.alwaysTitle(selectedDate.getMonth(), selectedDate.getDate())} <span className="text-gray-400 tabular-nums">{selectedAlways.length}</span>
-                </h2>
-                <ul className="mt-3 flex flex-col gap-2">
-                  {selectedAlways.map((posting) => (
-                    <DayRow key={posting.id} posting={posting} fit={fitOf(posting, resume)} diagnosed={diagnosed.has(posting.id)} onOpen={() => pick(posting, 'list')} />
-                  ))}
-                </ul>
-              </section>
-            )}
-          </>
+                </section>
+              )}
+            </div>
+          </div>
         )}
       </div>
       {confirmPick.dialog}
