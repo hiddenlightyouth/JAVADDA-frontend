@@ -313,7 +313,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
   const [deleting, setDeleting] = useState<Report | null>(null)
 
   return (
-    <aside className="relative z-30 flex w-64 shrink-0 flex-col border-r border-gray-200 bg-gray-50">
+    <aside className="relative z-30 flex w-72 shrink-0 flex-col border-r border-gray-200 bg-gray-50">
       {isWebApp ? (
         // 웹에서는 왼쪽 위의 사이드바 버튼 옆에 로고를 두고, 누르면 새 진단 화면으로 가요. 높이는 헤더와 맞춰요.
         <div className="flex h-14 shrink-0 items-center pl-12">

@@ -139,11 +139,11 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
           <>
             <div aria-hidden onClick={() => setDrawerOpen(false)} className="fixed inset-0 z-30 animate-fade bg-gray-900/20" />
             <div className="fixed inset-y-0 left-0 z-30 flex animate-slide-in-left">
-              <Suspense fallback={<aside className="w-64 border-r border-gray-200 bg-gray-50" />}>{panel}</Suspense>
+              <Suspense fallback={<aside className="w-72 border-r border-gray-200 bg-gray-50" />}>{panel}</Suspense>
             </div>
           </>
         ) : (
-          <Suspense fallback={<aside data-app-drag className="w-64 shrink-0 border-r border-gray-200 bg-gray-50" />}>{panel}</Suspense>
+          <Suspense fallback={<aside data-app-drag className="w-72 shrink-0 border-r border-gray-200 bg-gray-50" />}>{panel}</Suspense>
         ))}
       {children}
       {settingsOpen && (
