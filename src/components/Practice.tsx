@@ -17,10 +17,10 @@ const TEXT = messages({
     missingBody: '리포트가 지워졌거나 아직 질문을 만들지 못했어요.',
     back: '돌아가기',
     exit: '면접 나가기',
-    exitTitle: '면접에서 정말 나갈까요?',
-    exitBody: '지금 나가면 이번 면접의 진행 상황과 결과를 다시 볼 수 없어요.',
+    exitTitle: '면접을 여기서 마칠까요?',
+    exitBody: '지금까지 답한 질문만 채점해서 결과를 보여줘요. 답변은 기록에 남아요.',
     stay: '계속하기',
-    leave: '나가기',
+    leave: '여기까지 평가받기',
     progress: (current: number, total: number) => `${current} / ${total}`,
     introTitle: '가상 면접 시작',
     introBody: '면접 준비가 되었다면 편안한 환경에서 본인을 테스트 해보세요.',
@@ -70,10 +70,10 @@ const TEXT = messages({
     missingBody: 'The report was deleted or questions are not ready.',
     back: 'Go back',
     exit: 'Leave interview',
-    exitTitle: 'Leave the interview?',
-    exitBody: "If you leave now, you won't be able to see this interview's progress or results again.",
+    exitTitle: 'End the interview here?',
+    exitBody: "We'll grade only the questions you answered and show the results. Your answers are saved.",
     stay: 'Keep going',
-    leave: 'Leave',
+    leave: 'Get feedback so far',
     progress: (current: number, total: number) => `${current} / ${total}`,
     introTitle: 'Start a mock interview',
     introBody: 'When you feel ready, find a comfortable spot and put yourself to the test.',
@@ -262,6 +262,41 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     void ask(0)
   }
 
+  /** 질문 하나의 답을 결과에 남기고, 답했으면 뒤에서 채점을 받아요. 한 글자라도 답했으면 채점하고, 아무 말도 없으면 답변하지 않음이에요. */
+  function record(at: number, question: InterviewQuestion, text: string) {
+    const gradable = text.length > 0
+    const entry: Answer = { question, text, spoken: spoken.current, feedback: gradable ? 'grading' : 'skipped' }
+    setAnswers((prev) => [...prev.slice(0, at), entry])
+    if (gradable) {
+      track('practice_submit', { voice: spoken.current })
+      void submitAnswer(id, question, text).then((result) => {
+        setAnswers((prev) => prev.map((item, order) => (order === at ? { ...item, feedback: result ?? 'failed' } : item)))
+      })
+    } else track('practice_skip')
+  }
+
+  /**
+   * 면접 중에 나가기를 누르면 여기까지만 평가해요. 지금 답하던 질문도 한 말이 있으면 채점에 넣어요.
+   * 아직 아무것도 답하지 않았으면 볼 결과가 없어서 그냥 나가요.
+   */
+  function finishHere() {
+    if (!questions || !current) return exit()
+    run.current += 1
+    voice.stop()
+    const text = phase === 'answering' ? joinSpeech(answer, dictation.finish()).trim() : ''
+    dictation.finish()
+    setConfirming(false)
+    // 다음 질문으로 넘어가던 중이면 지금 질문의 답은 이미 남겼어요.
+    const answeredNow = phase === 'answering' && text.length > 0
+    const kept = answers.slice(0, phase === 'moving' ? index + 1 : index).filter((item) => item.feedback !== 'skipped')
+    if (kept.length === 0 && !answeredNow) return exit()
+    track('practice_finish_early', { answered: kept.length + (answeredNow ? 1 : 0), total: questions.length })
+    // 답하지 않은 뒤의 질문은 결과에 넣지 않아요.
+    setAnswers((prev) => prev.slice(0, phase === 'moving' ? index + 1 : index))
+    if (answeredNow) record(index, current, text)
+    setPhase('finished')
+  }
+
   /** 지금 질문의 답을 마치고 다음 질문으로 넘어가요. 채점은 뒤에서 받아요. */
   function complete(skip = false) {
     if (!questions || !current) return
@@ -270,16 +305,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     const text = skip ? '' : joinSpeech(answer, dictation.finish()).trim()
     dictation.finish()
     const at = index
-    // 한 글자라도 답했으면 채점해요. 답하지 않음은 아무 말도 하지 않고 건너뛴 질문에만 붙어요.
-    const gradable = text.length > 0
-    const entry: Answer = { question: current, text, spoken: spoken.current, feedback: gradable ? 'grading' : 'skipped' }
-    setAnswers((prev) => [...prev.slice(0, at), entry])
-    if (gradable) {
-      track('practice_submit', { voice: spoken.current })
-      void submitAnswer(id, current, text).then((result) => {
-        setAnswers((prev) => prev.map((item, order) => (order === at ? { ...item, feedback: result ?? 'failed' } : item)))
-      })
-    } else track('practice_skip')
+    record(at, current, text)
     setPhase('moving')
     setTimeout(() => {
       if (mine !== run.current) return
@@ -504,7 +530,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
               <button type="button" autoFocus onClick={() => setConfirming(false)} className="h-9 rounded-full px-4 text-[13px] font-medium text-[#fff]/80 transition-colors hover:bg-[#fff]/10">
                 {L.stay}
               </button>
-              <button type="button" onClick={exit} className="h-9 rounded-full bg-red-500 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-red-600">
+              <button type="button" onClick={finishHere} className="h-9 rounded-full bg-[#fff] px-4 text-[13px] font-semibold text-[#000] transition-opacity hover:opacity-90">
                 {L.leave}
               </button>
             </div>
