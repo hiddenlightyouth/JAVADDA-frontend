@@ -424,7 +424,7 @@ export function PostingMeta({ posting, size = 'sm', careerClass = 'flex', locati
  */
 /**
  * 기업의 사업 분류를 고르는 버튼 줄이에요. 기업이 많아져서 공고 탐색과 마감 달력은 기업 대신 이것으로 골라요. 공고가 있는 분류만 보여줘요.
- * 기업 상세나 새 진단에서 한 기업을 골라 들어오면 그 기업 이름을 앞에 두고, 누르면 풀려요.
+ * 네카라쿠배당토가 아닌 기업을 골라 들어오면(기업 상세, 새 진단) 그 기업 이름을 앞에 두고, 누르면 풀려요.
  */
 export function CategoryFilter({ postings, value, onChange, label, allLabel, company, onClearCompany }: {
   postings: readonly { companyId: string }[]

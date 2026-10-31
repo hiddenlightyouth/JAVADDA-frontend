@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
-import { careerName, companyOf, type CompanyCategory, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, SEARCH_SUGGESTIONS, SUGGEST_MS } from '../lib/gap'
+import { careerName, companyOf, type CompanyCategory, majorCompanies, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, SEARCH_SUGGESTIONS, SUGGEST_MS } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
-import { CategoryFilter, Failed, Notice, usePickConfirm } from './GapParts'
+import { CategoryFilter, CompanyFilter, Failed, Notice, usePickConfirm } from './GapParts'
 import { SearchIcon } from './Icons'
 import { JobItem, jobsGrid, jobsList, LayoutToggle, readLayout, useJobBrowser, type Layout } from './JobCard'
 import { SplitView } from './PostingBrowser'
@@ -35,6 +35,7 @@ const TEXT = messages({
     reset: '조건 초기화',
     location: '지역',
     category: '기업 분류',
+    majors: '주요 기업',
   },
   en: {
     title: 'Explore jobs',
@@ -50,6 +51,7 @@ const TEXT = messages({
     reset: 'Clear filters',
     location: 'Location',
     category: 'Company type',
+    majors: 'Major companies',
   },
 })
 
@@ -201,18 +203,31 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
           />
         </div>
 
-        {/* 기업이 많아서 사업 분류로 골라요. 다시 누르면 풀려요. 기업 상세에서 왔으면 그 기업이 앞에 보여요. */}
+        {/* 네카라쿠배당토는 로고로 바로 고르고, 나머지는 사업 분류로 골라요. 둘을 같이 고르면 비기 쉬워서 하나를 고르면 다른 하나는 풀려요. */}
         <div className="mt-4">
+          <CompanyFilter
+            companies={majorCompanies()}
+            value={company}
+            label={L.majors}
+            onChange={(next) => {
+              track('jobs_company_select', { company: next ?? 'all' })
+              setCompany(next)
+              setCategory(null)
+            }}
+          />
+        </div>
+        <div className="mt-2">
           <CategoryFilter
             postings={Array.isArray(loaded) ? loaded : []}
             value={category}
             label={L.category}
             allLabel={L.all}
-            company={company ? companyOf(company) : null}
+            company={company && !majorCompanies().some((item) => item.id === company) ? companyOf(company) : null}
             onClearCompany={() => setCompany(null)}
             onChange={(next) => {
               track('jobs_category_select', { category: next ?? 'all' })
               setCategory(next)
+              setCompany(null)
             }}
           />
         </div>

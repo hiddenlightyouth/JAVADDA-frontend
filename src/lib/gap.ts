@@ -324,6 +324,11 @@ export const COMPANIES: Company[] = [...FALLBACK_COMPANIES]
 
 const companyById = new Map(COMPANIES.map((company) => [company.id, company]))
 
+/** 기업 버튼으로 따로 보여주는 대기업이에요. 네카라쿠배당토 순서예요. */
+const MAJOR_COMPANY_IDS = ['naver', 'kakao', 'line', 'coupang', 'woowa', 'daangn', 'toss']
+
+export const majorCompanies = () => MAJOR_COMPANY_IDS.flatMap((id) => COMPANIES.filter((company) => company.id === id))
+
 export const companyOf = (id: string): Company => companyById.get(id) ?? { id, name: id, initial: id[0]?.toUpperCase() ?? '?', industry: '', site: '' }
 
 /** 스킬이 어느 묶음인지. 레이더의 축이에요. */
