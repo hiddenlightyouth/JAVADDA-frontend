@@ -26,7 +26,6 @@ const TEXT = messages({
     more: '공고 탐색에서 보기',
     noPostings: '지금 열려 있는 공고가 없어요.',
     stack: '기술 스택',
-    stackHint: '이 기업 공고에 적힌 기술이에요.',
     stackCount: (count: number, total: number) => `공고 ${total}개 중 ${count}개에 적혀 있어요.`,
     questions: '자주 나오는 면접 질문',
     questionsHint: '이 기업 기술 스택에 맞춘 예상 질문이에요.',
@@ -49,7 +48,6 @@ const TEXT = messages({
     more: 'View in Explore',
     noPostings: 'No open postings right now.',
     stack: 'Tech stack',
-    stackHint: 'Skills listed in the postings of this company.',
     stackCount: (count: number, total: number) => `Listed in ${count} of ${total} postings.`,
     questions: 'Common interview questions',
     questionsHint: 'Likely questions for the tech stack of this company.',
@@ -278,7 +276,6 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
         <div className="flex min-w-0 flex-col gap-4">
           <CompanyLocation profile={profile} />
           <Panel title={L.stack}>
-            <p className="-mt-2 mb-4 text-[12px] leading-relaxed text-gray-400">{L.stackHint}</p>
             <div className="space-y-4">
               {stack.map((group) => (
                 <section key={group.axis}>
