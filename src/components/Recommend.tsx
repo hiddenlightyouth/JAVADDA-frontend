@@ -121,7 +121,7 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
       order={order}
       onView={() => browser.view(posting)}
       onCompany={() => browser.viewCompany(posting.companyId)}
-      onOpen={() => confirmPick.ask(posting, () => analyze(posting, from))}
+      onOpen={() => confirmPick.ask(posting, () => browser.view(posting), 'view')}
       onAnalyze={() => analyze(posting, from)}
     />
   )

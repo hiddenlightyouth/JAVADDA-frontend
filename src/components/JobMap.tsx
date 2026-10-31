@@ -236,7 +236,7 @@ export function JobMap({ onPick }: { onPick: (postingId: string) => void }) {
     confirmPick.ask(posting, () => {
       track('posting_select', { posting: posting.id, from: 'map' })
       onPick(posting.id)
-    })
+    }, 'analyze')
   }
 
   // 네이버 지도 키가 있으면 네이버 지도로, 없거나 인증에 실패하면 SVG 지도로 그려요. 핀과 칸은 같아요.

@@ -270,7 +270,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
                   onCompany={() => browser.viewCompany(posting.companyId)}
                   fit={fitOf(posting, resume)}
                   order={order}
-                  onOpen={() => confirmPick.ask(posting, () => analyze(posting))}
+                  onOpen={() => confirmPick.ask(posting, () => browser.view(posting), 'view')}
                   onAnalyze={() => analyze(posting)}
                 />
               ))}
