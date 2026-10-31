@@ -1084,10 +1084,48 @@ export function requestLogin() {
 type ServerCompany = Omit<Company, 'logo' | 'techBlog' | 'category'> & { logo?: string | null; techBlog?: string | null; category?: CompanyCategory | null }
 type ServerPosting = Omit<JobPosting, 'deadline' | 'fitScore'> & { deadline?: string | null; fitScore?: number | null }
 
+/**
+ * 서버가 로고를 주지 않는 기업의 로고예요(`public/logos`). 워크넷에서 모은 기업은 아이디가 바뀔 수 있어서 이름으로 찾아요.
+ * 기업이나 그룹의 공식 사이트 아이콘을 받아 둔 것이고, 계열사는 그룹 로고를 같이 써요. 흐리거나 알아보기 어려운 아이콘은 넣지 않고 머리글자로 둬요.
+ */
+const LOGO_BY_NAME: Record<string, string> = {
+  세스코: '/logos/cesco.png',
+  녹십자홀딩스: '/logos/gc.png',
+  지씨씨엘: '/logos/gc.png',
+  두산퓨얼셀: '/logos/doosan.png',
+  에스디바이오센서: '/logos/sdbiosensor.png',
+  경동나비엔: '/logos/kdnavien.png',
+  롯데바이오로직스: '/logos/lotte.png',
+  롯데글로벌로지스: '/logos/lotte.png',
+  롯데컬처웍스: '/logos/lottecinema.png',
+  에스케이온: '/logos/sk.png',
+  에스케이바이오팜: '/logos/sk.png',
+  비지에프푸드: '/logos/bgf.png',
+  비지에프에코머티리얼즈: '/logos/bgf.png',
+  지에스리테일: '/logos/gs.png',
+  연합뉴스: '/logos/yna.png',
+  대한적십자사: '/logos/redcross.png',
+  한국카본: '/logos/hcarbon.png',
+  비케이알: '/logos/burgerking.png',
+  에어로케이항공: '/logos/aerok.png',
+  해커스어학원: '/logos/hackers.png',
+  중소기업은행: '/logos/ibk.png',
+  하나저축은행: '/logos/hana.png',
+  케이비라이프파트너스: '/logos/kb.png',
+  국립암센터: '/logos/ncc.png',
+  국립중앙의료원: '/logos/nmc.png',
+  한전KPS: '/logos/kps.png',
+  에이치디현대크랭크샤프트: '/logos/hd.png',
+  한국농어촌공사: '/logos/ekr.png',
+  국립공원공단: '/logos/knps.png',
+  한국교통안전공단: '/logos/kotsa.png',
+  이엔에프테크놀로지: '/logos/enf.png',
+}
+
 const toCompany = (item: ServerCompany): Company => ({
   ...item,
   initial: item.initial || item.name.slice(0, 1).toUpperCase(),
-  logo: item.logo ?? undefined,
+  logo: item.logo ?? LOGO_BY_NAME[item.name],
   techBlog: item.techBlog ?? undefined,
   category: item.category ?? undefined,
   site: item.site ?? '',
