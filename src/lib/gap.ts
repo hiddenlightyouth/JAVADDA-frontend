@@ -1230,10 +1230,13 @@ const LOGO_BY_NAME: Record<string, string> = {
   이엔에프테크놀로지: '/logos/enf.png',
 }
 
+/** 업종 대신 기업 규모가 적혀 오는 공공 기업이에요. 로고가 없으면 정부 상징(`public/logos/gov.svg`, 위키미디어 공용의 대한민국 정부 상징)을 붙여요. */
+const PUBLIC_SIZES = new Set(['공공기관', '공기업'])
+
 const toCompany = (item: ServerCompany): Company => ({
   ...item,
   initial: item.initial || item.name.slice(0, 1).toUpperCase(),
-  logo: item.logo ?? LOGO_BY_NAME[item.name],
+  logo: item.logo ?? LOGO_BY_NAME[item.name] ?? (item.industry && PUBLIC_SIZES.has(item.industry) ? '/logos/gov.svg' : undefined),
   techBlog: item.techBlog ?? undefined,
   category: item.category ?? undefined,
   site: item.site ?? '',
@@ -1451,6 +1454,16 @@ const COMPANY_OFFICE: Record<string, CompanyOffice> = {
   wanted: { address: '서울 송파구 올림픽로 300', lat: 37.5126, lon: 127.1025 },
   bucketplace: { address: '서울 서초구 서초대로74길 4', lat: 37.4966, lon: 127.0257 },
 }
+
+/**
+ * 기업 규모예요. 고용24에서 온 기업은 서버가 업종 자리에 규모(공공기관, 공기업, 대기업, 중견기업)를 적어 보내서 그걸 읽어요.
+ * 서버가 업종을 적어 주는 기업은 공정거래위원회가 기업집단으로 지정한 곳만 화면에 적어 뒀어요. 서버가 규모를 주게 되면 그쪽으로 옮겨요.
+ */
+const SIZE_WORDS = ['공공기관', '공기업', '대기업', '중견기업', '중소기업']
+const COMPANY_SIZE: Record<string, string> = { kakao: '대기업', naver: '대기업', coupang: '대기업', dunamu: '대기업', krafton: '대기업' }
+
+export const isSizeWord = (industry: string) => SIZE_WORDS.includes(industry)
+export const companySizeOf = (company: Company): string | undefined => (isSizeWord(company.industry) ? company.industry : COMPANY_SIZE[company.id])
 
 /** 기업 본사 자리예요. 모르면 없어요. 채용 지도가 핀을 본사 자리에 꽂을 때 써요. */
 export const officeOf = (companyId: string): CompanyOffice | undefined => COMPANY_OFFICE[companyId]

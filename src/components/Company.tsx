@@ -1,7 +1,7 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import { track } from '../lib/analytics'
 import { fetchBlogDigests, isStale, type BlogDigest } from '../lib/blogs'
-import { canEmbed, companyOf, familyName, fetchCompany, sortPostings, useResume, type CompanyProfile, type QuestionCategory, type Resume, type JobFamily } from '../lib/gap'
+import { canEmbed, categoryName, companyOf, companySizeOf, daysLeft, daysSince, familyName, fetchCompany, isSizeWord, sortPostings, useResume, type CompanyProfile, type QuestionCategory, type Resume, type JobFamily } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
@@ -20,8 +20,11 @@ const TEXT = messages({
     back: '뒤로',
     site: '기업 사이트',
     blog: '기술 블로그',
-    facts: { industry: '업종', open: '채용 중', families: '주로 뽑는 직군', locations: '근무지' },
+    facts: { size: '기업 규모', industry: '업종', open: '채용 중', entry: '신입 지원 가능', deadline: '가장 가까운 마감', recent: '최근 공고', families: '주로 뽑는 직군', locations: '근무지' },
     openCount: (count: number) => `공고 ${count}개`,
+    always: '상시 채용',
+    dday: (days: number, date: string) => (days === 0 ? `오늘 마감 (${date})` : `D-${days} (${date})`),
+    ago: (days: number) => (days === 0 ? '오늘 올라옴' : `${days}일 전`),
     postings: '채용 중인 공고',
     more: '공고 탐색에서 보기',
     noPostings: '지금 열려 있는 공고가 없어요.',
@@ -42,8 +45,11 @@ const TEXT = messages({
     back: 'Back',
     site: 'Company site',
     blog: 'Tech blog',
-    facts: { industry: 'Industry', open: 'Hiring', families: 'Main roles', locations: 'Locations' },
+    facts: { size: 'Company size', industry: 'Industry', open: 'Hiring', entry: 'Open to new grads', deadline: 'Next deadline', recent: 'Latest posting', families: 'Main roles', locations: 'Locations' },
     openCount: (count: number) => `${count} ${count === 1 ? 'posting' : 'postings'}`,
+    always: 'Rolling',
+    dday: (days: number, date: string) => (days === 0 ? `Closes today (${date})` : `D-${days} (${date})`),
+    ago: (days: number) => (days === 0 ? 'Today' : `${days} ${days === 1 ? 'day' : 'days'} ago`),
     postings: 'Open postings',
     more: 'View in Explore',
     noPostings: 'No open postings right now.',
@@ -192,6 +198,12 @@ const PLACE_NAMES: [RegExp, string][] = [
   [/gwangju/i, '광주'],
   [/jeju/i, '제주'],
 ]
+/** 11.04 처럼 달과 날만 적어요. */
+const shortDate = (iso: string) => {
+  const date = new Date(iso)
+  return `${date.getMonth() + 1}.${String(date.getDate()).padStart(2, '0')}`
+}
+
 const koreanPlace = (location: string) => {
   const trimmed = location.replace(/,?\s*(south\s+)?korea$/i, '').trim()
   return PLACE_NAMES.find(([pattern]) => pattern.test(trimmed))?.[1] ?? trimmed
@@ -221,12 +233,26 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
   const sorted = resume ? sortPostings(postings, 'fit', resume) : postings
   // 기업 공고가 많아도 칸이 끝없이 길어지지 않게 여섯 개씩 보여줘요.
   const postingMore = useShowMore(sorted.length, profile.company.id, COMPANY_POSTINGS)
+  // 규모와 업종, 신입이 지원할 수 있는 공고, 마감과 최근 공고까지 훑어보는 정보를 두 줄로 늘어놓아요. 모르는 칸은 두지 않아요.
+  const { company } = profile
+  const size = companySizeOf(company)
+  // 고용24 기업은 업종 자리에 규모가 와서, 업종은 사업 분류로 대신 적어요.
+  const industry = isSizeWord(company.industry) || company.industry === '기업' ? (company.category ? categoryName(company.category) : '') : company.industry
+  const entry = postings.filter((posting) => posting.career !== 'junior').length
+  const nearest = postings
+    .filter((posting) => posting.deadline)
+    .sort((a, b) => a.deadline!.localeCompare(b.deadline!))[0]
+  const recent = postings.length > 0 ? Math.min(...postings.map(daysSince)) : null
   const facts = [
-    { label: L.facts.industry, value: profile.company.industry },
+    size && { label: L.facts.size, value: size },
+    industry && { label: L.facts.industry, value: industry },
     { label: L.facts.open, value: L.openCount(postings.length) },
+    postings.length > 0 && { label: L.facts.entry, value: L.openCount(entry) },
+    postings.length > 0 && { label: L.facts.deadline, value: nearest ? L.dday(daysLeft(nearest) ?? 0, shortDate(nearest.deadline!)) : L.always },
+    recent !== null && { label: L.facts.recent, value: L.ago(recent) },
     { label: L.facts.families, value: families.join(', ') || '-' },
     { label: L.facts.locations, value: locations.join(', ') || '-' },
-  ]
+  ].filter((fact): fact is { label: string; value: string } => !!fact)
 
   return (
     <div className="space-y-4">
@@ -237,7 +263,7 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
           {facts.map((fact) => (
             <div key={fact.label} className="min-w-0">
               <dt className="text-[12px] text-gray-400">{fact.label}</dt>
-              <dd className="mt-1 truncate text-[14px] font-medium text-gray-900">{fact.value}</dd>
+              <dd title={fact.value} className="mt-1 truncate text-[14px] font-medium text-gray-900">{fact.value}</dd>
             </div>
           ))}
         </dl>
