@@ -63,7 +63,7 @@ export function AppLogin({ onCancel }: { onCancel: () => void }) {
   const valid = CHALLENGE_PATTERN.test(challenge) && STATE_PATTERN.test(state)
 
   useEffect(() => {
-    document.title = `${TEXT[lang].pageTitle} | ${SITE_TITLE[lang]}`
+    document.title = `${TEXT[lang].pageTitle} | ${SITE_TITLE}`
     return () => {
       document.title = HOME_META[lang].title
     }

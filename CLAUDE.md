@@ -24,14 +24,14 @@
 
 ## 브랜딩 규칙
 
-- 서비스명: 화면에 보이는 이름은 Javadda예요(미리보기 태그, 푸터, 안내 문구, 아티클). 탭 제목만 한국어 화면이 잡아따, 영어 화면이 Javadda예요(`src/lib/meta.ts`의 `SITE_TITLE`, `index.html`의 `<title>`). 아티클과 계정 화면의 탭 제목은 "아티클 | 잡아따"처럼 뒤에 붙여요. 그 전 이름은 Lofy였고, 패키지명(lofy)과 코드 안의 이름(`LofyScript`, lofy 규칙)은 그대로 둬요. 더 예전 이름은 WhoIsLoafing이었어요. API 서버 주소(api.whoisloafing.hidly.dev), Workers 이름, localStorage 키(`whoisloafing:`), 앱과 약속한 값(User-Agent의 `WhoIsLoafingApp`, `whoisloafing://` 주소, 웹뷰 메시지 이름 `whoisloafing`, 설치 파일 이름 `WhoIsLoafing.dmg`)은 바꾸면 저장된 값이 사라지거나 앱과 어긋나서 예전 이름 그대로 둬요. 화면에 보이는 이름만 Javadda예요.
+- 서비스명: 화면에 보이는 이름은 Javadda예요(미리보기 태그, 푸터, 안내 문구, 아티클). 탭 제목만 화면 언어와 상관없이 잡아따예요(`src/lib/meta.ts`의 `SITE_TITLE`, `index.html`의 `<title>`). 아티클과 계정 화면의 탭 제목은 "아티클 | 잡아따", "Sign in | 잡아따"처럼 뒤에 붙여요. 그 전 이름은 Lofy였고, 패키지명(lofy)과 코드 안의 이름(`LofyScript`, lofy 규칙)은 그대로 둬요. 더 예전 이름은 WhoIsLoafing이었어요. API 서버 주소(api.whoisloafing.hidly.dev), Workers 이름, localStorage 키(`whoisloafing:`), 앱과 약속한 값(User-Agent의 `WhoIsLoafingApp`, `whoisloafing://` 주소, 웹뷰 메시지 이름 `whoisloafing`, 설치 파일 이름 `WhoIsLoafing.dmg`)은 바꾸면 저장된 값이 사라지거나 앱과 어긋나서 예전 이름 그대로 둬요. 화면에 보이는 이름만 Javadda예요.
 - 로고: 화면에 보이는 로고는 모두 Javadda라고 쓴 손글씨예요. 헤더(`Logo`), 앱 로그인 화면, 웹 앱 사이드바 맨 위는 움직임 없이 그린 것(`ScriptMark`)이고, 소개 화면 첫 화면에서는 흰색으로 써져요. 예전의 중절모와 Lofy 글자 그림(`public/logo.svg`)은 더 이상 화면에 쓰지 않아요. 손글씨(`LofyScript`)는 Javadda라고 쓰고, 새 진단 화면, 소개 화면 맨 위, 앱 로그인 화면에 써요. 웹 앱 사이드바 맨 위의 로고도 같은 손글씨를 움직임 없이 그린 것(`ScriptMark`)이에요. 색은 짙은 회색(#2C2C2C) 한 가지예요. 파비콘과 미리보기 이미지는 따로 만든 파일이라 같이 고쳐야 해요.
 - 본문 폰트: Pretendard. 전체 자간은 -0.02em
 - 메인 컬러: #2E90FA, hover는 #1570EF, 연한 배경은 #EFF8FF
   - 버튼, 링크, 입력창 포커스, 적합도 숫자와 막대, 레이더의 내 영역, 갖춘 역량 이름표, 강점 이름표 같은 강조 요소에만 써요.
   - 나머지는 흰 배경과 회색 계열 텍스트로 절제해요. 빨간색은 빠진 필수 역량의 엑스 표시, 지우기 버튼, 적합도 낮음(50% 아래), 마감 달력의 일요일과 공휴일에만 써요. 적합도 중간(50% 이상 70% 아래)은 노란색(amber)이에요. 경계 값은 `GapParts`의 `FIT_HIGH`, `FIT_MID` 한 곳에 있어요.
 - 컬러와 폰트는 `src/index.css`의 `@theme`에 토큰으로 등록되어 있어요. (`brand`, `brand-hover`, `brand-soft`, `font-sans`)
-- 탭 제목은 잡아따(영어 화면은 Javadda)예요. 파비콘(`public/favicon.svg`)은 흰 둥근 칸 가운데에 손글씨 로고의 J 한 글자(`LofyScript`의 첫 글자 도형을 그대로 옮긴 것, 짙은 회색 #2C2C2C)예요. 로고 글자를 바꾸면 파비콘도 같이 바꿔요.
+- 탭 제목은 잡아따예요(영어 화면도 같아요). 파비콘(`public/favicon.svg`)은 흰 둥근 칸 가운데에 손글씨 로고의 J 한 글자(`LofyScript`의 첫 글자 도형을 그대로 옮긴 것, 짙은 회색 #2C2C2C)예요. 로고 글자를 바꾸면 파비콘도 같이 바꿔요.
 - 링크를 카카오톡이나 디스코드에 붙이면 뜨는 미리보기 카드는 `index.html`의 og 태그와 `public/og.png`로 정해요. 영어 주소(`/en`으로 시작)의 카드는 `public/og-en.png`와 영어 문구를 써요. 주소는 실제 서비스 주소(https://lofy.hidly.dev)로 적혀 있어서, 도메인이 바뀌면 같이 바꿔야 해요(`index.html`, `src/lib/meta.ts`의 `SITE`, `scripts/prerender.mjs`의 `SITE`, `public/robots.txt`, 업데이트 목록과 앱 레포). 예전 주소(https://whoisloafing.hidly.dev)는 1.3까지의 macOS 앱이 열어서 같은 Worker에 계속 연결해 둬요.
 - 화면 맨 아래나 제목 옆에 "하루 한 번 모아요", "이렇게 셌어요" 같은 출처와 계산 설명을 작게 덧붙이지 않아요. 꼭 필요하면 숫자에 `Tip`으로 달아요.
 - 디자인 원칙: 여백 위주의 미니멀. 장식, 그라데이션, 이모지, 아이콘 남발 금지. 공고 카드의 직군, 경력, 지역처럼 훑어보는 정보에만 작은 선 아이콘을 붙여요(공고 탐색과 새 진단 화면의 `JobCard`, 기업 상세와 리포트의 `PostingTile`). 기업 로고는 그 회사의 색 그대로 보여줘서 메인 컬러 규칙의 예외예요. 타이틀 위에 태그, 뱃지, 라벨을 붙이지 않아요.
