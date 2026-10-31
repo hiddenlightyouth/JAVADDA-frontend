@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { track } from '../lib/analytics'
-import { fetchQuestions, PROGRESS_START, type InterviewQuestion, type ProgressState, type QuestionCategory } from '../lib/gap'
+import { fetchAnswers, fetchQuestions, PROGRESS_START, type InterviewQuestion, type PracticeRecord, type ProgressState, type QuestionCategory } from '../lib/gap'
+import { formatDateTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
 import { Dropdown } from './Dropdown'
 import { AiProgress, Failed, Notice } from './GapParts'
@@ -23,6 +24,12 @@ export const QUESTION_TEXT = messages({
     points: '답변 포인트',
     followUp: '꼬리 질문',
     count: (count: number) => `${count}개의 질문`,
+    history: (count: number) => `지난 답변 ${count}개`,
+    hideHistory: '지난 답변 접기',
+    myAnswer: '내 답변',
+    modelAnswer: '이렇게 답했으면 좋았어요',
+    rephrase: '이렇게 말해 보세요',
+    score: (value: number) => `${value}점`,
   },
   en: {
     categories: { tech: 'Technical', project: 'Project', cs: 'CS basics', culture: 'Culture fit' },
@@ -37,6 +44,12 @@ export const QUESTION_TEXT = messages({
     intent: 'What they look for',
     points: 'Answer points',
     followUp: 'Follow-up',
+    history: (count: number) => `${count} past ${count === 1 ? 'answer' : 'answers'}`,
+    hideHistory: 'Hide past answers',
+    myAnswer: 'Your answer',
+    modelAnswer: 'A stronger answer',
+    rephrase: 'Try saying it like this',
+    score: (value: number) => `${value} pts`,
     count: (count: number) => `${count} ${count === 1 ? 'question' : 'questions'}`,
   },
 })
@@ -78,9 +91,44 @@ export function QuestionDetail({ question, followUp = true, className = '' }: { 
   )
 }
 
-function Card({ question, order, onPractice }: { question: InterviewQuestion; order: number; onPractice: () => void }) {
+/**
+ * 이 질문에 예전에 한 답변이에요. 최근 것부터 내 답, 점수, 이렇게 말해 보세요, 모범 답변(이렇게 답했으면 좋았어요)을 보여줘요.
+ * 답변은 서버에 남아 있어서(`fetchAnswers`) 다른 기기에서도 보여요.
+ */
+function PastAnswers({ records }: { records: PracticeRecord[] }) {
+  const L = useMessages(QUESTION_TEXT)
+  return (
+    <ol className="mt-4 animate-rise space-y-3">
+      {records.map((record) => (
+        <li key={record.id} className="rounded-xl bg-white p-4">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[12px] text-gray-400 tabular-nums">{formatDateTime(record.createdAt)}</span>
+            <span className="text-[13px] font-semibold text-brand tabular-nums">{L.score(record.feedback.score)}</span>
+          </div>
+          <h3 className={`mt-2 ${label}`}>{L.myAnswer}</h3>
+          <p className="mt-1 text-[13.5px] leading-relaxed whitespace-pre-wrap text-gray-700">{record.answer}</p>
+          {record.feedback.rephrase.length > 0 && (
+            <>
+              <h3 className={`mt-3 ${label}`}>{L.rephrase}</h3>
+              <Bullets items={record.feedback.rephrase} className="mt-1" />
+            </>
+          )}
+          {record.feedback.modelAnswer && (
+            <div className="mt-3 rounded-lg bg-brand-soft p-3">
+              <h3 className="text-[12.5px] font-semibold text-brand-hover">{L.modelAnswer}</h3>
+              <p className="mt-1 text-[13.5px] leading-relaxed text-gray-800">{record.feedback.modelAnswer}</p>
+            </div>
+          )}
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+function Card({ question, order, records, onPractice }: { question: InterviewQuestion; order: number; records: PracticeRecord[]; onPractice: () => void }) {
   const L = useMessages(QUESTION_TEXT)
   const [open, setOpen] = useState(false)
+  const [history, setHistory] = useState(false)
   return (
     <li className="animate-rise rounded-2xl bg-gray-50 p-5" style={stagger(order)}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -90,18 +138,35 @@ function Card({ question, order, onPractice }: { question: InterviewQuestion; or
       </div>
       <p className="mt-3 text-[15px] leading-relaxed font-semibold text-gray-900">{question.question}</p>
       {open && <QuestionDetail question={question} className="mt-4" />}
+      {history && <PastAnswers records={records} />}
       <div className="mt-3 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => {
-            if (!open) track('question_expand', { id: question.id })
-            setOpen((value) => !value)
-          }}
-          className={`${ghostButton} -ml-2`}
-        >
-          {open ? L.hide : L.show}
-        </button>
+        <span className="-ml-2 flex items-center gap-1">
+          <button
+            type="button"
+            aria-expanded={open}
+            onClick={() => {
+              if (!open) track('question_expand', { id: question.id })
+              setOpen((value) => !value)
+            }}
+            className={ghostButton}
+          >
+            {open ? L.hide : L.show}
+          </button>
+          {/* 이 질문에 답한 적이 있을 때만 지난 답변을 펼칠 수 있어요. */}
+          {records.length > 0 && (
+            <button
+              type="button"
+              aria-expanded={history}
+              onClick={() => {
+                if (!history) track('practice_history_open', { count: records.length })
+                setHistory((value) => !value)
+              }}
+              className={ghostButton}
+            >
+              {history ? L.hideHistory : L.history(records.length)}
+            </button>
+          )}
+        </span>
         <button type="button" onClick={onPractice} className={toolButton}>
           {L.practiceOne}
         </button>
@@ -119,6 +184,8 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
   const [questions, setQuestions] = useState<InterviewQuestion[] | null | undefined>(undefined)
   const [category, setCategory] = useState<QuestionCategory | null>(null)
   const [progress, setProgress] = useState<ProgressState>(PROGRESS_START)
+  /** 질문마다 예전에 한 답변이에요. 질문 목록과 따로 받아서, 못 받아도 질문은 그대로 보여요. */
+  const [records, setRecords] = useState<Record<string, PracticeRecord[]>>({})
   /** 마지막으로 보낸 요청이에요. 앞의 요청이 늦게 끝나도 화면을 덮지 않게 해요. */
   const latest = useRef(0)
 
@@ -134,6 +201,16 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
 
   useEffect(() => {
     void load()
+    let stale = false
+    void fetchAnswers(reportId).then((list) => {
+      if (stale) return
+      const grouped: Record<string, PracticeRecord[]> = {}
+      for (const record of list) (grouped[record.questionId] ??= []).push(record)
+      setRecords(grouped)
+    })
+    return () => {
+      stale = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportId])
 
@@ -184,6 +261,7 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
               key={question.id}
               question={question}
               order={order}
+              records={records[question.id] ?? []}
               onPractice={() => {
                 track('practice_start', { from: 'question' })
                 onPractice(question.id)

@@ -201,6 +201,19 @@ export interface PracticeFeedback {
   improve: string[]
   rephrase: string[]
   followUp: string
+  /** 이렇게 답했으면 좋았어요. 내 답을 바탕으로 빠진 포인트를 채운 모범 답변이에요. 예전에 저장한 답변에는 없어요. */
+  modelAnswer?: string | null
+}
+
+/** 저장해 둔 연습 답변 하나예요(GET /reports/{id}/questions/answers). 무엇을 물었고 뭐라고 답했고 어떤 피드백을 받았는지예요. */
+export interface PracticeRecord {
+  id: number
+  questionId: string
+  /** 답할 때의 질문 글이에요. 질문을 다시 만들어 찾을 수 없으면 빈 글이에요. */
+  question: string
+  answer: string
+  feedback: PracticeFeedback
+  createdAt: string
 }
 
 interface InterviewNote {
@@ -1571,6 +1584,12 @@ export async function fetchQuestions(reportId: string, onProgress?: OnProgress):
 }
 
 // ---------- 면접 연습 ----------
+
+/** 이 리포트에서 연습한 답변이에요(GET /reports/{id}/questions/answers). 최근 것부터예요. 실패하면 조용히 빈 목록이에요(질문 목록은 그대로 보여요). */
+export async function fetchAnswers(reportId: string): Promise<PracticeRecord[]> {
+  const result = await call<PracticeRecord[]>(`/reports/${Number(currentId(reportId))}/questions/answers`)
+  return result.ok && Array.isArray(result.data) ? result.data : []
+}
 
 /** 답변을 보내고 피드백을 받아요(POST /reports/{id}/questions/{질문}/answers). onProgress를 주면 채점 진행 상황을 알려줘요. 실패하면 토스트로 알리고 null이에요. */
 export async function submitAnswer(reportId: string, question: InterviewQuestion, answer: string, onProgress?: OnProgress): Promise<PracticeFeedback | null> {
