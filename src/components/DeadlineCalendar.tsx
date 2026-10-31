@@ -13,7 +13,7 @@ import { Badge, iconButton, loadCenter, LoadProgress, Segmented, toolButton, use
  * 마감 달력이에요. 공고의 마감일을 달력에 놓아서, 어느 기업의 어떤 공고가 언제 마감인지 한눈에 봐요.
  * 날짜 칸에는 그날 마감하는 공고를 기업 로고와 제목으로 모두 적고, 날짜를 누르면 아래에 그날의 공고를 모두 보여줘요.
  * 기업으로 거르고, 진단한 공고만 볼 수도 있어요. 상시 채용(마감 없음)은 올라온 날부터 계속 열려 있어서,
- * 날짜 칸마다 그날 열려 있던 상시 채용 수를 날짜 옆에 작게 적어요. 날짜를 고르면 아래에 그날 마감하는 공고와 그날 열려 있던 상시 채용 공고를 함께 보여줘요.
+ * 고른 날짜 칸에만 그날 열려 있던 상시 채용 수를 날짜 옆에 작게 적어요. 날짜 칸의 마감 공고는 세 개까지만 이름표로 보여요. 날짜를 고르면 아래에 그날 마감하는 공고와 그날 열려 있던 상시 채용 공고를 함께 보여줘요.
  * 공고를 누르면 해당 공고로 이동할지 한 번 더 묻고, 진단으로 가요(이미 진단했으면 그 리포트로 가요).
  */
 
@@ -32,6 +32,8 @@ const TEXT = messages({
     scopes: { all: '전체 공고', diagnosed: '진단한 공고' } as Record<Scope, string>,
     always: (count: number) => `${count}개의 상시 채용`,
     alwaysShort: (count: number) => `상시 ${count}`,
+    moreInCell: (count: number) => `+${count}곳`,
+    companyCount: (count: number) => `공고 ${count}개`,
     alwaysTitle: (month: number, date: number) => `${month + 1}월 ${date}일 상시 채용`,
     day: (month: number, date: number) => `${month + 1}월 ${date}일 마감`,
     dayEmpty: '정보를 찾을 수 없음',
@@ -52,6 +54,8 @@ const TEXT = messages({
     scopes: { all: 'All postings', diagnosed: 'Diagnosed' },
     always: (count: number) => `${count} rolling`,
     alwaysShort: (count: number) => `+${count}`,
+    moreInCell: (count: number) => `+${count} more`,
+    companyCount: (count: number) => `${count} postings`,
     alwaysTitle: (month: number, date: number) => `Rolling on ${new Date(2000, month, date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`,
     day: (month: number, date: number) => `Closing ${new Date(2000, month, date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`,
     dayEmpty: 'No information found',
@@ -75,6 +79,16 @@ const dayKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() +
 function monthDays(year: number, month: number): Date[] {
   const first = new Date(year, month, 1)
   return Array.from({ length: 42 }, (_, index) => new Date(year, month, 1 - first.getDay() + index))
+}
+
+/** 날짜 칸에 줄로 보여줄 기업 수예요. 나머지는 "+2곳"처럼 수로 줄여요. */
+const CELL_POSTINGS = 3
+
+/** 공고를 기업별로 묶어요. 공고가 많은 기업이 앞이고, 같으면 받은 순서예요. */
+function groupByCompany(postings: JobPosting[]): { companyId: string; postings: JobPosting[] }[] {
+  const groups = new Map<string, JobPosting[]>()
+  for (const posting of postings) groups.set(posting.companyId, [...(groups.get(posting.companyId) ?? []), posting])
+  return [...groups.entries()].map(([companyId, list]) => ({ companyId, postings: list })).sort((a, b) => b.postings.length - a.postings.length)
 }
 
 export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => void }) {
@@ -245,7 +259,8 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
                   const past = key < todayKey
                   const isSelected = key === selected
                   const holiday = holidayOf(key)
-                  const alwaysCount = inMonth ? alwaysOn(key).length : 0
+                  // 상시 채용 수는 고른 날짜 칸에만 적어요. 칸마다 적으면 같은 문구가 달력을 덮어요.
+                  const alwaysCount = inMonth && key === selected ? alwaysOn(key).length : 0
                   // 일요일과 공휴일은 빨간색, 토요일은 메인 컬러예요. 지난 날은 흐리게 둬요.
                   const tone = holiday || day.getDay() === 0 ? 'text-red-500' : day.getDay() === 6 ? 'text-brand' : 'text-gray-800'
                   return (
@@ -303,25 +318,36 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
                         </span>
                       )}
                       <span className={`hidden flex-col gap-1 @3xl:flex ${past ? 'opacity-50' : ''}`}>
-                        {list.map((posting) => (
-                          <button
-                            key={posting.id}
-                            type="button"
-                            data-no-press
-                            title={`${companyOf(posting.companyId).name} · ${posting.title}`}
-                            aria-label={L.pick(posting.title)}
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              pick(posting, 'cell')
-                            }}
-                            className={`flex h-6 min-w-0 items-center gap-1.5 rounded-md px-1.5 text-left text-[12px] transition-colors ${
-                              diagnosed.has(posting.id) ? 'bg-brand-soft text-brand-hover hover:bg-brand-soft/70' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                          >
-                            <CompanyMark company={companyOf(posting.companyId)} className="size-4 rounded-[4px]! text-[8px]" />
-                            <span className="min-w-0 truncate">{posting.title}</span>
-                          </button>
-                        ))}
+                        {/* 그날 마감 공고를 기업별로 묶어 한 줄씩 둬요. 같은 기업 공고가 칸을 다 차지하지 않게요. 세 곳까지 보여주고 나머지는 수로 줄여요. */}
+                        {groupByCompany(list).slice(0, CELL_POSTINGS).map(({ companyId, postings }) => {
+                          const company = companyOf(companyId)
+                          const one = postings.length === 1 ? postings[0] : null
+                          return (
+                            <button
+                              key={companyId}
+                              type="button"
+                              data-no-press
+                              title={one ? `${company.name}, ${one.title}` : `${company.name} ${L.companyCount(postings.length)}`}
+                              aria-label={one ? L.pick(one.title) : `${company.name} ${L.companyCount(postings.length)}`}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                // 공고가 하나면 그 공고로, 여러 개면 그날을 골라 오른쪽에 다 보여줘요.
+                                if (one) pick(one, 'cell')
+                                else setSelected(key)
+                              }}
+                              className={`flex h-6 min-w-0 items-center gap-1.5 rounded-md px-1.5 text-left text-[12px] transition-colors ${
+                                postings.some((posting) => diagnosed.has(posting.id)) ? 'bg-brand-soft text-brand-hover hover:bg-brand-soft/70' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              <CompanyMark company={company} className="size-4 rounded-[4px]! text-[8px]" />
+                              <span className="min-w-0 truncate">{one ? one.title : company.name}</span>
+                              {!one && <span className="ml-auto shrink-0 font-medium tabular-nums">{postings.length}</span>}
+                            </button>
+                          )
+                        })}
+                        {groupByCompany(list).length > CELL_POSTINGS && (
+                          <span className="px-1.5 text-[11.5px] text-gray-500 tabular-nums">{L.moreInCell(groupByCompany(list).length - CELL_POSTINGS)}</span>
+                        )}
                       </span>
                     </div>
                   )
