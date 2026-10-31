@@ -476,6 +476,8 @@ export function CategoryFilter({ postings, value, onChange, label, allLabel, com
   const categories = COMPANY_CATEGORIES.filter((category) => present.has(category) || category === value)
   const tone = (on: boolean) => (on ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950')
   const chip = 'flex h-10 shrink-0 items-center rounded-full border px-4 text-[14px] font-medium transition-colors'
+  // 고를 분류가 없으면(서버가 분류를 주지 않을 때) 전체 버튼 하나만 남지 않게 줄을 두지 않아요.
+  if (categories.length === 0 && !company) return null
   return (
     <div role="radiogroup" aria-label={label} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
       {company && (
@@ -499,7 +501,7 @@ export function CategoryFilter({ postings, value, onChange, label, allLabel, com
 
 export function CompanyFilter({ companies, value, onChange, label, allLabel, oneLine = false }: {
   companies: readonly Company[]
-  /** 목록 폭이 넉넉하면 한 줄만 쓰고, 그 줄의 버튼이 늘어나 양 끝까지 채워요. 들어가지 않는 기업은 숨겨요. 폭은 화면이 아니라 목록을 보고 정해서 모니터, 사이드바, 원문 칸이 달라도 맞아요. */
+  /** 목록 폭이 넉넉하면 한 줄만 쓰고, 들어가지 않는 기업은 숨겨요. 버튼은 늘이지 않아서 기업이 적어도 모양이 그대로예요. 폭은 화면이 아니라 목록을 보고 정해서 모니터, 사이드바, 원문 칸이 달라도 맞아요. */
   oneLine?: boolean
   value: string | null
   onChange: (company: string | null) => void
@@ -509,7 +511,7 @@ export function CompanyFilter({ companies, value, onChange, label, allLabel, one
   const tone = (on: boolean) => (on ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950')
   return (
     // 기업을 고르는 일이 화면의 첫 동작이라, 다른 도구 버튼(36px)보다 한 단계 크게(44px) 둬서 누르기 쉽게 해요.
-    <div role="radiogroup" aria-label={label} className={`-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap ${oneLine ? '@2xl:max-h-12 @2xl:gap-x-1.5 @2xl:overflow-hidden @2xl:[&>button]:grow @2xl:[&>button]:justify-center' : '@2xl:overflow-visible'}`}>
+    <div role="radiogroup" aria-label={label} className={`-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap ${oneLine ? '@2xl:max-h-12 @2xl:overflow-hidden' : '@2xl:overflow-visible'}`}>
       {allLabel && (
         <button type="button" role="radio" aria-checked={!value} onClick={() => onChange(null)} className={`flex h-11 shrink-0 items-center rounded-full border px-5 text-[14.5px] font-medium transition-colors ${tone(!value)}`}>
           {allLabel}
