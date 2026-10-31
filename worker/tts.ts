@@ -4,7 +4,7 @@
  * 키가 없거나 실패하면 오류로 답하고, 화면은 브라우저 음성으로 읽어요.
  */
 
-import { VOICES, voiceOf } from '../shared/voices'
+import { DEFAULT_VOICE, voiceOf } from '../shared/voices'
 
 export const TTS_PATH = '/tts'
 /**
@@ -165,7 +165,7 @@ export async function handleTts(request: Request, env: TtsEnv, options: TtsOptio
   // 사용자가 고른 목소리는 목록에 있는 것만 받아요. 고르지 않았으면 기본 목소리예요.
   const picked = typeof body?.voice === 'string' ? voiceOf(body.voice) : undefined
   if (body?.voice !== undefined && !picked) return reply(400, 'invalid_voice')
-  const voice = picked?.id ?? (env.ELEVENLABS_VOICE_ID || VOICES[0].id)
+  const voice = picked?.id ?? (env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE.id)
   const model = env.ELEVENLABS_MODEL_ID || DEFAULT_MODEL_ID
   const key = options.cache ? await cacheKey(voice, model, text) : null
   if (key) {
