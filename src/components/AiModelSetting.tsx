@@ -9,8 +9,7 @@ const TEXT = messages({
   ko: {
     label: 'AI 모델',
     note: '진단, 서류 검증, 예상 질문, 면접 연습에 사용할 모델입니다.',
-    serverDefault: (name: string) => `서버 기본 (${name})`,
-    serverDefaultShort: '서버 기본',
+    defaultHint: '기본',
     loading: '불러오고 있어요',
     none: '고를 수 있는 모델이 없어요',
     noneNote: '서버에 OpenAI나 Claude 키가 없어서 AI 없이 규칙으로 분석해요.',
@@ -20,8 +19,7 @@ const TEXT = messages({
   en: {
     label: 'AI model',
     note: 'The model used for diagnosis, document review, interview questions, and practice.',
-    serverDefault: (name: string) => `Server default (${name})`,
-    serverDefaultShort: 'Server default',
+    defaultHint: 'Default',
     loading: 'Loading',
     none: 'No models available',
     noneNote: 'The server has no OpenAI or Claude key, so analysis runs on rules without AI.',
@@ -33,8 +31,8 @@ const TEXT = messages({
 /**
  * AI 모델 고르기예요. 설정 창과 내 정보 화면이 같이 써요. 줄의 모양은 화면마다 달라서 이름, 설명, 고르는 칸만 돌려줘요.
  * 쓸 때마다 서버에 `/config`를 다시 물어서(`refreshConfig`), 화면을 연 뒤에 서버를 켰거나 키를 바꿔도 바로 맞춰요.
- * 드롭다운 맨 위는 서버 기본이고, 그 아래로 공급자(OpenAI, Claude)마다 묶어 서버에 키가 있는 모델만 늘어놓아요.
- * 고른 것은 localStorage의 `whoisloafing:ai-model`에 두고, 서버 기본을 고르면 지워서 헤더를 보내지 않아요.
+ * 드롭다운에는 늘 모델 이름을 보여줘요. 공급자(OpenAI, Claude)마다 묶어 서버에 키가 있는 모델만 늘어놓고, 서버의 기본 모델에는 "기본"을 옅게 붙여요.
+ * 고른 것은 localStorage의 `whoisloafing:ai-model`에 두고, 서버의 기본 모델을 고르면 지워서 헤더를 보내지 않아요.
  */
 export function useAiModelSetting(align: 'left' | 'right' = 'right') {
   const text = useMessages(TEXT)
@@ -55,10 +53,12 @@ export function useAiModelSetting(align: 'left' | 'right' = 'right') {
 
   const models = ai && ai !== 'offline' ? ai.models : []
   const serverDefault = ai && ai !== 'offline' ? (models.find((model) => model.id === ai.defaultModel) ?? models[0]) : undefined
-  // 고른 모델이 서버 목록에 없으면(키를 뺐으면) 서버 기본을 쓰고 있는 것으로 보여줘요.
-  const picked = models.find((model) => model.id === chosen)
+  // 고른 모델이 서버 목록에 없으면(키를 뺐으면) 서버의 기본 모델을 쓰고 있는 것으로 보여줘요.
+  const current = models.find((model) => model.id === chosen) ?? serverDefault
   const providers = [...new Set(models.map((model) => model.provider))]
-  const select = (id: string | null) => {
+  // 서버의 기본 모델을 고르면 저장한 값을 지워서 헤더를 보내지 않아요.
+  const select = (model: AiModel) => {
+    const id = model.id === serverDefault?.id ? null : model.id
     track('app_ai_model_change', { model: id ?? 'default' })
     setAiModel(id)
   }
@@ -72,24 +72,18 @@ export function useAiModelSetting(align: 'left' | 'right' = 'right') {
     ) : (
       <Dropdown
         align={align}
-        value={picked ? picked.label : text.serverDefaultShort}
-        groups={[
-          {
-            items: [
-              {
-                label: serverDefault ? text.serverDefault(serverDefault.label) : text.serverDefaultShort,
-                checked: !picked,
-                onSelect: () => select(null),
-              },
-            ],
-          },
-          ...providers.map((provider) => ({
-            title: text.providers[provider],
-            items: models
-              .filter((model) => model.provider === provider)
-              .map((model) => ({ label: model.label, checked: picked?.id === model.id, onSelect: () => select(model.id) })),
-          })),
-        ]}
+        value={current?.label}
+        groups={providers.map((provider) => ({
+          title: text.providers[provider],
+          items: models
+            .filter((model) => model.provider === provider)
+            .map((model) => ({
+              label: model.label,
+              hint: model.id === serverDefault?.id ? text.defaultHint : undefined,
+              checked: current?.id === model.id,
+              onSelect: () => select(model),
+            })),
+        }))}
       />
     )
 
