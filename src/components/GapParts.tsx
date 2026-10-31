@@ -472,7 +472,7 @@ export function CompanyFilter({ companies, value, onChange, label, allLabel, one
   const tone = (on: boolean) => (on ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950')
   return (
     // 기업을 고르는 일이 화면의 첫 동작이라, 다른 도구 버튼(36px)보다 한 단계 크게(44px) 둬서 누르기 쉽게 해요.
-    <div role="radiogroup" aria-label={label} className={`-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap ${oneLine ? '@2xl:max-h-12 @2xl:justify-between @2xl:overflow-hidden' : '@2xl:overflow-visible'}`}>
+    <div role="radiogroup" aria-label={label} className={`-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap ${oneLine ? '@2xl:max-h-12 @2xl:justify-between @2xl:gap-x-1.5 @2xl:overflow-hidden' : '@2xl:overflow-visible'}`}>
       {allLabel && (
         <button type="button" role="radio" aria-checked={!value} onClick={() => onChange(null)} className={`flex h-11 shrink-0 items-center rounded-full border px-5 text-[14.5px] font-medium transition-colors ${tone(!value)}`}>
           {allLabel}
