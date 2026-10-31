@@ -52,7 +52,7 @@ export interface JobPosting {
   required: string[]
   preferred: string[]
   summary: string
-  source: 'worknet' | 'company'
+  source: 'worknet' | 'company' | 'public'
   url: string
   /** 서버가 대표 이력서로 계산한 적합도. 로그인하지 않았거나 이력서가 없으면 없어요. 화면은 `fitOf`로 다시 계산해요. */
   fitScore?: number
@@ -317,6 +317,11 @@ const FALLBACK_COMPANIES: Company[] = [
   { id: 'zigbang', name: '직방', initial: 'Z', logo: '/logos/zigbang.png', industry: '프롭테크', site: 'https://career.zigbang.com', techBlog: 'https://medium.com/zigbang', category: 'service' },
   { id: 'wanted', name: '원티드랩', initial: 'W', logo: '/logos/wanted.png', industry: 'HR 테크', site: 'https://www.wantedlab.com', techBlog: 'https://medium.com/wantedjobs', category: 'service' },
   { id: 'bucketplace', name: '오늘의집', initial: '오', logo: '/logos/bucketplace.png', industry: '리빙 커머스', site: 'https://www.bucketplace.com', techBlog: 'https://www.bucketplace.com/culture/Tech/', category: 'commerce' },
+  { id: 'yanolja', name: '야놀자', initial: '야', logo: '/logos/yanolja.png', industry: '여행 플랫폼', site: 'https://careers.yanolja.co', category: 'service' },
+  { id: 'miso', name: '미소', initial: '미', logo: '/logos/miso.png', industry: '홈서비스', site: 'https://www.miso.kr', category: 'service' },
+  { id: 'kurly', name: '컬리', initial: '컬', logo: '/logos/kurly.png', industry: '식품 커머스', site: 'https://kurly.career.greetinghr.com', category: 'commerce' },
+  { id: 'myrealtrip', name: '마이리얼트립', initial: '마', logo: '/logos/myrealtrip.png', industry: '여행 플랫폼', site: 'https://myrealtrip.career.greetinghr.com', category: 'service' },
+  { id: 'krafton', name: '크래프톤', initial: '크', industry: '게임', site: 'https://www.krafton.com', category: 'service' },
 ]
 
 /** 기업 목록이에요. 처음 그리기 전에 `loadCatalog`가 서버의 목록으로 채워요(배열은 그대로 두고 속만 바꿔요). */
@@ -324,8 +329,8 @@ export const COMPANIES: Company[] = [...FALLBACK_COMPANIES]
 
 const companyById = new Map(COMPANIES.map((company) => [company.id, company]))
 
-/** 기업 버튼으로 따로 보여주는 대기업이에요. 네카라쿠배당토 순서예요. */
-const MAJOR_COMPANY_IDS = ['naver', 'kakao', 'line', 'coupang', 'woowa', 'daangn', 'toss']
+/** 기업 버튼으로 따로 보여주는 기업이에요. 네카라쿠배당토 다음에 유명 기업을 두고, 화면 폭에 들어가는 만큼 앞에서부터 보여줘요. */
+const MAJOR_COMPANY_IDS = ['naver', 'kakao', 'line', 'coupang', 'woowa', 'daangn', 'toss', 'musinsa', 'zigbang', 'bucketplace', 'yanolja', 'miso', 'kurly', 'myrealtrip', 'krafton']
 
 export const majorCompanies = () => MAJOR_COMPANY_IDS.flatMap((id) => COMPANIES.filter((company) => company.id === id))
 

@@ -206,6 +206,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
         {/* 네카라쿠배당토는 로고로 바로 고르고, 나머지는 사업 분류로 골라요. 둘을 같이 고르면 비기 쉬워서 하나를 고르면 다른 하나는 풀려요. */}
         <div className="mt-4">
           <CompanyFilter
+            oneLine
             companies={majorCompanies()}
             value={company}
             label={L.majors}

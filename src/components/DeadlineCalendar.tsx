@@ -179,6 +179,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
   return (
     <ScrollPage header={<PageHeader title={L.title} />} className="@container">
       <CompanyFilter
+        oneLine
         companies={majorCompanies()}
         value={company}
         label={L.majors}
