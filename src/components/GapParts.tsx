@@ -182,6 +182,16 @@ function TipBubble({ anchor, text, side }: { anchor: DOMRect; text: string; side
   )
 }
 
+/**
+ * 적합도에 맞는 색이에요. 높음(70% 이상)은 메인 컬러, 중간(50% 이상)은 노란색, 낮음은 빨간색이에요.
+ * 적합도 태그(`FitTag`), 적합도 막대(`FitBadge`), 사이드바의 리포트 줄이 같은 색을 써요.
+ */
+export function fitColor(fit: number): { text: string; bar: string } {
+  if (fit >= 70) return { text: 'text-brand', bar: 'bg-brand' }
+  if (fit >= 50) return { text: 'text-amber-700', bar: 'bg-amber-500' }
+  return { text: 'text-red-600', bar: 'bg-red-500' }
+}
+
 export function FitBadge({ fit, compact = false }: { fit: number | null; compact?: boolean }) {
   const L = useMessages(TEXT)
   if (fit === null) return <span className="text-[12px] text-gray-400">{compact ? '' : L.noFit}</span>
@@ -189,9 +199,9 @@ export function FitBadge({ fit, compact = false }: { fit: number | null; compact
     <Tip text={L.fitTip}>
       <span className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap" aria-label={L.fit(fit)}>
         <span className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200/70" aria-hidden>
-          <span className="block h-full rounded-full bg-brand" style={{ width: `${fit}%` }} />
+          <span className={`block h-full rounded-full ${fitColor(fit).bar}`} style={{ width: `${fit}%` }} />
         </span>
-        <span className="text-[13px] font-semibold text-brand tabular-nums">{fit}%</span>
+        <span className={`text-[13px] font-semibold tabular-nums ${fitColor(fit).text}`}>{fit}%</span>
       </span>
     </Tip>
   )
