@@ -810,7 +810,7 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
         ) : tab === 'fit' ? (
           <FitTab report={report} onPick={onPick} />
         ) : tab === 'review' ? (
-          <ReviewTab reportId={id} />
+          <ReviewTab reportId={id} onQuestions={() => onTab('questions')} />
         ) : (
           <QuestionsTab reportId={id} onPractice={(question) => onPractice(id, question)} />
         )}

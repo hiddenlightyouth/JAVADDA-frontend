@@ -381,6 +381,16 @@ async function handle(path: string, query: URLSearchParams, method: string, body
       return reply(shown(startReport(report.postingId, resume)), 202)
     }
     if (Date.now() < report.readyAt && sub) return fail(409, 'C4092')
+    if (sub === 'reviews' && last === 'paragraphs') {
+      // 고쳐 쓴 문단 다시 보기예요. 숫자가 있으면 좋아요, 없으면 고쳐요로 대충 바꿔요.
+      const review = state.reviews[`${report.id}:${extra}`]
+      if (!review) return fail(404, 'C4044')
+      const text = String(json.text ?? '')
+      const id = parts[5]
+      review.paragraphs = review.paragraphs.map((paragraph) => (paragraph.id === id ? { id, text, tags: /\d/.test(text) ? ['good'] : ['fix'], feedback: /\d/.test(text) ? '성과가 숫자로 드러나서 좋아요.' : '결과를 숫자로 보여주면 좋아요.' } : paragraph))
+      save()
+      return reply(review)
+    }
     if (sub === 'reviews') {
       const key = `${report.id}:${extra}`
       if (last === 'regenerate') delete state.reviews[key]

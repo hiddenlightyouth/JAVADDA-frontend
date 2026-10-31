@@ -1,11 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { track } from '../lib/analytics'
-import { docName, fetchReview, PROGRESS_START, regenerateReview, useResume, type DocType, type ProgressState, type DocumentReview, type ParagraphTag, type ReviewParagraph } from '../lib/gap'
+import { docName, fetchQuestions, fetchReview, PROGRESS_START, recheckParagraph, regenerateReview, useReports, useResume, useResumeShelf, type InterviewQuestion, type DocType, type ProgressState, type DocumentReview, type ParagraphTag, type ReviewParagraph } from '../lib/gap'
 import { formatDateTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
-import { AiProgress, Failed, Panel, ScoreHero } from './GapParts'
+import { AiProgress, Delta, Failed, Panel, ScoreHero } from './GapParts'
 import { RefreshIcon } from './Icons'
-import { Badge, loadCenter, NumberBadge, Segmented, stagger, toolButton } from './ui'
+import { Badge, loadCenter, NumberBadge, primaryButton, quietButton, Segmented, stagger, textArea, toolButton } from './ui'
 
 const DOCS: DocType[] = ['coverLetter', 'resume', 'portfolio']
 
@@ -21,6 +21,15 @@ const TEXT = messages({
     appeal: '더 어필할 점',
     reviewedAt: (when: string) => `검증 ${when}`,
     tags: { good: '좋아요', fix: '고쳐요', missing: '빠졌어요', interview: '면접 예상' } as Record<ParagraphTag, string>,
+    rewrite: '고쳐 쓰기',
+    recheck: '다시 보기',
+    checking: '다시 보는 중',
+    cancel: '취소',
+    rewritePlaceholder: '이 문단을 고쳐 써 보세요. 빠진 내용이면 새로 써 넣어요.',
+    rechecked: '방금 다시 봤어요',
+    questionsFrom: (count: number) => `이 문단에서 나올 질문 ${count}개`,
+    change: '직전보다',
+    scoreChange: (before: number, after: number) => `부합도 ${before}% → ${after}%`,
     tagHints: {
       good: '공고와 잘 이어지는 문단',
       fix: '조금 다듬으면 좋은 문단',
@@ -42,6 +51,15 @@ const TEXT = messages({
     appeal: 'Worth adding',
     reviewedAt: (when: string) => `Reviewed ${when}`,
     tags: { good: 'Good', fix: 'Revise', missing: 'Missing', interview: 'Likely asked' },
+    rewrite: 'Rewrite',
+    recheck: 'Check again',
+    checking: 'Checking',
+    cancel: 'Cancel',
+    rewritePlaceholder: 'Rewrite this paragraph. If something is missing, write it in.',
+    rechecked: 'Just rechecked',
+    questionsFrom: (count: number) => `${count} questions from this paragraph`,
+    change: 'Since last check',
+    scoreChange: (before: number, after: number) => `Match ${before}% to ${after}%`,
     tagHints: {
       good: 'Lines up with the posting',
       fix: 'Worth polishing',
@@ -95,15 +113,93 @@ function ParagraphNumber({ value, on }: { value: number; on: boolean }) {
   return <NumberBadge n={value} tone={on ? 'brand' : 'muted'} className="transition-colors" />
 }
 
+/** 문단을 고쳐 쓰고 다시 보는 일, 문단에서 나올 예상 질문으로 가는 일이에요. 종이와 코멘트가 같이 써요. */
+interface ReviewActions {
+  /** 고쳐 쓰는 중인 문단 */
+  editing: string | null
+  /** 다시 보는 중인 문단 */
+  checking: string | null
+  /** 이번에 다시 본 문단 */
+  rechecked: Set<string>
+  edit: (id: string | null) => void
+  recheck: (id: string, text: string) => void
+  /** 이 문단에서 나온 예상 질문 수예요. */
+  questionsOf: (text: string) => number
+  onQuestions?: () => void
+}
+const Actions = createContext<ReviewActions | null>(null)
+
 function Comment({ paragraph, index, on }: { paragraph: ReviewParagraph; index: number; on: boolean }) {
+  const L = useMessages(TEXT)
+  const actions = useContext(Actions)
+  const count = actions?.questionsOf(paragraph.text) ?? 0
   return (
     <>
       <div className="flex items-center gap-2">
         <ParagraphNumber value={index + 1} on={on} />
         <Tags tags={paragraph.tags} />
+        {actions?.rechecked.has(paragraph.id) && <span className="ml-auto text-[11.5px] font-medium text-brand">{L.rechecked}</span>}
       </div>
       <p className="mt-2.5 text-[13px] leading-relaxed text-gray-700">{paragraph.feedback}</p>
+      {actions && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+          {actions.editing !== paragraph.id && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                actions.edit(paragraph.id)
+              }}
+              className="text-[12.5px] font-medium text-brand transition-colors hover:text-brand-hover"
+            >
+              {L.rewrite}
+            </button>
+          )}
+          {count > 0 && actions.onQuestions && (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                track('review_questions_open', { count })
+                actions.onQuestions?.()
+              }}
+              className="text-[12.5px] font-medium text-gray-500 transition-colors hover:text-gray-900"
+            >
+              {L.questionsFrom(count)}
+            </button>
+          )}
+        </div>
+      )}
     </>
+  )
+}
+
+/** 종이 위에서 문단을 고쳐 쓰는 칸이에요. 빠졌어요 문단은 빈 칸에서 새로 써요. 다시 보기를 누르면 그 문단만 다시 검증해요. */
+function ParagraphEditor({ paragraph }: { paragraph: ReviewParagraph }) {
+  const L = useMessages(TEXT)
+  const actions = useContext(Actions)!
+  const [text, setText] = useState(paragraph.tags.includes('missing') ? '' : paragraph.text)
+  const checking = actions.checking === paragraph.id
+  return (
+    <div className="min-w-0 flex-1">
+      <textarea
+        autoFocus
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        placeholder={paragraph.tags.includes('missing') ? `${paragraph.text}. ${L.rewritePlaceholder}` : L.rewritePlaceholder}
+        rows={Math.min(10, Math.max(4, Math.ceil(text.length / 60)))}
+        disabled={checking}
+        className={`${textArea} w-full text-[14.5px] leading-[1.8]`}
+      />
+      <div className="mt-2 flex items-center justify-end gap-1">
+        <button type="button" disabled={checking} onClick={() => actions.edit(null)} className={quietButton}>
+          {L.cancel}
+        </button>
+        <button type="button" disabled={checking || text.trim().length < 10} onClick={() => actions.recheck(paragraph.id, text.trim())} className={primaryButton}>
+          {checking ? L.checking : L.recheck}
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -171,6 +267,7 @@ function DocumentView({ title, owner, paragraphs, filter }: { title: string; own
   }, [paragraphs])
 
   const dim = (paragraph: ReviewParagraph) => filter !== 'all' && !paragraph.tags.includes(filter)
+  const editing = useContext(Actions)?.editing ?? null
 
   function focus(paragraph: ReviewParagraph) {
     setActive(paragraph.id)
@@ -204,7 +301,7 @@ function DocumentView({ title, owner, paragraphs, filter }: { title: string; own
                   <span className="mt-[5px]">
                     <ParagraphNumber value={index + 1} on={on} />
                   </span>
-                  <p className="min-w-0 flex-1 text-[15px] leading-[1.9] text-gray-800">{paragraph.text}</p>
+                  {editing === paragraph.id ? <ParagraphEditor paragraph={paragraph} /> : <p className="min-w-0 flex-1 text-[15px] leading-[1.9] text-gray-800">{paragraph.text}</p>}
                 </div>
                 <div className="mt-2 rounded-xl bg-gray-50 p-4 md:hidden">
                   <Comment paragraph={paragraph} index={index} on={on} />
@@ -220,9 +317,17 @@ function DocumentView({ title, owner, paragraphs, filter }: { title: string; own
         {paragraphs.map((paragraph, index) => {
           const on = active === paragraph.id
           return (
-            <button
+            // 안에 고쳐 쓰기 버튼이 있어서 바깥은 버튼이 아니라 누를 수 있는 칸이에요.
+            <div
               key={paragraph.id}
-              type="button"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+                  event.preventDefault()
+                  focus(paragraph)
+                }
+              }}
               ref={(element) => {
                 if (element) notes.current.set(paragraph.id, element)
                 else notes.current.delete(paragraph.id)
@@ -234,7 +339,7 @@ function DocumentView({ title, owner, paragraphs, filter }: { title: string; own
               style={{ top: layout?.tops[index] ?? 0 }}
             >
               <Comment paragraph={paragraph} index={index} on={on} />
-            </button>
+            </div>
           )
         })}
       </div>
@@ -268,7 +373,7 @@ function DocumentView({ title, owner, paragraphs, filter }: { title: string; own
  * 서류 검증 탭이에요. 자기소개서, 이력서, 포트폴리오를 공고에 맞춰 문단마다 읽고, 좋아요, 고쳐요, 빠졌어요, 면접 예상 태그와 피드백을 붙여요.
  * 면접 예상 태그가 붙은 문단은 예상 질문 탭의 질문으로 이어져요.
  */
-export function ReviewTab({ reportId }: { reportId: string }) {
+export function ReviewTab({ reportId, onQuestions }: { reportId: string; onQuestions?: () => void }) {
   const L = useMessages(TEXT)
   const resume = useResume()
   const [doc, setDoc] = useState<DocType>('coverLetter')
@@ -281,6 +386,53 @@ export function ReviewTab({ reportId }: { reportId: string }) {
   const [filter, setFilter] = useState<ParagraphTag | 'all'>('all')
   const review = reviews[doc]
   const countOf = (tag: ParagraphTag) => review?.paragraphs.filter((paragraph) => paragraph.tags.includes(tag)).length ?? 0
+  /** 재검증이나 고쳐 쓰기 전의 결과예요. 점수와 태그 수가 얼마나 바뀌었는지 보여줘요. 이번 접속 동안만 기억해요. */
+  const [previous, setPrevious] = useState<Partial<Record<DocType, DocumentReview>>>({})
+  const before = previous[doc]
+  const beforeCount = (tag: ParagraphTag) => before?.paragraphs.filter((paragraph) => paragraph.tags.includes(tag)).length ?? 0
+  const [editing, setEditing] = useState<string | null>(null)
+  const [checking, setChecking] = useState<string | null>(null)
+  const [rechecked, setRechecked] = useState<Set<string>>(new Set())
+
+  /** 고쳐 쓴 문단 하나만 다시 검증해요. 다 되면 결과를 바꾸고 바뀌기 전 결과를 남겨 변화를 보여줘요. */
+  async function recheck(id: string, text: string) {
+    if (!review) return
+    const target = doc
+    setChecking(id)
+    track('review_paragraph_recheck', { doc: target })
+    const next = await recheckParagraph(reportId, target, id, text)
+    setChecking(null)
+    if (!next) return
+    setPrevious((prev) => ({ ...prev, [target]: review }))
+    setReviews((prev) => ({ ...prev, [target]: next }))
+    setRechecked((prev) => new Set(prev).add(id))
+    setEditing(null)
+  }
+
+  // 예상 질문 중 서류 문단에서 나온 질문("서류 2문단")을 그 문단과 맞춰요. 검증 문단은 이력서 문단을 그대로 옮긴 글이라 글로 찾아요.
+  const report = useReports().find((item) => item.id === reportId)
+  const sourceParagraphs = useResumeShelf().list.find((item) => item.id === report?.resumeId)?.paragraphs ?? resume?.paragraphs ?? []
+  const [questions, setQuestions] = useState<InterviewQuestion[]>([])
+  useEffect(() => {
+    let stale = false
+    void fetchQuestions(reportId, undefined, true).then((list) => {
+      if (!stale) setQuestions(list)
+    })
+    return () => {
+      stale = true
+    }
+  }, [reportId])
+  const normalize = (text: string) => text.replace(/\s+/g, ' ').trim()
+  function questionsOf(text: string) {
+    const target = normalize(text)
+    const index = sourceParagraphs.findIndex((paragraph) => {
+      const source = normalize(paragraph)
+      return source === target || source.startsWith(target.slice(0, 40)) || target.startsWith(source.slice(0, 40))
+    })
+    if (index < 0 || target.length < 20) return 0
+    return questions.filter((question) => question.source.type === 'paragraph' && Number(/(\d+)\s*문단/.exec(question.source.label)?.[1]) === index + 1).length
+  }
+  const actions: ReviewActions = { editing, checking, rechecked, edit: setEditing, recheck: (id, text) => void recheck(id, text), questionsOf, onQuestions }
 
   /** 서류 검증을 받아요. fresh(재검증)면 저장된 결과를 지우고 다시 읽어요. */
   async function load(target: DocType, fresh = false) {
@@ -290,7 +442,14 @@ export function ReviewTab({ reportId }: { reportId: string }) {
     const onProgress = (next: ProgressState) => {
       if (request === latest.current) setProgress(next)
     }
+    const current = reviews[target]
     const result = fresh ? await regenerateReview(reportId, target, onProgress) : await fetchReview(reportId, target, onProgress)
+    // 재검증이면 바뀌기 전 결과를 남겨 두고, 고쳐 쓰던 칸과 다시 본 표시는 비워요.
+    if (fresh && current) setPrevious((prev) => ({ ...prev, [target]: current }))
+    if (fresh) {
+      setEditing(null)
+      setRechecked(new Set())
+    }
     setReviews((prev) => ({ ...prev, [target]: result }))
     if (request === latest.current) setLoading(false)
   }
@@ -331,6 +490,14 @@ export function ReviewTab({ reportId }: { reportId: string }) {
       ) : (
         <>
           <ScoreHero score={review.fitScore} label={L.fitLabel} title={L.verdict(review.fitScore)} body={review.summary} />
+          {/* 재검증이나 고쳐 쓰기를 했으면 직전보다 부합도가 얼마나 바뀌었는지 적어요. */}
+          {before && (
+            <p className="-mt-3 flex items-center gap-2 px-1 text-[13px] text-gray-500 tabular-nums">
+              {L.change}
+              <span className="font-medium text-gray-800">{L.scoreChange(before.fitScore, review.fitScore)}</span>
+              <Delta value={review.fitScore - before.fitScore} />
+            </p>
+          )}
 
           {/* 문단 요약이에요. 칸을 누르면 그 태그의 문단만 걸러 보고, 한 번 더 누르면 전체로 돌아가요. */}
           <section aria-label={L.summary} className="grid animate-rise grid-cols-2 gap-2 [animation-delay:40ms] lg:grid-cols-4">
@@ -353,6 +520,12 @@ export function ReviewTab({ reportId }: { reportId: string }) {
                   <span className={`mt-1.5 text-[26px] leading-none font-semibold tabular-nums ${SUMMARY_TONES[tag]}`}>
                     {count}
                     <span className="ml-0.5 text-[13px] font-medium text-gray-400">/ {review.paragraphs.length}</span>
+                    {before && count !== beforeCount(tag) && (
+                      <span className="ml-1.5 text-[12.5px] font-medium text-gray-500">
+                        {count > beforeCount(tag) ? '+' : ''}
+                        {count - beforeCount(tag)}
+                      </span>
+                    )}
                   </span>
                   <span className="mt-2 text-[12px] text-gray-500">{L.tagHints[tag]}</span>
                 </button>
@@ -372,7 +545,9 @@ export function ReviewTab({ reportId }: { reportId: string }) {
                 </button>
               )}
             </div>
-            <DocumentView title={docName(doc)} owner={resume?.name} paragraphs={review.paragraphs} filter={filter} />
+            <Actions.Provider value={actions}>
+              <DocumentView title={docName(doc)} owner={resume?.name} paragraphs={review.paragraphs} filter={filter} />
+            </Actions.Provider>
           </section>
 
           {review.appealMore.length > 0 && (

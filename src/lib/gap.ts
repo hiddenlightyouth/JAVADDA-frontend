@@ -1976,6 +1976,20 @@ export async function fetchReview(reportId: string, docType: DocType, onProgress
   return { ...result.data, paragraphs: result.data.paragraphs ?? [], appealMore: result.data.appealMore ?? [] }
 }
 
+/**
+ * 고쳐 쓴 문단 하나만 다시 검증해요(POST /reports/{id}/reviews/{docType}/paragraphs/{문단}/check). 서버가 저장된 검증에서
+ * 그 문단의 글, 태그, 코멘트를 바꾸고 부합도를 다시 계산해 검증 전체를 돌려줘요. 실패하면 토스트로 알리고 null이에요.
+ */
+export async function recheckParagraph(reportId: string, docType: DocType, paragraphId: string, text: string, onProgress?: OnProgress): Promise<DocumentReview | null> {
+  const path = `/reports/${Number(currentId(reportId))}/reviews/${docType}/paragraphs/${encodeURIComponent(paragraphId)}/check`
+  const result = await withProgress(onProgress, (headers) => call<DocumentReview>(path, send('POST', { text }), true, headers))
+  if (!result.ok || !result.data) {
+    fail(result)
+    return null
+  }
+  return { ...result.data, paragraphs: result.data.paragraphs ?? [], appealMore: result.data.appealMore ?? [] }
+}
+
 /** 서류 검증을 다시 해요(POST /reports/{id}/reviews/{docType}/regenerate). 저장된 결과를 지우고 AI가 새로 읽어요. 실패하면 토스트로 알리고 null이에요. */
 export async function regenerateReview(reportId: string, docType: DocType, onProgress?: OnProgress): Promise<DocumentReview | null> {
   const result = await withProgress(onProgress, (headers) => call<DocumentReview>(`/reports/${Number(currentId(reportId))}/reviews/${docType}/regenerate`, { method: 'POST' }, true, headers))
@@ -1988,11 +2002,14 @@ export async function regenerateReview(reportId: string, docType: DocType, onPro
 
 // ---------- 예상 면접 질문 ----------
 
-/** 예상 면접 질문이에요(GET /reports/{id}/questions). 나올 확률 순서예요. onProgress를 주면 진행 상황을 알려줘요. 실패하면 토스트로 알리고 빈 목록이에요. */
-export async function fetchQuestions(reportId: string, onProgress?: OnProgress): Promise<InterviewQuestion[]> {
+/**
+ * 예상 면접 질문이에요(GET /reports/{id}/questions). 나올 확률 순서예요. onProgress를 주면 진행 상황을 알려줘요. 실패하면 토스트로 알리고 빈 목록이에요.
+ * quiet면 실패해도 토스트를 띄우지 않아요. 서류 검증 탭이 문단과 질문을 잇느라 부를 때처럼 덤으로 받을 때 써요.
+ */
+export async function fetchQuestions(reportId: string, onProgress?: OnProgress, quiet = false): Promise<InterviewQuestion[]> {
   const result = await withProgress(onProgress, (headers) => call<InterviewQuestion[]>(`/reports/${Number(currentId(reportId))}/questions`, {}, true, headers))
   if (!result.ok || !Array.isArray(result.data)) {
-    fail(result)
+    if (!quiet) fail(result)
     return []
   }
   return [...result.data].sort((a, b) => b.probability - a.probability)
