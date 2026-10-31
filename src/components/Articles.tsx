@@ -171,8 +171,8 @@ export function Articles({ slug, onOpen, onHome }: Props) {
   useEffect(() => {
     applyMeta(
       article
-        ? { title: `${article.title} | ${SITE_TITLE}`, description: article.description }
-        : { title: `${ARTICLES_TEXT[lang].title} | ${SITE_TITLE}`, description: ARTICLES_TEXT[lang].description },
+        ? { title: `${article.title} | ${SITE_TITLE[lang]}`, description: article.description }
+        : { title: `${ARTICLES_TEXT[lang].title} | ${SITE_TITLE[lang]}`, description: ARTICLES_TEXT[lang].description },
       lang,
       article ? `/articles/${article.slug}` : '/articles',
     )

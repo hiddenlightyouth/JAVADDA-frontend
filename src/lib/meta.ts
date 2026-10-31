@@ -5,7 +5,8 @@
 import { localizePath, messages, type Lang } from './i18n'
 
 export const SITE = 'https://lofy.hidly.dev'
-export const SITE_TITLE = 'Javadda'
+/** 탭 제목에 붙는 서비스 이름이에요. 한국어 화면은 잡아따, 영어 화면은 Javadda예요. */
+export const SITE_TITLE: Record<Lang, string> = { ko: '잡아따', en: 'Javadda' }
 
 interface PageMeta {
   /** 탭 제목 */
@@ -24,12 +25,12 @@ export const OG_IMAGES: Record<Lang, string> = { ko: `${SITE}/og.png`, en: `${SI
 /** 메인 화면과, 따로 정하지 않은 화면의 값이에요. */
 export const HOME_META = messages<PageMeta>({
   ko: {
-    title: SITE_TITLE,
+    title: SITE_TITLE.ko,
     description: '기업이나 공고를 기준으로 이력서를 진단하고, 부족한 역량과 채우는 방법, 맞는 공고까지 한 리포트로 받아요.',
     ogTitle: 'Javadda, 내 역량과 공고 사이 얼마나 멀까요?',
   },
   en: {
-    title: 'Javadda - How far are you from the job you want?',
+    title: `${SITE_TITLE.en} - How far are you from the job you want?`,
     description: 'Measure your resume against a real company or posting. Get skill gaps, how to close them, and the postings that fit you now.',
     ogTitle: 'How far are you from the job you want?',
     ogDescription: 'Pick a posting, upload your resume, and get the gaps, the plan, and the interview questions in one report.',

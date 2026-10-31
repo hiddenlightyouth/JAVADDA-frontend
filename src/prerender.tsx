@@ -60,13 +60,13 @@ function pagesFor(lang: Lang): PrerenderedPage[] {
     { ...base('/'), ...home, html: render(<About onHome={noop} />) },
     {
       ...base('/articles'),
-      title: `${ARTICLES_TEXT[lang].title} | ${SITE_TITLE}`,
+      title: `${ARTICLES_TEXT[lang].title} | ${SITE_TITLE[lang]}`,
       description: ARTICLES_TEXT[lang].description,
       html: render(articlesScreen(null)),
     },
     ...articlesFor(lang).map((article) => ({
       ...base(`/articles/${article.slug}`),
-      title: `${article.title} | ${SITE_TITLE}`,
+      title: `${article.title} | ${SITE_TITLE[lang]}`,
       description: article.description,
       html: render(articlesScreen(article.slug)),
     })),
