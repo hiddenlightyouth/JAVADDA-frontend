@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { careerName, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, skillLogoOf, useDiagnosed, type Company, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
+import { careerName, categoryName, COMPANY_CATEGORIES, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, skillLogoOf, useDiagnosed, type Company, type CompanyCategory, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { ConfirmDialog } from './Dialog'
 import { BeakerIcon, BoxesIcon, BriefcaseIcon, CheckIcon, ChipIcon, CloseIcon, CodeIcon, DatabaseIcon, GlobeIcon, LayersIcon, MapPinIcon, PersonIcon, SparkleIcon, TreeIcon, TriangleIcon } from './Icons'
@@ -422,6 +422,44 @@ export function PostingMeta({ posting, size = 'sm', careerClass = 'flex', locati
  * 기업을 로고와 이름으로 한 번에 고르는 버튼 줄이에요. 공고 탐색과 기술 블로그가 같이 써요.
  * 고른 기업을 다시 누르면 풀려요. allLabel을 넘기면 맨 앞에 전체 버튼이 생겨요. 넓은 목록에서는 여러 줄로, 좁으면 옆으로 넘겨요.
  */
+/**
+ * 기업의 사업 분류를 고르는 버튼 줄이에요. 기업이 많아져서 공고 탐색과 마감 달력은 기업 대신 이것으로 골라요. 공고가 있는 분류만 보여줘요.
+ * 기업 상세나 새 진단에서 한 기업을 골라 들어오면 그 기업 이름을 앞에 두고, 누르면 풀려요.
+ */
+export function CategoryFilter({ postings, value, onChange, label, allLabel, company, onClearCompany }: {
+  postings: readonly { companyId: string }[]
+  value: CompanyCategory | null
+  onChange: (category: CompanyCategory | null) => void
+  label: string
+  allLabel: string
+  company?: Company | null
+  onClearCompany?: () => void
+}) {
+  const present = new Set(postings.map((posting) => companyOf(posting.companyId).category))
+  const categories = COMPANY_CATEGORIES.filter((category) => present.has(category) || category === value)
+  const tone = (on: boolean) => (on ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950')
+  const chip = 'flex h-10 shrink-0 items-center rounded-full border px-4 text-[14px] font-medium transition-colors'
+  return (
+    <div role="radiogroup" aria-label={label} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
+      {company && (
+        <button type="button" onClick={onClearCompany} className={`${chip} gap-2 pl-1.5 ${tone(true)}`}>
+          <CompanyMark company={company} className="size-7 rounded-full! text-[11px]" />
+          {company.name}
+          <CloseIcon className="size-3" />
+        </button>
+      )}
+      <button type="button" role="radio" aria-checked={!value} onClick={() => onChange(null)} className={`${chip} ${tone(!value)}`}>
+        {allLabel}
+      </button>
+      {categories.map((category) => (
+        <button key={category} type="button" role="radio" aria-checked={value === category} onClick={() => onChange(value === category ? null : category)} className={`${chip} ${tone(value === category)}`}>
+          {categoryName(category)}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export function CompanyFilter({ companies, value, onChange, label, allLabel }: {
   companies: readonly Company[]
   value: string | null

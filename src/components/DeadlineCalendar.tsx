@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { track } from '../lib/analytics'
-import { COMPANIES, companyOf, fetchPostings, fitOf, useReports, useResume, type JobPosting } from '../lib/gap'
+import { companyOf, type CompanyCategory, fetchPostings, fitOf, useReports, useResume, type JobPosting } from '../lib/gap'
 import { holidayOf } from '../lib/holidays'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
-import { CompanyFilter, CompanyMark, Failed, FitTag, PostingMeta, usePickConfirm } from './GapParts'
+import { CategoryFilter, CompanyMark, Failed, FitTag, PostingMeta, usePickConfirm } from './GapParts'
 import { ChevronRightIcon } from './Icons'
 import { Badge, iconButton, loadCenter, LoadProgress, Segmented, toolButton } from './ui'
 
@@ -25,7 +25,8 @@ const TEXT = messages({
     prev: '이전 달',
     next: '다음 달',
     today: '오늘',
-    company: '기업',
+    category: '기업 분류',
+    allCategories: '전체',
     scope: '보기',
     scopes: { all: '전체 공고', diagnosed: '진단한 공고' } as Record<Scope, string>,
     always: (count: number) => `${count}개의 상시 채용`,
@@ -43,7 +44,8 @@ const TEXT = messages({
     prev: 'Previous month',
     next: 'Next month',
     today: 'Today',
-    company: 'Company',
+    category: 'Company type',
+    allCategories: 'All',
     scope: 'Show',
     scopes: { all: 'All postings', diagnosed: 'Diagnosed' },
     always: (count: number) => `${count} rolling`,
@@ -80,7 +82,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
   const now = new Date()
   const todayKey = dayKey(now)
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() })
-  const [company, setCompany] = useState<string | null>(null)
+  const [category, setCategory] = useState<CompanyCategory | null>(null)
   const [scope, setScope] = useState<Scope>('all')
   const [selected, setSelected] = useState<string>(todayKey)
   const [loaded, setLoaded] = useState<Loaded | undefined>(undefined)
@@ -114,7 +116,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
     const always: { posting: JobPosting; from: string }[] = []
     if (!Array.isArray(loaded)) return { byDay, always }
     for (const posting of loaded) {
-      if (company && posting.companyId !== company) continue
+      if (category && companyOf(posting.companyId).category !== category) continue
       if (scope === 'diagnosed' && !diagnosed.has(posting.id)) continue
       if (!posting.deadline) {
         always.push({ posting, from: dayKey(new Date(posting.postedAt)) })
@@ -125,7 +127,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
     }
     for (const list of byDay.values()) list.sort((a, b) => (a.deadline ?? '').localeCompare(b.deadline ?? ''))
     return { byDay, always }
-  }, [loaded, company, scope, diagnosed])
+  }, [loaded, category, scope, diagnosed])
 
   // 처음 열면 오늘부터 가장 가까운 마감이 있는 달과 날짜를 골라 둬요. 이번 달에 남은 마감이 없으면 빈 달력만 보여서 이상해 보였어요.
   useEffect(() => {
@@ -172,7 +174,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
 
   return (
     <ScrollPage header={<PageHeader title={L.title} />} className="@container">
-      <CompanyFilter companies={COMPANIES} value={company} label={L.company} onChange={setCompany} />
+      <CategoryFilter postings={Array.isArray(loaded) ? loaded : []} value={category} label={L.category} allLabel={L.allCategories} onChange={setCategory} />
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button type="button" aria-label={L.prev} onClick={() => moveMonth(-1)} className={`${iconButton.md} size-9! border border-gray-200 bg-white`}>

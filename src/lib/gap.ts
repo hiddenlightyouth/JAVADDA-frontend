@@ -17,6 +17,11 @@ export type JobFamily = 'backend' | 'frontend' | 'mobile' | 'data' | 'devops'
 export type CareerLevel = 'entry' | 'junior' | 'any'
 type Requirement = 'required' | 'preferred'
 
+export type CompanyCategory = 'service' | 'saas' | 'commerce' | 'finance' | 'ai' | 'it-service' | 'manufacturing' | 'public' | 'other'
+
+/** 공고 탐색과 마감 달력의 분류 버튼 순서예요. */
+export const COMPANY_CATEGORIES: CompanyCategory[] = ['service', 'saas', 'commerce', 'finance', 'ai', 'it-service', 'manufacturing', 'public', 'other']
+
 export interface Company {
   id: string
   name: string
@@ -29,6 +34,8 @@ export interface Company {
   site: string
   /** 기업 기술 블로그 주소. 요구 스택의 변화를 읽는 자료이고, 요약은 `blogs.ts`에 있어요. */
   techBlog?: string
+  /** 사업 분류. 아직 분류하지 않았으면 비어 있어요. */
+  category?: CompanyCategory
 }
 
 export interface JobPosting {
@@ -298,18 +305,18 @@ export const LEVEL_MAX = 5
 
 /** 서버에 닿지 못했을 때 보여줄 기업이에요. 서버에 닿으면 `loadCatalog`가 `COMPANIES`를 서버의 목록으로 바꿔요. */
 const FALLBACK_COMPANIES: Company[] = [
-  { id: 'toss', name: '토스', initial: 'T', logo: '/logos/toss.png', industry: '핀테크', site: 'https://toss.im/company', techBlog: 'https://toss.tech' },
-  { id: 'kakao', name: '카카오', initial: 'K', logo: '/logos/kakao.png', industry: '플랫폼', site: 'https://www.kakaocorp.com/page/', techBlog: 'https://tech.kakao.com' },
-  { id: 'naver', name: '네이버', initial: 'N', logo: '/logos/naver.png', industry: '포털', site: 'https://www.navercorp.com', techBlog: 'https://d2.naver.com' },
-  { id: 'woowa', name: '우아한형제들', initial: '우', logo: '/logos/woowa.png', industry: '푸드테크', site: 'https://www.woowahan.com', techBlog: 'https://techblog.woowahan.com' },
-  { id: 'coupang', name: '쿠팡', initial: 'C', logo: '/logos/coupang.png', industry: '커머스', site: 'https://www.aboutcoupang.com', techBlog: 'https://medium.com/coupang-engineering' },
-  { id: 'line', name: '라인플러스', initial: 'L', logo: '/logos/line.png', industry: '메신저', site: 'https://www.linepluscorp.com', techBlog: 'https://techblog.lycorp.co.jp/ko' },
-  { id: 'daangn', name: '당근', initial: '당', logo: '/logos/daangn.png', industry: '로컬 커뮤니티', site: 'https://about.daangn.com', techBlog: 'https://medium.com/daangn' },
-  { id: 'musinsa', name: '무신사', initial: 'M', logo: '/logos/musinsa.png', industry: '패션 커머스', site: 'https://www.musinsacareers.com/ko/home', techBlog: 'https://techblog.musinsa.com' },
-  { id: 'dunamu', name: '두나무', initial: 'D', logo: '/logos/dunamu.png', industry: '핀테크', site: 'https://www.dunamu.com' },
-  { id: 'zigbang', name: '직방', initial: 'Z', logo: '/logos/zigbang.png', industry: '프롭테크', site: 'https://career.zigbang.com', techBlog: 'https://medium.com/zigbang' },
-  { id: 'wanted', name: '원티드랩', initial: 'W', logo: '/logos/wanted.png', industry: 'HR 테크', site: 'https://www.wantedlab.com', techBlog: 'https://medium.com/wantedjobs' },
-  { id: 'bucketplace', name: '오늘의집', initial: '오', logo: '/logos/bucketplace.png', industry: '리빙 커머스', site: 'https://www.bucketplace.com', techBlog: 'https://www.bucketplace.com/culture/Tech/' },
+  { id: 'toss', name: '토스', initial: 'T', logo: '/logos/toss.png', industry: '핀테크', site: 'https://toss.im/company', techBlog: 'https://toss.tech', category: 'finance' },
+  { id: 'kakao', name: '카카오', initial: 'K', logo: '/logos/kakao.png', industry: '플랫폼', site: 'https://www.kakaocorp.com/page/', techBlog: 'https://tech.kakao.com', category: 'service' },
+  { id: 'naver', name: '네이버', initial: 'N', logo: '/logos/naver.png', industry: '포털', site: 'https://www.navercorp.com', techBlog: 'https://d2.naver.com', category: 'service' },
+  { id: 'woowa', name: '우아한형제들', initial: '우', logo: '/logos/woowa.png', industry: '푸드테크', site: 'https://www.woowahan.com', techBlog: 'https://techblog.woowahan.com', category: 'service' },
+  { id: 'coupang', name: '쿠팡', initial: 'C', logo: '/logos/coupang.png', industry: '커머스', site: 'https://www.aboutcoupang.com', techBlog: 'https://medium.com/coupang-engineering', category: 'commerce' },
+  { id: 'line', name: '라인플러스', initial: 'L', logo: '/logos/line.png', industry: '메신저', site: 'https://www.linepluscorp.com', techBlog: 'https://techblog.lycorp.co.jp/ko', category: 'service' },
+  { id: 'daangn', name: '당근', initial: '당', logo: '/logos/daangn.png', industry: '로컬 커뮤니티', site: 'https://about.daangn.com', techBlog: 'https://medium.com/daangn', category: 'service' },
+  { id: 'musinsa', name: '무신사', initial: 'M', logo: '/logos/musinsa.png', industry: '패션 커머스', site: 'https://www.musinsacareers.com/ko/home', techBlog: 'https://techblog.musinsa.com', category: 'commerce' },
+  { id: 'dunamu', name: '두나무', initial: 'D', logo: '/logos/dunamu.png', industry: '핀테크', site: 'https://www.dunamu.com', category: 'finance' },
+  { id: 'zigbang', name: '직방', initial: 'Z', logo: '/logos/zigbang.png', industry: '프롭테크', site: 'https://career.zigbang.com', techBlog: 'https://medium.com/zigbang', category: 'service' },
+  { id: 'wanted', name: '원티드랩', initial: 'W', logo: '/logos/wanted.png', industry: 'HR 테크', site: 'https://www.wantedlab.com', techBlog: 'https://medium.com/wantedjobs', category: 'service' },
+  { id: 'bucketplace', name: '오늘의집', initial: '오', logo: '/logos/bucketplace.png', industry: '리빙 커머스', site: 'https://www.bucketplace.com', techBlog: 'https://www.bucketplace.com/culture/Tech/', category: 'commerce' },
 ]
 
 /** 기업 목록이에요. 처음 그리기 전에 `loadCatalog`가 서버의 목록으로 채워요(배열은 그대로 두고 속만 바꿔요). */
@@ -499,6 +506,30 @@ export function suggestSkills(query: string, exclude: string[] = [], limit = 8):
     .slice(0, limit)
     .map((item) => item.name)
 }
+
+const CATEGORY_NAMES: Record<CompanyCategory, string> = {
+  service: '자체 서비스',
+  saas: 'B2B SaaS',
+  commerce: '커머스',
+  finance: '핀테크, 금융',
+  ai: 'AI, 데이터',
+  'it-service': 'IT 서비스, SI',
+  manufacturing: '제조, 산업',
+  public: '공공기관',
+  other: '기타',
+}
+const CATEGORY_NAMES_EN: Record<CompanyCategory, string> = {
+  service: 'Consumer services',
+  saas: 'B2B SaaS',
+  commerce: 'Commerce',
+  finance: 'Fintech, finance',
+  ai: 'AI, data',
+  'it-service': 'IT services',
+  manufacturing: 'Manufacturing',
+  public: 'Public sector',
+  other: 'Other',
+}
+export const categoryName = (category: CompanyCategory) => (getLang() === 'en' ? CATEGORY_NAMES_EN[category] : CATEGORY_NAMES[category])
 
 const FAMILY_NAMES: Record<JobFamily, string> = { backend: '백엔드', frontend: '프론트엔드', mobile: '모바일', data: '데이터', devops: 'DevOps' }
 const FAMILY_NAMES_EN: Record<JobFamily, string> = { backend: 'Backend', frontend: 'Frontend', mobile: 'Mobile', data: 'Data', devops: 'DevOps' }
@@ -1040,7 +1071,7 @@ export function requestLogin() {
 
 // ---------- 기업과 공고 ----------
 
-type ServerCompany = Omit<Company, 'logo' | 'techBlog'> & { logo?: string | null; techBlog?: string | null }
+type ServerCompany = Omit<Company, 'logo' | 'techBlog' | 'category'> & { logo?: string | null; techBlog?: string | null; category?: CompanyCategory | null }
 type ServerPosting = Omit<JobPosting, 'deadline' | 'fitScore'> & { deadline?: string | null; fitScore?: number | null }
 
 const toCompany = (item: ServerCompany): Company => ({
@@ -1048,6 +1079,7 @@ const toCompany = (item: ServerCompany): Company => ({
   initial: item.initial || item.name.slice(0, 1).toUpperCase(),
   logo: item.logo ?? undefined,
   techBlog: item.techBlog ?? undefined,
+  category: item.category ?? undefined,
   site: item.site ?? '',
   industry: item.industry ?? '',
 })

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
-import { careerName, COMPANIES, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, SEARCH_SUGGESTIONS, SUGGEST_MS } from '../lib/gap'
+import { careerName, companyOf, type CompanyCategory, familyName, fetchPostings, fitOf, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort, SEARCH_SUGGESTIONS, SUGGEST_MS } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
-import { CompanyFilter, Failed, Notice, usePickConfirm } from './GapParts'
+import { CategoryFilter, Failed, Notice, usePickConfirm } from './GapParts'
 import { SearchIcon } from './Icons'
 import { JobItem, jobsGrid, jobsList, LayoutToggle, readLayout, useJobBrowser, type Layout } from './JobCard'
 import { SplitView } from './PostingBrowser'
@@ -34,7 +34,7 @@ const TEXT = messages({
     noneBody: '검색어나 걸러 둔 조건을 바꿔 보세요.',
     reset: '조건 초기화',
     location: '지역',
-    company: '기업',
+    category: '기업 분류',
   },
   en: {
     title: 'Explore jobs',
@@ -49,7 +49,7 @@ const TEXT = messages({
     noneBody: 'Try a different search or filter.',
     reset: 'Clear filters',
     location: 'Location',
-    company: 'Company',
+    category: 'Company type',
   },
 })
 
@@ -67,6 +67,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   const [attempt, setAttempt] = useState(0)
   const [suggestion, setSuggestion] = useState(0)
   const [company, setCompany] = useState<string | null>(initialCompany)
+  const [category, setCategory] = useState<CompanyCategory | null>(null)
   const browser = useJobBrowser()
   const [layout, setLayout] = useState<Layout>(readLayout)
   const load = useLoadProgress()
@@ -107,8 +108,10 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
 
   // 기업은 받아 온 공고에서 바로 걸러요. 기업마다 공고가 몇 개뿐이라 서버에 다시 묻지 않아요.
   const list = useMemo(
-    () => (Array.isArray(loaded) ? sortPostings(company ? loaded.filter((posting) => posting.companyId === company) : loaded, sort, resume) : loaded),
-    [loaded, company, sort, resume],
+    () => (Array.isArray(loaded) ? sortPostings(
+            loaded.filter((posting) => (!company || posting.companyId === company) && (!category || companyOf(posting.companyId).category === category)),
+            sort, resume) : loaded),
+    [loaded, company, category, sort, resume],
   )
   const waiting = useLoadHold(list === undefined)
 
@@ -198,15 +201,18 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
           />
         </div>
 
-        {/* 기업도 로고를 보고 한 번에 골라요. 다시 누르면 풀려요. */}
+        {/* 기업이 많아서 사업 분류로 골라요. 다시 누르면 풀려요. 기업 상세에서 왔으면 그 기업이 앞에 보여요. */}
         <div className="mt-4">
-          <CompanyFilter
-            companies={COMPANIES}
-            value={company}
-            label={L.company}
+          <CategoryFilter
+            postings={Array.isArray(loaded) ? loaded : []}
+            value={category}
+            label={L.category}
+            allLabel={L.all}
+            company={company ? companyOf(company) : null}
+            onClearCompany={() => setCompany(null)}
             onChange={(next) => {
-              track('jobs_company_select', { company: next ?? 'all' })
-              setCompany(next)
+              track('jobs_category_select', { category: next ?? 'all' })
+              setCategory(next)
             }}
           />
         </div>
@@ -225,13 +231,14 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
             <Notice
               title={L.none}
               body={L.noneBody}
-              action={query || family || career || company ? L.reset : undefined}
+              action={query || family || career || company || category ? L.reset : undefined}
               onAction={() => {
                 track('jobs_filter_reset')
                 setQuery('')
                 setFamily(null)
                 setCareer(null)
                 setCompany(null)
+                setCategory(null)
               }}
               className="mt-16"
             />
