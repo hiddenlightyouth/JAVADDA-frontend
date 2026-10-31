@@ -32,7 +32,6 @@ const TEXT = messages({
     scopes: { all: '전체 공고', diagnosed: '진단한 공고' } as Record<Scope, string>,
     always: (count: number) => `${count}개의 상시 채용`,
     alwaysShort: (count: number) => `상시 ${count}`,
-    moreInCell: (count: number) => `+${count}곳`,
     companyCount: (count: number) => `공고 ${count}개`,
     alwaysTitle: (month: number, date: number) => `${month + 1}월 ${date}일 상시 채용`,
     day: (month: number, date: number) => `${month + 1}월 ${date}일 마감`,
@@ -54,7 +53,6 @@ const TEXT = messages({
     scopes: { all: 'All postings', diagnosed: 'Diagnosed' },
     always: (count: number) => `${count} rolling`,
     alwaysShort: (count: number) => `+${count}`,
-    moreInCell: (count: number) => `+${count} more`,
     companyCount: (count: number) => `${count} postings`,
     alwaysTitle: (month: number, date: number) => `Rolling on ${new Date(2000, month, date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`,
     day: (month: number, date: number) => `Closing ${new Date(2000, month, date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`,
@@ -80,9 +78,6 @@ function monthDays(year: number, month: number): Date[] {
   const first = new Date(year, month, 1)
   return Array.from({ length: 42 }, (_, index) => new Date(year, month, 1 - first.getDay() + index))
 }
-
-/** 날짜 칸에 줄로 보여줄 기업 수예요. 나머지는 "+2곳"처럼 수로 줄여요. */
-const CELL_POSTINGS = 3
 
 /** 공고를 기업별로 묶어요. 공고가 많은 기업이 앞이고, 같으면 받은 순서예요. */
 function groupByCompany(postings: JobPosting[]): { companyId: string; postings: JobPosting[] }[] {
@@ -318,8 +313,8 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
                         </span>
                       )}
                       <span className={`hidden flex-col gap-1 @3xl:flex ${past ? 'opacity-50' : ''}`}>
-                        {/* 그날 마감 공고를 기업별로 묶어 한 줄씩 둬요. 같은 기업 공고가 칸을 다 차지하지 않게요. 세 곳까지 보여주고 나머지는 수로 줄여요. */}
-                        {groupByCompany(list).slice(0, CELL_POSTINGS).map(({ companyId, postings }) => {
+                        {/* 그날 마감 공고를 기업별로 묶어 한 줄씩 둬요. 같은 기업 공고가 칸을 다 차지하지 않게요. 줄이지 않고 모두 보여줘서, 기업이 많으면 칸이 그만큼 길어져요. */}
+                        {groupByCompany(list).map(({ companyId, postings }) => {
                           const company = companyOf(companyId)
                           const one = postings.length === 1 ? postings[0] : null
                           return (
@@ -345,9 +340,6 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
                             </button>
                           )
                         })}
-                        {groupByCompany(list).length > CELL_POSTINGS && (
-                          <span className="px-1.5 text-[11.5px] text-gray-500 tabular-nums">{L.moreInCell(groupByCompany(list).length - CELL_POSTINGS)}</span>
-                        )}
                       </span>
                     </div>
                   )
