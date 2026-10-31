@@ -5,7 +5,7 @@ import { formatDateTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
 import { Dropdown } from './Dropdown'
 import { AiProgress, Failed, Notice } from './GapParts'
-import { Bullets, ghostButton, label, primaryButton, stagger, tag, toolButton } from './ui'
+import { Bullets, ghostButton, label, loadCenter, primaryButton, stagger, tag, toolButton } from './ui'
 
 const CATEGORIES: QuestionCategory[] = ['tech', 'project', 'cs', 'culture']
 
@@ -251,7 +251,7 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
 
       {questions === undefined ? (
         // AI가 질문을 만드는 동안은 진행 정도를 막대로 보여줘요. 이미 만들어 둔 질문이면 금방 지나가요.
-        <AiProgress progress={progress.progress} stage={progress.stage} className="mx-auto mt-16 w-full max-w-md" />
+        <AiProgress progress={progress.progress} stage={progress.stage} className={loadCenter} />
       ) : questions === null ? (
         <Failed onRetry={() => void load()} className="mt-16" />
       ) : (

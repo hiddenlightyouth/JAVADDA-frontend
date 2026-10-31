@@ -80,7 +80,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
     return (
       <main className={pageFrame}>
         <PageHeader title={L.title} onBack={onBack} backLabel={L.back} />
-        <Notice title={L.missing} body={L.missingBody} action={L.goHome} onAction={onBack} className="mt-24" />
+        <Notice title={L.missing} body={L.missingBody} action={L.goHome} onAction={onBack} className="mt-16" />
       </main>
     )
   }
@@ -89,7 +89,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
     return (
       <main className={pageFrame}>
         <PageHeader title={posting.title} onBack={onBack} backLabel={L.back} />
-        <Failed onRetry={() => setFailed(false)} className="mt-24" />
+        <Failed onRetry={() => setFailed(false)} className="mt-16" />
       </main>
     )
   }
@@ -117,7 +117,7 @@ export function Diagnose({ postingId, onBack, onReport }: Props) {
           }
         />
         <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:-mx-10 md:px-10">
-          <div className="mx-auto w-full max-w-[640px] animate-rise space-y-8">
+          <div className="mx-auto w-full max-w-2xl animate-rise space-y-8">
             <section className="rounded-2xl bg-gray-50 p-5">
               <p className="text-[13px] text-gray-500">
                 {posting.location}, {familyName(posting.family)}, {careerName(posting.career)}, {left !== null ? L.deadline(left) : L.always}

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useDismiss } from '../hooks/useDismiss'
 import { Kbd } from './Shortcuts'
 import { CheckIcon, ChevronDownIcon } from './Icons'
-import { label as labelText, LoadProgress, menuItem, menuPanel, toolButton } from './ui'
+import { label as labelText, LoadProgress, menuItem, menuPanel, toolButton, toolButtonLg } from './ui'
 
 interface MenuItem {
   label: string
@@ -55,7 +55,7 @@ function placeOf(button: HTMLElement, align: 'left' | 'right'): Place {
  * 메뉴는 화면 맨 바깥(body)에 그려요. 설정 창처럼 스크롤되는 칸 안에 두면 칸 끝에서 잘리거나 칸이 같이 늘어나서 어색했어요.
  * 아래 자리가 모자라면 위로 펼치고, 스크롤하거나 창 크기가 바뀌면 버튼을 따라가요.
  */
-export function Dropdown({ label, value, active = false, groups, onOpen, align = 'left', className = '' }: {
+export function Dropdown({ label, value, active = false, groups, onOpen, align = 'left', size = 'md', className = '' }: {
   /** 버튼에 적는 이름. 고른 값만 보여줘도 뜻이 통하면 넘기지 않아요. */
   label?: string
   /** 지금 고른 값. 있으면 버튼에 이름 옆으로 보여줘요. */
@@ -66,7 +66,9 @@ export function Dropdown({ label, value, active = false, groups, onOpen, align =
   onOpen?: () => void
   /** 메뉴를 버튼의 어느 쪽 끝에 맞출지. 오른쪽 끝에 놓인 버튼(설정 창)은 right예요. */
   align?: 'left' | 'right'
-  /** 버튼 모양을 덧씌울 때 써요. */
+  /** md는 줄 안의 기본 크기(36px), lg는 화면 맨 위 거르는 줄의 크기(44px)예요. */
+  size?: 'md' | 'lg'
+  /** 버튼 모양을 덧씌울 때 써요. 크기는 size로 정하고 여기서 바꾸지 않아요. */
   className?: string
 }) {
   const [open, setOpen] = useState(false)
@@ -109,7 +111,7 @@ export function Dropdown({ label, value, active = false, groups, onOpen, align =
           if (!open) onOpen?.()
           setOpen((value) => !value)
         }}
-        className={`${toolButton} ${active ? 'border-brand! text-brand-hover!' : ''} ${className}`}
+        className={`${size === 'lg' ? toolButtonLg : toolButton} ${active ? 'border-brand! text-brand-hover!' : ''} ${className}`}
       >
         {label && <span className="text-gray-500">{label}</span>}
         {value && <span className="max-w-40 truncate">{value}</span>}

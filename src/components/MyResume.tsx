@@ -363,7 +363,7 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
       <PageHeader
         title={L.title}
         actions={
-          <button type="button" onClick={addDocument} className={`${primaryButton} flex items-center gap-1.5`}>
+          <button type="button" onClick={addDocument} className={primaryButton}>
             <PlusIcon className="size-3.5" />
             {L.addDoc}
           </button>
@@ -392,9 +392,9 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
             </section>
           )}
           {shelf.list.length === 0 ? (
-            !adding && <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={addDocument} className="mt-24" />
+            !adding && <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={addDocument} className="mt-16" />
           ) : (
-            <ul className="grid gap-4 @2xl:grid-cols-2 @5xl:grid-cols-3">
+            <ul className="grid gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3">
               {shelf.list.map((resume) => (
                 <ResumeCard
                   key={resume.id}
@@ -524,7 +524,7 @@ function ResumeCard({ resume, primary, selected, onSelect, onPrimary }: { resume
           </button>
         </Tip>
       </div>
-      <button type="button" onClick={onSelect} className="mt-3 truncate text-left text-[14.5px] font-semibold text-gray-900 group-hover:text-brand">
+      <button type="button" onClick={onSelect} className="mt-3 truncate text-left text-[16px] leading-snug font-semibold text-gray-900 group-hover:text-brand-hover">
         {resume.name}
       </button>
       <p className="mt-0.5 text-[12px] text-gray-400">

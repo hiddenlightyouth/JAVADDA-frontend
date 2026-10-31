@@ -5,7 +5,7 @@ import { formatDateTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
 import { AiProgress, Failed, Panel, ScoreHero } from './GapParts'
 import { RefreshIcon } from './Icons'
-import { Badge, NumberBadge, NumberedList, Segmented, toolButton } from './ui'
+import { Badge, loadCenter, NumberBadge, NumberedList, Segmented, toolButton } from './ui'
 
 const DOCS: DocType[] = ['coverLetter', 'resume', 'portfolio']
 
@@ -283,10 +283,10 @@ export function ReviewTab({ reportId }: { reportId: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <Segmented size="md" label={L.docs} options={DOCS.map((item) => [item, docName(item)] as const)} value={doc} onChange={setDoc} />
         <div className="ml-auto flex items-center gap-3">
-          {review && <span className="text-[12.5px] text-gray-400 tabular-nums">{L.reviewedAt(formatDateTime(review.reviewedAt))}</span>}
+          {review && <span className="text-[13px] text-gray-500 tabular-nums">{L.reviewedAt(formatDateTime(review.reviewedAt))}</span>}
           <button
             type="button"
             disabled={loading}
@@ -304,7 +304,7 @@ export function ReviewTab({ reportId }: { reportId: string }) {
 
       {loading || review === undefined ? (
         // AI가 문단마다 읽는 동안은 진행 정도를 막대로 보여줘요. 이미 읽어 둔 서류면 금방 지나가요.
-        <AiProgress progress={progress.progress} stage={progress.stage} className="mx-auto mt-16 w-full max-w-md" />
+        <AiProgress progress={progress.progress} stage={progress.stage} className={loadCenter} />
       ) : review === null ? (
         <Failed onRetry={() => void load(doc)} className="mt-16" />
       ) : (

@@ -8,7 +8,7 @@ import { pageFrame, PageHeader } from './AppPage'
 import { ConfirmDialog } from './Dialog'
 import { CompanyMark, FitBadge, Notice } from './GapParts'
 import { DotsIcon } from './Icons'
-import { menuDangerItem, menuPanel } from './ui'
+import { iconButton, menuDangerItem, menuPanel } from './ui'
 import { messages, pick, useMessages } from '../lib/i18n'
 
 export const REPORT_LIST_TEXT = messages({
@@ -154,7 +154,7 @@ function Row({ report, urgency, onOpen, onDelete }: { report: Report; urgency: U
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((open) => !open)}
-        className="flex size-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+        className={iconButton.md}
       >
         <DotsIcon />
       </button>
@@ -190,18 +190,18 @@ export function History({ onOpenReport, onHome }: { onOpenReport: (id: string) =
   return (
     <main className={pageFrame}>
       <PageHeader title={text.title} />
-      <div className="min-h-0 flex-1 overflow-y-auto pb-10">
+      <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:-mx-10 md:px-10">
         {reports.length === 0 ? (
           <Notice title={text.none} body={text.start} action={text.diagnose} onAction={onHome} className="mt-16" />
         ) : (
-          <div className="mx-auto w-full max-w-2xl px-4">
+          <div className="mx-auto w-full max-w-2xl">
             {[
               { title: text.active, items: ranked.filter((item) => item.urgency.kind !== 'closed') },
               { title: text.ended, items: ranked.filter((item) => item.urgency.kind === 'closed') },
             ]
               .filter((group) => group.items.length > 0)
               .map((group) => (
-                <section key={group.title} className="mt-6 first:mt-2">
+                <section key={group.title} className="mt-8 first:mt-0">
                   <h2 className="px-3 text-[12.5px] font-medium text-gray-400">
                     {group.title} <span className="tabular-nums">{group.items.length}</span>
                   </h2>

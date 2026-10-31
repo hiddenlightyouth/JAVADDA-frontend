@@ -31,7 +31,7 @@ import { DeleteReportDialog, removeReport } from './History'
 import { AlertIcon, CheckIcon, ChevronRightIcon, ClockIcon, LevelIcon, RefreshIcon, TrashIcon } from './Icons'
 import { ReviewTab } from './ReportReview'
 import { QuestionsTab } from './ReportQuestions'
-import { Bullets, label, LoadProgress, NumberedList, primaryButton, Tabs, textArea, toolButton, toolDangerButton } from './ui'
+import { Bullets, label, loadCenter, LoadProgress, NumberedList, primaryButton, Tabs, textArea, toolButton, toolDangerButton } from './ui'
 
 /** 리포트의 탭이에요. 요약, 적합도 설명, 서류 검증, 예상 면접 질문 순서예요. */
 export type ReportTab = 'summary' | 'fit' | 'review' | 'questions'
@@ -566,7 +566,7 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
     return (
       <main className={pageFrame}>
         <PageHeader title={L.tabs.summary} onBack={onBack} backLabel={L.back} />
-        <LoadProgress percent={load.percent} className="mx-auto mt-24 w-full max-w-md" />
+        <LoadProgress percent={load.percent} className={loadCenter} />
       </main>
     )
   }
@@ -576,9 +576,9 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
       <main className={pageFrame}>
         <PageHeader title={L.tabs.summary} onBack={onBack} backLabel={L.back} />
         {signedIn ? (
-          <Notice title={L.missing} body={L.missingBody} action={L.goHome} onAction={onBack} className="mt-24" />
+          <Notice title={L.missing} body={L.missingBody} action={L.goHome} onAction={onBack} className="mt-16" />
         ) : (
-          <Notice title={L.signInTitle} body={L.signInBody} action={L.signIn} onAction={requestLogin} className="mt-24" />
+          <Notice title={L.signInTitle} body={L.signInBody} action={L.signIn} onAction={requestLogin} className="mt-16" />
         )}
       </main>
     )
@@ -658,10 +658,10 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
           </div>
         )}
         {failed ? (
-          <Notice title={L.failedTitle} body={L.failedBody} action={L.failedAction} onAction={() => void rerun()} className="mt-24" />
+          <Notice title={L.failedTitle} body={L.failedBody} action={L.failedAction} onAction={() => void rerun()} className="mt-16" />
         ) : !done ? (
           // 만드는 동안은 서버가 알려 주는 진행 정도를 막대로 보여줘요. 저장소가 1초마다 다시 물어요.
-          <AiProgress progress={report.progress ?? 0} stage={report.stage ?? 'queued'} className="mx-auto mt-24 w-full max-w-md" />
+          <AiProgress progress={report.progress ?? 0} stage={report.stage ?? 'queued'} className={loadCenter} />
         ) : tab === 'summary' ? (
           <SummaryTab report={report} onOpenGap={(item) => {
             track('gap_open', { kind: item.kind, skill: item.skill })
