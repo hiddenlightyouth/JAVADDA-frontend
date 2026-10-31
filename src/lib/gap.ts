@@ -13,7 +13,7 @@ import { getLang, messages, pick } from './i18n'
 import { createStore, useStore } from './store'
 import { showToast } from './toast'
 
-export type JobFamily = 'backend' | 'frontend' | 'mobile' | 'data' | 'devops'
+export type JobFamily = 'backend' | 'frontend' | 'mobile' | 'data' | 'devops' | 'other'
 export type CareerLevel = 'entry' | 'junior' | 'any'
 type Requirement = 'required' | 'preferred'
 
@@ -531,8 +531,8 @@ const CATEGORY_NAMES_EN: Record<CompanyCategory, string> = {
 }
 export const categoryName = (category: CompanyCategory) => (getLang() === 'en' ? CATEGORY_NAMES_EN[category] : CATEGORY_NAMES[category])
 
-const FAMILY_NAMES: Record<JobFamily, string> = { backend: '백엔드', frontend: '프론트엔드', mobile: '모바일', data: '데이터', devops: 'DevOps' }
-const FAMILY_NAMES_EN: Record<JobFamily, string> = { backend: 'Backend', frontend: 'Frontend', mobile: 'Mobile', data: 'Data', devops: 'DevOps' }
+const FAMILY_NAMES: Record<JobFamily, string> = { backend: '백엔드', frontend: '프론트엔드', mobile: '모바일', data: '데이터', devops: 'DevOps', other: '기타' }
+const FAMILY_NAMES_EN: Record<JobFamily, string> = { backend: 'Backend', frontend: 'Frontend', mobile: 'Mobile', data: 'Data', devops: 'DevOps', other: 'Other' }
 
 export const familyName = (family: JobFamily) => (getLang() === 'en' ? FAMILY_NAMES_EN[family] : FAMILY_NAMES[family])
 

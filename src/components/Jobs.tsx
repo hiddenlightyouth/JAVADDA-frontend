@@ -16,7 +16,7 @@ import { loadCenter, LoadProgress } from './ui'
  * 이력서를 올려 두었으면 카드마다 적합도가 보여요.
  */
 
-const FAMILIES: JobFamily[] = ['backend', 'frontend', 'mobile', 'data', 'devops']
+const FAMILIES: JobFamily[] = ['backend', 'frontend', 'mobile', 'data', 'devops', 'other']
 const CAREERS: CareerLevel[] = ['entry', 'junior', 'any']
 const SORTS: PostingSort[] = ['fit', 'recent', 'deadline']
 
