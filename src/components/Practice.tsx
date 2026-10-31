@@ -24,8 +24,6 @@ const TEXT = messages({
     progress: (current: number, total: number) => `${current} / ${total}`,
     introTitle: '가상 면접 시작',
     introBody: '면접 준비가 되었다면 편안한 환경에서 본인을 테스트 해보세요.',
-    singleTitle: '한 문제 연습',
-    singleBody: '질문 하나에 답하면 바로 피드백을 보여줘요. 어떤 부분을 어떻게 말하면 좋을지 확인해 보세요.',
     voiceTip: '면접관의 목소리는 설정에서 변경할 수 있습니다.',
     start: '시작',
     preparing: '면접관이 질문을 준비하고 있어요',
@@ -77,8 +75,6 @@ const TEXT = messages({
     progress: (current: number, total: number) => `${current} / ${total}`,
     introTitle: 'Start a mock interview',
     introBody: 'When you feel ready, find a comfortable spot and put yourself to the test.',
-    singleTitle: 'Practice one question',
-    singleBody: 'Answer one question and get feedback right away. See which parts to say differently.',
     voiceTip: "You can change the interviewer's voice in Settings.",
     start: 'Start',
     preparing: 'The interviewer is getting ready',
@@ -145,7 +141,7 @@ interface Answer {
  * 그 뒤로 말하는 내용이 음성 인식으로 화면에 바로 나오고, 말을 마치고 잠시(SILENCE_MS) 조용하면 다음 질문으로 넘어가요.
  * 채점은 다음 질문을 하는 동안 뒤에서 받아서, 면접이 끝나면 질문마다 점수와 피드백을 한 번에 보여줘요.
  * 음성 인식이 없는 브라우저(macOS 앱의 웹뷰, Firefox)나 마이크를 쓸 수 없으면 글로 답해요. 면접관 목소리는 설정에서 골라요(`VoiceSetting`).
- * 질문 하나를 골라 들어오면 그 질문만 연습하고, 답하면 바로 점수와 피드백, 모범 답변을 보여줘요(한 문제 연습).
+ * 질문 하나를 골라 들어오면 그 질문만 연습하고, 답하면 바로 점수와 피드백, 모범 답변을 보여줘요. 시작 화면은 전체 연습과 같은 "가상 면접 시작"이에요.
  */
 export function Practice({ id, question: startId, onBack }: { id: string; question?: string; onBack: () => void }) {
   const L = useMessages(TEXT)
@@ -387,8 +383,8 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
         <span className="flex size-16 items-center justify-center rounded-full bg-[#fff]/10">
           <MicIcon className="size-7 text-white" />
         </span>
-        <h1 className="mt-6 text-[30px] leading-tight font-bold tracking-tight text-white md:text-[38px]">{single ? L.singleTitle : L.introTitle}</h1>
-        <p className="mt-4 text-[15px] leading-relaxed break-keep text-[#fff]/60">{single ? L.singleBody : L.introBody}</p>
+        <h1 className="mt-6 text-[30px] leading-tight font-bold tracking-tight text-white md:text-[38px]">{L.introTitle}</h1>
+        <p className="mt-4 text-[15px] leading-relaxed break-keep text-[#fff]/60">{L.introBody}</p>
         {canSpeak() && (
           <p className="mt-5 text-[13px] text-[#fff]/45">{L.voiceTip}</p>
         )}
