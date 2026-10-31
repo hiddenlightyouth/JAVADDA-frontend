@@ -48,6 +48,8 @@ const PAGE_TITLES = {
   'app-login': 'Javadda 앱 로그인',
   explore: 'Javadda 공고 탐색',
   recommend: 'Javadda 추천 공고',
+  calendar: 'Javadda 마감 달력',
+  map: 'Javadda 채용 지도',
   resume: 'Javadda 내 이력서',
   blogs: 'Javadda 기술 블로그',
   company: 'Javadda 기업 상세',

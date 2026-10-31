@@ -1218,6 +1218,8 @@ export interface CompanyProfile {
   about: string
   /** 지금 열려 있는 공고. 올라온 순서예요. */
   postings: JobPosting[]
+  /** 본사 주소와 자리예요. 모르는 기업은 없어요. */
+  office?: CompanyOffice
   /** 이 기업 공고에 적힌 스킬을 레이더 축마다 묶었어요. 스킬마다 몇 개의 공고에 적혔는지 같이 있어요. */
   stack: { axis: string; skills: { skill: string; count: number }[] }[]
   questions: CompanyQuestion[]
@@ -1237,6 +1239,29 @@ const COMPANY_ABOUT: Record<string, string> = {
   zigbang: '집을 구하고 사는 과정을 온라인으로 옮기는 서비스를 만들어요.',
   wanted: '채용 플랫폼 원티드와 HR 솔루션을 만들어요.',
   bucketplace: '인테리어 콘텐츠와 커머스를 잇는 오늘의집을 만들어요.',
+}
+
+export interface CompanyOffice {
+  address: string
+  lat: number
+  lon: number
+}
+
+/**
+ * 기업 본사 주소와 자리예요. 기업 상세의 위치 칸이 네이버 지도에 핀을 꽂을 때 써요.
+ * 서버의 기업 자료에 주소가 없어서 화면에 적어 뒀어요. 확실히 아는 곳만 적고, 모르는 기업은 공고의 근무지로 보여줘요.
+ */
+const COMPANY_OFFICE: Record<string, CompanyOffice> = {
+  toss: { address: '서울 강남구 테헤란로 131', lat: 37.5004, lon: 127.0363 },
+  kakao: { address: '경기 성남시 분당구 판교역로 166', lat: 37.3952, lon: 127.1104 },
+  naver: { address: '경기 성남시 분당구 정자일로 95', lat: 37.3595, lon: 127.1052 },
+  woowa: { address: '서울 송파구 위례성대로 2', lat: 37.516, lon: 127.1118 },
+  coupang: { address: '서울 송파구 송파대로 570', lat: 37.5153, lon: 127.1028 },
+  daangn: { address: '서울 서초구 강남대로 465', lat: 37.5047, lon: 127.0245 },
+  musinsa: { address: '서울 성동구 아차산로13길 11', lat: 37.5447, lon: 127.056 },
+  dunamu: { address: '서울 강남구 테헤란로4길 14', lat: 37.499, lon: 127.03 },
+  wanted: { address: '서울 송파구 올림픽로 300', lat: 37.5126, lon: 127.1025 },
+  bucketplace: { address: '서울 서초구 서초대로74길 4', lat: 37.4966, lon: 127.0257 },
 }
 
 /** 스킬마다 면접에서 자주 나오는 질문이에요. 기출이 쌓이기 전이라 보기 자료예요. */
@@ -1279,7 +1304,7 @@ export async function fetchCompany(id: string): Promise<CompanyProfile | null> {
     ...skills.flatMap(({ skill }) => (QUESTION_BANK[skill] ?? []).map((item) => ({ ...item, family: familyOf(skill) }))),
     ...CULTURE_QUESTIONS.map((question) => ({ question, category: 'culture' as const, family: postings[0]?.family ?? 'backend' })),
   ].slice(0, 6)
-  return { company, about: COMPANY_ABOUT[id] ?? '', postings, stack, questions }
+  return { company, about: COMPANY_ABOUT[id] ?? '', office: COMPANY_OFFICE[id], postings, stack, questions }
 }
 
 

@@ -11,7 +11,7 @@ import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { readJson, writeJson } from '../lib/storage'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
-import { BookIcon, BugIcon, CalendarIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DotsIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
+import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DotsIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { fitColor, Tip } from './GapParts'
 
@@ -20,6 +20,7 @@ const TEXT = messages({
     new: '새 진단',
     explore: '공고 탐색',
     calendar: '마감 달력',
+    map: '채용 지도',
     recommend: '추천 공고',
     recommendLocked: '이력서를 먼저 등록하세요',
     resume: '내 이력서',
@@ -39,6 +40,7 @@ const TEXT = messages({
     new: 'New diagnosis',
     explore: 'Explore jobs',
     calendar: 'Deadlines',
+    map: 'Job map',
     recommend: 'Recommended',
     recommendLocked: 'Upload your resume first',
     resume: 'My resume',
@@ -65,7 +67,7 @@ function resetLeft(value: string): { days: number; hours: number } | null {
   return { days: hours >= 24 ? Math.ceil(ms / 86_400_000) : 0, hours }
 }
 
-type SidebarPage = 'explore' | 'recommend' | 'calendar' | 'resume' | 'blogs' | 'articles' | 'me' | 'history' | 'admin' | null
+type SidebarPage = 'explore' | 'recommend' | 'calendar' | 'map' | 'resume' | 'blogs' | 'articles' | 'me' | 'history' | 'admin' | null
 
 /** 접어 둔 이력서 폴더의 아이디예요. 이 기기에 기억해요. */
 const CLOSED_FOLDERS_KEY = 'whoisloafing:sidebar-closed-resumes'
@@ -84,6 +86,8 @@ interface Props {
   onRecommend: () => void
   /** 마감 달력을 열어요. */
   onCalendar: () => void
+  /** 채용 지도를 열어요. */
+  onMap: () => void
   onResume: () => void
   /** 기술 블로그 요약을 열어요. */
   onBlogs: () => void
@@ -251,7 +255,7 @@ function NavLink({ href, active, onClick, icon, label, shortcut, locked }: { hre
 }
 
 /** 앱 화면 왼쪽의 사이드바예요. 새 진단, 공고 탐색, 추천 공고, 기술 블로그, 내 이력서, 내 리포트 목록과 관리, 내 정보로 가는 링크가 있어요. */
-export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onCalendar, onResume, onBlogs, onOpenReport, onHistory, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, signedIn, onLogin }: Props) {
+export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onCalendar, onMap, onResume, onBlogs, onOpenReport, onHistory, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, signedIn, onLogin }: Props) {
   const { me } = useAuth()
   const list = useMessages(REPORT_LIST_TEXT)
   const text = useMessages(TEXT)
@@ -375,6 +379,17 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           label={text.calendar}
           shortcut="D"
           icon={<CalendarIcon className="size-4 shrink-0" />}
+        />
+        <NavLink
+          href="/map"
+          active={page === 'map'}
+          onClick={() => {
+            track('map_open', { from: 'sidebar' })
+            onMap()
+          }}
+          label={text.map}
+          shortcut="M"
+          icon={<MapIcon className="size-4 shrink-0" />}
         />
         <NavLink
           href="/blogs"

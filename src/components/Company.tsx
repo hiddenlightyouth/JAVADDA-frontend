@@ -5,12 +5,13 @@ import { canEmbed, companyOf, familyName, fetchCompany, sortPostings, useResume,
 import { messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
+import { CompanyLocation } from './CompanyLocation'
 import { CompanyMark, Failed, Notice, Panel, PostingTile, SkillChip, skillTone, Tip } from './GapParts'
 import { PostingBrowser, SplitView, type BrowserPage } from './PostingBrowser'
 import { loadCenter, LoadProgress, toolButton } from './ui'
 
 /**
- * 기업 상세 화면이에요. 기업 소개와 열린 공고, 이 기업 공고에 적힌 기술 스택, 면접 질문, 기술 블로그 글을 한 화면에 모아요.
+ * 기업 상세 화면이에요. 기업 소개와 열린 공고, 위치, 이 기업 공고에 적힌 기술 스택, 면접 질문, 기술 블로그 글을 한 화면에 모아요.
  * 기업 소개 사이트는 공고 원문처럼 앱 안의 미니 브라우저로 열어요.
  */
 
@@ -275,6 +276,7 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
         </div>
 
         <div className="flex min-w-0 flex-col gap-4">
+          <CompanyLocation profile={profile} />
           <Panel title={L.stack}>
             <p className="-mt-2 mb-4 text-[12px] leading-relaxed text-gray-400">{L.stackHint}</p>
             <div className="space-y-4">

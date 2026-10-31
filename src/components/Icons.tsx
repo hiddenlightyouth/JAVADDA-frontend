@@ -196,6 +196,16 @@ export function CalendarIcon({ className = 'size-4', strokeWidth = 1.4, label }:
   )
 }
 
+/** 채용 지도의 접은 지도예요. */
+export function MapIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M2.5 4.2l3.7-1.7 3.6 1.7 3.7-1.7v9.3l-3.7 1.7-3.6-1.7-3.7 1.7z" />
+      <path d="M6.2 2.5v9.3M9.8 4.2v9.3" />
+    </Icon>
+  )
+}
+
 /** 찾기 칸의 돋보기예요. */
 export function SearchIcon({ className = 'size-4 shrink-0 text-gray-400', strokeWidth = 1.5, label }: IconProps) {
   return (

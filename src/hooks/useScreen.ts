@@ -24,6 +24,8 @@ function trackPage(page: Page | null) {
     case 'app-login':
     case 'explore':
     case 'recommend':
+    case 'calendar':
+    case 'map':
     case 'resume':
       return trackPageView(page.kind)
     case 'blogs':
