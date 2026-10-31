@@ -1230,27 +1230,20 @@ const LOGO_BY_NAME: Record<string, string> = {
   이엔에프테크놀로지: '/logos/enf.png',
 }
 
-/** 업종 대신 기업 규모가 적혀 오는 공공 기업이에요. 로고가 없으면 정부 상징(`public/logos/gov.svg`, 위키미디어 공용의 대한민국 정부 상징)을 붙여요. */
-const PUBLIC_SIZES = new Set(['공공기관', '공기업'])
 /**
- * 고용24는 국립대 병원과 대학도 공공기관으로 보내요. 흔히 공공기관으로 여기지 않는 곳이라, 정부 상징을 붙이지 않고 업종을 병원과 대학으로 바꿔 받아요. 카드, 제목 줄, 기업 상세가 모두 이 업종을 봐요.
- * 연구원과 공단, 공사는 그대로 공공기관이에요.
+ * 업종 대신 기업 규모가 적혀 오는 공공 기업이에요. 로고가 없으면 정부 상징(`public/logos/gov.svg`, 위키미디어 공용의 대한민국 정부 상징)을 붙여요.
+ * 국립대 병원과 대학은 서버가 업종을 병원, 대학으로 바꿔 보내서 여기에 들지 않아요.
  */
-const HOSPITAL = /병원|의료원/
-const SCHOOL = /대학교|학교법인/
-const institutionOf = (name: string) => (HOSPITAL.test(name) ? '병원' : SCHOOL.test(name) ? '대학' : null)
-const isGovernment = (item: { name: string; industry?: string | null }) => !!item.industry && PUBLIC_SIZES.has(item.industry) && !institutionOf(item.name)
-const industryOf = (item: { name: string; industry?: string | null }) =>
-  item.industry && PUBLIC_SIZES.has(item.industry) ? (institutionOf(item.name) ?? item.industry) : (item.industry ?? '')
+const PUBLIC_SIZES = new Set(['공공기관', '공기업'])
 
 const toCompany = (item: ServerCompany): Company => ({
   ...item,
   initial: item.initial || item.name.slice(0, 1).toUpperCase(),
-  logo: item.logo ?? LOGO_BY_NAME[item.name] ?? (isGovernment(item) ? '/logos/gov.svg' : undefined),
+  logo: item.logo ?? LOGO_BY_NAME[item.name] ?? (item.industry && PUBLIC_SIZES.has(item.industry) ? '/logos/gov.svg' : undefined),
   techBlog: item.techBlog ?? undefined,
   category: item.category ?? undefined,
   site: item.site ?? '',
-  industry: industryOf(item),
+  industry: item.industry ?? '',
 })
 
 const toPosting = (item: ServerPosting): JobPosting => ({
