@@ -1217,7 +1217,7 @@ export async function fetchCompany(id: string): Promise<CompanyProfile | null> {
 // ---------- 저장소 ----------
 
 /** 올려 둔 서류 목록과, 진단과 추천에 쓰는 대표 서류의 아이디예요. */
-interface ResumeShelf {
+export interface ResumeShelf {
   list: Resume[]
   primaryId: string | null
 }

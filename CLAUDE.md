@@ -318,7 +318,11 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 내 리포트
 
-- 사이드바의 "내 리포트"에 진단한 공고가 최근 순서로 있어요. 줄마다 기업 이름과 적합도, 공고 제목, 진단한 때가 보이고, 만드는 중이면 때 대신 "진단 중 42%"처럼 만드는 정도를 적어요(`/history`도 같아요). 누르면 리포트로 가요. 마우스를 올리면 점 세 개 버튼이 나오고 지울 수 있어요. 같은 공고를 다시 진단하면 예전 리포트를 대신해요.
+- 사이드바의 "내 리포트"에 진단한 공고가 최근 순서로 있어요. 줄마다 기업 이름과 적합도, 공고 제목, 진단한 때가 보이고, 만드는 중이면 때 대신 "진단 중 42%"처럼 만드는 정도를 적어요(`/history`도 같아요). 누르면 리포트로 가요. 마우스를 올리면 점 세 개 버튼이 나오고 고정하거나 삭제할 수 있어요. 같은 공고를 같은 이력서로 다시 진단하면 예전 리포트를 대신하고, 다른 이력서로 진단한 리포트는 각자 남아요.
+- 리포트는 만든 이력서마다 폴더로 묶여요(`byResume`, `History`). 폴더 머리 줄에는 서류 아이콘과 이름, 대표 이력서면 메인 컬러 별, 리포트 수가 있고, 누르면 접고 펴요. 대표 이력서 폴더가 맨 위, 그다음은 올린 서류 목록 순서, 지운 이력서로 만든 리포트는 맨 아래 "지운 이력서" 폴더예요. 폴더 안의 리포트는 전부 보여주고, 길어지면 폴더를 접어요. 리포트를 열면 그 리포트가 든 폴더를 한 번 펼치고, 그 뒤로는 다시 접을 수 있어요. 접은 폴더는 localStorage의 `whoisloafing:sidebar-closed-resumes`에 기억해요.
+- 폴더 안의 리포트 줄은 끌어서 순서를 바꿔요. 놓일 자리에 메인 컬러 선이 생기고, 다른 이력서 폴더로는 옮기지 않아요. 서버에는 순서가 없어서 localStorage의 `whoisloafing:sidebar-report-order`(폴더마다 리포트 아이디 순서)에 기억해요. 옮긴 적 없는 새 리포트는 맨 위에 마감이 가까운 순서로 와요.
+- 줄의 점 세 개 메뉴에는 고정(고정 해제)과 빨간 삭제가 있어요. 고정한 리포트는 폴더 맨 위에 오고 기업 이름 앞에 압정(`PinIcon`)이 붙어요. localStorage의 `whoisloafing:sidebar-pinned-reports`에 기억해요.
+- 내 리포트 화면(`/history`)은 두 개 이상의 이력서로 진단했으면 맨 위에 이력서 메뉴(`Dropdown`, 전체와 이력서마다 리포트 수)가 있어서 한 이력서의 리포트만 골라 봐요.
 - `/history`에도 같은 목록이 있어요. 웹의 헤더에서 들어가고, 앱 사이드바에는 링크를 두지 않아요.
 
 ## 웹 앱 (/app)
@@ -452,6 +456,10 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `practice_voice_select` | 면접 연습에서 목소리를 골랐을 때 | `voice` |
 | `practice_tts_fallback` | 사람 목소리를 받지 못해 브라우저 음성으로 읽었을 때 | `status` |
 | `history_report_open` | 사이드바에서 리포트를 눌렀을 때 | `from`(sidebar) |
+| `sidebar_report_move` | 사이드바에서 리포트를 끌어 순서를 바꿨을 때 | |
+| `sidebar_report_pin` | 사이드바에서 리포트를 고정하거나 풀었을 때 | `pinned` |
+| `sidebar_folder_toggle` | 사이드바에서 이력서 폴더를 접거나 폈을 때 | `open` |
+| `history_resume_select` | 내 리포트 화면에서 이력서 메뉴를 골랐을 때 | `resume`(all, resume, deleted) |
 | `admin_tab_view`, `admin_period_change`, `admin_user_open`, `admin_user_action`, `admin_call_open`, `admin_call_copy`, `admin_chat_action` | 관리자 화면 | 전과 같아요 |
 | `language_change` | 헤더나 앱의 설정 창에서 언어를 바꿨을 때 | `lang`(ko, en), `from`(header, settings) |
 | `about_faq_open` | 소개 화면에서 자주 묻는 질문을 펼쳤을 때 | `id` |
