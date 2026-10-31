@@ -47,7 +47,7 @@ export interface JobPosting {
   required: string[]
   preferred: string[]
   summary: string
-  source: 'worknet' | 'company'
+  source: 'worknet' | 'company' | 'public'
   url: string
   /** 서버가 대표 이력서로 계산한 적합도. 로그인하지 않았거나 이력서가 없으면 없어요. 화면은 `fitOf`로 다시 계산해요. */
   fitScore?: number
