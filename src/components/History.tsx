@@ -1,22 +1,26 @@
 import { useRef, useState } from 'react'
 import { useDismiss } from '../hooks/useDismiss'
 import { track } from '../lib/analytics'
-import { companyOf, daysLeft, deleteReport, postingOf, useReports, type Report } from '../lib/gap'
+import { companyOf, daysLeft, deleteReport, postingOf, useReportPosting, useReports, useResumeShelf, type Report, type Resume, type ResumeShelf } from '../lib/gap'
 import { formatWhen } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { pageFrame, PageHeader } from './AppPage'
 import { ConfirmDialog } from './Dialog'
+import { Dropdown } from './Dropdown'
 import { CompanyMark, FitBadge, Notice } from './GapParts'
 import { DotsIcon } from './Icons'
-import { menuDangerItem, menuPanel } from './ui'
+import { iconButton, menuDangerItem, menuPanel } from './ui'
 import { messages, pick, useMessages } from '../lib/i18n'
 
 export const REPORT_LIST_TEXT = messages({
   ko: {
-    deleteTitle: '이 리포트를 지울까요?',
-    deleteBody: (company: string, title: string) => `${company}의 ${title} 리포트를 지워요. 지운 리포트는 되돌릴 수 없어요.`,
-    delete: '지우기',
-    deleted: '리포트를 지웠어요.',
+    deleteTitle: '이 리포트를 삭제할까요?',
+    deleteBody: (company: string, title: string) => `${company}의 ${title} 리포트를 삭제해요. 삭제한 리포트는 되돌릴 수 없어요.`,
+    delete: '삭제',
+    deleted: '리포트를 삭제했어요.',
+    pin: '고정',
+    unpin: '고정 해제',
+    pinned: '고정됨',
     manage: (title: string) => `${title} 리포트 관리`,
     title: '내 리포트',
     pending: (progress: number) => `진단 중 ${progress}%`,
@@ -34,12 +38,20 @@ export const REPORT_LIST_TEXT = messages({
     dday: (days: number) => (days === 0 ? 'D-day' : `D-${days}`),
     active: '준비 중',
     ended: '마감된 공고',
+    resume: '이력서',
+    allResumes: '전체',
+    deletedResume: '지운 이력서',
+    resumeCount: (name: string, count: number) => `${name} ${count}`,
+    toggle: (name: string) => `${name}에서 만든 리포트`,
   },
   en: {
     deleteTitle: 'Delete this report?',
     deleteBody: (company: string, title: string) => `This deletes the report for ${title} at ${company}. Deleted reports can't be recovered.`,
     delete: 'Delete',
     deleted: 'Report deleted.',
+    pin: 'Pin',
+    unpin: 'Unpin',
+    pinned: 'Pinned',
     manage: (title: string) => `Manage ${title} report`,
     title: 'My reports',
     pending: (progress: number) => `Analyzing ${progress}%`,
@@ -57,6 +69,11 @@ export const REPORT_LIST_TEXT = messages({
     dday: (days: number) => (days === 0 ? 'D-day' : `D-${days}`),
     active: 'In progress',
     ended: 'Closed postings',
+    resume: 'Resume',
+    allResumes: 'All',
+    deletedResume: 'Deleted resume',
+    resumeCount: (name: string, count: number) => `${name} ${count}`,
+    toggle: (name: string) => `Reports made with ${name}`,
   },
 })
 
@@ -93,6 +110,30 @@ export function byUrgency(reports: Report[]): { report: Report; urgency: Urgency
     })
 }
 
+/** 같은 이력서로 만든 리포트 묶음이에요. 지운 이력서로 만든 리포트는 resume이 null이에요. */
+export interface ResumeGroup {
+  id: string
+  resume: Resume | null
+  primary: boolean
+  items: { report: Report; urgency: Urgency }[]
+}
+
+/**
+ * 리포트를 만든 이력서마다 묶어요. 대표 이력서가 맨 앞이고, 그다음은 올린 서류 목록의 순서, 지운 이력서로 만든 리포트는 맨 뒤예요.
+ * 묶음 안은 받은 순서(byUrgency) 그대로예요. 사이드바와 내 리포트 화면이 같이 써요.
+ */
+export function byResume(ranked: { report: Report; urgency: Urgency }[], shelf: ResumeShelf): ResumeGroup[] {
+  const order = [...shelf.list].sort((a, b) => Number(b.id === shelf.primaryId) - Number(a.id === shelf.primaryId))
+  const known = new Set(order.map((resume) => resume.id))
+  const groups: ResumeGroup[] = order.map((resume) => ({ id: resume.id, resume, primary: resume.id === shelf.primaryId, items: [] }))
+  const deleted: ResumeGroup = { id: 'deleted', resume: null, primary: false, items: [] }
+  for (const item of ranked) {
+    const group = known.has(item.report.resumeId) ? groups.find((each) => each.id === item.report.resumeId) : deleted
+    group?.items.push(item)
+  }
+  return [...groups, deleted].filter((group) => group.items.length > 0)
+}
+
 /** 리포트 줄 오른쪽의 작은 글이에요. 진단 중이면 퍼센트, 마감이 사흘 안이면 메인 컬러의 D-day, 마감됐으면 옅게 적어요. */
 export function UrgencyLabel({ report, urgency, className = '' }: { report: Report; urgency: Urgency; className?: string }) {
   const text = useMessages(REPORT_LIST_TEXT)
@@ -114,7 +155,7 @@ export function UrgencyLabel({ report, urgency, className = '' }: { report: Repo
 export function DeleteReportDialog({ report, onCancel, onConfirm }: { report: Report; onCancel: () => void; onConfirm: () => void }) {
   const text = useMessages(REPORT_LIST_TEXT)
   const company = companyOf(report.companyId)
-  const posting = postingOf(report.postingId)
+  const posting = useReportPosting(report.postingId)
   return <ConfirmDialog title={text.deleteTitle} body={text.deleteBody(company.name, posting?.title ?? '')} confirm={text.delete} danger onCancel={onCancel} onConfirm={onConfirm} />
 }
 
@@ -131,7 +172,7 @@ function Row({ report, urgency, onOpen, onDelete }: { report: Report; urgency: U
   const ref = useRef<HTMLLIElement>(null)
   useDismiss(menuOpen, ref, () => setMenuOpen(false))
   const company = companyOf(report.companyId)
-  const posting = postingOf(report.postingId)
+  const posting = useReportPosting(report.postingId)
   return (
     <li ref={ref} className={`relative flex items-center gap-3 rounded-2xl px-3 transition-colors hover:bg-gray-50 ${urgency.kind === 'closed' ? 'opacity-60' : ''}`}>
       <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left">
@@ -154,7 +195,7 @@ function Row({ report, urgency, onOpen, onDelete }: { report: Report; urgency: U
         aria-haspopup="menu"
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((open) => !open)}
-        className="flex size-8 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+        className={iconButton.md}
       >
         <DotsIcon />
       </button>
@@ -184,24 +225,50 @@ function Row({ report, urgency, onOpen, onDelete }: { report: Report; urgency: U
 export function History({ onOpenReport, onHome }: { onOpenReport: (id: string) => void; onHome: () => void }) {
   const text = useMessages(REPORT_LIST_TEXT)
   const reports = useReports()
-  const ranked = byUrgency(reports)
+  const shelf = useResumeShelf()
+  const resumeGroups = byResume(byUrgency(reports), shelf)
+  // 이력서를 여러 개로 진단했으면 이력서 메뉴로 하나만 골라 봐요. 고른 이력서가 사라지면 전체로 돌아가요.
+  const [resumeId, setResumeId] = useState<string | null>(null)
+  const picked = resumeGroups.find((group) => group.id === resumeId) ?? null
+  // 전체를 볼 때는 이력서와 상관없이 마감이 가까운 순서예요.
+  const ranked = picked ? picked.items : byUrgency(reports)
+  const nameOf = (group: ResumeGroup) => group.resume?.name ?? text.deletedResume
   const [deleting, setDeleting] = useState<Report | null>(null)
 
   return (
     <main className={pageFrame}>
       <PageHeader title={text.title} />
-      <div className="min-h-0 flex-1 overflow-y-auto pb-10">
+      <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:-mx-10 md:px-10">
         {reports.length === 0 ? (
           <Notice title={text.none} body={text.start} action={text.diagnose} onAction={onHome} className="mt-16" />
         ) : (
-          <div className="mx-auto w-full max-w-2xl px-4">
+          <div className="mx-auto w-full max-w-2xl">
+            {resumeGroups.length > 1 && (
+              <Dropdown
+                label={text.resume}
+                value={picked ? nameOf(picked) : text.allResumes}
+                className="mb-4 ml-3 max-w-full"
+                groups={[
+                  {
+                    items: [null, ...resumeGroups].map((group) => ({
+                      label: group ? text.resumeCount(nameOf(group), group.items.length) : text.allResumes,
+                      checked: (group?.id ?? null) === (picked?.id ?? null),
+                      onSelect: () => {
+                        track('history_resume_select', { resume: group ? (group.resume ? 'resume' : 'deleted') : 'all' })
+                        setResumeId(group?.id ?? null)
+                      },
+                    })),
+                  },
+                ]}
+              />
+            )}
             {[
               { title: text.active, items: ranked.filter((item) => item.urgency.kind !== 'closed') },
               { title: text.ended, items: ranked.filter((item) => item.urgency.kind === 'closed') },
             ]
               .filter((group) => group.items.length > 0)
               .map((group) => (
-                <section key={group.title} className="mt-6 first:mt-2">
+                <section key={group.title} className="mt-8 first:mt-0">
                   <h2 className="px-3 text-[12.5px] font-medium text-gray-400">
                     {group.title} <span className="tabular-nums">{group.items.length}</span>
                   </h2>

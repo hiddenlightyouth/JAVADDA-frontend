@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { track } from '../lib/analytics'
 import {
   companyOf,
+  fitOf,
   postingOf,
+  useReportPosting,
   PROVIDER_LOGOS,
   rerunReport,
   saveNote,
@@ -11,6 +13,7 @@ import {
   usePlans,
   requestLogin,
   useReport,
+  useReports,
   useResume,
   type Course,
   type Report as ReportData,
@@ -26,12 +29,12 @@ import { useLoadHold, useLoadProgress } from '../lib/load'
 import { showToast } from '../lib/toast'
 import { pageFrame, PageHeader } from './AppPage'
 import { panelBody, SidePanel } from './Dialog'
-import { AiProgress, CheckMark, CompanyMark, Delta, FitBadge, KindLabel, Meter, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreHero, ScoreRing, Sparkline, Tip, percent } from './GapParts'
+import { AiProgress, CheckMark, CompanyMark, SkillMark, Delta, FitBadge, KindLabel, Meter, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreHero, ScoreRing, Sparkline, Tip, percent } from './GapParts'
 import { DeleteReportDialog, removeReport } from './History'
-import { AlertIcon, CheckIcon, ChevronRightIcon, ClockIcon, LevelIcon, RefreshIcon, TrashIcon } from './Icons'
+import { AlertIcon, CheckIcon, ClockIcon, LevelIcon, RefreshIcon, TrashIcon } from './Icons'
 import { ReviewTab } from './ReportReview'
 import { QuestionsTab } from './ReportQuestions'
-import { Bullets, label, LoadProgress, NumberedList, primaryButton, Tabs, textArea, toolButton, toolDangerButton } from './ui'
+import { Bullets, label, loadCenter, LoadProgress, NumberedList, primaryButton, Segmented, stagger, Tabs, textArea, toolButton, toolDangerButton } from './ui'
 
 /** 리포트의 탭이에요. 요약, 적합도 설명, 서류 검증, 예상 면접 질문 순서예요. */
 export type ReportTab = 'summary' | 'fit' | 'review' | 'questions'
@@ -47,8 +50,11 @@ const TEXT = messages({
     rerun: '재진단',
     rerunDone: '다시 진단하고 있어요.',
     staleTitle: '이력서 업데이트를 감지했어요',
-    staleBody: '해당 공고를 현재의 이력서로 다시 검토해 볼까요?',
-    staleAction: '다시 진단하기',
+    staleBody: '지금 대표 이력서로도 이 공고를 진단해 볼까요? 이 리포트는 그대로 남아요.',
+    staleAction: '이 이력서로도 진단하기',
+    siblingTitle: '대표 이력서로 만든 리포트도 있어요',
+    siblingBody: '같은 공고를 지금 대표 이력서로 진단한 리포트예요.',
+    siblingAction: '그 리포트 보기',
     delete: '삭제',
     missing: '이 리포트를 찾을 수 없어요.',
     missingBody: '지웠거나 다른 계정에서 만든 리포트예요.',
@@ -71,6 +77,10 @@ const TEXT = messages({
     level: '난이도',
     duration: '강의 시간',
     groups: { missing: '서류에서 찾지 못한 역량', partial: '서류에 있지만 찾지 못함', strength: '강점' } as Record<SkillGap['kind'], string>,
+    kinds: { missing: '부족', partial: '보완', strength: '강점' } as Record<SkillGap['kind'], string>,
+    kindCount: (kind: string, count: number) => `${kind} ${count}`,
+    weeks: (weeks: number) => `약 ${weeks}주`,
+    noGaps: '이 공고와 비교해 찾은 갭이 없어요.',
     trends: '시장 요구 변화',
     trendColumns: { skill: '역량', weeks: '최근 12주', share: '공고 비중', change: '6개월 변화' },
     changeTip: '지난 6개월 사이 이 역량을 적은 공고 비율이 얼마나 바뀌었는지예요.',
@@ -108,8 +118,11 @@ const TEXT = messages({
     rerun: 'Re-run',
     rerunDone: 'Running the diagnosis again.',
     staleTitle: 'Your resume has changed',
-    staleBody: 'Review this posting again with your current resume?',
-    staleAction: 'Re-run',
+    staleBody: 'Diagnose this posting with your current resume too? This report stays.',
+    staleAction: 'Diagnose with this resume',
+    siblingTitle: 'There is a report with your primary resume',
+    siblingBody: 'The same posting, diagnosed with your current primary resume.',
+    siblingAction: 'Open that report',
     delete: 'Delete',
     missing: "Couldn't find this report.",
     missingBody: 'It may have been deleted or created with another account.',
@@ -132,6 +145,10 @@ const TEXT = messages({
     level: 'Level',
     duration: 'Length',
     groups: { missing: 'Not in your documents', partial: 'Listed but not shown', strength: 'Strengths' },
+    kinds: { missing: 'Missing', partial: 'Weak', strength: 'Strengths' },
+    kindCount: (kind: string, count: number) => `${kind} ${count}`,
+    weeks: (weeks: number) => `About ${weeks} wk`,
+    noGaps: 'No gaps found against this posting.',
     trends: 'Market demand',
     trendColumns: { skill: 'Skill', weeks: 'Last 12 weeks', share: 'Share', change: '6-month change' },
     changeTip: 'How much the share of postings listing this skill moved over the last 6 months.',
@@ -199,77 +216,93 @@ function CourseRow({ course }: { course: Course }) {
   )
 }
 
-/** 갭 하나를 보여주는 줄이에요. 이름과 근거 한 줄, 오른쪽에 공고 비중과 오를 점수를 맞춰 세워요. 누르면 오른쪽에 자세한 칸이 열려요. */
-function GapRow({ gap, inPlan, onOpen }: { gap: SkillGap; inPlan: boolean; onOpen: () => void }) {
+/** 리포트 탭의 아래 줄에서 칸마다 보여줄 줄 수예요. 한 화면에 다 들어오게 몇 개만 보여줘요. */
+const TREND_ROWS = 4
+const COURSE_ROWS = 3
+const ALTERNATIVE_ROWS = 3
+
+/**
+ * 갭 하나를 보여주는 작은 카드예요. 왼쪽에 기술 로고(`SkillMark`), 위에 스킬 이름과 필수, 우대 이름표, 채우면 오를 점수, 아래에 같은 직군 공고 비중 막대가 있어요.
+ * 근거는 길어서 카드에 적지 않고, 누르면 오른쪽에 열리는 상세 칸에서 봐요.
+ */
+function GapTile({ gap, inPlan, order, onOpen }: { gap: SkillGap; inPlan: boolean; order: number; onOpen: () => void }) {
   const L = useMessages(TEXT)
-  const line = gap.kind === 'missing' ? L.notFound(gap.estimatedWeeks) : (gap.evidence ?? gap.reason)
   return (
-    <li className="animate-rise">
-      {/* 표의 한 줄이라 누를 때 작아지지 않게 해요. 줄 전체가 줄었다 늘면 표가 출렁여 보여요. */}
-      <button type="button" data-no-press onClick={onOpen} className="group flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors hover:bg-gray-50">
-        <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-2">
+    <li className="animate-rise" style={stagger(order)}>
+      <button type="button" onClick={onOpen} className="group flex w-full items-center gap-3.5 rounded-xl bg-white px-4 py-3 text-left transition-colors hover:bg-gray-100">
+        <SkillMark skill={gap.skill} />
+        <span className="flex min-w-0 flex-1 flex-col gap-2.5">
+          <span className="flex w-full items-center gap-2">
             <span className="truncate text-[14px] font-semibold text-gray-900 transition-colors group-hover:text-brand">{gap.skill}</span>
             <RequirementLabel requirement={gap.requirement} />
             {gap.kind !== 'strength' && inPlan && <CheckIcon className="size-3.5 shrink-0 text-brand" label={L.inPlan} />}
+            {gap.kind !== 'strength' && (
+              <Tip text={L.gainTip} className="ml-auto inline-flex shrink-0">
+                <span className="text-[12.5px] font-medium text-brand tabular-nums">{L.gain(gap.scoreGain)}</span>
+              </Tip>
+            )}
           </span>
-          <span className="mt-1 block truncate text-[12.5px] text-gray-500">{line}</span>
-        </span>
-        <span className="hidden shrink-0 sm:block">
-          <Tip text={L.shareTip}>
-            <span className="block w-16">
-              <span className="block text-right text-[12.5px] font-medium text-gray-700 tabular-nums">{percent(gap.share)}</span>
-              <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-gray-200/70">
-                <span className="block h-full rounded-full bg-gray-400" style={{ width: `${Math.round(gap.share * 100)}%` }} />
-              </span>
+          <Tip text={L.shareTip} className="flex w-full items-center gap-2.5">
+            <span className="h-1 flex-1 overflow-hidden rounded-full bg-gray-200/70" aria-hidden>
+              <span className="block h-full rounded-full bg-gray-400" style={{ width: `${Math.round(gap.share * 100)}%` }} />
             </span>
+            <span className="shrink-0 text-[12px] text-gray-500 tabular-nums">{percent(gap.share)}</span>
+            {gap.kind === 'missing' && <span className="shrink-0 text-[12px] text-gray-400 tabular-nums">{L.weeks(gap.estimatedWeeks)}</span>}
           </Tip>
         </span>
-        <span className="w-11 shrink-0 text-right text-[12.5px] font-medium tabular-nums">
-          {gap.kind !== 'strength' && (
-            <Tip text={L.gainTip}>
-              <span className="text-brand">{L.gain(gap.scoreGain)}</span>
-            </Tip>
-          )}
-        </span>
-        <ChevronRightIcon />
       </button>
     </li>
   )
 }
 
-/** 시장 요구 변화를 표처럼 한 줄씩 보여줘요. 많이 늘어난 역량이 위에 와요. */
+/** 시장 요구 변화를 몇 줄만 보여줘요. 많이 늘어난 역량이 위에 오고, 줄마다 역량, 최근 12주 막대, 6개월 변화예요. */
 function TrendList({ report }: { report: ReportData }) {
   const L = useMessages(TEXT)
   const rows = report.trends
     .map((trend) => ({ ...trend, gap: report.gaps.find((item) => item.skill === trend.skill) }))
     .sort((a, b) => (b.gap?.marketChange ?? 0) - (a.gap?.marketChange ?? 0))
-  const columns = 'grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)_3.5rem_4.5rem] items-center gap-4 px-4 sm:grid-cols-[minmax(0,9rem)_minmax(0,1fr)_4rem_5rem]'
+    .slice(0, TREND_ROWS)
   return (
-    <div className="overflow-hidden rounded-xl bg-white">
-      <div className={`${columns} pt-3 pb-2 text-[11.5px] text-gray-400`}>
-        <span>{L.trendColumns.skill}</span>
-        <span>{L.trendColumns.weeks}</span>
-        <span className="text-right">{L.trendColumns.share}</span>
-        <span className="text-right">{L.trendColumns.change}</span>
-      </div>
-      <ul className="divide-y divide-gray-100">
-        {rows.map((row) => (
-          <li key={row.skill} className={`${columns} py-3`}>
-            <span className="truncate text-[13.5px] font-medium text-gray-900">{row.skill}</span>
-            <Sparkline series={row.series} className="h-7 max-w-56" />
-            <span className="text-right text-[12.5px] text-gray-700 tabular-nums">{row.gap ? percent(row.gap.share) : ''}</span>
-            <span className="text-right">
-              {row.gap && (
-                <Tip text={L.changeTip}>
-                  <Delta value={row.gap.marketChange} unit="%p" />
-                </Tip>
-              )}
-            </span>
+    <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl bg-white">
+      {rows.map((row) => (
+        <li key={row.skill} className="grid grid-cols-[minmax(0,1fr)_4.5rem_3.5rem] items-center gap-3 px-4 py-2.5">
+          <span className="truncate text-[13px] font-medium text-gray-900">{row.skill}</span>
+          <Sparkline series={row.series} className="h-6" />
+          <span className="text-right">
+            {row.gap && (
+              <Tip text={L.changeTip}>
+                <Delta value={row.gap.marketChange} unit="%p" />
+              </Tip>
+            )}
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/** 더 잘 맞는 다른 공고를 한 줄씩 보여줘요. 기업 로고, 공고 제목과 기업, 적합도예요. 누르면 그 공고로 진단해요. */
+function AlternativeList({ ids, onPick }: { ids: string[]; onPick: (postingId: string) => void }) {
+  const resume = useResume()
+  const postings = ids.flatMap((id) => postingOf(id) ?? []).slice(0, ALTERNATIVE_ROWS)
+  return (
+    <ul className="-mx-3">
+      {postings.map((posting) => {
+        const company = companyOf(posting.companyId)
+        return (
+          <li key={posting.id}>
+            <button type="button" onClick={() => onPick(posting.id)} className="group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-gray-200/50">
+              <CompanyMark company={company} className="size-9 text-[13px]" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13.5px] font-medium text-gray-900 transition-colors group-hover:text-brand">{posting.title}</span>
+                <span className="mt-0.5 block truncate text-[12px] text-gray-500">{company.name}</span>
+              </span>
+              <FitBadge fit={fitOf(posting, resume)} compact />
+            </button>
           </li>
-        ))}
-      </ul>
-    </div>
+        )
+      })}
+    </ul>
   )
 }
 
@@ -292,15 +325,19 @@ function GapPanel({ gap, trend, onClose }: { gap: SkillGap; trend: number[] | un
       closeLabel={L.close}
       labelledBy="gap-panel-title"
       header={
-        <>
-          <div className="flex items-center gap-2">
-            <KindLabel kind={gap.kind} />
-            <RequirementLabel requirement={gap.requirement} />
+        // 갭 카드처럼 왼쪽에 기술 로고(없으면 뜻에 맞는 아이콘)를 크게 붙여요.
+        <div className="flex items-center gap-3.5">
+          <SkillMark skill={gap.skill} className="size-12 rounded-xl p-2" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <KindLabel kind={gap.kind} />
+              <RequirementLabel requirement={gap.requirement} />
+            </div>
+            <h2 id="gap-panel-title" className="mt-1.5 truncate text-[20px] font-semibold text-gray-900">
+              {gap.skill}
+            </h2>
           </div>
-          <h2 id="gap-panel-title" className="mt-2 text-[20px] font-semibold text-gray-900">
-            {gap.skill}
-          </h2>
-        </>
+        </div>
       }
     >
       <div className={panelBody}>
@@ -421,64 +458,77 @@ function Alternatives({ ids, onPick }: { ids: string[]; onPick: (postingId: stri
   )
 }
 
+/**
+ * 리포트 탭이에요. 스크롤 없이 한 화면에 들어오게, 맨 위 점수 머리말 아래로 갭과 레이더, 그 아래로 시장 요구 변화, 추천 강의, 더 잘 맞는 공고를 나란히 놓아요.
+ * 갭은 부족, 보완, 강점 중 하나를 골라 그 묶음만 카드로 보여줘요.
+ */
 function SummaryTab({ report, onOpenGap, onPick }: { report: ReportData; onOpenGap: (gap: SkillGap) => void; onPick: (postingId: string) => void }) {
   const L = useMessages(TEXT)
   const plans = usePlans()
-  const groups: SkillGap['kind'][] = ['missing', 'partial', 'strength']
+  const kinds = (['missing', 'partial', 'strength'] as const).filter((kind) => report.gaps.some((gap) => gap.kind === kind))
+  const [picked, setPicked] = useState<SkillGap['kind'] | null>(null)
+  // 고른 묶음이 이 리포트에 없으면(다른 리포트로 옮겼을 때) 첫 묶음을 보여줘요.
+  const kind = picked && kinds.includes(picked) ? picked : kinds[0]
+  const gaps = report.gaps.filter((gap) => gap.kind === kind)
+  // 더 잘 맞는 공고 중 마감되어 목록에서 빠진 것은 빼요. 다 빠지면 그 칸을 두지 않아요.
+  const alternatives = report.alternatives.filter((id) => postingOf(id))
+  const bottom = [report.trends.length > 0, report.courses.length > 0, alternatives.length > 0].filter(Boolean).length
   return (
     <div className="space-y-4">
       <ScoreHero score={report.fitScore} label={L.fitTitle} meta={L.createdAt(formatDateTime(report.createdAt))} title={L.verdict(report.fitScore)} body={report.summary} />
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="flex min-w-0 flex-col gap-4">
 
-          <Panel title={L.gaps}>
-            <div className="space-y-6">
-              {groups.map((kind) => {
-                const list = report.gaps.filter((gap) => gap.kind === kind)
-                if (list.length === 0) return null
-                return (
-                  <section key={kind}>
-                    <h3 className="flex items-center gap-1.5 px-1 text-[13px] font-semibold text-gray-800">
-                      {L.groups[kind]}
-                      <span className="font-normal text-gray-400 tabular-nums">{list.length}</span>
-                    </h3>
-                    <ul className="mt-2.5 divide-y divide-gray-100 overflow-hidden rounded-xl bg-white">
-                      {list.map((gap) => (
-                        <GapRow key={gap.skill} gap={gap} inPlan={plans.includes(gap.skill)} onOpen={() => onOpenGap(gap)} />
-                      ))}
-                    </ul>
-                  </section>
-                )
-              })}
-            </div>
-          </Panel>
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <Panel
+          title={L.gaps}
+          action={
+            kinds.length > 1 && (
+              <Segmented
+                label={L.gaps}
+                value={kind}
+                options={kinds.map((each) => [each, L.kindCount(L.kinds[each], report.gaps.filter((gap) => gap.kind === each).length)] as const)}
+                onChange={(next) => {
+                  track('gap_group_select', { kind: next })
+                  setPicked(next)
+                }}
+              />
+            )
+          }
+        >
+          {gaps.length === 0 && <p className="py-6 text-center text-[13.5px] text-gray-500">{L.noGaps}</p>}
+          <ul key={kind} className="grid gap-2 sm:grid-cols-2">
+            {gaps.map((gap, order) => (
+              <GapTile key={gap.skill} gap={gap} order={order} inPlan={plans.includes(gap.skill)} onOpen={() => onOpenGap(gap)} />
+            ))}
+          </ul>
+        </Panel>
+        <Panel title={L.radar}>
+          <Radar axes={report.radar} size={240} />
+        </Panel>
+      </div>
 
-          <Panel title={L.trends}>
-            <TrendList report={report} />
-          </Panel>
-
-          {report.alternatives.length > 0 && (
-            <Panel title={L.alternatives}>
-              <Alternatives ids={report.alternatives} onPick={onPick} />
+      {bottom > 0 && (
+        <div className={`grid gap-4 ${bottom === 3 ? 'lg:grid-cols-3' : bottom === 2 ? 'lg:grid-cols-2' : ''}`}>
+          {report.trends.length > 0 && (
+            <Panel title={L.trends} action={<span className="text-[12px] text-gray-400">{L.trendColumns.weeks}</span>}>
+              <TrendList report={report} />
             </Panel>
           )}
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-4">
-          <Panel title={L.radar}>
-            <Radar axes={report.radar} size={280} />
-          </Panel>
           {report.courses.length > 0 && (
             <Panel title={L.courses}>
               <ul className="-mx-3">
-                {report.courses.map((course) => (
+                {report.courses.slice(0, COURSE_ROWS).map((course) => (
                   <CourseRow key={course.id} course={course} />
                 ))}
               </ul>
             </Panel>
           )}
-          </div>
-      </div>
+          {alternatives.length > 0 && (
+            <Panel title={L.alternatives}>
+              <AlternativeList ids={alternatives} onPick={onPick} />
+            </Panel>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -540,8 +590,9 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
   const report = useReport(id, load.one)
   const waiting = useLoadHold(report === undefined)
   const resume = useResume()
-  const posting = report ? postingOf(report.postingId) : null
+  const posting = useReportPosting(report?.postingId)
   const company = report ? companyOf(report.companyId) : null
+  const reports = useReports()
   const [gap, setGap] = useState<SkillGap | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [rerunning, setRerunning] = useState(false)
@@ -566,27 +617,28 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
     return (
       <main className={pageFrame}>
         <PageHeader title={L.tabs.summary} onBack={onBack} backLabel={L.back} />
-        <LoadProgress percent={load.percent} className="mx-auto mt-24 w-full max-w-md" />
+        <LoadProgress percent={load.percent} className={loadCenter} />
       </main>
     )
   }
 
-  if (!report || !posting || !company) {
+  // 마감 공고는 서버에서 받는 동안 제목이 비어 있어도 리포트는 열어요.
+  if (!report || !company) {
     return (
       <main className={pageFrame}>
         <PageHeader title={L.tabs.summary} onBack={onBack} backLabel={L.back} />
         {signedIn ? (
-          <Notice title={L.missing} body={L.missingBody} action={L.goHome} onAction={onBack} className="mt-24" />
+          <Notice title={L.missing} body={L.missingBody} action={L.goHome} onAction={onBack} className="mt-16" />
         ) : (
-          <Notice title={L.signInTitle} body={L.signInBody} action={L.signIn} onAction={requestLogin} className="mt-24" />
+          <Notice title={L.signInTitle} body={L.signInBody} action={L.signIn} onAction={requestLogin} className="mt-16" />
         )}
       </main>
     )
   }
 
-  async function rerun(from: 'button' | 'outdated' = 'button') {
+  async function rerun() {
     setRerunning(true)
-    track('report_rerun', { from })
+    track('report_rerun', { from: 'button' })
     const next = await rerunReport(id)
     setRerunning(false)
     if (!next) return
@@ -598,13 +650,15 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
 
   const done = report.status === 'done'
   const failed = report.status === 'failed'
-  // 이 리포트를 만든 서류와 지금 별을 누른 대표 이력서가 다르면, 대표 이력서로 다시 진단하자고 알려요.
+  // 이 리포트를 만든 서류와 지금 별을 누른 대표 이력서가 다르면, 대표 이력서로도 진단해 보자고 알려요. 이 리포트는 지우지 않아요.
+  // 대표 이력서로 만든 리포트가 이미 있으면 그 리포트로 가자고 알려요.
   const outdated = done && !!resume && report.resumeId !== resume.id
+  const sibling = outdated && reports.some((item) => item.postingId === report.postingId && item.resumeId === resume.id && item.status !== 'failed')
 
   return (
     <main className={pageFrame}>
       <PageHeader
-        title={posting.title}
+        title={posting?.title ?? ''}
         owner={company.name}
         mark={<CompanyMark company={company} className="size-11 text-[15px]" />}
         onBack={onBack}
@@ -649,19 +703,27 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
             <AlertIcon className="size-5 shrink-0 text-brand" />
             {/* 제목과 설명은 두 줄로 나눠 적어요. 한 줄에 이어 붙이면 문장 두 개가 한 문장처럼 읽혀요. */}
             <div className="min-w-0 flex-1 text-[13.5px] leading-relaxed">
-              <p className="font-semibold text-gray-900">{L.staleTitle}</p>
-              <p className="mt-0.5 text-gray-700">{L.staleBody}</p>
+              <p className="font-semibold text-gray-900">{sibling ? L.siblingTitle : L.staleTitle}</p>
+              <p className="mt-0.5 text-gray-700">{sibling ? L.siblingBody : L.staleBody}</p>
             </div>
-            <button type="button" disabled={rerunning} onClick={() => void rerun('outdated')} className={primaryButton}>
-              {L.staleAction}
+            {/* 공고 카드를 누른 것과 같아요. 대표 이력서로 만든 리포트가 있으면 열고, 없으면 새로 만들어요. */}
+            <button
+              type="button"
+              onClick={() => {
+                track('report_resume_diagnose', { existing: sibling })
+                onPick(report.postingId)
+              }}
+              className={primaryButton}
+            >
+              {sibling ? L.siblingAction : L.staleAction}
             </button>
           </div>
         )}
         {failed ? (
-          <Notice title={L.failedTitle} body={L.failedBody} action={L.failedAction} onAction={() => void rerun()} className="mt-24" />
+          <Notice title={L.failedTitle} body={L.failedBody} action={L.failedAction} onAction={() => void rerun()} className="mt-16" />
         ) : !done ? (
           // 만드는 동안은 서버가 알려 주는 진행 정도를 막대로 보여줘요. 저장소가 1초마다 다시 물어요.
-          <AiProgress progress={report.progress ?? 0} stage={report.stage ?? 'queued'} className="mx-auto mt-24 w-full max-w-md" />
+          <AiProgress progress={report.progress ?? 0} stage={report.stage ?? 'queued'} className={loadCenter} />
         ) : tab === 'summary' ? (
           <SummaryTab report={report} onOpenGap={(item) => {
             track('gap_open', { kind: item.kind, skill: item.skill })

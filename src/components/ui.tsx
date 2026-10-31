@@ -20,8 +20,8 @@ const TEXT = messages({
 
 const brandFill = 'bg-brand font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-gray-200 disabled:text-gray-400'
 
-/** 메인 컬러의 알약 버튼이에요. 창과 줄 안의 기본 크기(36px)예요. */
-export const primaryButton = `h-9 rounded-full px-4 text-[13px] ${brandFill}`
+/** 메인 컬러의 알약 버튼이에요. 창과 줄 안의 기본 크기(36px)예요. 아이콘을 앞에 붙여도 가운데에 맞아요. */
+export const primaryButton = `inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-4 text-[13px] ${brandFill}`
 /** 안내 화면 가운데에 두는 한 단계 큰 메인 버튼(40px)이에요. */
 export const primaryButtonMd = `inline-flex h-10 items-center justify-center rounded-full px-5 text-[14px] ${brandFill}`
 /** 로그인처럼 폭을 다 채우는 큰 메인 버튼(48px)이에요. */
@@ -40,6 +40,12 @@ export const softDangerButton =
 /** 테두리를 두른 흰 도구 버튼이에요. 드롭다운, 재진단, 복사 같은 보조 작업에 써요. */
 export const toolButton =
   'flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-gray-800 transition-colors hover:border-gray-300 hover:text-gray-950'
+/**
+ * 화면 맨 위 거르는 줄(공고 탐색, 추천 공고, 기술 블로그)의 큰 도구 버튼(44px)이에요.
+ * 같은 줄의 검색창과 기업 고르기 버튼이 44px이라 높이를 맞춰요. 드롭다운의 size="lg"가 이 모양이에요.
+ */
+export const toolButtonLg =
+  'flex h-11 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-[14px] font-medium text-gray-800 transition-colors hover:border-gray-300 hover:text-gray-950'
 /** 도구 버튼의 빨간 모양이에요. 삭제에 써요. */
 export const toolDangerButton =
   'flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 text-[13px] font-medium text-red-500 transition-colors hover:border-red-200 hover:text-red-600'
@@ -127,7 +133,8 @@ export function FormError({ children, className = '' }: { children: ReactNode; c
 
 const SEGMENTED = {
   sm: { box: 'rounded-lg p-0.5', item: 'h-7 rounded-md px-2.5 text-[12.5px]', icon: 'size-7 rounded-md' },
-  md: { box: 'rounded-xl p-1', item: 'h-8 rounded-lg px-3.5 text-[13px]', icon: 'size-8 rounded-lg' },
+  // md는 바깥 높이가 36px라 같은 줄의 도구 버튼, 드롭다운과 높이가 같아요.
+  md: { box: 'rounded-lg p-0.5', item: 'h-8 rounded-md px-3.5 text-[13px]', icon: 'size-8 rounded-md' },
 }
 
 /**

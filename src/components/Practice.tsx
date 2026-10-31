@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { track } from '../lib/analytics'
-import { companyOf, fetchQuestions, postingOf, PROGRESS_START, submitAnswer, useReport, type InterviewQuestion, type PracticeFeedback, type ProgressState } from '../lib/gap'
+import { companyOf, fetchQuestions, PROGRESS_START, submitAnswer, useReport, useReportPosting, type InterviewQuestion, type PracticeFeedback, type ProgressState } from '../lib/gap'
 import { messages, useLang, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { canDictate, canSpeak, chime, joinSpeech, prefetchVoice, unlockChime, useDictation, usePracticeVoice, useSpeak } from '../lib/speech'
@@ -221,7 +221,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
 
   /** 질문 하나만 연습하는지예요. 시작 화면과 결과 화면의 글이 달라요. */
   const single = !!startId
-  const posting = report ? postingOf(report.postingId) : null
+  const posting = useReportPosting(report?.postingId)
   const company = report ? companyOf(report.companyId) : null
   const current = questions?.[index]
 

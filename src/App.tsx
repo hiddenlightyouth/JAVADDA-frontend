@@ -117,6 +117,7 @@ export default function App() {
   const openPractice = useCallback((id: string, question?: string) => open({ kind: 'practice', id, question }), [open])
   const openExplore = useCallback(() => open({ kind: 'explore' }), [open])
   const openRecommend = useCallback(() => open({ kind: 'recommend' }), [open])
+  const openCalendar = useCallback(() => open({ kind: 'calendar' }), [open])
   const openCompany = useCallback((company: string) => open({ kind: 'explore', company }), [open])
   const openCompanyPage = useCallback((id: string) => open({ kind: 'company', id }), [open])
   const openResume = useCallback(() => open({ kind: 'resume' }), [open])
@@ -162,6 +163,7 @@ export default function App() {
       KeyT: appShell ? openExplore : undefined,
       KeyR: appShell && resume ? openRecommend : undefined,
       KeyG: appShell ? () => openBlogs() : undefined,
+      KeyD: appShell ? openCalendar : undefined,
       KeyB: appShell ? () => toggleSidebar(!sidebarOpen) : undefined,
     },
     !(isApp && tokens === null) && page?.kind !== 'app-login',
@@ -254,7 +256,7 @@ export default function App() {
       sidebar={{
         activeReportId,
         page:
-          page?.kind === 'explore' || page?.kind === 'recommend' || page?.kind === 'resume' || page?.kind === 'blogs' || page?.kind === 'admin'
+          page?.kind === 'explore' || page?.kind === 'recommend' || page?.kind === 'calendar' || page?.kind === 'resume' || page?.kind === 'blogs' || page?.kind === 'admin'
             ? page.kind
             : account === 'me' || account === 'history'
               ? account
@@ -264,6 +266,7 @@ export default function App() {
         onNew: goHome,
         onExplore: openExplore,
         onRecommend: openRecommend,
+        onCalendar: openCalendar,
         onResume: openResume,
         onBlogs: () => openBlogs(),
         onOpenReport: (id) => {

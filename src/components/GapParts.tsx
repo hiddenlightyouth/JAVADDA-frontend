@@ -1,8 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { careerName, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, useDiagnosed, type Company, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
+import { careerName, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, skillLogoOf, useDiagnosed, type Company, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
-import { BriefcaseIcon, CheckIcon, CloseIcon, MapPinIcon, PersonIcon, TriangleIcon } from './Icons'
+import { ConfirmDialog } from './Dialog'
+import { BeakerIcon, BoxesIcon, BriefcaseIcon, CheckIcon, ChipIcon, CloseIcon, CodeIcon, DatabaseIcon, GlobeIcon, LayersIcon, MapPinIcon, PersonIcon, SparkleIcon, TreeIcon, TriangleIcon } from './Icons'
 import { Badge, primaryButton, ProgressRing, stagger } from './ui'
 
 /**
@@ -34,6 +35,9 @@ const TEXT = messages({
     wanted: '공고',
     failed: '불러오지 못했어요. 잠시 뒤에 다시 시도해 주세요.',
     retry: '다시 시도하기',
+    pickTitle: '해당 공고로 이동할까요?',
+    pickBody: (company: string, title: string, diagnosed: boolean) => `${company}의 ${title} 공고로 ${diagnosed ? '이동할까요?' : '이동하고, 분석을 시작할까요?'}`,
+    pickGo: '이동하기',
     remove: (name: string) => `${name} 빼기`,
     stages: {
       waiting: '시작하는 중',
@@ -75,6 +79,9 @@ const TEXT = messages({
     wanted: 'Posting',
     failed: "Couldn't load. Please try again in a moment.",
     retry: 'Try again',
+    pickTitle: 'Go to this posting?',
+    pickBody: (company: string, title: string, diagnosed: boolean) => `${diagnosed ? 'Go to' : 'Go to and analyze'} ${title} at ${company}?`,
+    pickGo: 'Go',
     remove: (name: string) => `Remove ${name}`,
     stages: {
       waiting: 'Getting started',
@@ -112,6 +119,38 @@ export function CompanyMark({ company, className = 'size-12 text-[17px]' }: { co
   return (
     <span aria-hidden className={`flex shrink-0 items-center justify-center rounded-xl bg-gray-100 font-semibold text-gray-700 ${className}`}>
       {company.initial}
+    </span>
+  )
+}
+
+/** 로고가 없는 개념 스킬의 아이콘이에요. 스킬 이름에 들어 있는 말로 골라요. 위에서부터 먼저 맞는 것을 써요. */
+const CONCEPT_ICONS: [RegExp, typeof CodeIcon][] = [
+  [/테스트|test|tdd/i, BeakerIcon],
+  [/네트워크|network|http|tcp/i, GlobeIcon],
+  [/운영체제|컴퓨터 구조|\bos\b|linux/i, ChipIcon],
+  [/알고리즘|자료구조|algorithm/i, TreeIcon],
+  [/설계|아키텍처|architecture|design/i, LayersIcon],
+  [/msa|마이크로|micro/i, BoxesIcon],
+  [/llm|\bai\b|\brag\b|머신러닝|딥러닝|\bml\b/i, SparkleIcon],
+  [/sql|데이터베이스|database|db/i, DatabaseIcon],
+  [/협업|커뮤니케이션|collab/i, PersonIcon],
+]
+
+/**
+ * 기술 스택 로고를 둥근 네모에 넣어요. 기업 로고처럼 다크 모드에서도 바탕은 흰색이에요.
+ * 로고가 없는 개념 스킬(테스트 코드, 네트워크 등)은 뜻에 맞는 선 아이콘을, 맞는 것도 없으면 코드 괄호를 같은 칸에 메인 컬러로 그려요.
+ */
+export function SkillMark({ skill, className = 'size-9' }: { skill: string; className?: string }) {
+  const [broken, setBroken] = useState(false)
+  const logo = skillLogoOf(skill)
+  const Concept = CONCEPT_ICONS.find(([pattern]) => pattern.test(skill))?.[1] ?? CodeIcon
+  return (
+    <span aria-hidden className={`flex shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-[#fff] p-1.5 ${className}`}>
+      {logo && !broken ? (
+        <img src={logo} alt="" loading="lazy" onError={() => setBroken(true)} className="size-full object-contain" />
+      ) : (
+        <Concept className="size-[55%] text-[#2e90fa]" />
+      )}
     </span>
   )
 }
@@ -392,9 +431,10 @@ export function CompanyFilter({ companies, value, onChange, label, allLabel }: {
 }) {
   const tone = (on: boolean) => (on ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950')
   return (
-    <div role="radiogroup" aria-label={label} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
+    // 기업을 고르는 일이 화면의 첫 동작이라, 다른 도구 버튼(36px)보다 한 단계 크게(44px) 둬서 누르기 쉽게 해요.
+    <div role="radiogroup" aria-label={label} className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
       {allLabel && (
-        <button type="button" role="radio" aria-checked={!value} onClick={() => onChange(null)} className={`flex h-9 shrink-0 items-center rounded-full border px-4 text-[13px] font-medium transition-colors ${tone(!value)}`}>
+        <button type="button" role="radio" aria-checked={!value} onClick={() => onChange(null)} className={`flex h-11 shrink-0 items-center rounded-full border px-5 text-[14.5px] font-medium transition-colors ${tone(!value)}`}>
           {allLabel}
         </button>
       )}
@@ -405,9 +445,9 @@ export function CompanyFilter({ companies, value, onChange, label, allLabel }: {
           role="radio"
           aria-checked={value === item.id}
           onClick={() => onChange(value === item.id ? null : item.id)}
-          className={`flex h-9 shrink-0 items-center gap-2 rounded-full border py-1 pr-3.5 pl-1.5 text-[13px] font-medium transition-colors ${tone(value === item.id)}`}
+          className={`flex h-11 shrink-0 items-center gap-2.5 rounded-full border py-1 pr-4.5 pl-1.5 text-[14.5px] font-medium transition-colors ${tone(value === item.id)}`}
         >
-          <CompanyMark company={item} className="size-6 rounded-full! text-[10px]" />
+          <CompanyMark company={item} className="size-8 rounded-full! text-[12px]" />
           {item.name}
         </button>
       ))}
@@ -463,7 +503,7 @@ export function PostingTile({ posting, resume, fit = fitOf(posting, resume), tag
             <span className="truncate">{company.name}</span>
           </span>
         </span>
-        <span className="mt-3 line-clamp-2 text-[16px] leading-snug font-semibold text-gray-900 transition-colors group-hover:text-brand">{posting.title}</span>
+        <span className="mt-3 line-clamp-2 text-[16px] leading-snug font-semibold text-gray-900 transition-colors group-hover:text-brand-hover">{posting.title}</span>
         <PostingMeta posting={posting} className="mt-2" />
         <span className="mt-auto flex items-end justify-between gap-3 pt-3">
           {/* 회색 바탕 위라 테두리 있는 이름표 대신 한 단계 짙은 회색 태그로 적어요. 이력서가 있으면 갖춘 역량만 메인 컬러로 칠해요. */}
@@ -701,3 +741,28 @@ export const number = (value: number) => value.toLocaleString(getLang() === 'ko'
 
 /** 퍼센트(0에서 1)를 "49%"처럼 적어요. */
 export const percent = (value: number) => `${Math.round(value * 100)}%`
+
+/**
+ * 공고를 눌렀을 때 바로 진단으로 가지 않고 한 번 더 물어요. 마감 달력, 공고 탐색, 추천 공고가 써요.
+ * ask(공고, 갈 때 할 일)로 창을 열고, 화면은 돌려준 dialog를 그려요.
+ */
+export function usePickConfirm() {
+  const [asking, setAsking] = useState<{ posting: JobPosting; go: () => void } | null>(null)
+  const dialog = asking && (
+    <PickConfirm
+      posting={asking.posting}
+      onCancel={() => setAsking(null)}
+      onConfirm={() => {
+        setAsking(null)
+        asking.go()
+      }}
+    />
+  )
+  return { ask: (posting: JobPosting, go: () => void) => setAsking({ posting, go }), dialog }
+}
+
+function PickConfirm({ posting, onCancel, onConfirm }: { posting: JobPosting; onCancel: () => void; onConfirm: () => void }) {
+  const L = useMessages(TEXT)
+  const diagnosed = useDiagnosed(posting.id)
+  return <ConfirmDialog title={L.pickTitle} body={L.pickBody(companyOf(posting.companyId).name, posting.title, Boolean(diagnosed))} confirm={L.pickGo} onCancel={onCancel} onConfirm={onConfirm} />
+}

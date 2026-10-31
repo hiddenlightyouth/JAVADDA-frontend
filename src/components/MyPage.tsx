@@ -101,7 +101,7 @@ interface Props {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mt-12 first:mt-4">
+    <section className="mt-12 first:mt-0">
       <h2 className="text-[17px] font-semibold text-gray-900">{title}</h2>
       <div className="mt-4">{children}</div>
     </section>
@@ -394,7 +394,7 @@ export function MyPage({ onSignedOut }: Props) {
   return (
     <main className={pageFrame}>
       <PageHeader title={text.title} />
-      <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pb-20 md:-mx-10 md:px-10">
+      <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:-mx-10 md:px-10">
       <div className="w-full max-w-2xl">
 
         <Section title={text.account}>

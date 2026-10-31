@@ -5,13 +5,16 @@ import { messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
-import { cardsGrid, Failed, Notice, PostingTile } from './GapParts'
+import { Failed, Notice, usePickConfirm } from './GapParts'
+import { JobItem, jobsGrid, jobsList, LayoutToggle, readLayout, useJobBrowser, type Layout } from './JobCard'
+import { SplitView } from './PostingBrowser'
 import { loadCenter, LoadProgress } from './ui'
 
 /**
  * 추천 공고 화면이에요. 올려 둔 이력서의 역량과 가까운 공고를 적합도 순서로 보여줘요.
  * 추천은 늘 대표 이력서(별을 누른 서류)로 해요. 대표를 바꾸는 것은 내 이력서 화면이 맡아요.
  * 추천 기준(적합도 필터)에 조금 못 미치는 공고(30%부터)는 아래 "조금 더 채우면 맞는 공고"에 따로 보여줘서, 추천이 비어도 무엇을 채우면 될지 보여요.
+ * 카드와 줄, 보기 방식, 미니 브라우저는 공고 탐색과 같은 것(`JobCard`)을 써요.
  * 이력서가 없으면 먼저 올리라고 안내해요.
  */
 
@@ -100,6 +103,28 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
     [loaded, resume, threshold],
   )
   const waiting = useLoadHold(list === undefined)
+  // 카드를 누르면 바로 가지 않고 한 번 더 묻고, 분석하기는 바로 진단해요.
+  const confirmPick = usePickConfirm()
+  const browser = useJobBrowser()
+  const [layout, setLayout] = useState<Layout>(readLayout)
+  function analyze(posting: JobPosting, from: string) {
+    track('posting_select', { posting: posting.id, from })
+    onPick(posting.id)
+  }
+  const item = (posting: JobPosting, order: number, from: string) => (
+    <JobItem
+      key={`${layout}:${from}:${sort}:${threshold}:${posting.id}`}
+      layout={layout}
+      posting={posting}
+      resume={resume}
+      fit={fitOf(posting, resume)}
+      order={order}
+      onView={() => browser.view(posting)}
+      onCompany={() => browser.viewCompany(posting.companyId)}
+      onOpen={() => confirmPick.ask(posting, () => analyze(posting, from))}
+      onAnalyze={() => analyze(posting, from)}
+    />
+  )
 
   if (!resume) {
     return (
@@ -110,91 +135,72 @@ export function Recommend({ onPick, onResume }: { onPick: (postingId: string) =>
   }
 
   return (
-    <ScrollPage header={<PageHeader title={L.title} />}>
-      <div className="flex flex-wrap items-center gap-2">
-        <Dropdown
-          label={L.sort}
-          value={L.sorts[sort]}
-          groups={[
-            {
-              items: SORTS.map((value) => ({
-                label: L.sorts[value],
-                checked: sort === value,
-                onSelect: () => {
-                  track('recommend_sort_change', { sort: value })
-                  setSort(value)
-                },
-              })),
-            },
-          ]}
-        />
-        <Dropdown
-          label={L.threshold}
-          value={L.thresholds[threshold]}
-          groups={[
-            {
-              items: THRESHOLDS.map((value) => ({
-                label: L.thresholds[value],
-                checked: threshold === value,
-                onSelect: () => {
-                  track('recommend_threshold_change', { threshold: value })
-                  setThreshold(value)
-                },
-              })),
-            },
-          ]}
-        />
-        {Array.isArray(list) && <p className="ml-auto text-[13px] text-gray-500 tabular-nums">{L.items(list.length)}</p>}
-      </div>
+    <SplitView side={browser.side}>
+      <ScrollPage header={<PageHeader title={L.title} />} className="@container">
+        <div className="flex flex-wrap items-center gap-2">
+          <Dropdown
+            size="lg"
+            label={L.sort}
+            value={L.sorts[sort]}
+            groups={[
+              {
+                items: SORTS.map((value) => ({
+                  label: L.sorts[value],
+                  checked: sort === value,
+                  onSelect: () => {
+                    track('recommend_sort_change', { sort: value })
+                    setSort(value)
+                  },
+                })),
+              },
+            ]}
+          />
+          <Dropdown
+            size="lg"
+            label={L.threshold}
+            value={L.thresholds[threshold]}
+            groups={[
+              {
+                items: THRESHOLDS.map((value) => ({
+                  label: L.thresholds[value],
+                  checked: threshold === value,
+                  onSelect: () => {
+                    track('recommend_threshold_change', { threshold: value })
+                    setThreshold(value)
+                  },
+                })),
+              },
+            ]}
+          />
+        </div>
 
-      <div className="mt-4">
-        {waiting || list === undefined ? (
-          <LoadProgress percent={load.percent} className={loadCenter} />
-        ) : list === 'failed' ? (
-          <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
-        ) : list.length === 0 ? (
-          // 아래에 조금 더 채우면 맞는 공고가 있으면 안내를 짧게 두고, 없으면 화면 가운데에 크게 둬요.
-          <Notice title={L.none} body={L.noneBody} className={near.length > 0 ? 'mt-6' : 'mt-16'} />
-        ) : (
-          <ul className={cardsGrid}>
-            {list.map((posting, order) => (
-              <PostingTile
-                key={`${sort}:${threshold}:${posting.id}`}
-                posting={posting}
-                resume={resume}
-                tag="fit"
-                order={order}
-                onOpen={() => {
-                  track('posting_select', { posting: posting.id, from: 'recommend' })
-                  onPick(posting.id)
-                }}
-              />
-            ))}
-          </ul>
+        <div className="mt-4 flex h-8 items-center justify-between gap-3">
+          <p className="text-[13px] text-gray-500 tabular-nums">{Array.isArray(list) ? L.items(list.length) : ''}</p>
+          <LayoutToggle value={layout} onChange={setLayout} />
+        </div>
+
+        <div className="mt-4">
+          {waiting || list === undefined ? (
+            <LoadProgress percent={load.percent} className={loadCenter} />
+          ) : list === 'failed' ? (
+            <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
+          ) : list.length === 0 ? (
+            // 아래에 조금 더 채우면 맞는 공고가 있으면 안내를 짧게 두고, 없으면 화면 가운데에 크게 둬요.
+            <Notice title={L.none} body={L.noneBody} className={near.length > 0 ? 'mt-6' : 'mt-16'} />
+          ) : (
+            <ul className={layout === 'gallery' ? jobsGrid : jobsList}>{list.map((posting, order) => item(posting, order, 'recommend'))}</ul>
+          )}
+        </div>
+
+        {Array.isArray(list) && near.length > 0 && (
+          <section className="mt-12">
+            <h2 className="text-[16px] font-semibold text-gray-900">{L.nearTitle}</h2>
+            <p className="mt-1 text-[13px] text-gray-500">{L.nearBody}</p>
+            <ul className={`mt-4 ${layout === 'gallery' ? jobsGrid : jobsList}`}>{near.map((posting, order) => item(posting, order, 'recommend-near'))}</ul>
+          </section>
         )}
-      </div>
-
-      {Array.isArray(list) && near.length > 0 && (
-        <section className="mt-12">
-          <h2 className="text-[16px] font-semibold text-gray-900">{L.nearTitle}</h2>
-          <p className="mt-1 text-[13px] text-gray-500">{L.nearBody}</p>
-          <ul className={`mt-4 ${cardsGrid}`}>
-            {near.map((posting, order) => (
-              <PostingTile
-                key={`near:${threshold}:${posting.id}`}
-                posting={posting}
-                resume={resume}
-                tag="fit"
-                order={order}
-                onOpen={() => {
-                  track('posting_select', { posting: posting.id, from: 'recommend-near' })
-                  onPick(posting.id)
-                }}
-              />
-            ))}
-          </ul>
-        </section>
-      )}
-    </ScrollPage>
+        {confirmPick.dialog}
+      </ScrollPage>
+    </SplitView>
   )
 }

@@ -8,7 +8,8 @@ import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
 import { CompanyFilter, CompanyMark, Failed, Notice } from './GapParts'
 import { PostingBrowser, SplitView, type BrowserPage } from './PostingBrowser'
-import { Badge, Bullets, label, loadCenter, LoadProgress, primaryButton, stagger, toolButton } from './ui'
+import { Modal } from './Dialog'
+import { Badge, Bullets, label, loadCenter, LoadProgress, primaryButton, quietButton, stagger, toolButton } from './ui'
 
 /**
  * 기술 블로그 화면이에요. 여러 기업 기술 블로그의 글을 최신 순서로 한데 늘어놓고, 기업과 주제로 걸러 봐요.
@@ -38,6 +39,11 @@ const TEXT = messages({
     interviewTitle: '면접에서 이렇게 써 보세요',
     jobs: (count: number) => `공고 ${count}개 보기`,
     openBlog: '블로그 열기',
+    leaveTitle: '해당 링크로 이동하는 중',
+    leaveCount: (seconds: number) => `${seconds}초 뒤에 새 탭에서 해당 링크가 열립니다.`,
+    leaveBlocked: '새 탭을 열지 못했어요. 이동을 눌러 주세요.',
+    leaveNow: '이동',
+    leaveCancel: '취소',
     none: '이 조건에 맞는 글이 없어요.',
     noneAction: '주제 풀기',
     missing: '이 기업의 기술 블로그 요약은 아직 없어요.',
@@ -57,6 +63,11 @@ const TEXT = messages({
     interviewTitle: 'Use it in your interview',
     jobs: (count: number) => `View ${count} ${count === 1 ? 'posting' : 'postings'}`,
     openBlog: 'Open blog',
+    leaveTitle: 'Opening the link',
+    leaveCount: (seconds: number) => `The link opens in a new tab in ${seconds}s.`,
+    leaveBlocked: "Couldn't open a new tab. Press Go.",
+    leaveNow: 'Go',
+    leaveCancel: 'Cancel',
     none: 'No posts match.',
     noneAction: 'Clear topic',
     missing: "We don't have a summary for this company's blog yet.",
@@ -81,13 +92,9 @@ type Entry = BlogPost & { companyId: string }
 
 /**
  * 원문 링크의 누름이에요. 그냥 누르면 미니 브라우저로 열고, Cmd, Ctrl, Shift, 가운데 버튼이면 브라우저가 알아서 새 탭으로 열게 둬요.
- * 다른 서비스 안에 띄우는 것을 막아 둔 블로그(`canEmbed`)는 미니 브라우저에 요약만 보여주는 대신 바로 새 탭으로 열어요.
+ * 다른 서비스 안에 띄우는 것을 막아 둔 블로그(`canEmbed`)는 read가 외부 페이지로 간다고 알리고 3초 뒤에 새 탭으로 열어요.
  */
 const openIn = (read: (page: BrowserPage) => void, page: BrowserPage) => (event: MouseEvent) => {
-  if (!canEmbed(page.url)) {
-    track('blog_post_open', { company: page.companyId, from: 'tab' })
-    return
-  }
   if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return
   event.preventDefault()
   read(page)
@@ -105,6 +112,8 @@ export function Blogs({ company, onCompany, onJobs }: {
   const [attempt, setAttempt] = useState(0)
   const [theme, setTheme] = useState<BlogTheme | null>(null)
   const [reading, setReading] = useState<BrowserPage | null>(null)
+  // 앱 안에 띄울 수 없어서 새 탭으로 열려고 기다리는 글이에요.
+  const [leaving, setLeaving] = useState<BrowserPage | null>(null)
   const load = useLoadProgress()
   const waiting = useLoadHold(loaded === undefined)
 
@@ -156,6 +165,11 @@ export function Blogs({ company, onCompany, onJobs }: {
     setTheme(next)
   }
   const read = (page: BrowserPage) => {
+    if (!canEmbed(page.url)) {
+      track('blog_post_open', { company: page.companyId, from: 'tab' })
+      setLeaving(page)
+      return
+    }
     track('blog_post_open', { company: page.companyId, from: 'browser' })
     setReading(page)
   }
@@ -186,8 +200,9 @@ export function Blogs({ company, onCompany, onJobs }: {
         {/* 기업은 공고 탐색처럼 로고를 보고 한 번에 골라요. */}
         <CompanyFilter companies={blogCompanies} value={company} label={L.company} allLabel={L.all} onChange={selectCompany} />
 
-        <div className="mt-4 flex h-9 items-center justify-between gap-3">
+        <div className="mt-4 flex h-11 items-center justify-between gap-3">
           <Dropdown
+            size="lg"
             label={L.theme}
             value={theme ? THEME_NAMES[theme] : L.all}
             active={theme !== null}
@@ -225,6 +240,7 @@ export function Blogs({ company, onCompany, onJobs }: {
             />
           )}
         </div>
+        {leaving && <LeaveDialog page={leaving} onClose={() => setLeaving(null)} />}
       </ScrollPage>
     </SplitView>
   )
@@ -256,7 +272,7 @@ function buildItems({ entries, digest, trends, onJobs, onTheme, read }: {
   return items
 }
 
-/** 전체 보기의 칸 수예요. 목록 폭을 보고 정해요. 공고 탐색의 카드 줄과 같은 기준(672px, 1152px)이에요. */
+/** 전체 보기의 칸 수예요. 목록 폭을 보고 정해요. 공고 탐색, 내 이력서의 카드 줄(@2xl, @6xl)과 같은 기준(672px, 1152px)이에요. */
 function useColumns() {
   const ref = useRef<HTMLDivElement>(null)
   const [columns, setColumns] = useState(1)
@@ -313,7 +329,7 @@ function PostCard({ entry, order, read }: { entry: Entry; order: number; read: (
         <span className="min-w-0 flex-1 truncate">{company.name}</span>
         <span className="shrink-0 tabular-nums">{dayLabel(entry.date)}</span>
       </span>
-      <span className="mt-3 block text-[15px] leading-snug font-semibold text-gray-900 transition-colors group-hover:text-brand-hover">{entry.title}</span>
+      <span className="mt-3 block text-[16px] leading-snug font-semibold text-gray-900 transition-colors group-hover:text-brand-hover">{entry.title}</span>
       <span className="mt-2 line-clamp-3 block text-[13px] leading-relaxed text-gray-600">{entry.summary}</span>
       <span className="mt-3 flex flex-wrap gap-1">
         {entry.themes.map((item) => (
@@ -387,5 +403,55 @@ function CompanyCard({ digest, onJobs }: { digest: BlogDigest; onJobs: (company:
         </button>
       )}
     </div>
+  )
+}
+
+/** 외부 페이지로 가기 전에 기다리는 초예요. */
+const LEAVE_SECONDS = 3
+
+/**
+ * 앱 안에 띄울 수 없는 글을 열기 전에 외부 페이지로 간다고 알리는 창이에요. 3초를 세고 새 탭으로 열어요.
+ * 브라우저가 새 탭을 막으면 창을 그대로 두고, 이동(직접 누르는 링크)으로 열게 해요.
+ */
+function LeaveDialog({ page, onClose }: { page: BrowserPage; onClose: () => void }) {
+  const L = useMessages(TEXT)
+  const [left, setLeft] = useState(LEAVE_SECONDS)
+  const [blocked, setBlocked] = useState(false)
+  const close = useRef(onClose)
+  close.current = onClose
+
+  useEffect(() => {
+    if (blocked) return
+    if (left === 0) {
+      const tab = window.open(page.url, '_blank')
+      if (!tab) {
+        setBlocked(true)
+        return
+      }
+      tab.opener = null
+      close.current()
+      return
+    }
+    const timer = window.setTimeout(() => setLeft((value) => value - 1), 1000)
+    return () => window.clearTimeout(timer)
+  }, [left, blocked, page.url])
+
+  return (
+    <Modal onClose={onClose} labelledBy="leave-dialog-title">
+      <h2 id="leave-dialog-title" className="text-[15px] font-semibold text-gray-900">
+        {L.leaveTitle}
+      </h2>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500 tabular-nums" aria-live="polite">
+        {blocked ? L.leaveBlocked : L.leaveCount(left)}
+      </p>
+      <div className="mt-4 flex justify-end gap-2">
+        <button type="button" onClick={onClose} className={quietButton}>
+          {L.leaveCancel}
+        </button>
+        <a href={page.url} target="_blank" rel="noopener noreferrer" onClick={onClose} className={`${primaryButton} inline-flex items-center`}>
+          {L.leaveNow}
+        </a>
+      </div>
+    </Modal>
   )
 }

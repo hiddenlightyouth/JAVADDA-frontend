@@ -10,6 +10,7 @@ const AppLogin = lazy(() => import('./AppLogin').then((module) => ({ default: mo
 // 진단 화면들은 열 때만 받아요.
 const Jobs = lazy(() => import('./Jobs').then((module) => ({ default: module.Jobs })))
 const Recommend = lazy(() => import('./Recommend').then((module) => ({ default: module.Recommend })))
+const DeadlineCalendar = lazy(() => import('./DeadlineCalendar').then((module) => ({ default: module.DeadlineCalendar })))
 const Blogs = lazy(() => import('./Blogs').then((module) => ({ default: module.Blogs })))
 const MyResume = lazy(() => import('./MyResume').then((module) => ({ default: module.MyResume })))
 const Company = lazy(() => import('./Company').then((module) => ({ default: module.Company })))
@@ -66,6 +67,8 @@ export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExp
         <Jobs key={page.company ?? 'all'} onPick={onDiagnose} initialCompany={page.company ?? null} />
       ) : page.kind === 'recommend' ? (
         <Recommend onPick={onDiagnose} onResume={onResume} />
+      ) : page.kind === 'calendar' ? (
+        <DeadlineCalendar onPick={onDiagnose} />
       ) : page.kind === 'resume' ? (
         <MyResume onExplore={onExplore} />
       ) : page.kind === 'blogs' ? (
