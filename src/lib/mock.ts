@@ -391,6 +391,7 @@ async function handle(path: string, query: URLSearchParams, method: string, body
       return reply(state.reviews[key])
     }
     if (sub === 'questions') {
+      if (extra === 'regenerate') delete state.questions[report.id]
       const questions = (state.questions[report.id] ??= buildQuestions(report))
       if (extra === 'answers' && !last) return reply(state.answers[report.id] ?? [])
       if (last === 'answers') {

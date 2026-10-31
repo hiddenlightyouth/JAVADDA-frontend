@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { track } from '../lib/analytics'
-import { fetchAnswers, fetchQuestions, PROGRESS_START, type InterviewQuestion, type PracticeRecord, type ProgressState, type QuestionCategory } from '../lib/gap'
-import { formatDateTime } from '../lib/format'
+import { fetchAnswers, fetchQuestions, PROGRESS_START, regenerateQuestions, type InterviewQuestion, type PracticeRecord, type ProgressState, type QuestionCategory } from '../lib/gap'
+import { formatDate, formatDateTime, parseServerTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
 import { AiProgress, Failed, Notice, Tip } from './GapParts'
-import { MicIcon } from './Icons'
-import { Bullets, ghostButton, label, loadCenter, primaryButton, stagger } from './ui'
+import { ConfirmDialog, panelBody, SidePanel } from './Dialog'
+import { ClockIcon, MicIcon, RefreshIcon } from './Icons'
+import { Bullets, ghostButton, label, loadCenter, primaryButton, Segmented, stagger, toolButton } from './ui'
 
 const CATEGORIES: QuestionCategory[] = ['tech', 'project', 'cs', 'culture']
 
@@ -32,6 +33,27 @@ export const QUESTION_TEXT = messages({
     score: (value: number) => `${value}점`,
     practiced: (value: number) => `연습함 ${value}점`,
     likelihood: '나올 확률',
+    regenerate: '새 질문 받기',
+    pastRecords: '지난 기록',
+    pastTitle: '지난 질문과 답변',
+    pastSummary: (count: number, average: number) => `답변 ${count}개, 평균 ${average}점`,
+    pastFilter: '보기',
+    pastAll: '전체',
+    pastOld: '예전 질문만',
+    oldQuestion: '예전 질문',
+    noQuestionText: '질문 글이 남아 있지 않은 예전 답변이에요',
+    pastEmpty: '아직 연습한 답변이 없어요',
+    pastEmptyBody: '질문을 연습하면 내 답과 피드백이 여기에 쌓여요.',
+    pastOldEmpty: '예전 질문의 답변이 없어요',
+    showFeedback: '피드백 보기',
+    hideFeedback: '피드백 접기',
+    good: '좋았어요',
+    improve: '보완할 점',
+    close: '닫기',
+    regenerateTitle: '새 질문을 받을까요?',
+    regenerateBody: '지금 질문과 겹치지 않는 질문을 새로 만들어요. 지금 질문은 사라지고, 지난 답변 기록은 남아요.',
+    allDone: '질문을 모두 연습했어요',
+    allDoneBody: '새 질문을 받아서 다른 관점으로 더 연습해 볼까요?',
     percent: (value: number) => `${value}%`,
     progress: '연습 현황',
     progressCount: (done: number, total: number) => `${total}개 중 ${done}개 연습했어요`,
@@ -60,6 +82,27 @@ export const QUESTION_TEXT = messages({
     count: (count: number) => `${count} ${count === 1 ? 'question' : 'questions'}`,
     practiced: (value: number) => `Practiced ${value} pts`,
     likelihood: 'Likelihood',
+    regenerate: 'New questions',
+    pastRecords: 'History',
+    pastTitle: 'Past questions and answers',
+    pastSummary: (count: number, average: number) => `${count} answers, avg ${average} pts`,
+    pastFilter: 'Show',
+    pastAll: 'All',
+    pastOld: 'Earlier questions',
+    oldQuestion: 'Earlier question',
+    noQuestionText: 'An earlier answer without its question text',
+    pastEmpty: 'No practice yet',
+    pastEmptyBody: 'Your answers and feedback will collect here as you practice.',
+    pastOldEmpty: 'No answers to earlier questions',
+    showFeedback: 'Show feedback',
+    hideFeedback: 'Hide feedback',
+    good: 'What went well',
+    improve: 'To improve',
+    close: 'Close',
+    regenerateTitle: 'Get new questions?',
+    regenerateBody: "We'll write questions that don't repeat these. Current questions go away, your past answers stay.",
+    allDone: 'You practiced every question',
+    allDoneBody: 'Get new questions to practice from another angle?',
     percent: (value: number) => `${value}%`,
     progress: 'Practice progress',
     progressCount: (done: number, total: number) => `${done} of ${total} practiced`,
@@ -211,6 +254,125 @@ function Row({ question, index, order, records, onPractice }: { question: Interv
   )
 }
 
+/** 지난 기록 칸의 답변 하나예요. 점수, 시각, 질문, 내 답(세 줄까지)이 있고 피드백은 눌러야 펼쳐져요. */
+function PastItem({ record, old }: { record: PracticeRecord; old: boolean }) {
+  const L = useMessages(QUESTION_TEXT)
+  const [open, setOpen] = useState(false)
+  const { feedback } = record
+  return (
+    <li className="rounded-xl bg-gray-50 p-4">
+      <div className="flex items-center gap-2">
+        <span className="rounded-md bg-brand-soft px-2 py-0.5 text-[12px] font-semibold text-brand-hover tabular-nums">{L.score(feedback.score)}</span>
+        {old && <span className="rounded-md bg-gray-200/70 px-2 py-0.5 text-[11.5px] font-medium text-gray-600">{L.oldQuestion}</span>}
+        <span className="ml-auto text-[12px] text-gray-400 tabular-nums">{formatDateTime(record.createdAt)}</span>
+      </div>
+      <p className={`mt-2.5 text-[14px] leading-relaxed font-semibold ${record.question ? 'text-gray-900' : 'text-gray-400'}`}>{record.question || L.noQuestionText}</p>
+      <p className={`mt-1.5 text-[13.5px] leading-relaxed whitespace-pre-wrap text-gray-600 ${open ? '' : 'line-clamp-3'}`}>{record.answer}</p>
+      <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className={`${ghostButton} -ml-2 mt-1`}>
+        {open ? L.hideFeedback : L.showFeedback}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-3 rounded-xl bg-white p-4">
+          {feedback.good.length > 0 && (
+            <div>
+              <h3 className={label}>{L.good}</h3>
+              <Bullets items={feedback.good} brand className="mt-1" />
+            </div>
+          )}
+          {feedback.improve.length > 0 && (
+            <div>
+              <h3 className={label}>{L.improve}</h3>
+              <Bullets items={feedback.improve} className="mt-1" />
+            </div>
+          )}
+          {feedback.rephrase.length > 0 && (
+            <div>
+              <h3 className={label}>{L.rephrase}</h3>
+              <Bullets items={feedback.rephrase} className="mt-1" />
+            </div>
+          )}
+          {feedback.modelAnswer && (
+            <div className="rounded-lg bg-brand-soft p-3">
+              <h3 className="text-[12.5px] font-semibold text-brand-hover">{L.modelAnswer}</h3>
+              <p className="mt-1 text-[13.5px] leading-relaxed text-gray-800">{feedback.modelAnswer}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </li>
+  )
+}
+
+/**
+ * 지난 질문과 답변을 오른쪽에서 여는 칸에 모아 보여줘요. 예상 질문을 새로 뽑기 전의 예전 질문 답변도 여기서 봐요.
+ * 맨 위에 답변 수와 평균 점수, 전체와 예전 질문만 고르는 칸이 있고, 답변은 날짜별로 묶여 최근 것부터 와요.
+ */
+function PastPanel({ records, current, onClose }: { records: PracticeRecord[]; current: Set<string>; onClose: () => void }) {
+  const L = useMessages(QUESTION_TEXT)
+  const [onlyOld, setOnlyOld] = useState(false)
+  const list = onlyOld ? records.filter((record) => !current.has(record.questionId)) : records
+  const average = records.length === 0 ? 0 : Math.round(records.reduce((sum, record) => sum + record.feedback.score, 0) / records.length)
+  // 날짜별로 묶어요. 답변은 최근 것부터 와서 묶음도 최근 날짜부터예요.
+  const days: { day: string; items: PracticeRecord[] }[] = []
+  for (const record of list) {
+    const date = parseServerTime(record.createdAt)
+    const day = date ? formatDate(date) : ''
+    const last = days[days.length - 1]
+    if (last && last.day === day) last.items.push(record)
+    else days.push({ day, items: [record] })
+  }
+  return (
+    <SidePanel
+      onClose={onClose}
+      closeLabel={L.close}
+      labelledBy="past-panel-title"
+      className="max-w-[520px]"
+      header={
+        <div>
+          <h2 id="past-panel-title" className="text-[20px] font-semibold text-gray-900">
+            {L.pastTitle}
+          </h2>
+          {records.length > 0 && <p className="mt-1 text-[13px] text-gray-500 tabular-nums">{L.pastSummary(records.length, average)}</p>}
+        </div>
+      }
+    >
+      <div className={panelBody}>
+        {records.length === 0 ? (
+          <Notice title={L.pastEmpty} body={L.pastEmptyBody} className="mt-16" />
+        ) : (
+          <>
+            <Segmented
+              label={L.pastFilter}
+              options={[
+                ['all', L.pastAll],
+                ['old', L.pastOld],
+              ] as const}
+              value={onlyOld ? 'old' : 'all'}
+              onChange={(value) => setOnlyOld(value === 'old')}
+            />
+            {list.length === 0 ? (
+              <Notice title={L.pastOldEmpty} className="mt-12" />
+            ) : (
+              <div className="mt-5 space-y-6">
+                {days.map(({ day, items }) => (
+                  <section key={day}>
+                    <h3 className="mb-2 text-[12.5px] font-medium text-gray-500">{day}</h3>
+                    <ol className="space-y-2">
+                      {items.map((record) => (
+                        <PastItem key={record.id} record={record} old={!current.has(record.questionId)} />
+                      ))}
+                    </ol>
+                  </section>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </SidePanel>
+  )
+}
+
 /**
  * 예상 면접 질문 탭이에요. 서류 문단, 갭과 강점, 기업 기술 블로그, 기출 코퍼스에서 나온 질문을 나올 확률 순서로 보여줘요.
  * 질문마다 의도와 답변 포인트, 꼬리 질문을 펼쳐 보고, 하나씩 또는 전부 연습하러 가요.
@@ -222,17 +384,28 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
   const [progress, setProgress] = useState<ProgressState>(PROGRESS_START)
   /** 질문마다 예전에 한 답변이에요. 질문 목록과 따로 받아서, 못 받아도 질문은 그대로 보여요. */
   const [records, setRecords] = useState<Record<string, PracticeRecord[]>>({})
+  /** 이 리포트에서 한 답변 전부예요. 새로 뽑기 전의 예전 질문 답변도 들어 있어요. 최근 것부터예요. */
+  const [allRecords, setAllRecords] = useState<PracticeRecord[]>([])
+  const [showPast, setShowPast] = useState(false)
   /** 마지막으로 보낸 요청이에요. 앞의 요청이 늦게 끝나도 화면을 덮지 않게 해요. */
   const latest = useRef(0)
 
-  async function load() {
+  /** 질문을 받아요. fresh면 새로 뽑아요. 받는 동안은 진행 막대를 보여줘요. */
+  async function load(fresh = false) {
     const request = ++latest.current
     setQuestions(undefined)
+    setCategory(null)
     setProgress(PROGRESS_START)
-    const list = await fetchQuestions(reportId, (next) => {
+    const onProgress = (next: ProgressState) => {
       if (request === latest.current) setProgress(next)
-    })
+    }
+    const list = fresh ? await regenerateQuestions(reportId, onProgress) : await fetchQuestions(reportId, onProgress)
     if (request === latest.current) setQuestions(list.length > 0 ? list : null)
+  }
+  const [asking, setAsking] = useState(false)
+  function askRegenerate(from: 'header' | 'done') {
+    track('questions_regenerate_open', { from })
+    setAsking(true)
   }
 
   useEffect(() => {
@@ -243,6 +416,7 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
       const grouped: Record<string, PracticeRecord[]> = {}
       for (const record of list) (grouped[record.questionId] ??= []).push(record)
       setRecords(grouped)
+      setAllRecords(list)
     })
     return () => {
       stale = true
@@ -289,6 +463,22 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
             <span className="h-1.5 w-20 overflow-hidden rounded-full bg-gray-200/70" aria-label={L.progress}>
               <span className="block h-full rounded-full bg-brand transition-[width]" style={{ width: `${(practiced.length / Math.max(1, questions.length)) * 100}%` }} />
             </span>
+            <button
+              type="button"
+              onClick={() => {
+                track('questions_history_open', { count: allRecords.length })
+                setShowPast(true)
+              }}
+              className={toolButton}
+            >
+              <ClockIcon />
+              {L.pastRecords}
+              {allRecords.length > 0 && <span className="text-gray-400 tabular-nums">{allRecords.length}</span>}
+            </button>
+            <button type="button" onClick={() => askRegenerate('header')} className={toolButton}>
+              <RefreshIcon />
+              {L.regenerate}
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -341,6 +531,32 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
         </div>
       )}
       {questions && list.length === 0 && <Notice title={L.count(0)} className="mt-16" />}
+      {/* 질문을 모두 연습했으면 목록 아래에서 새 질문을 받자고 권해요. */}
+      {questions && practiced.length === questions.length && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl bg-brand-soft px-5 py-4">
+          <div className="min-w-0 flex-1 text-[13.5px] leading-relaxed">
+            <p className="font-semibold text-gray-900">{L.allDone}</p>
+            <p className="mt-0.5 text-gray-700">{L.allDoneBody}</p>
+          </div>
+          <button type="button" onClick={() => askRegenerate('done')} className={primaryButton}>
+            {L.regenerate}
+          </button>
+        </div>
+      )}
+      {showPast && <PastPanel records={allRecords} current={new Set((questions ?? []).map((question) => question.id))} onClose={() => setShowPast(false)} />}
+      {asking && (
+        <ConfirmDialog
+          title={L.regenerateTitle}
+          body={L.regenerateBody}
+          confirm={L.regenerate}
+          onCancel={() => setAsking(false)}
+          onConfirm={() => {
+            setAsking(false)
+            track('questions_regenerate', {})
+            void load(true)
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -1985,6 +1985,19 @@ export async function fetchQuestions(reportId: string, onProgress?: OnProgress):
   return [...result.data].sort((a, b) => b.probability - a.probability)
 }
 
+/**
+ * 예상 질문을 새로 뽑아요(POST /reports/{id}/questions/regenerate). 서버가 예전 질문과 겹치지 않게 다시 만들어요.
+ * 새 질문은 아이디가 달라서 지난 답변은 새 질문에 붙지 않아요. 실패하면 토스트로 알리고 빈 목록이에요.
+ */
+export async function regenerateQuestions(reportId: string, onProgress?: OnProgress): Promise<InterviewQuestion[]> {
+  const result = await withProgress(onProgress, (headers) => call<InterviewQuestion[]>(`/reports/${Number(currentId(reportId))}/questions/regenerate`, { method: 'POST' }, true, headers))
+  if (!result.ok || !Array.isArray(result.data)) {
+    fail(result)
+    return []
+  }
+  return [...result.data].sort((a, b) => b.probability - a.probability)
+}
+
 // ---------- 면접 연습 ----------
 
 /** 이 리포트에서 연습한 답변이에요(GET /reports/{id}/questions/answers). 최근 것부터예요. 실패하면 조용히 빈 목록이에요(질문 목록은 그대로 보여요). */
