@@ -1,14 +1,16 @@
-import { useEffect, useState, type MouseEvent } from 'react'
+import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { track } from '../lib/analytics'
 import { fetchBlogDigests, isStale, type BlogDigest } from '../lib/blogs'
 import { canEmbed, categoryName, companyOf, companySizeOf, daysLeft, daysSince, familyName, fetchCompany, isSizeWord, sortPostings, useResume, type CompanyProfile, type QuestionCategory, type Resume, type JobFamily } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
+import { isPlainClick } from '../lib/links'
 import { PageHeader, ScrollPage } from './AppPage'
 import { CompanyLocation } from './CompanyLocation'
-import { CompanyMark, Failed, Notice, Panel, PostingTile, SkillChip, skillTone, Tip } from './GapParts'
+import { CompanyMark, Notice, Panel, PostingTile, SkillChip, skillTone } from './GapParts'
 import { PostingBrowser, SplitView, type BrowserPage } from './PostingBrowser'
-import { loadCenter, LoadProgress, toolButton, useShowMore } from './ui'
+import { LoadGate, panelAction, shortDate } from './ScreenParts'
+import { Badge, toolButton, useShowMore } from './ui'
 
 /**
  * 기업 상세 화면이에요. 기업 소개와 열린 공고, 위치, 이 기업 공고에 적힌 기술 스택, 면접 질문, 기술 블로그 글을 한 화면에 모아요.
@@ -172,13 +174,9 @@ export function Company({ id, onBack, onPick, onPostings, onBlogs }: {
           />
         }
       >
-        {waiting || loaded === undefined ? (
-          <LoadProgress percent={load.percent} className={loadCenter} />
-        ) : loaded === 'failed' ? (
-          <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
-        ) : (
-          <Profile profile={loaded.profile} digest={loaded.digest} resume={resume} onPick={onPick} onPostings={() => onPostings(id)} onBlogs={() => onBlogs(id)} onRead={setViewing} />
-        )}
+        <LoadGate waiting={waiting || loaded === undefined} failed={loaded === 'failed'} percent={load.percent} onRetry={() => setAttempt((value) => value + 1)}>
+          {() => loaded && loaded !== 'failed' && <Profile profile={loaded.profile} digest={loaded.digest} resume={resume} onPick={onPick} onPostings={() => onPostings(id)} onBlogs={() => onBlogs(id)} onRead={setViewing} />}
+        </LoadGate>
       </ScrollPage>
     </SplitView>
   )
@@ -198,12 +196,6 @@ const PLACE_NAMES: [RegExp, string][] = [
   [/gwangju/i, '광주'],
   [/jeju/i, '제주'],
 ]
-/** 11.04 처럼 달과 날만 적어요. */
-const shortDate = (iso: string) => {
-  const date = new Date(iso)
-  return `${date.getMonth() + 1}.${String(date.getDate()).padStart(2, '0')}`
-}
-
 const koreanPlace = (location: string) => {
   const trimmed = location.replace(/,?\s*(south\s+)?korea$/i, '').trim()
   return PLACE_NAMES.find(([pattern]) => pattern.test(trimmed))?.[1] ?? trimmed
@@ -221,38 +213,39 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
 }) {
   const L = useMessages(TEXT)
   const { postings, stack } = profile
-  // 공고가 많은 직군부터 적고, 기타(개발이 아닌 직무)는 맨 뒤로 보내요.
-  const familyCounts = new Map<JobFamily, number>()
-  for (const posting of postings) familyCounts.set(posting.family, (familyCounts.get(posting.family) ?? 0) + 1)
-  const families = [...familyCounts.entries()]
-    .sort((a, b) => Number(a[0] === 'other') - Number(b[0] === 'other') || b[1] - a[1])
-    .map(([family]) => familyName(family))
-    .filter(Boolean)
-  // 근무지는 영어 도시 이름을 한글로 맞추고 같은 곳은 한 번만 적어요(Seoul과 서울).
-  const locations = [...new Set(postings.map((posting) => koreanPlace(posting.location)))]
-  const sorted = resume ? sortPostings(postings, 'fit', resume) : postings
+  // 미니 브라우저를 열고 닫을 때마다 다시 그려져서, 정렬과 훑어보는 정보는 기업과 이력서가 바뀔 때만 다시 계산해요.
+  const sorted = useMemo(() => (resume ? sortPostings(postings, 'fit', resume) : postings), [postings, resume])
   // 기업 공고가 많아도 칸이 끝없이 길어지지 않게 여섯 개씩 보여줘요.
   const postingMore = useShowMore(sorted.length, profile.company.id, COMPANY_POSTINGS)
   // 규모와 업종, 신입이 지원할 수 있는 공고, 마감과 최근 공고까지 훑어보는 정보를 두 줄로 늘어놓아요. 모르는 칸은 두지 않아요.
-  const { company } = profile
-  const size = companySizeOf(company)
-  // 고용24 기업은 업종 자리에 규모가 와서, 업종은 사업 분류로 대신 적어요.
-  const industry = isSizeWord(company.industry) || company.industry === '기업' ? (company.category ? categoryName(company.category) : '') : company.industry
-  const entry = postings.filter((posting) => posting.career !== 'junior').length
-  const nearest = postings
-    .filter((posting) => posting.deadline)
-    .sort((a, b) => a.deadline!.localeCompare(b.deadline!))[0]
-  const recent = postings.length > 0 ? Math.min(...postings.map(daysSince)) : null
-  const facts = [
-    size && { label: L.facts.size, value: size },
-    industry && { label: L.facts.industry, value: industry },
-    { label: L.facts.open, value: L.openCount(postings.length) },
-    postings.length > 0 && { label: L.facts.entry, value: L.openCount(entry) },
-    postings.length > 0 && { label: L.facts.deadline, value: nearest ? L.dday(daysLeft(nearest) ?? 0, shortDate(nearest.deadline!)) : L.always },
-    recent !== null && { label: L.facts.recent, value: L.ago(recent) },
-    { label: L.facts.families, value: families.join(', ') || '-' },
-    { label: L.facts.locations, value: locations.join(', ') || '-' },
-  ].filter((fact): fact is { label: string; value: string } => !!fact)
+  const facts = useMemo(() => {
+    // 공고가 많은 직군부터 적고, 기타(개발이 아닌 직무)는 맨 뒤로 보내요.
+    const familyCounts = new Map<JobFamily, number>()
+    for (const posting of postings) familyCounts.set(posting.family, (familyCounts.get(posting.family) ?? 0) + 1)
+    const families = [...familyCounts.entries()]
+      .sort((a, b) => Number(a[0] === 'other') - Number(b[0] === 'other') || b[1] - a[1])
+      .map(([family]) => familyName(family))
+      .filter(Boolean)
+    // 근무지는 영어 도시 이름을 한글로 맞추고 같은 곳은 한 번만 적어요(Seoul과 서울).
+    const locations = [...new Set(postings.map((posting) => koreanPlace(posting.location)))]
+    const { company } = profile
+    const size = companySizeOf(company)
+    // 고용24 기업은 업종 자리에 규모가 와서, 업종은 사업 분류로 대신 적어요.
+    const industry = isSizeWord(company.industry) || company.industry === '기업' ? (company.category ? categoryName(company.category) : '') : company.industry
+    const entry = postings.filter((posting) => posting.career !== 'junior').length
+    const nearest = postings.filter((posting) => posting.deadline).sort((a, b) => a.deadline!.localeCompare(b.deadline!))[0]
+    const recent = postings.length > 0 ? Math.min(...postings.map(daysSince)) : null
+    return [
+      size && { label: L.facts.size, value: size },
+      industry && { label: L.facts.industry, value: industry },
+      { label: L.facts.open, value: L.openCount(postings.length) },
+      postings.length > 0 && { label: L.facts.entry, value: L.openCount(entry) },
+      postings.length > 0 && { label: L.facts.deadline, value: nearest ? L.dday(daysLeft(nearest) ?? 0, shortDate(nearest.deadline!)) : L.always },
+      recent !== null && { label: L.facts.recent, value: L.ago(recent) },
+      { label: L.facts.families, value: families.join(', ') || '-' },
+      { label: L.facts.locations, value: locations.join(', ') || '-' },
+    ].filter((fact): fact is { label: string; value: string } => !!fact)
+  }, [profile, postings, L])
 
   return (
     <div className="space-y-4">
@@ -281,7 +274,7 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
                     track('company_more_click', { company: profile.company.id })
                     onPostings()
                   }}
-                  className="text-[12.5px] font-medium text-gray-500 transition-colors hover:text-gray-900"
+                  className={panelAction}
                 >
                   {L.more}
                 </button>
@@ -318,7 +311,7 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
                   <li key={item.question} className="px-4 py-3.5">
                     <p className="text-[13.5px] leading-relaxed text-gray-900">{item.question}</p>
                     <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[12px] text-gray-400">
-                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-600">{L.categories[item.category]}</span>
+                      <Badge strong>{L.categories[item.category]}</Badge>
                       <span>{familyName(item.family)}</span>
                     </p>
                   </li>
@@ -337,9 +330,7 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
                   <h3 className="text-[12px] text-gray-500">{group.axis}</h3>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {group.skills.map((item) => (
-                      <Tip key={item.skill} text={L.stackCount(item.count, postings.length)}>
-                        <SkillChip name={item.skill} tone={skillTone(item.skill, resume)} />
-                      </Tip>
+                      <SkillChip key={item.skill} name={item.skill} tone={skillTone(item.skill, resume)} tip={L.stackCount(item.count, postings.length)} />
                     ))}
                   </div>
                 </section>
@@ -357,7 +348,7 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
                     track('company_blog_click', { company: profile.company.id, from: 'panel' })
                     onBlogs()
                   }}
-                  className="text-[12.5px] font-medium text-gray-500 transition-colors hover:text-gray-900"
+                  className={panelAction}
                 >
                   {L.blogMore}
                 </button>
@@ -369,7 +360,11 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
             ) : (
               <>
                 <p className="-mt-1 mb-3 text-[13px] leading-relaxed text-gray-700">
-                  {isStale(digest) && <span className="mr-1.5 rounded bg-gray-200/70 px-1.5 py-0.5 text-[11px] font-medium text-gray-600">{L.blogStale}</span>}
+                  {isStale(digest) && (
+                    <Badge strong className="mr-1.5">
+                      {L.blogStale}
+                    </Badge>
+                  )}
                   {digest.headline}
                 </p>
                 <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl bg-white">
@@ -380,7 +375,7 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
                         target="_blank"
                         rel="noreferrer"
                         onClick={(event: MouseEvent) => {
-                          const embed = canEmbed(post.url) && !(event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0)
+                          const embed = canEmbed(post.url) && isPlainClick(event)
                           track('blog_post_open', { company: profile.company.id, from: embed ? 'company' : 'tab' })
                           if (!embed) return
                           event.preventDefault()
@@ -388,7 +383,7 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
                         }}
                         className="group block px-4 py-3 transition-colors hover:bg-gray-50"
                       >
-                        <p className="text-[13px] leading-snug font-medium text-gray-900 group-hover:text-brand">{post.title}</p>
+                        <p className="text-[13px] leading-snug font-medium text-gray-900 transition-colors group-hover:text-brand-hover">{post.title}</p>
                         <p className="mt-1 text-[12px] text-gray-400 tabular-nums">{post.date.replaceAll('-', '.')}</p>
                       </a>
                     </li>

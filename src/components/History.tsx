@@ -4,7 +4,7 @@ import { track } from '../lib/analytics'
 import { companyOf, daysLeft, deleteReport, postingOf, useReportPosting, useReports, useResumeShelf, type Report, type Resume, type ResumeShelf } from '../lib/gap'
 import { formatWhen } from '../lib/format'
 import { showToast } from '../lib/toast'
-import { pageFrame, PageHeader } from './AppPage'
+import { pageFrame, PageHeader, scrollBody } from './AppPage'
 import { ConfirmDialog } from './Dialog'
 import { Dropdown } from './Dropdown'
 import { CompanyMark, FitBadge, Notice } from './GapParts'
@@ -28,11 +28,7 @@ export const REPORT_LIST_TEXT = messages({
     none: '아직 진단한 공고가 없어요.',
     start: '첫 진단을 시작해볼까요?',
     diagnose: '진단하기',
-    loading: '불러오고 있어요.',
-    more: '더 보기',
-    working: '처리 중',
     all: '모두 보기',
-    allCount: (count: number) => `리포트 ${count}개 모두 보기`,
     always: '상시',
     closed: '마감',
     dday: (days: number) => (days === 0 ? 'D-day' : `D-${days}`),
@@ -59,11 +55,7 @@ export const REPORT_LIST_TEXT = messages({
     none: "You haven't diagnosed any postings yet.",
     start: 'Ready for your first diagnosis?',
     diagnose: 'Start a diagnosis',
-    loading: 'Loading.',
-    more: 'Show more',
-    working: 'Working',
     all: 'See all',
-    allCount: (count: number) => `See all ${count} reports`,
     always: 'Rolling',
     closed: 'Closed',
     dday: (days: number) => (days === 0 ? 'D-day' : `D-${days}`),
@@ -227,19 +219,20 @@ export function History({ onOpenReport, onHome }: { onOpenReport: (id: string) =
   const text = useMessages(REPORT_LIST_TEXT)
   const reports = useReports()
   const shelf = useResumeShelf()
-  const resumeGroups = byResume(byUrgency(reports), shelf)
+  const urgent = byUrgency(reports)
+  const resumeGroups = byResume(urgent, shelf)
   // 이력서를 여러 개로 진단했으면 이력서 메뉴로 하나만 골라 봐요. 고른 이력서가 사라지면 전체로 돌아가요.
   const [resumeId, setResumeId] = useState<string | null>(null)
   const picked = resumeGroups.find((group) => group.id === resumeId) ?? null
   // 전체를 볼 때는 이력서와 상관없이 마감이 가까운 순서예요.
-  const ranked = picked ? picked.items : byUrgency(reports)
+  const ranked = picked ? picked.items : urgent
   const nameOf = (group: ResumeGroup) => group.resume?.name ?? text.deletedResume
   const [deleting, setDeleting] = useState<Report | null>(null)
 
   return (
     <main className={pageFrame}>
       <PageHeader title={text.title} />
-      <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:-mx-10 md:px-10">
+      <div className={scrollBody}>
         {reports.length === 0 ? (
           <Notice title={text.none} body={text.start} action={text.diagnose} onAction={onHome} className="mt-16" />
         ) : (

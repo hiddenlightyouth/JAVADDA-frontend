@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
-import { COMPANIES, companyOf, fitOf, POSTINGS, postingOf, RECOMMEND_MIN_FIT, SEARCH_SUGGESTIONS, sortPostings, SUGGEST_MS, useReports, useResume, type JobPosting } from '../lib/gap'
+import { COMPANIES, companyOf, fitOf, POSTINGS, postingOf, RECOMMEND_MIN_FIT, sortPostings, useReports, useResume, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { CompanyMark, DiagnosedTag, FitBadge } from './GapParts'
 import { JobCard, useJobBrowser } from './JobCard'
-import { SplitView } from './PostingBrowser'
 import { ChevronRightIcon, SearchIcon } from './Icons'
-import { stagger } from './ui'
 import { LofyScript } from './LofyScript'
+import { SplitView } from './PostingBrowser'
+import { SuggestionHint, useSuggestion } from './ScreenParts'
+import { menuPanel, stagger } from './ui'
 
 /**
  * 앱의 메인 화면, 새 진단이에요. 기업이나 공고를 찾아서 고르면 진단을 시작해요.
@@ -66,22 +67,31 @@ interface Props {
   onExplore: () => void
   onRecommend: () => void
   onResume: () => void
-  /** 기업을 골라 그 기업 공고만 공고 탐색에서 봐요. */
+  /** 기업 상세(`/company/기업아이디`)를 열어요. */
   onCompany: (companyId: string) => void
+}
+
+/** 공고마다 찾을 글자(기업 이름, 공고 제목, 지역, 스킬)를 한 번만 만들어 두어서, 글자를 칠 때마다 다시 잇지 않아요. */
+const haystacks = new WeakMap<JobPosting, string>()
+const haystackOf = (posting: JobPosting) => {
+  let text = haystacks.get(posting)
+  if (text === undefined) {
+    text = [companyOf(posting.companyId).name, posting.title, posting.location, ...posting.required, ...posting.preferred].join(' ').toLowerCase()
+    haystacks.set(posting, text)
+  }
+  return text
 }
 
 /** 검색어로 공고를 걸러요. 기업 이름, 공고 제목, 지역, 스킬에서 찾아요. */
 function search(query: string): JobPosting[] {
   const needle = query.trim().toLowerCase()
   if (!needle) return []
-  return POSTINGS.filter((posting) => {
-    const company = companyOf(posting.companyId)
-    return [company.name, posting.title, posting.location, ...posting.required, ...posting.preferred].join(' ').toLowerCase().includes(needle)
-  })
+  return POSTINGS.filter((posting) => haystackOf(posting).includes(needle))
 }
 
 /** 공고가 하나라도 있고 로고가 있는 기업이에요. 머리글자만 있는 기업은 둘러보기 줄을 어수선하게 해서 빼요. */
-const BROWSE_COMPANIES = COMPANIES.filter((company) => company.logo && POSTINGS.some((posting) => posting.companyId === company.id))
+const HIRING = new Set(POSTINGS.map((posting) => posting.companyId))
+const BROWSE_COMPANIES = COMPANIES.filter((company) => company.logo && HIRING.has(company.id))
 
 export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   const L = useMessages(TEXT)
@@ -90,10 +100,10 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   const browser = useJobBrowser()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
-  const [suggestion, setSuggestion] = useState(0)
   /** 방향키로 고른 검색 결과의 순서. 고른 게 없으면 -1이에요. */
   const [active, setActive] = useState(-1)
-  const inputRef = useRef<HTMLInputElement>(null)
+  // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요. 공고 탐색과 같아요.
+  const suggestion = useSuggestion(!query)
   const listRef = useRef<HTMLUListElement>(null)
   const results = useMemo(() => search(query), [query])
 
@@ -113,19 +123,12 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [open])
 
-  // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요. 공고 탐색과 같아요.
-  useEffect(() => {
-    if (query) return
-    const timer = window.setInterval(() => setSuggestion((value) => (value + 1) % SEARCH_SUGGESTIONS.length), SUGGEST_MS)
-    return () => window.clearInterval(timer)
-  }, [query])
-
   function submit(event: FormEvent) {
     event.preventDefault()
     // 비어 있을 때 Enter를 누르면 지금 보이는 추천 검색어로 찾아요.
     if (!query) {
-      track('home_suggestion_use', { query: SEARCH_SUGGESTIONS[suggestion] })
-      setQuery(SEARCH_SUGGESTIONS[suggestion])
+      track('home_suggestion_use', { query: suggestion.text })
+      setQuery(suggestion.text)
       setOpen(true)
       return
     }
@@ -156,17 +159,20 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   const closing = useMemo(() => sortPostings(POSTINGS.filter((posting) => posting.deadline), 'deadline', null).slice(0, ROW_SIZE), [])
   // 나와 잘 맞는 공고는 추천 공고와 같이 적합도 50% 이상만이에요. 낮음은 이 줄에 넣지 않아요.
   const fit = useMemo(
-    () => (resume ? sortPostings(POSTINGS, 'fit', resume).filter((posting) => posting.family !== 'other' && (fitOf(posting, resume) ?? 0) >= RECOMMEND_MIN_FIT).slice(0, ROW_SIZE) : []),
+    () => (resume ? sortPostings(POSTINGS.filter((posting) => posting.family !== 'other' && (fitOf(posting, resume) ?? 0) >= RECOMMEND_MIN_FIT), 'fit', resume).slice(0, ROW_SIZE) : []),
     [resume],
   )
-  /** 진단해 둔 공고 중 적합도가 낮았던 것. 보완한 뒤에 다시 보라고 보여줘요. */
+  /** 진단해 둔 공고 중 적합도가 낮았던 것. 보완한 뒤에 다시 보라고 보여줘요. 같은 공고를 다른 이력서로 여러 번 진단했어도 한 번만 넣어요. */
   const again = useMemo(
     () =>
-      reports
-        .filter((report) => report.status === 'done' && report.fitScore < 70)
-        .map((report) => postingOf(report.postingId))
-        .filter((posting): posting is JobPosting => !!posting)
-        .slice(0, ROW_SIZE),
+      [
+        ...new Set(
+          reports
+            .filter((report) => report.status === 'done' && report.fitScore < 70)
+            .map((report) => postingOf(report.postingId))
+            .filter((posting): posting is JobPosting => !!posting),
+        ),
+      ].slice(0, ROW_SIZE),
     [reports],
   )
 
@@ -197,7 +203,6 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
               >
                 <SearchIcon className="mr-2.5 size-4 shrink-0 text-gray-400" />
                 <input
-                  ref={inputRef}
                   type="search"
                   autoComplete="off"
                   spellCheck={false}
@@ -218,21 +223,14 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
                   // 모바일에서 글자가 16px보다 작으면 입력창을 누를 때 화면이 확대돼서, 모바일에서는 16px로 둬요.
                   className="h-full min-w-0 flex-1 bg-transparent text-base text-gray-900 outline-none placeholder:text-gray-400 sm:text-[14px] [&::-webkit-search-cancel-button]:hidden"
                 />
-                {/* 추천 검색어는 자리표시 글자처럼 옅게 보여서, 이런 걸 쳐 볼 수 있다는 것만 슬쩍 알려요. */}
-                {!query && (
-                  <span aria-hidden className="pointer-events-none absolute inset-y-0 left-[46px] right-5 flex items-center overflow-hidden text-base whitespace-nowrap text-gray-400 sm:text-[14px]">
-                    <span key={suggestion} className="animate-rise">
-                      {SEARCH_SUGGESTIONS[suggestion]}
-                    </span>
-                  </span>
-                )}
+                {!query && <SuggestionHint {...suggestion} className="right-5 left-[46px]" />}
                 {query && <span className="shrink-0 text-[12px] text-gray-400 tabular-nums">{L.results(results.length)}</span>}
               </form>
 
               {open && query.trim() && (
                 <>
                   <div aria-hidden className="fixed inset-0 z-0" onClick={() => setOpen(false)} />
-                  <ul ref={listRef} id="home-search-results" role="listbox" className="absolute top-full right-0 left-0 z-10 mt-2 max-h-[52dvh] origin-top animate-pop overflow-y-auto rounded-2xl border border-gray-200 bg-white p-1.5">
+                  <ul ref={listRef} id="home-search-results" role="listbox" className={`${menuPanel} absolute top-full right-0 left-0 z-10 mt-2 max-h-[52dvh] origin-top overflow-y-auto`}>
                     {results.length === 0 ? (
                       <li className="px-3 py-3 text-[13px] text-gray-500">{L.noResult(query.trim())}</li>
                     ) : (
@@ -249,7 +247,7 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
                               aria-selected={index === active}
                               onClick={() => pick(posting)}
                               onMouseMove={() => index !== active && setActive(index)}
-                              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${index === active ? 'bg-gray-100' : ''}`}
+                              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors ${index === active ? 'bg-gray-100' : ''}`}
                             >
                               <CompanyMark company={company} className="size-9 text-[13px]" />
                               <span className="min-w-0 flex-1">
@@ -293,7 +291,7 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
                   )}
                 </div>
                 {key === 'companies' ? (
-                  // 기업을 누르면 그 기업 공고만 골라 둔 채로 공고 탐색을 열어요.
+                  // 기업을 누르면 그 기업의 기업 상세를 열어요.
                   // 테두리 없이 로고와 이름만 늘어놓아서, 공고 카드 사이에서 가볍게 보여요.
                   <ul className="mt-2 grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-1">
                     {BROWSE_COMPANIES.map((company, order) => (
@@ -323,7 +321,6 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
                         fit={fitOf(posting, resume)}
                         order={order}
                         onOpen={() => browser.view(posting)}
-                        onView={() => browser.view(posting)}
                         onCompany={() => browser.viewCompany(posting.companyId)}
                         onAnalyze={() => pick(posting)}
                       />

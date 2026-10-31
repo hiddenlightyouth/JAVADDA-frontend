@@ -72,10 +72,12 @@ export default function App() {
     if (!ownMeta) applyMeta(HOME_META[lang], lang, '/')
   }, [ownMeta, lang])
 
-  // 로그인하거나 로그아웃하면 한도가 바뀌어서, 이번 주 사용량을 새로 받아요.
+  // 로그인하거나 로그아웃하면(계정이 바뀌어도) 한도가 바뀌어서, 이번 주 사용량을 새로 받아요. 토큰을 새로 받는 것만으로는 다시 받지 않아요.
+  const signedIn = tokens !== null
+  const meId = me?.id
   useEffect(() => {
     if (appShell) void refreshUsage()
-  }, [tokens])
+  }, [signedIn, meId])
 
   const openReport = useCallback((id: string, tab: ReportTab = 'summary', replace = false) => open({ kind: 'report', id, tab }, replace), [open])
 
@@ -202,7 +204,7 @@ export default function App() {
               }
             : undefined
         }
-        signedIn={tokens !== null}
+        signedIn={signedIn}
         // 계정 화면은 웹의 /app 안에 있어요. 소개와 아티클 화면에서는 시작하기 버튼이 대신해요.
         onAccount={appShell ? (next) => go(next) : undefined}
       />
@@ -287,7 +289,7 @@ export default function App() {
         onMe: () => {
           if (account !== 'me') go('me')
         },
-        signedIn: tokens !== null,
+        signedIn,
         onLogin: () => {
           if (account !== 'login') go('login')
         },

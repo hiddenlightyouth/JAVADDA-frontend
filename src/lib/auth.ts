@@ -293,45 +293,31 @@ export const signUp = (email: string, name: string, password: string) =>
 export const signInSocial = (provider: string, code: string, redirectUri: string) =>
   submitCredentials(`/auth/social/${provider}`, { code, redirectUri })
 
-/** 로그인한 내 계정에 소셜 계정을 연결해요. */
-export async function linkSocial(provider: string, code: string, redirectUri: string): Promise<AuthOutcome> {
+/** 로그인한 계정을 바꾸는 요청이에요. 성공하면 after를 마친 뒤에 끝나고, 실패하면 서버의 오류 코드를 쉬운 말로 바꿔 돌려줘요. */
+async function accountChange(path: string, init: RequestInit, after: () => unknown): Promise<AuthOutcome> {
   try {
-    const result = await authFetch<null>(`/auth/social/${provider}/link`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, redirectUri }),
-    })
+    const result = await authFetch<null>(path, init)
     if (!result.ok) return { ok: false, message: messageOf(result.code) }
-    await loadMe()
+    await after()
     return { ok: true }
   } catch {
     return { ok: false, message: NETWORK_MESSAGE() }
   }
 }
+
+/** 로그인한 내 계정에 소셜 계정을 연결해요. */
+export const linkSocial = (provider: string, code: string, redirectUri: string): Promise<AuthOutcome> =>
+  accountChange(
+    `/auth/social/${provider}/link`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, redirectUri }) },
+    () => loadMe(),
+  )
 
 /** 내 계정에서 소셜 계정 연결을 해제해요. */
-export async function unlinkSocial(provider: string): Promise<AuthOutcome> {
-  try {
-    const result = await authFetch<null>(`/auth/social/${provider}/link`, { method: 'DELETE' })
-    if (!result.ok) return { ok: false, message: messageOf(result.code) }
-    await loadMe()
-    return { ok: true }
-  } catch {
-    return { ok: false, message: NETWORK_MESSAGE() }
-  }
-}
+export const unlinkSocial = (provider: string): Promise<AuthOutcome> => accountChange(`/auth/social/${provider}/link`, { method: 'DELETE' }, () => loadMe())
 
 /** 회원 탈퇴해요. 서버에서 계정과 채팅을 모두 지우고, 이 브라우저의 로그인도 지워요. */
-export async function withdraw(): Promise<AuthOutcome> {
-  try {
-    const result = await authFetch<null>('/users/me', { method: 'DELETE' })
-    if (!result.ok) return { ok: false, message: messageOf(result.code) }
-    clearAuth()
-    return { ok: true }
-  } catch {
-    return { ok: false, message: NETWORK_MESSAGE() }
-  }
-}
+export const withdraw = (): Promise<AuthOutcome> => accountChange('/users/me', { method: 'DELETE' }, clearAuth)
 
 /** 앱에서, 브라우저로 넘겨줄 계정 연결용 일회용 값을 받아요. 브라우저는 이 값으로 어느 계정에 연결할지 알아요. */
 export async function createSocialLinkTicket(provider: string): Promise<string | null> {

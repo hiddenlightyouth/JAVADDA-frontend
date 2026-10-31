@@ -556,16 +556,6 @@ export function MicIcon({ className = 'size-4', strokeWidth = 1.4, label }: Icon
   )
 }
 
-/** 질문 듣기의 스피커예요. */
-export function SpeakerIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
-  return (
-    <Icon className={className} strokeWidth={strokeWidth} label={label}>
-      <path d="M2.5 6.25v3.5h2.25L8 12.5v-9L4.75 6.25z" />
-      <path d="M10.5 5.75a3.2 3.2 0 0 1 0 4.5M12.25 4a5.7 5.7 0 0 1 0 8" />
-    </Icon>
-  )
-}
-
 /** 알려 줄 것이 있다는 동그라미 느낌표예요. */
 export function AlertIcon({ className = 'size-4 shrink-0', strokeWidth = 1.6, label }: IconProps) {
   return (

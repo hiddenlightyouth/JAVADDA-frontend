@@ -6,7 +6,8 @@ import { AuthForm } from './AuthForm'
 import { ScriptMark } from './LofyScript'
 import { messages, pick, useLang, useMessages } from '../lib/i18n'
 import { HOME_META, SITE_TITLE } from '../lib/meta'
-import { FormError, primaryButtonLg } from './ui'
+import { Avatar } from './Avatar'
+import { FormError, primaryButtonLg, quietButton } from './ui'
 import { CheckIcon } from './Icons'
 
 const CHALLENGE_PATTERN = /^[A-Za-z0-9_-]{43}$/
@@ -96,13 +97,7 @@ export function AppLogin({ onCancel }: { onCancel: () => void }) {
   }
 
   if (tokens === null) {
-    return (
-      <AuthForm
-        key={mode}
-        mode={mode}
-        onSwitch={() => setMode(mode === 'signup' ? 'login' : 'signup')}
-      />
-    )
+    return <AuthForm key={mode} mode={mode} onSwitch={() => setMode(mode === 'signup' ? 'login' : 'signup')} />
   }
 
   const name = me?.name || me?.email || ''
@@ -124,9 +119,7 @@ export function AppLogin({ onCancel }: { onCancel: () => void }) {
           ) : (
             <>
               <div className="mt-5 flex items-center gap-3 rounded-2xl bg-gray-50 px-3.5 py-3">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[14px] font-semibold text-brand-hover">
-                  {(name[0] ?? '?').toUpperCase()}
-                </span>
+                <Avatar name={name} className="size-9 text-[14px]" />
                 <div className="min-w-0">
                   {me?.name && <p className="truncate text-[14px] font-semibold text-gray-900">{me.name}</p>}
                   <p className="truncate text-[13px] text-gray-500">{me?.email ?? text.currentAccount}</p>
@@ -144,19 +137,13 @@ export function AppLogin({ onCancel }: { onCancel: () => void }) {
             </>
           )}
 
-          {error && (
-            <FormError className="mt-4">{error}</FormError>
-          )}
+          <FormError className="mt-4">{error}</FormError>
 
           <button
             type="button"
             disabled={working}
             onClick={() => void handOver()}
-            className={
-              sent
-                ? 'mt-5 h-10 w-full rounded-full text-[13px] font-medium text-gray-600 transition-colors hover:text-gray-900 disabled:text-gray-400'
-                : `mt-7 ${primaryButtonLg}`
-            }
+            className={sent ? `mt-5 w-full disabled:text-gray-400 ${quietButton}` : `mt-7 ${primaryButtonLg}`}
           >
             {working ? text.working : sent ? text.reopen : text.proceed}
           </button>
@@ -167,7 +154,7 @@ export function AppLogin({ onCancel }: { onCancel: () => void }) {
                 track('app_login_cancel')
                 onCancel()
               }}
-              className="mt-1.5 h-10 w-full rounded-full text-[13px] font-medium text-gray-600 transition-colors hover:text-gray-900"
+              className={`mt-1.5 w-full ${quietButton}`}
             >
               {text.cancel}
             </button>

@@ -5,8 +5,11 @@ import { heroDark } from '../lib/hero'
 import { messages, useLang, useMessages } from '../lib/i18n'
 import { applyMeta, HOME_META } from '../lib/meta'
 import { Footer } from './Footer'
-import { Delta, Meter, Radar, ScoreRing, SkillChip, Sparkline } from './GapParts'
+import { Delta, KindLabel, Meter, Radar, ScoreRing, SkillChip, Sparkline } from './GapParts'
 import { AppleLogo } from './Header'
+import { ChevronRightIcon } from './Icons'
+import { Badge } from './ui'
+import { followLink } from '../lib/links'
 import { LofyScript } from './LofyScript'
 
 interface Props {
@@ -128,9 +131,6 @@ const SAMPLE = messages({
     pref: '우대 역량',
     evidence: '프로젝트 근거',
     recency: '요즘 뜨는 역량',
-    missing: '부족',
-    partial: '보완',
-    strength: '강점',
     paragraph: '거래 목록 조회가 느려지는 문제를 만나 실행 계획을 분석하고 복합 인덱스를 추가해 응답 시간을 1.8초에서 0.2초로 줄였습니다.',
     good: '좋아요',
     interview: '면접 예상',
@@ -147,9 +147,6 @@ const SAMPLE = messages({
     pref: 'Preferred skills',
     evidence: 'Project evidence',
     recency: 'Rising skills',
-    missing: 'Missing',
-    partial: 'Weak',
-    strength: 'Strength',
     paragraph: 'When list queries slowed down, I analyzed the execution plan and added a composite index, cutting response time from 1.8s to 0.2s.',
     good: 'Good',
     interview: 'Likely asked',
@@ -192,6 +189,10 @@ function flicker(progress: number) {
 const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max)
+
+/** 본문 묶음(진단 흐름, 자주 묻는 질문)의 자리와 제목이에요. */
+const section = 'mx-auto max-w-[1280px] px-4 pt-[88px] sm:px-10 md:pt-32'
+const sectionTitle = 'text-[clamp(28px,3.2vw,40px)] leading-[1.4] font-bold tracking-[-0.02em] text-gray-900'
 
 const primaryPill = 'inline-flex h-[52px] items-center justify-center rounded-full bg-brand px-7 text-[16px] font-bold text-white transition-[background-color,scale] duration-200 hover:bg-brand-hover active:scale-[.98]'
 const outlinePill = 'inline-flex h-12 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-6 text-[15px] font-bold text-gray-900 transition-colors duration-150 hover:bg-gray-100'
@@ -241,13 +242,15 @@ function Shot({ kind, alt }: { kind: Preview; alt: string }) {
     ),
     gaps: (
       <div className="w-full space-y-3">
-        {[
-          { label: S.missing, chips: ['Kafka', 'Kubernetes'], tone: 'missing' as const },
-          { label: S.partial, chips: ['Redis', '테스트 코드', 'Docker'], tone: 'partial' as const },
-          { label: S.strength, chips: ['Java', 'Spring Boot', 'JPA', 'MySQL'], tone: 'met' as const },
-        ].map((group) => (
-          <div key={group.label} className="flex items-start gap-3">
-            <span className={`mt-0.5 inline-flex h-6 shrink-0 items-center rounded-md px-2 text-[11.5px] font-medium ${group.tone === 'met' ? 'bg-brand-soft text-brand-hover' : 'bg-white text-gray-600'}`}>{group.label}</span>
+        {([
+          { kind: 'missing', chips: ['Kafka', 'Kubernetes'], tone: 'missing' },
+          { kind: 'partial', chips: ['Redis', '테스트 코드', 'Docker'], tone: 'partial' },
+          { kind: 'strength', chips: ['Java', 'Spring Boot', 'JPA', 'MySQL'], tone: 'met' },
+        ] as const).map((group) => (
+          <div key={group.kind} className="flex items-start gap-3">
+            <span className="mt-0.5">
+              <KindLabel kind={group.kind} />
+            </span>
             <div className="flex flex-wrap gap-1.5">
               {group.chips.map((skill) => (
                 <SkillChip key={skill} name={skill} tone={group.tone} />
@@ -262,8 +265,12 @@ function Shot({ kind, alt }: { kind: Preview; alt: string }) {
       <div className="w-full">
         <p className="border-l-2 border-gray-300 pl-3 text-[12.5px] leading-relaxed text-gray-700">{S.paragraph}</p>
         <div className="mt-2.5 flex gap-1.5">
-          <span className="inline-flex h-6 items-center rounded-md bg-brand-soft px-2 text-[11.5px] font-medium text-brand-hover">{S.good}</span>
-          <span className="inline-flex h-6 items-center rounded-md border border-gray-900 px-2 text-[11.5px] font-medium text-gray-900">{S.interview}</span>
+          <Badge tone="brand" strong>
+            {S.good}
+          </Badge>
+          <Badge tone="outline" strong>
+            {S.interview}
+          </Badge>
         </div>
         <p className="mt-2 text-[12.5px] leading-relaxed text-gray-500">{S.feedback}</p>
       </div>
@@ -308,11 +315,18 @@ function Roll({ words, index, jump }: { words: string[]; index: number; jump: bo
   const [widths, setWidths] = useState<number[]>([])
 
   useLayoutEffect(() => {
-    const measure = () => setWidths(refs.current.map((el) => el?.offsetWidth ?? 0))
+    let live = true
+    const measure = () => {
+      if (live) setWidths(refs.current.map((el) => el?.offsetWidth ?? 0))
+    }
     measure()
+    // 글꼴이 늦게 오면 폭이 바뀌어서 한 번 더 재요. 그 전에 화면을 떠났으면 재지 않아요.
     document.fonts?.ready.then(measure)
     window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
+    return () => {
+      live = false
+      window.removeEventListener('resize', measure)
+    }
   }, [words])
 
   return (
@@ -580,12 +594,10 @@ export function About({ onHome }: Props) {
     return () => observer.disconnect()
   }, [])
 
-  const start = (event: MouseEvent) => {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
-    event.preventDefault()
+  const start = followLink(() => {
     track('about_cta_click')
     onHome()
-  }
+  })
 
   const faq = text.faq.filter((item) => !('app' in item && item.app) || MAC_DOWNLOAD_OPEN)
 
@@ -611,8 +623,8 @@ export function About({ onHome }: Props) {
           </div>
         </section>
 
-        <section className="mx-auto max-w-[1280px] px-4 pt-[88px] sm:px-10 md:pt-32">
-          <h2 data-reveal className="text-[clamp(28px,3.2vw,40px)] leading-[1.4] font-bold tracking-[-0.02em] text-gray-900">{text.flowTitle}</h2>
+        <section className={section}>
+          <h2 data-reveal className={sectionTitle}>{text.flowTitle}</h2>
           {/* 단계마다 STEP 번호를 적은 원을 두고, 넓은 화면에서는 원 사이를 가는 선으로 이어요. */}
           <ol data-reveal className="mt-12 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
             {text.flow.map((row, index) => (
@@ -630,15 +642,13 @@ export function About({ onHome }: Props) {
           <div className="mt-14 flex justify-center">
             <a href="/app" onClick={start} className={outlinePill}>
               {text.flowMore}
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="size-4" aria-hidden>
-                <path d="M6 3.5 10.5 8 6 12.5" />
-              </svg>
+              <ChevronRightIcon className="size-4" />
             </a>
           </div>
         </section>
 
-        <section className="mx-auto max-w-[1280px] px-4 pt-[88px] sm:px-10 md:pt-32">
-          <h2 data-reveal className="text-[clamp(28px,3.2vw,40px)] leading-[1.4] font-bold tracking-[-0.02em] text-gray-900">{text.faqTitle}</h2>
+        <section className={section}>
+          <h2 data-reveal className={sectionTitle}>{text.faqTitle}</h2>
           <div data-reveal className="mt-10 space-y-2">
             {faq.map((item, index) => (
               <FaqItem key={item.q} id={`faq-${index}`} q={item.q} a={item.a} />

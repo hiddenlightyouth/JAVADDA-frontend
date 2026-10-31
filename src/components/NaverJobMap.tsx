@@ -5,6 +5,7 @@ import { unproject } from '../lib/koreaMap'
 import { loadNaverMaps, onNaverMapAuthFailure, type NaverMap, type NaverMaps, type NaverMarker } from '../lib/naverMap'
 import type { RegionId } from '../lib/regions'
 import { groupPins, pinKey, REGION_LABEL, type MapBox, type MapPin, type PinGroup } from './KoreaMap'
+import { LOCATION_DOT_HTML } from './mapDot'
 
 /**
  * 네이버 지도로 그린 채용 지도예요. 키가 있을 때 `JobMap`이 SVG 지도(`KoreaMap`) 대신 써요. 인증에 실패하면 onFail로 알려서 SVG 지도로 돌아가요.
@@ -44,15 +45,22 @@ function logoPinHtml(pin: PinGroup, active: boolean, label: string) {
   return `<div title="${escape(label)}" role="button" aria-label="${escape(label)}" style="position:relative;cursor:pointer;border-radius:9999px;box-shadow:0 0 0 ${active ? 3 : 2}px ${active ? BRAND : '#fff'}">${markHtml(pin.companies[0])}${count}</div>`
 }
 
-/** 권역 말풍선이에요. 글자 폭이 달라서 자리의 가운데로 반만큼 당겨요. */
-function regionHtml(text: string, enabled: boolean) {
-  return `<div role="button" style="transform:translate(-50%,-50%);display:flex;height:32px;align-items:center;padding:0 12px;border-radius:9999px;white-space:nowrap;font-size:13px;font-weight:600;${FONT};cursor:${enabled ? 'pointer' : 'default'};background:${enabled ? '#fff' : 'rgba(255,255,255,.7)'};color:${enabled ? '#111827' : '#9ca3af'};box-shadow:0 0 0 1px #e5e7eb">${escape(text)}</div>`
+/** 권역 말풍선이에요. 공고가 있는 권역만 그려서 늘 누를 수 있어요. 글자 폭이 달라서 자리의 가운데로 반만큼 당겨요. */
+function regionHtml(text: string) {
+  return `<div role="button" style="transform:translate(-50%,-50%);display:flex;height:32px;align-items:center;padding:0 12px;border-radius:9999px;white-space:nowrap;font-size:13px;font-weight:600;${FONT};cursor:pointer;background:#fff;color:#111827;box-shadow:0 0 0 1px #e5e7eb">${escape(text)}</div>`
 }
 
-/** 내 위치예요. `LocationDot`과 같은 파란 점이에요. */
-const ME_HTML =
-  `<div style="position:relative;width:40px;height:40px"><div style="position:absolute;inset:0;border-radius:9999px;background:rgba(46,144,250,.18)"></div>` +
-  `<div style="position:absolute;left:12px;top:12px;width:16px;height:16px;border-radius:9999px;background:${BRAND};border:3px solid #fff;box-sizing:border-box"></div></div>`
+/**
+ * 네이버 지도를 다뤄요. 인증에 실패하면 네이버 스크립트가 지도 속을 비워서 부르는 곳마다 멈출 수 있어요.
+ * 그때 화면 전체가 무너지지 않게 멈춘 것을 받아 onFail로 알리고, 채용 지도는 SVG 지도로 돌아가요.
+ */
+function safely(work: () => void, onFail: () => void) {
+  try {
+    work()
+  } catch {
+    onFail()
+  }
+}
 
 export function NaverJobMap({
   target,
@@ -101,16 +109,23 @@ export function NaverJobMap({
     loadNaverMaps().then(
       (maps) => {
         if (stale || !ref.current) return
-        map = new maps.Map(ref.current, {
-          center: new maps.LatLng(...NATION_CENTER),
-          zoom: NATION_ZOOM,
-          minZoom: 6,
-          zoomControl: true,
-          zoomControlOptions: { position: maps.Position.LEFT_BOTTOM, style: maps.ZoomControlStyle.SMALL },
-          scaleControl: false,
-          mapDataControl: false,
-        })
-        idle = maps.Event.addListener(map, 'idle', () => setTick((value) => value + 1))
+        // 등록하지 않은 주소에서는 스크립트가 반쯤만 준비돼서(Event가 비어 있어요) 지도를 만들다 멈춰요. 그때도 SVG 지도로 돌아가요.
+        try {
+          map = new maps.Map(ref.current, {
+            center: new maps.LatLng(...NATION_CENTER),
+            zoom: NATION_ZOOM,
+            minZoom: 6,
+            zoomControl: true,
+            zoomControlOptions: { position: maps.Position.LEFT_BOTTOM, style: maps.ZoomControlStyle.SMALL },
+            scaleControl: false,
+            mapDataControl: false,
+          })
+          idle = maps.Event.addListener(map, 'idle', () => setTick((value) => value + 1))
+        } catch {
+          map = null
+          failRef.current()
+          return
+        }
         setApi({ maps, map })
       },
       () => {
@@ -120,8 +135,13 @@ export function NaverJobMap({
     return () => {
       stale = true
       stop()
-      if (idle && window.naver) window.naver.maps.Event.removeListener(idle)
-      map?.destroy()
+      // 인증에 실패하면 네이버 스크립트가 window.naver.maps를 비워서, 지우다 멈추지 않게 감싸요. 이때 SVG 지도로 바뀌며 이 칸이 사라져요.
+      try {
+        if (idle) window.naver?.maps?.Event.removeListener(idle)
+        map?.destroy()
+      } catch {
+        // 이미 무너진 지도는 그대로 둬요.
+      }
     }
   }, [])
 
@@ -130,14 +150,16 @@ export function NaverJobMap({
   useEffect(() => {
     if (!api) return
     const { maps, map } = api
-    if (!target) {
-      map.morph(new maps.LatLng(...NATION_CENTER), NATION_ZOOM)
-      return
-    }
-    const [west, north] = unproject(target[0], target[1])
-    const [east, south] = unproject(target[2], target[3])
-    const wide = (ref.current?.clientWidth ?? 0) >= 768
-    map.fitBounds(new maps.LatLngBounds(new maps.LatLng(south, west), new maps.LatLng(north, east)), { top: 24, bottom: 24, left: 24, right: 24 + (wide ? padRight : 0) })
+    safely(() => {
+      if (!target) {
+        map.morph(new maps.LatLng(...NATION_CENTER), NATION_ZOOM)
+        return
+      }
+      const [west, north] = unproject(target[0], target[1])
+      const [east, south] = unproject(target[2], target[3])
+      const wide = (ref.current?.clientWidth ?? 0) >= 768
+      map.fitBounds(new maps.LatLngBounds(new maps.LatLng(south, west), new maps.LatLng(north, east)), { top: 24, bottom: 24, left: 24, right: 24 + (wide ? padRight : 0) })
+    }, failRef.current)
     // target은 targetKey로 봐요. 칸이 떠서 padRight가 바뀌어도 사용자가 옮긴 지도를 되돌리지 않아요.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, targetKey])
@@ -156,30 +178,34 @@ export function NaverJobMap({
       markers.push(marker)
       if (onClick) listeners.push(maps.Event.addListener(marker, 'click', onClick))
     }
-    if (map.getZoom() < pinZoom) {
-      for (const region of Object.keys(REGION_LABEL) as RegionId[]) {
-        const count = counts[region] ?? 0
-        // 공고가 없는 권역은 이름표를 두지 않아요. 0이 지도를 덮어요.
-        if (count === 0) continue
-        const [lon, lat] = REGION_LABEL[region]
-        add(lat, lon, regionHtml(regionLabel(region, count), count > 0), count > 0 ? () => handlers.current.onRegion(region) : null, [0, 0])
+    const draw = () => {
+      if (map.getZoom() < pinZoom) {
+        for (const region of Object.keys(REGION_LABEL) as RegionId[]) {
+          const count = counts[region] ?? 0
+          // 공고가 없는 권역은 이름표를 두지 않아요. 0이 지도를 덮어요.
+          if (count === 0) continue
+          const [lon, lat] = REGION_LABEL[region]
+          add(lat, lon, regionHtml(regionLabel(region, count)), () => handlers.current.onRegion(region), [0, 0])
+        }
+      } else {
+        const projection = map.getProjection()
+        const toPixel = (lon: number, lat: number): [number, number] => {
+          const offset = projection.fromCoordToOffset(new maps.LatLng(lat, lon))
+          return [offset.x, offset.y]
+        }
+        for (const pin of groupPins(pins, toPixel, L.more)) {
+          const active = activePin === pinKey(pin)
+          add(pin.places[0].lat, pin.places[0].lon, logoPinHtml(pin, active, pinLabel(pin)), () => handlers.current.onPin(pin), [18, 18], active ? 100 : pin.companies.length)
+        }
       }
-    } else {
-      const projection = map.getProjection()
-      const toPixel = (lon: number, lat: number): [number, number] => {
-        const offset = projection.fromCoordToOffset(new maps.LatLng(lat, lon))
-        return [offset.x, offset.y]
-      }
-      for (const pin of groupPins(pins, toPixel, L.more)) {
-        const active = activePin === pinKey(pin)
-        add(pin.places[0].lat, pin.places[0].lon, logoPinHtml(pin, active, pinLabel(pin)), () => handlers.current.onPin(pin), [18, 18], active ? 100 : pin.companies.length)
-      }
+      if (me) add(me.lat, me.lon, LOCATION_DOT_HTML, null, [20, 20], 200)
     }
-    if (me) add(me.lat, me.lon, ME_HTML, null, [20, 20], 200)
-    return () => {
-      listeners.forEach((listener) => maps.Event.removeListener(listener))
-      markers.forEach((marker) => marker.setMap(null))
-    }
+    safely(draw, failRef.current)
+    return () =>
+      safely(() => {
+        listeners.forEach((listener) => maps.Event.removeListener(listener))
+        markers.forEach((marker) => marker.setMap(null))
+      }, () => {})
     // regionLabel과 pinLabel은 문구만 만들어서 언어가 바뀔 때(L) 같이 바뀌어요.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, tick, pins, counts, activePin, pinZoom, me, L])

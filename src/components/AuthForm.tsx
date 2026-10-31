@@ -4,7 +4,8 @@ import { signIn, signUp } from '../lib/auth'
 import { SocialButtons, useSocialClients } from './Social'
 import { currentPath, localizePath, messages, useMessages } from '../lib/i18n'
 import { appShell } from '../lib/app'
-import { FormError, primaryButtonLg } from './ui'
+import { followLink } from '../lib/links'
+import { fieldBase, FormError, primaryButtonLg } from './ui'
 
 const TEXT = messages({
   ko: {
@@ -51,15 +52,15 @@ interface Props {
   mode: 'login' | 'signup'
   notice?: string
   onSwitch: () => void
-  /** 소셜 로그인을 마치고 돌아갈 주소. 넘기지 않으면 보던 화면이나 내 작업으로 가요. */
+  /** 소셜 로그인을 마치고 돌아갈 주소. 넘기지 않으면 보던 화면이나 내 리포트로 가요. */
   returnTo?: string
 }
 
-/** 소셜 로그인을 마치고 돌아갈 주소를 정해요. 앱 로그인, 내 정보, 내 작업처럼 로그인 화면이 대신 떠 있던 주소면 그 주소로 돌아가요. */
+/** 소셜 로그인을 마치고 돌아갈 주소를 정해요. 앱 로그인, 내 정보, 내 리포트처럼 로그인 화면이 대신 떠 있던 주소면 그 주소로 돌아가요. */
 function defaultReturn(): string {
   const { pathname, search } = window.location
   const path = currentPath()
-  // 웹의 /app에서는 내 작업을 사이드바가 보여줘서 새 분석 화면으로 돌아가요.
+  // 웹의 /app에서는 내 리포트를 사이드바가 보여줘서 새 진단 화면으로 돌아가요.
   if (path === '/login' || path === '/signup') return appShell ? localizePath('/') : '/history'
   return `${pathname}${search}`
 }
@@ -75,7 +76,7 @@ function Field({ label, ...input }: { label: string } & InputHTMLAttributes<HTML
       <span className="text-[13px] font-medium text-gray-600">{label}</span>
       <input
         {...input}
-        className="mt-1.5 h-12 w-full rounded-2xl border border-gray-200 bg-white px-4 text-base text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand sm:text-[14px]"
+        className={`mt-1.5 h-12 w-full rounded-2xl px-4 text-base sm:text-[14px] ${fieldBase}`}
       />
     </label>
   )
@@ -170,15 +171,9 @@ export function AuthForm({ mode, notice, onSwitch, returnTo }: Props) {
             />
           )}
 
-          {error && (
-            <FormError>{error}</FormError>
-          )}
+          <FormError>{error}</FormError>
 
-          <button
-            type="submit"
-            disabled={working}
-            className={`mt-2 ${primaryButtonLg}`}
-          >
+          <button type="submit" disabled={working} className={`mt-2 ${primaryButtonLg}`}>
             {working ? text.working : signup ? text.submitSignup : text.login}
           </button>
         </form>
@@ -198,11 +193,7 @@ export function AuthForm({ mode, notice, onSwitch, returnTo }: Props) {
           {signup ? text.haveAccount : text.noAccount}{' '}
           <a
             href={signup ? '/login' : '/signup'}
-            onClick={(event) => {
-              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
-              event.preventDefault()
-              onSwitch()
-            }}
+            onClick={followLink(onSwitch)}
             className="font-medium text-brand transition-colors hover:text-brand-hover"
           >
             {signup ? text.login : text.signup}

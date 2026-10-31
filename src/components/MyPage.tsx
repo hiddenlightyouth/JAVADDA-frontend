@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
 import {
   describeDevice,
@@ -16,13 +16,15 @@ import {
 import { formatDate, formatDateTime, parseServerTime } from '../lib/format'
 import { loadConfig } from '../lib/api'
 import { showToast } from '../lib/toast'
-import { pageFrame, PageHeader } from './AppPage'
+import { PageHeader, ScrollPage } from './AppPage'
 import { ConfirmDialog } from './Dialog'
 import { isApp } from '../lib/app'
 import { SOCIAL_LABELS, type SocialProvider } from '../lib/social'
 import { IpPlace } from './IpPlace'
-import { useAiModelSetting } from './AiModelSetting'
-import { useVoiceSetting } from './VoiceSetting'
+import { AiModelRow } from './AiModelSetting'
+import { VoiceRow } from './VoiceSetting'
+import { lineList, settingList } from './SettingRow'
+import { MoreButton } from './MoreButton'
 import { SocialButtons, useSocialClients } from './Social'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
@@ -31,7 +33,6 @@ import { FormError, LoadProgress, softButton, softDangerButton } from './ui'
 
 const TEXT = messages({
   ko: {
-    loadingMore: (percent: number) => `불러오고 있어요 ${percent}%`,
     unlinked: (name: string) => `${name} 연결을 해제했어요.`,
     social: '소셜 로그인',
     linked: '연결됨',
@@ -45,7 +46,6 @@ const TEXT = messages({
     signOut: '로그아웃',
     noRecords: '아직 로그인 기록이 없어요.',
     unknownAddress: '주소를 알 수 없어요',
-    more: '더 보기',
     withdrawn: '탈퇴했어요. 그동안 써 주셔서 고마워요.',
     title: '내 정보',
     account: '계정',
@@ -63,7 +63,6 @@ const TEXT = messages({
     withdrawConfirm: '탈퇴하기',
   },
   en: {
-    loadingMore: (percent: number) => `Loading ${percent}%`,
     unlinked: (name: string) => `Disconnected ${name}.`,
     social: 'Social sign-in',
     linked: 'Connected',
@@ -77,7 +76,6 @@ const TEXT = messages({
     signOut: 'Sign out',
     noRecords: 'No sign-in history yet.',
     unknownAddress: 'Unknown address',
-    more: 'Show more',
     withdrawn: 'Your account has been deleted. Thanks for using Javadda.',
     title: 'Account',
     account: 'Profile',
@@ -99,7 +97,7 @@ interface Props {
   onSignedOut: () => void
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-12 first:mt-0">
       <h2 className="text-[17px] font-semibold text-gray-900">{title}</h2>
@@ -108,7 +106,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-function Message({ children }: { children: React.ReactNode }) {
+function Message({ children }: { children: ReactNode }) {
   return <p className="border-y border-gray-100 py-6 text-center text-[13.5px] text-gray-500">{children}</p>
 }
 
@@ -169,7 +167,7 @@ function Connections() {
 
   return (
     <Section title={text.social}>
-      <ul className="divide-y divide-gray-100 border-y border-gray-100">
+      <ul className={lineList}>
         {providers.map((provider) => (
           <li key={provider} className="flex items-center justify-between gap-4 py-3.5 text-[14px]">
             <div className="min-w-0">
@@ -188,8 +186,8 @@ function Connections() {
               </p>
             )}
             {me && !linked(provider) && canLink && (
-              <div className="w-20 shrink-0 [&_button]:h-9 [&_button]:text-[13px]">
-                <SocialButtons mode="link" returnTo="/me" only={provider} label={() => text.link} />
+              <div className="w-20 shrink-0">
+                <SocialButtons mode="link" returnTo="/me" only={provider} label={() => text.link} size="sm" />
               </div>
             )}
           </li>
@@ -242,7 +240,7 @@ function Sessions() {
 
   return (
     <>
-      <ul className="divide-y divide-gray-100 border-y border-gray-100">
+      <ul className={lineList}>
         {sessions.map((session) => (
           <li key={session.sessionId} className="flex items-center justify-between gap-4 py-4">
             <div className="min-w-0">
@@ -310,7 +308,7 @@ function LoginHistory() {
 
   return (
     <>
-      <ul className="divide-y divide-gray-100 border-y border-gray-100">
+      <ul className={lineList}>
         {records.slice(0, shown).map((record) => (
           <li key={record.id} className="flex items-start justify-between gap-4 py-4">
             <div className="min-w-0">
@@ -329,19 +327,17 @@ function LoginHistory() {
       <FormError className="mt-3">{error}</FormError>
       {(hasNext || shown < records.length) && (
         <div className="mt-4 text-center">
-          <button
-            type="button"
-            disabled={loading}
+          <MoreButton
+            className=""
+            loading={loading}
+            percent={progress.percent}
             onClick={() => {
               // 받아 둔 기록을 먼저 더 보여주고, 모자라면 서버에서 다음 묶음을 받아요.
               const next = shown + HISTORY_STEP
               setShown(next)
               if (next > records.length && hasNext) void load(page + 1)
             }}
-            className={`${softButton} tabular-nums`}
-          >
-            {loading ? text.loadingMore(progress.percent) : text.more}
-          </button>
+          />
         </div>
       )}
     </>
@@ -388,33 +384,27 @@ export function MyPage({ onSignedOut }: Props) {
   }
 
   const registered = parseServerTime(me?.registeredAt)
-  const aiModel = useAiModelSetting('right')
-  const voice = useVoiceSetting('right')
 
   return (
-    <main className={pageFrame}>
-      <PageHeader title={text.title} />
-      <div className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:-mx-10 md:px-10">
+    <ScrollPage header={<PageHeader title={text.title} />}>
       <div className="w-full max-w-2xl">
 
         <Section title={text.account}>
           {waitingMe ? (
             <LoadingRows percent={meLoad.percent} />
           ) : (
-          <dl className="divide-y divide-gray-100 border-y border-gray-100 text-[14px]">
-            {[
-              { label: text.name, value: me?.name },
-              { label: text.email, value: me?.email },
-              { label: text.joined, value: registered ? formatDate(registered) : undefined },
-            ].map((row) => (
-              <div key={row.label} className="flex items-center justify-between gap-4 py-3.5">
-                <dt className="shrink-0 text-gray-500">{row.label}</dt>
-                <dd className="min-w-0 truncate text-right font-medium text-gray-900">
-                  {row.value ?? ''}
-                </dd>
-              </div>
-            ))}
-          </dl>
+            <dl className={settingList}>
+              {[
+                { label: text.name, value: me?.name },
+                { label: text.email, value: me?.email },
+                { label: text.joined, value: registered ? formatDate(registered) : undefined },
+              ].map((row) => (
+                <div key={row.label} className="flex items-center justify-between gap-4 py-3.5">
+                  <dt className="shrink-0 text-gray-500">{row.label}</dt>
+                  <dd className="min-w-0 truncate text-right font-medium text-gray-900">{row.value ?? ''}</dd>
+                </div>
+              ))}
+            </dl>
           )}
           <div className="mt-4">
             <button
@@ -428,29 +418,16 @@ export function MyPage({ onSignedOut }: Props) {
           </div>
         </Section>
 
-        {/* 설정 창(사이드바 아래 톱니바퀴)과 같은 AI 모델 고르기예요. */}
+        {/* 설정 창(사이드바 아래 톱니바퀴)과 같은 AI 모델 고르기와 면접관 목소리 고르기예요. */}
         <Section title={text.ai}>
-          <dl className="divide-y divide-gray-100 border-y border-gray-100 text-[14px]">
-            <div className="flex items-center justify-between gap-6 py-3.5">
-              <dt className="min-w-0">
-                <span className="block text-gray-900">{aiModel.label}</span>
-                <span className="mt-0.5 block text-[12.5px] leading-relaxed break-keep text-gray-500">{aiModel.note}</span>
-              </dt>
-              <dd className="shrink-0">{aiModel.control}</dd>
-            </div>
+          <dl className={settingList}>
+            <AiModelRow />
           </dl>
         </Section>
 
-        {/* 설정 창과 같은 면접관 목소리 고르기예요. */}
         <Section title={text.practice}>
-          <dl className="divide-y divide-gray-100 border-y border-gray-100 text-[14px]">
-            <div className="flex items-center justify-between gap-6 py-3.5">
-              <dt className="min-w-0">
-                <span className="block text-gray-900">{voice.label}</span>
-                <span className="mt-0.5 block text-[12.5px] leading-relaxed break-keep text-gray-500">{voice.note}</span>
-              </dt>
-              <dd className="shrink-0">{voice.control}</dd>
-            </div>
+          <dl className={settingList}>
+            <VoiceRow />
           </dl>
         </Section>
 
@@ -484,7 +461,6 @@ export function MyPage({ onSignedOut }: Props) {
           />
         )}
       </div>
-      </div>
-    </main>
+    </ScrollPage>
   )
 }

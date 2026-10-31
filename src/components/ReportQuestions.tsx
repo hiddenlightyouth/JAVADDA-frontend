@@ -1,26 +1,23 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { track } from '../lib/analytics'
 import { fetchAnswers, fetchQuestions, PROGRESS_START, regenerateQuestions, type InterviewQuestion, type PracticeRecord, type ProgressState, type QuestionCategory } from '../lib/gap'
 import { formatDate, formatDateTime, parseServerTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
 import { AiProgress, Failed, Notice, Tip } from './GapParts'
 import { ConfirmDialog, panelBody, SidePanel } from './Dialog'
-import { ClockIcon, MicIcon, RefreshIcon } from './Icons'
-import { Bullets, ghostButton, label, loadCenter, primaryButton, Segmented, stagger, toolButton } from './ui'
+import { CheckIcon, ClockIcon, MicIcon, RefreshIcon } from './Icons'
+import { Callout, FeedbackSections, ModelAnswer } from './ReportParts'
+import { Badge, Bullets, ghostButton, label, loadCenter, primaryButton, Segmented, stagger, toolButton } from './ui'
 
 const CATEGORIES: QuestionCategory[] = ['tech', 'project', 'cs', 'culture']
 
-export const QUESTION_TEXT = messages({
+const TEXT = messages({
   ko: {
     categories: { tech: '기술', project: '프로젝트', cs: 'CS 기초', culture: '컬처핏' } as Record<QuestionCategory, string>,
     all: '전체',
     type: '유형',
     practiceAll: '전체 연습',
     practiceOne: '이 질문 연습',
-    probability: (value: number) => `나올 확률 ${value}%`,
-    source: (label: string) => `출처: ${label}`,
-    show: '답변 포인트 보기',
-    hide: '접기',
     intent: '의도',
     points: '답변 포인트',
     followUp: '꼬리 질문',
@@ -28,7 +25,6 @@ export const QUESTION_TEXT = messages({
     history: (count: number) => `지난 답변 ${count}개`,
     hideHistory: '지난 답변 접기',
     myAnswer: '내 답변',
-    modelAnswer: '이렇게 답했으면 좋았어요',
     rephrase: '이렇게 말해 보세요',
     score: (value: number) => `${value}점`,
     practiced: (value: number) => `연습함 ${value}점`,
@@ -47,8 +43,6 @@ export const QUESTION_TEXT = messages({
     pastOldEmpty: '예전 질문의 답변이 없어요',
     showFeedback: '피드백 보기',
     hideFeedback: '피드백 접기',
-    good: '좋았어요',
-    improve: '보완할 점',
     close: '닫기',
     regenerateTitle: '새 질문을 받을까요?',
     regenerateBody: '지금 질문과 겹치지 않는 질문을 새로 만들어요. 지금 질문은 사라지고, 지난 답변 기록은 남아요.',
@@ -66,17 +60,12 @@ export const QUESTION_TEXT = messages({
     type: 'Type',
     practiceAll: 'Practice all',
     practiceOne: 'Practice this',
-    probability: (value: number) => `${value}% likely`,
-    source: (label: string) => `Source: ${label}`,
-    show: 'Show answer points',
-    hide: 'Hide',
     intent: 'What they look for',
     points: 'Answer points',
     followUp: 'Follow-up',
     history: (count: number) => `${count} past ${count === 1 ? 'answer' : 'answers'}`,
     hideHistory: 'Hide past answers',
     myAnswer: 'Your answer',
-    modelAnswer: 'A stronger answer',
     rephrase: 'Try saying it like this',
     score: (value: number) => `${value} pts`,
     count: (count: number) => `${count} ${count === 1 ? 'question' : 'questions'}`,
@@ -96,8 +85,6 @@ export const QUESTION_TEXT = messages({
     pastOldEmpty: 'No answers to earlier questions',
     showFeedback: 'Show feedback',
     hideFeedback: 'Hide feedback',
-    good: 'What went well',
-    improve: 'To improve',
     close: 'Close',
     regenerateTitle: 'Get new questions?',
     regenerateBody: "We'll write questions that don't repeat these. Current questions go away, your past answers stay.",
@@ -111,25 +98,11 @@ export const QUESTION_TEXT = messages({
   },
 })
 
-/** 나올 확률을 짧은 막대와 숫자로 보여줘요. */
-export function Probability({ value }: { value: number }) {
-  const L = useMessages(QUESTION_TEXT)
-  const percent = Math.round(value * 100)
+/** 질문의 의도와 답변 포인트, 꼬리 질문이에요. 회색 줄 안의 흰 칸으로 펼쳐져요. */
+function QuestionDetail({ question }: { question: InterviewQuestion }) {
+  const L = useMessages(TEXT)
   return (
-    <span className="inline-flex items-center gap-2 text-[12.5px] text-gray-600 tabular-nums" aria-label={L.probability(percent)}>
-      <span className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200/70" aria-hidden>
-        <span className="block h-full rounded-full bg-brand" style={{ width: `${percent}%` }} />
-      </span>
-      {L.probability(percent)}
-    </span>
-  )
-}
-
-/** 질문의 의도와 답변 포인트, 꼬리 질문이에요. 회색 카드 안의 흰 칸으로 펼쳐져요. 면접 연습의 힌트도 같은 칸이에요. */
-export function QuestionDetail({ question, followUp = true, className = '' }: { question: InterviewQuestion; followUp?: boolean; className?: string }) {
-  const L = useMessages(QUESTION_TEXT)
-  return (
-    <div className={`animate-rise space-y-3 rounded-xl bg-white p-4 ${className}`}>
+    <div className="animate-rise space-y-3 rounded-xl bg-white p-4">
       <div>
         <h3 className={label}>{L.intent}</h3>
         <p className="mt-1 text-[13.5px] leading-relaxed text-gray-700">{question.intent}</p>
@@ -138,12 +111,10 @@ export function QuestionDetail({ question, followUp = true, className = '' }: { 
         <h3 className={label}>{L.points}</h3>
         <Bullets items={question.answerPoints} brand className="mt-1" />
       </div>
-      {followUp && (
-        <div>
-          <h3 className={label}>{L.followUp}</h3>
-          <p className="mt-1 text-[13.5px] leading-relaxed text-gray-700">{question.followUp}</p>
-        </div>
-      )}
+      <div>
+        <h3 className={label}>{L.followUp}</h3>
+        <p className="mt-1 text-[13.5px] leading-relaxed text-gray-700">{question.followUp}</p>
+      </div>
     </div>
   )
 }
@@ -153,7 +124,7 @@ export function QuestionDetail({ question, followUp = true, className = '' }: { 
  * 답변은 서버에 남아 있어서(`fetchAnswers`) 다른 기기에서도 보여요.
  */
 function PastAnswers({ records }: { records: PracticeRecord[] }) {
-  const L = useMessages(QUESTION_TEXT)
+  const L = useMessages(TEXT)
   return (
     <ol className="mt-4 animate-rise space-y-3">
       {records.map((record) => (
@@ -170,12 +141,7 @@ function PastAnswers({ records }: { records: PracticeRecord[] }) {
               <Bullets items={record.feedback.rephrase} className="mt-1" />
             </>
           )}
-          {record.feedback.modelAnswer && (
-            <div className="mt-3 rounded-lg bg-brand-soft p-3">
-              <h3 className="text-[12.5px] font-semibold text-brand-hover">{L.modelAnswer}</h3>
-              <p className="mt-1 text-[13.5px] leading-relaxed text-gray-800">{record.feedback.modelAnswer}</p>
-            </div>
-          )}
+          {record.feedback.modelAnswer && <ModelAnswer text={record.feedback.modelAnswer} className="mt-3" />}
         </li>
       ))}
     </ol>
@@ -187,7 +153,7 @@ function PastAnswers({ records }: { records: PracticeRecord[] }) {
  * 줄을 누르면 그 자리에서 의도, 답변 포인트, 꼬리 질문과 지난 답변이 펼쳐져요.
  */
 function Row({ question, index, order, records, onPractice }: { question: InterviewQuestion; index: number; order: number; records: PracticeRecord[]; onPractice: () => void }) {
-  const L = useMessages(QUESTION_TEXT)
+  const L = useMessages(TEXT)
   const [open, setOpen] = useState(false)
   const [history, setHistory] = useState(false)
   const last = records[0]
@@ -199,9 +165,7 @@ function Row({ question, index, order, records, onPractice }: { question: Interv
           {last ? (
             <>
               <span className="flex size-6 items-center justify-center rounded-full bg-brand text-white" aria-hidden>
-                <svg viewBox="0 0 16 16" className="size-3" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="m3.5 8.5 3 3 6-7" />
-                </svg>
+                <CheckIcon className="size-3" strokeWidth={2.2} />
               </span>
               <span className="text-[11px] font-medium text-brand tabular-nums">{L.score(last.feedback.score)}</span>
             </>
@@ -256,14 +220,20 @@ function Row({ question, index, order, records, onPractice }: { question: Interv
 
 /** 지난 기록 칸의 답변 하나예요. 점수, 시각, 질문, 내 답(세 줄까지)이 있고 피드백은 눌러야 펼쳐져요. */
 function PastItem({ record, old }: { record: PracticeRecord; old: boolean }) {
-  const L = useMessages(QUESTION_TEXT)
+  const L = useMessages(TEXT)
   const [open, setOpen] = useState(false)
   const { feedback } = record
   return (
     <li className="rounded-xl bg-gray-50 p-4">
       <div className="flex items-center gap-2">
-        <span className="rounded-md bg-brand-soft px-2 py-0.5 text-[12px] font-semibold text-brand-hover tabular-nums">{L.score(feedback.score)}</span>
-        {old && <span className="rounded-md bg-gray-200/70 px-2 py-0.5 text-[11.5px] font-medium text-gray-600">{L.oldQuestion}</span>}
+        <Badge tone="brand" strong className="tabular-nums">
+          {L.score(feedback.score)}
+        </Badge>
+        {old && (
+          <Badge tone="gray" strong>
+            {L.oldQuestion}
+          </Badge>
+        )}
         <span className="ml-auto text-[12px] text-gray-400 tabular-nums">{formatDateTime(record.createdAt)}</span>
       </div>
       <p className={`mt-2.5 text-[14px] leading-relaxed font-semibold ${record.question ? 'text-gray-900' : 'text-gray-400'}`}>{record.question || L.noQuestionText}</p>
@@ -273,30 +243,8 @@ function PastItem({ record, old }: { record: PracticeRecord; old: boolean }) {
       </button>
       {open && (
         <div className="mt-2 space-y-3 rounded-xl bg-white p-4">
-          {feedback.good.length > 0 && (
-            <div>
-              <h3 className={label}>{L.good}</h3>
-              <Bullets items={feedback.good} brand className="mt-1" />
-            </div>
-          )}
-          {feedback.improve.length > 0 && (
-            <div>
-              <h3 className={label}>{L.improve}</h3>
-              <Bullets items={feedback.improve} className="mt-1" />
-            </div>
-          )}
-          {feedback.rephrase.length > 0 && (
-            <div>
-              <h3 className={label}>{L.rephrase}</h3>
-              <Bullets items={feedback.rephrase} className="mt-1" />
-            </div>
-          )}
-          {feedback.modelAnswer && (
-            <div className="rounded-lg bg-brand-soft p-3">
-              <h3 className="text-[12.5px] font-semibold text-brand-hover">{L.modelAnswer}</h3>
-              <p className="mt-1 text-[13.5px] leading-relaxed text-gray-800">{feedback.modelAnswer}</p>
-            </div>
-          )}
+          <FeedbackSections feedback={feedback} />
+          {feedback.modelAnswer && <ModelAnswer text={feedback.modelAnswer} />}
         </div>
       )}
     </li>
@@ -308,7 +256,7 @@ function PastItem({ record, old }: { record: PracticeRecord; old: boolean }) {
  * 맨 위에 답변 수와 평균 점수, 전체와 예전 질문만 고르는 칸이 있고, 답변은 날짜별로 묶여 최근 것부터 와요.
  */
 function PastPanel({ records, current, onClose }: { records: PracticeRecord[]; current: Set<string>; onClose: () => void }) {
-  const L = useMessages(QUESTION_TEXT)
+  const L = useMessages(TEXT)
   const [onlyOld, setOnlyOld] = useState(false)
   const list = onlyOld ? records.filter((record) => !current.has(record.questionId)) : records
   const average = records.length === 0 ? 0 : Math.round(records.reduce((sum, record) => sum + record.feedback.score, 0) / records.length)
@@ -378,7 +326,7 @@ function PastPanel({ records, current, onClose }: { records: PracticeRecord[]; c
  * 질문마다 의도와 답변 포인트, 꼬리 질문을 펼쳐 보고, 하나씩 또는 전부 연습하러 가요.
  */
 export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPractice: (question?: string) => void }) {
-  const L = useMessages(QUESTION_TEXT)
+  const L = useMessages(TEXT)
   const [questions, setQuestions] = useState<InterviewQuestion[] | null | undefined>(undefined)
   const [category, setCategory] = useState<QuestionCategory | null>(null)
   const [progress, setProgress] = useState<ProgressState>(PROGRESS_START)
@@ -424,6 +372,8 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportId])
 
+  /** 지금 목록에 있는 질문이에요. 지난 기록 칸이 예전 질문을 가려내요. */
+  const currentIds = useMemo(() => new Set((questions ?? []).map((question) => question.id)), [questions])
   const list = questions ? questions.filter((question) => !category || question.category === category) : []
   // 연습한 질문과 질문마다 가장 최근 점수의 평균이에요. 답변 기록은 최근 것부터 와요.
   const practiced = questions ? questions.filter((question) => (records[question.id]?.length ?? 0) > 0) : []
@@ -534,17 +484,17 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
       {questions && list.length === 0 && <Notice title={L.count(0)} className="mt-16" />}
       {/* 질문을 모두 연습했으면 목록 아래에서 새 질문을 받자고 권해요. */}
       {questions && practiced.length === questions.length && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl bg-brand-soft px-5 py-4">
-          <div className="min-w-0 flex-1 text-[13.5px] leading-relaxed">
-            <p className="font-semibold text-gray-900">{L.allDone}</p>
-            <p className="mt-0.5 text-gray-700">{L.allDoneBody}</p>
-          </div>
-          <button type="button" onClick={() => askRegenerate('done')} className={primaryButton}>
-            {L.regenerate}
-          </button>
-        </div>
+        <Callout
+          title={L.allDone}
+          body={L.allDoneBody}
+          action={
+            <button type="button" onClick={() => askRegenerate('done')} className={primaryButton}>
+              {L.regenerate}
+            </button>
+          }
+        />
       )}
-      {showPast && <PastPanel records={allRecords} current={new Set((questions ?? []).map((question) => question.id))} onClose={() => setShowPast(false)} />}
+      {showPast && <PastPanel records={allRecords} current={currentIds} onClose={() => setShowPast(false)} />}
       {asking && (
         <ConfirmDialog
           title={L.regenerateTitle}

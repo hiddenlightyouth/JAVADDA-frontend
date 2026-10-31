@@ -50,8 +50,8 @@ function placeOf(button: HTMLElement, align: 'left' | 'right'): Place {
 }
 
 /**
- * 버튼을 누르면 아래로 펼쳐지는 메뉴예요. 공고 탐색의 직군, 경력, 정렬과 예상 질문의 유형 고르기에 같이 써요.
- * 고른 항목에는 체크 표시가 붙고, 바깥을 누르거나 Esc를 누르면 닫혀요.
+ * 버튼을 누르면 아래로 펼쳐지는 메뉴예요. 공고 탐색과 추천 공고의 거르는 메뉴, 기술 블로그의 주제, 내 리포트의 이력서, 설정의 AI 모델과 목소리 고르기에 같이 써요.
+ * 고른 항목에는 체크 표시가 붙고, 바깥을 누르거나 Esc를 누르면 닫혀요. active면 거르는 버튼 줄의 고른 버튼처럼 메인 컬러 테두리와 연한 바탕이에요.
  * 메뉴는 화면 맨 바깥(body)에 그려요. 설정 창처럼 스크롤되는 칸 안에 두면 칸 끝에서 잘리거나 칸이 같이 늘어나서 어색했어요.
  * 아래 자리가 모자라면 위로 펼치고, 스크롤하거나 창 크기가 바뀌면 버튼을 따라가요.
  */
@@ -111,7 +111,7 @@ export function Dropdown({ label, value, active = false, groups, onOpen, align =
           if (!open) onOpen?.()
           setOpen((value) => !value)
         }}
-        className={`${size === 'lg' ? toolButtonLg : toolButton} ${active ? 'border-brand! text-brand-hover!' : ''} ${className}`}
+        className={`${size === 'lg' ? toolButtonLg : toolButton} ${active ? 'border-brand! bg-brand-soft! text-brand-hover!' : ''} ${className}`}
       >
         {label && <span className="text-gray-500">{label}</span>}
         {value && <span className="max-w-40 truncate">{value}</span>}

@@ -22,8 +22,9 @@ interface State {
   notes: { skill: string; text: string; savedAt: string }[]
 }
 
-const EMPTY: State = { seq: 1, primaryId: null, resumes: [], reports: [], reviews: {}, questions: {}, answers: {}, plans: [], notes: [] }
-let state: State = { ...EMPTY, ...readJson<Partial<State>>(KEY, {}) }
+/** 빈 자료예요. 배열과 객체를 그 자리에서 고쳐 쓰기 때문에, 부를 때마다 새로 만들어요. */
+const empty = (): State => ({ seq: 1, primaryId: null, resumes: [], reports: [], reviews: {}, questions: {}, answers: {}, plans: [], notes: [] })
+let state: State = { ...empty(), ...readJson<Partial<State>>(KEY, {}) }
 const save = () => writeJson(KEY, state)
 const nextId = () => state.seq++
 
@@ -443,7 +444,7 @@ export function installMock() {
 
 /** 목 모드의 자료를 모두 지워요. 브라우저 콘솔에서 `mockReset()`으로 불러요. */
 ;(window as unknown as { mockReset: () => void }).mockReset = () => {
-  state = { ...EMPTY }
+  state = empty()
   save()
   window.location.reload()
 }

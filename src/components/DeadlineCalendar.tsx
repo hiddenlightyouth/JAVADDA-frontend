@@ -1,19 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { track } from '../lib/analytics'
-import { companyOf, type CompanyCategory, fetchPostings, majorCompanies, fitOf, useReports, useResume, type JobPosting } from '../lib/gap'
+import { companyOf, type CompanyCategory, majorCompanies, fitOf, useReports, useResume, type JobPosting } from '../lib/gap'
 import { holidayOf } from '../lib/holidays'
 import { getLang, messages, useMessages } from '../lib/i18n'
-import { useLoadHold, useLoadProgress } from '../lib/load'
 import { PageHeader, ScrollPage } from './AppPage'
-import { CategoryFilter, CompanyFilter, CompanyMark, Failed, FitTag, PostingMeta, usePickConfirm } from './GapParts'
+import { CategoryFilter, CompanyFilter, CompanyMark, DiagnosedTag, FitTag, usePickConfirm } from './GapParts'
 import { ChevronRightIcon } from './Icons'
-import { Badge, iconButton, loadCenter, LoadProgress, Segmented, toolButton, useShowMore } from './ui'
+import { PickRow } from './JobCard'
+import { LoadGate, usePostings } from './ScreenParts'
+import { Segmented, toolButton, useShowMore } from './ui'
 
 /**
  * 마감 달력이에요. 공고의 마감일을 달력에 놓아서, 어느 기업의 어떤 공고가 언제 마감인지 한눈에 봐요.
  * 날짜 칸에는 그날 마감하는 공고를 기업 로고와 제목으로 모두 적고, 날짜를 누르면 아래에 그날의 공고를 모두 보여줘요.
  * 기업으로 거르고, 진단한 공고만 볼 수도 있어요. 상시 채용(마감 없음)은 올라온 날부터 계속 열려 있어서,
- * 고른 날짜 칸에만 그날 열려 있던 상시 채용 수를 날짜 옆에 작게 적어요. 날짜 칸의 마감 공고는 세 개까지만 이름표로 보여요. 날짜를 고르면 아래에 그날 마감하는 공고와 그날 열려 있던 상시 채용 공고를 함께 보여줘요.
+ * 고른 날짜 칸에만 그날 열려 있던 상시 채용 수를 날짜 옆에 작게 적어요. 날짜 칸의 마감 공고는 기업마다 한 줄로 묶어 모두 보여줘요. 날짜를 고르면 그날 마감하는 공고와 그날 열려 있던 상시 채용 공고를 함께 보여줘요.
  * 공고를 누르면 해당 공고로 이동할지 한 번 더 묻고, 진단으로 가요(이미 진단했으면 그 리포트로 가요).
  */
 
@@ -36,7 +37,6 @@ const TEXT = messages({
     alwaysTitle: (month: number, date: number) => `${month + 1}월 ${date}일 상시 채용`,
     day: (month: number, date: number) => `${month + 1}월 ${date}일 마감`,
     dayEmpty: '정보를 찾을 수 없음',
-    diagnosed: '진단함',
     pick: (title: string) => `${title} 진단하기`,
   },
   en: {
@@ -57,15 +57,12 @@ const TEXT = messages({
     alwaysTitle: (month: number, date: number) => `Rolling on ${new Date(2000, month, date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`,
     day: (month: number, date: number) => `Closing ${new Date(2000, month, date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`,
     dayEmpty: 'No information found',
-    diagnosed: 'Diagnosed',
     pick: (title: string) => `Diagnose ${title}`,
   },
 })
 
 type Scope = 'all' | 'diagnosed'
 const SCOPES: Scope[] = ['all', 'diagnosed']
-
-type Loaded = JobPosting[] | 'failed'
 
 /** 이 기기의 날짜로 2026-10-31 같은 열쇠를 만들어요. 마감 시각이 어느 날짜 칸에 들어갈지 정할 때 써요. */
 const dayKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -82,7 +79,11 @@ function monthDays(year: number, month: number): Date[] {
 /** 공고를 기업별로 묶어요. 공고가 많은 기업이 앞이고, 같으면 받은 순서예요. */
 function groupByCompany(postings: JobPosting[]): { companyId: string; postings: JobPosting[] }[] {
   const groups = new Map<string, JobPosting[]>()
-  for (const posting of postings) groups.set(posting.companyId, [...(groups.get(posting.companyId) ?? []), posting])
+  for (const posting of postings) {
+    const list = groups.get(posting.companyId)
+    if (list) list.push(posting)
+    else groups.set(posting.companyId, [posting])
+  }
   return [...groups.entries()].map(([companyId, list]) => ({ companyId, postings: list })).sort((a, b) => b.postings.length - a.postings.length)
 }
 
@@ -97,28 +98,11 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
   const [category, setCategory] = useState<CompanyCategory | null>(null)
   const [scope, setScope] = useState<Scope>('all')
   const [selected, setSelected] = useState<string>(todayKey)
-  const [loaded, setLoaded] = useState<Loaded | undefined>(undefined)
-  const [attempt, setAttempt] = useState(0)
-  const load = useLoadProgress()
+  const { loaded, postings, waiting, percent, retry } = usePostings()
+  const majors = useMemo(majorCompanies, [])
 
-  useEffect(() => {
-    let stale = false
-    setLoaded(undefined)
-    void fetchPostings({}, load.one()).then(
-      (list) => {
-        if (!stale) setLoaded(list)
-      },
-      () => {
-        if (!stale) setLoaded('failed')
-      },
-    )
-    return () => {
-      stale = true
-    }
-  }, [attempt, load.one])
-  const waiting = useLoadHold(loaded === undefined)
-
-  const diagnosed = useMemo(() => new Set(reports.map((report) => report.postingId)), [reports])
+  // 진단한 공고예요. 진단함 태그(`DiagnosedTag`)처럼 만들지 못한 리포트는 빼요.
+  const diagnosed = useMemo(() => new Set(reports.filter((report) => report.status !== 'failed').map((report) => report.postingId)), [reports])
   /** 처음 받았을 때 한 번만 가장 가까운 마감으로 옮겨요. 그 뒤로는 사용자가 넘긴 달을 그대로 둬요. */
   const placed = useRef(false)
 
@@ -126,8 +110,8 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
   const { byDay, always } = useMemo(() => {
     const byDay = new Map<string, JobPosting[]>()
     const always: { posting: JobPosting; from: string }[] = []
-    if (!Array.isArray(loaded)) return { byDay, always }
-    for (const posting of loaded) {
+    if (!postings) return { byDay, always }
+    for (const posting of postings) {
       if (company && posting.companyId !== company) continue
       if (category && companyOf(posting.companyId).category !== category) continue
       if (scope === 'diagnosed' && !diagnosed.has(posting.id)) continue
@@ -136,32 +120,33 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
         continue
       }
       const key = dayKey(new Date(posting.deadline))
-      byDay.set(key, [...(byDay.get(key) ?? []), posting])
+      const list = byDay.get(key)
+      if (list) list.push(posting)
+      else byDay.set(key, [posting])
     }
     for (const list of byDay.values()) list.sort((a, b) => (a.deadline ?? '').localeCompare(b.deadline ?? ''))
     return { byDay, always }
-  }, [loaded, company, category, scope, diagnosed])
+  }, [postings, company, category, scope, diagnosed])
 
   // 처음 열면 오늘부터 가장 가까운 마감이 있는 달과 날짜를 골라 둬요. 이번 달에 남은 마감이 없으면 빈 달력만 보여서 이상해 보였어요.
   useEffect(() => {
-    if (placed.current || !Array.isArray(loaded)) return
+    if (placed.current || !postings) return
     placed.current = true
     const upcoming = [...byDay.keys()].filter((key) => key >= todayKey).sort()[0]
     if (!upcoming) return
     const date = new Date(`${upcoming}T00:00:00`)
     setCursor({ year: date.getFullYear(), month: date.getMonth() })
     setSelected(upcoming)
-  }, [loaded, byDay, todayKey])
+  }, [postings, byDay, todayKey])
 
-  const days = monthDays(cursor.year, cursor.month)
+  const days = useMemo(() => monthDays(cursor.year, cursor.month), [cursor])
   const monthCount = days.filter((day) => day.getMonth() === cursor.month).reduce((sum, day) => sum + (byDay.get(dayKey(day))?.length ?? 0), 0)
-  /** 그날 열려 있던 상시 채용 공고예요. 올라온 날부터 쳐요. */
-  const alwaysOn = (key: string) => always.filter((item) => item.from <= key).map((item) => item.posting)
   const selectedDate = new Date(`${selected}T00:00:00`)
   const selectedList = byDay.get(selected) ?? []
   // 오른쪽 목록은 공고가 많아도 버벅이지 않게 조금씩 그려요. 날짜를 바꾸면 처음부터예요.
   const dayMore = useShowMore(selectedList.length, `${selected}:${selectedList.length}`)
-  const selectedAlways = alwaysOn(selected)
+  /** 고른 날 열려 있던 상시 채용 공고예요. 올라온 날부터 쳐요. 날짜 칸의 수와 오른쪽 목록이 같이 써요. */
+  const selectedAlways = useMemo(() => always.filter((item) => item.from <= selected).map((item) => item.posting), [always, selected])
   const alwaysMore = useShowMore(selectedAlways.length, `${selected}:${selectedAlways.length}`)
   // 상시 채용 수를 누르면 그 날짜를 고르고 아래의 상시 채용 목록으로 내려가요.
   const alwaysRef = useRef<HTMLElement>(null)
@@ -192,7 +177,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
     <ScrollPage header={<PageHeader title={L.title} />} className="@container">
       <CompanyFilter
         oneLine
-        companies={majorCompanies()}
+        companies={majors}
         value={company}
         label={L.majors}
         onChange={(next) => {
@@ -202,7 +187,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
       />
       <div className="mt-2">
         <CategoryFilter
-          postings={Array.isArray(loaded) ? loaded : []}
+          postings={postings ?? []}
           value={category}
           label={L.category}
           allLabel={L.allCategories}
@@ -214,11 +199,11 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <button type="button" aria-label={L.prev} onClick={() => moveMonth(-1)} className={`${iconButton.md} size-9! border border-gray-200 bg-white`}>
+        <button type="button" aria-label={L.prev} onClick={() => moveMonth(-1)} className={`${toolButton} w-9 justify-center px-0!`}>
           <ChevronRightIcon className="size-4 rotate-180" />
         </button>
         <h2 className="min-w-28 text-center text-[17px] font-semibold text-gray-900 tabular-nums">{L.month(cursor.year, cursor.month)}</h2>
-        <button type="button" aria-label={L.next} onClick={() => moveMonth(1)} className={`${iconButton.md} size-9! border border-gray-200 bg-white`}>
+        <button type="button" aria-label={L.next} onClick={() => moveMonth(1)} className={`${toolButton} w-9 justify-center px-0!`}>
           <ChevronRightIcon className="size-4" />
         </button>
         <button type="button" onClick={goToday} className={toolButton}>
@@ -230,190 +215,180 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
       </div>
 
       <div className="mt-4">
-        {waiting || loaded === undefined ? (
-          <LoadProgress percent={load.percent} className={loadCenter} />
-        ) : loaded === 'failed' ? (
-          <Failed className="mt-16" onRetry={() => setAttempt((value) => value + 1)} />
-        ) : (
-          // 넓은 화면에서는 달력을 왼쪽에 두고, 고른 날짜의 공고를 오른쪽 칸에 나란히 둬요. 좁으면 달력 아래로 내려가요.
-          // 달력과 오른쪽 칸은 저마다 @container라, 안의 칸과 줄은 화면 폭이 아니라 자기 폭을 보고 글자를 줄여요.
-          <div className="grid gap-8 @5xl:grid-cols-[minmax(0,1fr)_360px] @5xl:items-start @7xl:grid-cols-[minmax(0,1fr)_420px]">
-            <div className="@container overflow-hidden rounded-2xl border border-gray-200">
-              <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
-                {L.weekdays.map((name, index) => (
-                  <span key={name} className={`py-2 text-center text-[12px] font-medium ${index === 0 ? 'text-red-500' : index === 6 ? 'text-brand' : 'text-gray-500'}`}>
-                    {name}
-                  </span>
-                ))}
-              </div>
-              <div className="grid grid-cols-7">
-                {days.map((day, index) => {
-                  const key = dayKey(day)
-                  const list = byDay.get(key) ?? []
-                  const inMonth = day.getMonth() === cursor.month
-                  const past = key < todayKey
-                  const isSelected = key === selected
-                  const holiday = holidayOf(key)
-                  // 상시 채용 수는 고른 날짜 칸에만 적어요. 칸마다 적으면 같은 문구가 달력을 덮어요.
-                  const alwaysCount = inMonth && key === selected ? alwaysOn(key).length : 0
-                  // 일요일과 공휴일은 빨간색, 토요일은 메인 컬러예요. 지난 날은 흐리게 둬요.
-                  const tone = holiday || day.getDay() === 0 ? 'text-red-500' : day.getDay() === 6 ? 'text-brand' : 'text-gray-800'
-                  return (
-                    // 칸 전체가 날짜를 고르는 자리이고, 안의 공고 이름표는 바로 진단으로 가요.
-                    <div
-                      key={key}
-                      role="button"
-                      tabIndex={0}
-                      aria-pressed={isSelected}
-                      aria-label={`${L.day(day.getMonth(), day.getDate())} ${list.length}`}
-                      onClick={() => setSelected(key)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault()
-                          setSelected(key)
-                        }
-                      }}
-                      className={`flex min-h-20 cursor-pointer flex-col gap-1 p-1.5 text-left transition-colors outline-none focus-visible:bg-brand-soft @3xl:min-h-28 ${index % 7 !== 6 ? 'border-r' : ''} ${
-                        index < days.length - 7 ? 'border-b' : ''
-                      } border-gray-200 ${isSelected ? 'bg-brand-soft/60' : inMonth ? 'hover:bg-gray-50' : 'bg-gray-50/60 hover:bg-gray-100/60'}`}
-                    >
-                      <span className="flex min-w-0 items-center gap-0.5 @3xl:gap-1">
-                        <span
-                          className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[12.5px] tabular-nums ${
-                            key === todayKey ? 'bg-brand font-semibold text-white' : inMonth ? `${tone} ${past ? 'opacity-50' : ''}` : 'text-gray-300'
-                          }`}
-                        >
-                          {day.getDate()}
-                        </span>
-                        {holiday && inMonth && getLang() === 'ko' && <span className={`hidden min-w-0 truncate text-[10.5px] text-red-400 @3xl:inline ${past ? 'opacity-50' : ''}`}>{holiday}</span>}
-                        {/* 그날 열려 있던 상시 채용 수예요. 누르면 아래에 그 공고들이 나와요. */}
-                        {alwaysCount > 0 && (
-                          <button
-                            type="button"
-                            data-no-press
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              setSelected(key)
-                              requestAnimationFrame(() => alwaysRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
-                            }}
-                            className={`ml-auto min-w-0 shrink-0 rounded px-0.5 text-[10px] whitespace-nowrap tabular-nums @3xl:px-1 @3xl:text-[10.5px] transition-colors ${
-                              isSelected ? 'text-brand-hover' : 'text-gray-400 hover:text-gray-700'
-                            } ${past ? 'opacity-50' : ''}`}
+        <LoadGate waiting={waiting} failed={loaded === 'failed'} percent={percent} onRetry={retry}>
+          {() => (
+            // 넓은 화면에서는 달력을 왼쪽에 두고, 고른 날짜의 공고를 오른쪽 칸에 나란히 둬요. 좁으면 달력 아래로 내려가요.
+            // 달력과 오른쪽 칸은 저마다 @container라, 안의 칸과 줄은 화면 폭이 아니라 자기 폭을 보고 글자를 줄여요.
+            <div className="grid gap-8 @5xl:grid-cols-[minmax(0,1fr)_360px] @5xl:items-start @7xl:grid-cols-[minmax(0,1fr)_420px]">
+              <div className="@container overflow-hidden rounded-2xl border border-gray-200">
+                <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
+                  {L.weekdays.map((name, index) => (
+                    <span key={name} className={`py-2 text-center text-[12px] font-medium ${index === 0 ? 'text-red-500' : index === 6 ? 'text-brand' : 'text-gray-500'}`}>
+                      {name}
+                    </span>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7">
+                  {days.map((day, index) => {
+                    const key = dayKey(day)
+                    const list = byDay.get(key) ?? []
+                    const inMonth = day.getMonth() === cursor.month
+                    const past = key < todayKey
+                    const isSelected = key === selected
+                    const holiday = holidayOf(key)
+                    // 상시 채용 수는 고른 날짜 칸에만 적어요. 칸마다 적으면 같은 문구가 달력을 덮어요.
+                    const alwaysCount = inMonth && key === selected ? selectedAlways.length : 0
+                    // 일요일과 공휴일은 빨간색, 토요일은 메인 컬러예요. 지난 날은 흐리게 둬요.
+                    const tone = holiday || day.getDay() === 0 ? 'text-red-500' : day.getDay() === 6 ? 'text-brand' : 'text-gray-800'
+                    return (
+                      // 칸 전체가 날짜를 고르는 자리이고, 안의 공고 이름표는 바로 진단으로 가요.
+                      <div
+                        key={key}
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={isSelected}
+                        aria-label={`${L.day(day.getMonth(), day.getDate())} ${list.length}`}
+                        onClick={() => setSelected(key)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            setSelected(key)
+                          }
+                        }}
+                        className={`flex min-h-20 cursor-pointer flex-col gap-1 p-1.5 text-left transition-colors outline-none focus-visible:bg-brand-soft @3xl:min-h-28 ${index % 7 !== 6 ? 'border-r' : ''} ${
+                          index < days.length - 7 ? 'border-b' : ''
+                        } border-gray-200 ${isSelected ? 'bg-brand-soft/60' : inMonth ? 'hover:bg-gray-50' : 'bg-gray-50/60 hover:bg-gray-100/60'}`}
+                      >
+                        <span className="flex min-w-0 items-center gap-0.5 @3xl:gap-1">
+                          <span
+                            className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[12.5px] tabular-nums ${
+                              key === todayKey ? 'bg-brand font-semibold text-white' : inMonth ? `${tone} ${past ? 'opacity-50' : ''}` : 'text-gray-300'
+                            }`}
                           >
-                            <span className="@3xl:hidden">{L.alwaysShort(alwaysCount)}</span>
-                            <span className="hidden @3xl:inline">{L.always(alwaysCount)}</span>
-                          </button>
-                        )}
-                      </span>
-                      {/* 좁은 화면에서는 이름표 대신 점과 수만 보여요. */}
-                      {list.length > 0 && (
-                        <span className="flex items-center gap-1 px-1 @3xl:hidden">
-                          <span className={`size-1.5 rounded-full ${past ? 'bg-gray-300' : 'bg-brand'}`} />
-                          <span className="text-[11px] text-gray-500 tabular-nums">{list.length}</span>
-                        </span>
-                      )}
-                      <span className={`hidden flex-col gap-1 @3xl:flex ${past ? 'opacity-50' : ''}`}>
-                        {/* 그날 마감 공고를 기업별로 묶어 한 줄씩 둬요. 같은 기업 공고가 칸을 다 차지하지 않게요. 줄이지 않고 모두 보여줘서, 기업이 많으면 칸이 그만큼 길어져요. */}
-                        {groupByCompany(list).map(({ companyId, postings }) => {
-                          const company = companyOf(companyId)
-                          const one = postings.length === 1 ? postings[0] : null
-                          return (
+                            {day.getDate()}
+                          </span>
+                          {holiday && inMonth && getLang() === 'ko' && <span className={`hidden min-w-0 truncate text-[10.5px] text-red-400 @3xl:inline ${past ? 'opacity-50' : ''}`}>{holiday}</span>}
+                          {/* 그날 열려 있던 상시 채용 수예요. 누르면 아래에 그 공고들이 나와요. */}
+                          {alwaysCount > 0 && (
                             <button
-                              key={companyId}
                               type="button"
                               data-no-press
-                              title={one ? `${company.name}, ${one.title}` : `${company.name} ${L.companyCount(postings.length)}`}
-                              aria-label={one ? L.pick(one.title) : `${company.name} ${L.companyCount(postings.length)}`}
                               onClick={(event) => {
                                 event.stopPropagation()
-                                // 공고가 하나면 그 공고로, 여러 개면 그날을 골라 오른쪽에 다 보여줘요.
-                                if (one) pick(one, 'cell')
-                                else setSelected(key)
+                                setSelected(key)
+                                requestAnimationFrame(() => alwaysRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
                               }}
-                              className={`flex h-6 min-w-0 items-center gap-1.5 rounded-md px-1.5 text-left text-[12px] transition-colors ${
-                                postings.some((posting) => diagnosed.has(posting.id)) ? 'bg-brand-soft text-brand-hover hover:bg-brand-soft/70' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                              }`}
+                              className={`ml-auto min-w-0 shrink-0 rounded px-0.5 text-[10px] whitespace-nowrap tabular-nums @3xl:px-1 @3xl:text-[10.5px] transition-colors ${
+                                isSelected ? 'text-brand-hover' : 'text-gray-400 hover:text-gray-700'
+                              } ${past ? 'opacity-50' : ''}`}
                             >
-                              <CompanyMark company={company} className="size-4 rounded-[4px]! text-[8px]" />
-                              <span className="min-w-0 truncate">{one ? one.title : company.name}</span>
-                              {!one && <span className="ml-auto shrink-0 font-medium tabular-nums">{postings.length}</span>}
+                              <span className="@3xl:hidden">{L.alwaysShort(alwaysCount)}</span>
+                              <span className="hidden @3xl:inline">{L.always(alwaysCount)}</span>
                             </button>
-                          )
-                        })}
-                      </span>
-                    </div>
-                  )
-                })}
+                          )}
+                        </span>
+                        {/* 좁은 화면에서는 이름표 대신 점과 수만 보여요. */}
+                        {list.length > 0 && (
+                          <span className="flex items-center gap-1 px-1 @3xl:hidden">
+                            <span className={`size-1.5 rounded-full ${past ? 'bg-gray-300' : 'bg-brand'}`} />
+                            <span className="text-[11px] text-gray-500 tabular-nums">{list.length}</span>
+                          </span>
+                        )}
+                        <span className={`hidden flex-col gap-1 @3xl:flex ${past ? 'opacity-50' : ''}`}>
+                          {/* 그날 마감 공고를 기업별로 묶어 한 줄씩 둬요. 같은 기업 공고가 칸을 다 차지하지 않게요. 줄이지 않고 모두 보여줘서, 기업이 많으면 칸이 그만큼 길어져요. */}
+                          {groupByCompany(list).map(({ companyId, postings }) => {
+                            const company = companyOf(companyId)
+                            const one = postings.length === 1 ? postings[0] : null
+                            return (
+                              <button
+                                key={companyId}
+                                type="button"
+                                data-no-press
+                                title={one ? `${company.name}, ${one.title}` : `${company.name} ${L.companyCount(postings.length)}`}
+                                aria-label={one ? L.pick(one.title) : `${company.name} ${L.companyCount(postings.length)}`}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  // 공고가 하나면 그 공고로, 여러 개면 그날을 골라 오른쪽에 다 보여줘요.
+                                  if (one) pick(one, 'cell')
+                                  else setSelected(key)
+                                }}
+                                className={`flex h-6 min-w-0 items-center gap-1.5 rounded-md px-1.5 text-left text-[12px] transition-colors ${
+                                  postings.some((posting) => diagnosed.has(posting.id)) ? 'bg-brand-soft text-brand-hover hover:bg-brand-soft/70' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                              >
+                                <CompanyMark company={company} className="size-4 rounded-[4px]! text-[8px]" />
+                                <span className="min-w-0 truncate">{one ? one.title : company.name}</span>
+                                {!one && <span className="ml-auto shrink-0 font-medium tabular-nums">{postings.length}</span>}
+                              </button>
+                            )
+                          })}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
 
-            {/* 오른쪽 칸은 달력 옆에 멈춰 있고, 공고가 많으면 칸 안에서 스크롤해요. */}
-            <div className="@container flex flex-col gap-8 @5xl:sticky @5xl:top-0 @5xl:max-h-[calc(100dvh-10rem)] @5xl:overflow-y-auto">
-              {/* 고른 날짜에 마감하는 공고예요. 그달에 마감이 하나도 없으면 칸째 두지 않아요. */}
-              {monthCount > 0 && (
-                <section>
-                  <h2 className="text-[16px] font-semibold text-gray-900">{L.day(selectedDate.getMonth(), selectedDate.getDate())}</h2>
-                  {selectedList.length === 0 ? (
-                    <p className="mt-3 text-[13.5px] text-gray-500">{L.dayEmpty}</p>
-                  ) : (
+              {/* 오른쪽 칸은 달력 옆에 멈춰 있고, 공고가 많으면 칸 안에서 스크롤해요. */}
+              <div className="@container flex flex-col gap-8 @5xl:sticky @5xl:top-0 @5xl:max-h-[calc(100dvh-10rem)] @5xl:overflow-y-auto">
+                {/* 고른 날짜에 마감하는 공고예요. 그달에 마감이 하나도 없으면 칸째 두지 않아요. */}
+                {monthCount > 0 && (
+                  <section>
+                    <h2 className="text-[16px] font-semibold text-gray-900">{L.day(selectedDate.getMonth(), selectedDate.getDate())}</h2>
+                    {selectedList.length === 0 ? (
+                      <p className="mt-3 text-[13.5px] text-gray-500">{L.dayEmpty}</p>
+                    ) : (
+                      <ul className="mt-3 flex flex-col gap-2">
+                        {selectedList.slice(0, dayMore.count).map((posting) => (
+                          <DayRow key={posting.id} posting={posting} fit={fitOf(posting, resume)} onOpen={() => pick(posting, 'list')} />
+                        ))}
+                      </ul>
+                    )}
+                    {dayMore.more}
+                  </section>
+                )}
+
+                {/* 고른 날짜에 열려 있던 상시 채용 공고예요. */}
+                {selectedAlways.length > 0 && (
+                  <section ref={alwaysRef} className="scroll-mt-4">
+                    <h2 className="text-[16px] font-semibold text-gray-900">
+                      {L.alwaysTitle(selectedDate.getMonth(), selectedDate.getDate())} <span className="text-gray-400 tabular-nums">{selectedAlways.length}</span>
+                    </h2>
                     <ul className="mt-3 flex flex-col gap-2">
-                      {selectedList.slice(0, dayMore.count).map((posting) => (
-                        <DayRow key={posting.id} posting={posting} fit={fitOf(posting, resume)} diagnosed={diagnosed.has(posting.id)} onOpen={() => pick(posting, 'list')} />
+                      {selectedAlways.slice(0, alwaysMore.count).map((posting) => (
+                        <DayRow key={posting.id} posting={posting} fit={fitOf(posting, resume)} onOpen={() => pick(posting, 'list')} />
                       ))}
                     </ul>
-                  )}
-                  {dayMore.more}
-                </section>
-              )}
-
-              {/* 고른 날짜에 열려 있던 상시 채용 공고예요. */}
-              {selectedAlways.length > 0 && (
-                <section ref={alwaysRef} className="scroll-mt-4">
-                  <h2 className="text-[16px] font-semibold text-gray-900">
-                    {L.alwaysTitle(selectedDate.getMonth(), selectedDate.getDate())} <span className="text-gray-400 tabular-nums">{selectedAlways.length}</span>
-                  </h2>
-                  <ul className="mt-3 flex flex-col gap-2">
-                    {selectedAlways.slice(0, alwaysMore.count).map((posting) => (
-                      <DayRow key={posting.id} posting={posting} fit={fitOf(posting, resume)} diagnosed={diagnosed.has(posting.id)} onOpen={() => pick(posting, 'list')} />
-                    ))}
-                  </ul>
-                  {alwaysMore.more}
-                </section>
-              )}
+                    {alwaysMore.more}
+                  </section>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </LoadGate>
       </div>
       {confirmPick.dialog}
     </ScrollPage>
   )
 }
 
-/** 고른 날짜의 공고 한 줄이에요. 공고 탐색의 줄 보기와 같은 모양이고, 마감 시각을 오른쪽에 적어요. */
-function DayRow({ posting, fit, diagnosed, onOpen }: { posting: JobPosting; fit: number | null; diagnosed: boolean; onOpen: () => void }) {
-  const L = useMessages(TEXT)
-  const company = companyOf(posting.companyId)
+/** 고른 날짜의 공고 한 줄이에요. 공고 탐색의 줄 보기와 같은 모양이고, 진단함과 얼마나 맞는지, 마감 시각을 오른쪽에 적어요. */
+function DayRow({ posting, fit, onOpen }: { posting: JobPosting; fit: number | null; onOpen: () => void }) {
   const time = posting.deadline ? new Date(posting.deadline).toLocaleTimeString(getLang() === 'en' ? 'en' : 'ko', { hour: 'numeric', minute: '2-digit' }) : ''
   return (
-    <li>
-      <button type="button" data-no-press onClick={onOpen} className="group flex w-full items-center gap-4 rounded-2xl bg-gray-50 px-4 py-3.5 text-left transition-colors hover:bg-gray-100">
-        <CompanyMark company={company} className="size-10 text-[15px]" />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-semibold text-gray-900 transition-colors group-hover:text-brand-hover">{posting.title}</span>
-          <PostingMeta posting={posting} className="mt-1" careerClass="hidden @xl:flex" locationClass="hidden @2xl:flex">
-            <span className="truncate font-medium text-gray-700">{company.name}</span>
-          </PostingMeta>
-        </span>
-        {diagnosed && (
-          <Badge tone="brand" strong>
-            {L.diagnosed}
-          </Badge>
-        )}
-        <span className="hidden @md:inline-flex">
-          <FitTag fit={fit} />
-        </span>
-        {time && <span className="shrink-0 text-[13px] text-gray-500 tabular-nums">{time}</span>}
-      </button>
-    </li>
+    <PickRow
+      posting={posting}
+      onOpen={onOpen}
+      locationClass="hidden @2xl:flex"
+      trailing={
+        <>
+          <DiagnosedTag postingId={posting.id} />
+          <span className="hidden shrink-0 @md:inline-flex">
+            <FitTag fit={fit} />
+          </span>
+          {time && <span className="shrink-0 text-[13px] text-gray-500 tabular-nums">{time}</span>}
+        </>
+      }
+    />
   )
 }

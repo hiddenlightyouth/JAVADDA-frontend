@@ -70,8 +70,6 @@ export function SplitView({ children, side }: { children: ReactNode; side: React
   )
 }
 
-const toolbarButton = iconButton.md
-
 /** 공고나 기업이 아닌 글 하나예요. 기술 블로그의 글과 블로그 첫 화면을 열 때 써요. 앱 안에 띄울 수 있는 주소(`canEmbed`)만 넘겨요. 막힌 곳은 화면이 바로 새 탭으로 열어요. */
 export interface BrowserPage {
   url: string
@@ -212,12 +210,12 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
               setLoaded(false)
               setVersion((value) => value + 1)
             }}
-            className={toolbarButton}
+            className={iconButton.md}
           >
             <RefreshIcon className="size-4" />
           </button>
         )}
-        <a href={url} target="_blank" rel="noopener noreferrer" aria-label={L.external} title={L.external} className={toolbarButton}>
+        <a href={url} target="_blank" rel="noopener noreferrer" aria-label={L.external} title={L.external} className={iconButton.md}>
           <ExternalLinkIcon strokeWidth={1.5} />
         </a>
         <CloseButton label={L.close} size="md" onClick={onClose} />
@@ -263,18 +261,23 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
                     <SkillChip key={skill} name={skill} />
                   ))}
                 </div>
-                <h3 className={`mt-4 ${label}`}>{L.preferred}</h3>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {posting.preferred.map((skill) => (
-                    <SkillChip key={skill} name={skill} />
-                  ))}
-                </div>
+                {/* 우대 역량을 적지 않은 공고는 빈 제목만 남지 않게 칸째 두지 않아요. */}
+                {posting.preferred.length > 0 && (
+                  <>
+                    <h3 className={`mt-4 ${label}`}>{L.preferred}</h3>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {posting.preferred.map((skill) => (
+                        <SkillChip key={skill} name={skill} />
+                      ))}
+                    </div>
+                  </>
+                )}
               </section>
             ) : (
               <CompanySummary company={company} postings={POSTINGS.filter((item) => item.companyId === company.id)} onPosting={onPosting} />
             )}
 
-            <a href={url} target="_blank" rel="noopener noreferrer" className={`${primaryButton} mt-6 inline-flex items-center`}>
+            <a href={url} target="_blank" rel="noopener noreferrer" className={`${primaryButton} mt-6`}>
               {L.external}
             </a>
           </div>

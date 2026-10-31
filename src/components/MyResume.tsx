@@ -224,8 +224,8 @@ function SkillEditor({ resume }: { resume: Resume }) {
   const [listing, setListing] = useState(false)
   /** 방향키로 고른 추천 스킬의 순서. 고른 게 없으면 -1이에요. */
   const [active, setActive] = useState(-1)
-  const owned = resume.skills.map((skill) => skill.name)
-  const suggestions = useMemo(() => suggestSkills(draft, owned), [draft, owned.join()])
+  const owned = useMemo(() => resume.skills.map((skill) => skill.name), [resume.skills])
+  const suggestions = useMemo(() => suggestSkills(draft, owned), [draft, owned])
   const showList = listing && suggestions.length > 0
 
   function save(skills: ResumeSkill[]) {
@@ -330,7 +330,7 @@ function SkillEditor({ resume }: { resume: Resume }) {
             </ul>
           )}
         </div>
-        <button type="submit" disabled={!draft.trim()} className={`${toolButton} disabled:text-gray-400`}>
+        <button type="submit" disabled={!draft.trim()} className={toolButton}>
           <PlusIcon className="size-3.5" />
           {L.add}
         </button>
@@ -524,7 +524,8 @@ function ResumeCard({ resume, primary, selected, onSelect, onPrimary }: { resume
           </button>
         </Tip>
       </div>
-      <button type="button" onClick={onSelect} className="mt-3 truncate text-left text-[16px] leading-snug font-semibold text-gray-900 group-hover:text-brand-hover">
+      {/* 이름 버튼은 키보드로 고르는 자리예요. 누르면 카드(li)까지 올라가서 거기서 열어요. */}
+      <button type="button" className="mt-3 truncate text-left text-[16px] leading-snug font-semibold text-gray-900 group-hover:text-brand-hover">
         {resume.name}
       </button>
       <p className="mt-0.5 text-[12px] text-gray-400">

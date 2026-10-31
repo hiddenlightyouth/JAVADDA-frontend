@@ -1336,6 +1336,8 @@ export async function fetchPostings(filter: PostingFilter = {}, onLoad?: OnLoad)
     if (!postingById.has(posting.id)) {
       POSTINGS.push(posting)
       postingById.set(posting.id, posting)
+      // 새 공고의 스킬도 역량 더하기에서 고를 수 있게 다음에 다시 모아요.
+      knownSkills = null
     }
     return posting
   })
@@ -1349,10 +1351,9 @@ export function sortPostings(list: JobPosting[], sort: PostingSort, resume: Resu
 }
 
 /**
- * 다른 서비스 안(iframe)에 보이지 않게 막아 둔 채용 사이트예요(X-Frame-Options나 frame-ancestors).
+ * 다른 서비스 안(iframe)에 보이지 않게 막아 둔 사이트예요(X-Frame-Options나 frame-ancestors). 같은 도메인도 페이지마다 달라서 주소 앞부분으로 적어요.
  * 이 사이트의 원문은 앱 안의 미니 브라우저에 띄우지 않고, 공고 요약과 새 탭 버튼을 대신 보여줘요.
  */
-// 다른 서비스 안에 보이지 않게 막아 둔 사이트예요(X-Frame-Options, frame-ancestors). 같은 도메인도 페이지마다 달라서 주소 앞부분으로 적어요.
 const FRAME_BLOCKED = [
   'toss.im/career',
   'careers.kakao.com',
@@ -1381,7 +1382,6 @@ export function canEmbed(url: string): boolean {
   }
 }
 
-/** 마감까지 남은 날. 마감이 없으면 null이에요. */
 /** 공고가 올라온 지 며칠 지났는지예요. 오늘 올라왔으면 0이에요. */
 export function daysSince(posting: JobPosting): number {
   return Math.max(0, Math.floor((Date.now() - new Date(posting.postedAt).getTime()) / DAY))
@@ -1393,6 +1393,7 @@ export const SEARCH_SUGGESTIONS = ['Spring Boot', '토스', 'React', 'Kubernetes
 /** 추천 검색어가 바뀌는 간격(ms)이에요. */
 export const SUGGEST_MS = 2600
 
+/** 마감까지 남은 날. 마감이 없으면 null이에요. */
 export function daysLeft(posting: JobPosting): number | null {
   if (!posting.deadline) return null
   return Math.max(0, Math.ceil((new Date(posting.deadline).getTime() - Date.now()) / DAY))
@@ -1541,17 +1542,30 @@ export const useReports = () => useStore(reportsStore)
 export const useNotes = () => useStore(notesStore)
 export const usePlans = () => useStore(plansStore)
 
-/** 이 공고를 진단한 리포트 중 가장 최근 것이에요. 만들지 못한(failed) 리포트는 빼요. 없으면 null이에요. */
-function diagnosedOf(reports: Report[], postingId: string): Report | null {
-  let latest: Report | null = null
+/** 공고마다 그 공고를 진단한 리포트 중 가장 최근 것이에요. 만들지 못한(failed) 리포트는 빼요. */
+function latestByPosting(reports: Report[]): Map<string, Report> {
+  const latest = new Map<string, Report>()
   for (const report of reports) {
-    if (report.postingId !== postingId || report.status === 'failed') continue
-    if (!latest || report.createdAt > latest.createdAt) latest = report
+    if (report.status === 'failed') continue
+    const before = latest.get(report.postingId)
+    if (!before || report.createdAt > before.createdAt) latest.set(report.postingId, report)
   }
   return latest
 }
 
-/** 이 공고를 이미 진단했는지예요. 공고 카드와 줄이 "진단함" 표시를 붙일 때 써요. 로그인한 계정의 리포트에서 찾아요. */
+// 공고 카드마다 리포트 전체를 훑지 않게, 리포트 목록이 바뀔 때 한 번만 공고별 표를 만들어 나눠 써요.
+let diagnosedFor: Report[] | null = null
+let diagnosedTable = new Map<string, Report>()
+
+function diagnosedOf(reports: Report[], postingId: string): Report | null {
+  if (reports !== diagnosedFor) {
+    diagnosedFor = reports
+    diagnosedTable = latestByPosting(reports)
+  }
+  return diagnosedTable.get(postingId) ?? null
+}
+
+/** 이 공고를 이미 진단했는지예요. 공고 카드와 줄이 "진단함" 표시를 붙일 때 써요. 로그인한 계정의 리포트에서 찾아요. 없으면 null이에요. */
 export const useDiagnosed = (postingId: string) => useStore(reportsStore, (reports) => diagnosedOf(reports, postingId))
 
 /** 로그아웃하면 늘어나요. 로그아웃 전에 보낸 요청의 응답이 비운 저장소를 다시 채우지 않게 해요. */
@@ -1871,11 +1885,14 @@ export async function startDiagnosis(postingId: string): Promise<Report | null |
   if (!resume || resume.skills.length === 0 || !postingOf(postingId)) return null
   const existing = reportsStore.get().find((report) => report.postingId === postingId && report.resumeId === resume.id && report.status !== 'failed')
   if (existing) return existing
+  const started = generation
   const result = await call<ServerReport>('/reports', send('POST', { postingId }), true)
   if (!result.ok || !result.data) {
     fail(result)
     return 'failed'
   }
+  // 기다리는 사이에 로그아웃했으면 비운 저장소에 넣지 않아요.
+  if (started !== generation) return 'failed'
   const report = toReport(result.data)
   full.add(report.id)
   upsertReport(report)
@@ -1954,11 +1971,14 @@ export function deleteReport(id: string) {
  */
 export async function rerunReport(id: string): Promise<Report | null> {
   const target = currentId(id)
+  const started = generation
   const result = await call<ServerReport>(`/reports/${Number(target)}/rerun`, { method: 'POST' }, true)
   if (!result.ok || !result.data) {
     fail(result)
     return null
   }
+  // 기다리는 사이에 로그아웃했으면 비운 저장소에 넣지 않아요.
+  if (started !== generation) return null
   const next = toReport(result.data)
   full.add(next.id)
   full.delete(target)
@@ -1978,6 +1998,14 @@ const DOC_NAMES: Record<DocType, { ko: string; en: string }> = {
 
 export const docName = (doc: DocType) => DOC_NAMES[doc][getLang()]
 
+/** 서류 검증 응답을 꺼내요. 빈 칸은 빈 목록으로 채우고, 실패하면 토스트로 알리고 null이에요. */
+function reviewOf(result: ApiResult<DocumentReview>): DocumentReview | null {
+  if (!result.ok || !result.data) {
+    fail(result)
+    return null
+  }
+  return { ...result.data, paragraphs: result.data.paragraphs ?? [], appealMore: result.data.appealMore ?? [] }
+}
 
 /**
  * 서류를 공고에 맞춰 문단마다 읽어요(GET /reports/{id}/reviews/{docType}). 태그는 좋아요(good), 고쳐요(fix), 빠졌어요(missing), 면접 예상(interview)이에요.
@@ -1985,11 +2013,7 @@ export const docName = (doc: DocType) => DOC_NAMES[doc][getLang()]
  */
 export async function fetchReview(reportId: string, docType: DocType, onProgress?: OnProgress): Promise<DocumentReview | null> {
   const result = await withProgress(onProgress, (headers) => call<DocumentReview>(`/reports/${Number(currentId(reportId))}/reviews/${docType}`, {}, true, headers))
-  if (!result.ok || !result.data) {
-    fail(result)
-    return null
-  }
-  return { ...result.data, paragraphs: result.data.paragraphs ?? [], appealMore: result.data.appealMore ?? [] }
+  return reviewOf(result)
 }
 
 /**
@@ -1999,31 +2023,19 @@ export async function fetchReview(reportId: string, docType: DocType, onProgress
 export async function recheckParagraph(reportId: string, docType: DocType, paragraphId: string, text: string, onProgress?: OnProgress): Promise<DocumentReview | null> {
   const path = `/reports/${Number(currentId(reportId))}/reviews/${docType}/paragraphs/${encodeURIComponent(paragraphId)}/check`
   const result = await withProgress(onProgress, (headers) => call<DocumentReview>(path, send('POST', { text }), true, headers))
-  if (!result.ok || !result.data) {
-    fail(result)
-    return null
-  }
-  return { ...result.data, paragraphs: result.data.paragraphs ?? [], appealMore: result.data.appealMore ?? [] }
+  return reviewOf(result)
 }
 
 /** 서류 검증을 다시 해요(POST /reports/{id}/reviews/{docType}/regenerate). 저장된 결과를 지우고 AI가 새로 읽어요. 실패하면 토스트로 알리고 null이에요. */
 export async function regenerateReview(reportId: string, docType: DocType, onProgress?: OnProgress): Promise<DocumentReview | null> {
   const result = await withProgress(onProgress, (headers) => call<DocumentReview>(`/reports/${Number(currentId(reportId))}/reviews/${docType}/regenerate`, { method: 'POST' }, true, headers))
-  if (!result.ok || !result.data) {
-    fail(result)
-    return null
-  }
-  return { ...result.data, paragraphs: result.data.paragraphs ?? [], appealMore: result.data.appealMore ?? [] }
+  return reviewOf(result)
 }
 
 // ---------- 예상 면접 질문 ----------
 
-/**
- * 예상 면접 질문이에요(GET /reports/{id}/questions). 나올 확률 순서예요. onProgress를 주면 진행 상황을 알려줘요. 실패하면 토스트로 알리고 빈 목록이에요.
- * quiet면 실패해도 토스트를 띄우지 않아요. 서류 검증 탭이 문단과 질문을 잇느라 부를 때처럼 덤으로 받을 때 써요.
- */
-export async function fetchQuestions(reportId: string, onProgress?: OnProgress, quiet = false): Promise<InterviewQuestion[]> {
-  const result = await withProgress(onProgress, (headers) => call<InterviewQuestion[]>(`/reports/${Number(currentId(reportId))}/questions`, {}, true, headers))
+/** 예상 질문 응답을 나올 확률 순서로 꺼내요. 실패하면 토스트로 알리고(quiet면 조용히) 빈 목록이에요. */
+function questionsOf(result: ApiResult<InterviewQuestion[]>, quiet = false): InterviewQuestion[] {
   if (!result.ok || !Array.isArray(result.data)) {
     if (!quiet) fail(result)
     return []
@@ -2032,16 +2044,21 @@ export async function fetchQuestions(reportId: string, onProgress?: OnProgress, 
 }
 
 /**
+ * 예상 면접 질문이에요(GET /reports/{id}/questions). 나올 확률 순서예요. onProgress를 주면 진행 상황을 알려줘요. 실패하면 토스트로 알리고 빈 목록이에요.
+ * quiet면 실패해도 토스트를 띄우지 않아요. 서류 검증 탭이 문단과 질문을 잇느라 부를 때처럼 덤으로 받을 때 써요.
+ */
+export async function fetchQuestions(reportId: string, onProgress?: OnProgress, quiet = false): Promise<InterviewQuestion[]> {
+  const result = await withProgress(onProgress, (headers) => call<InterviewQuestion[]>(`/reports/${Number(currentId(reportId))}/questions`, {}, true, headers))
+  return questionsOf(result, quiet)
+}
+
+/**
  * 예상 질문을 새로 뽑아요(POST /reports/{id}/questions/regenerate). 서버가 예전 질문과 겹치지 않게 다시 만들어요.
  * 새 질문은 아이디가 달라서 지난 답변은 새 질문에 붙지 않아요. 실패하면 토스트로 알리고 빈 목록이에요.
  */
 export async function regenerateQuestions(reportId: string, onProgress?: OnProgress): Promise<InterviewQuestion[]> {
   const result = await withProgress(onProgress, (headers) => call<InterviewQuestion[]>(`/reports/${Number(currentId(reportId))}/questions/regenerate`, { method: 'POST' }, true, headers))
-  if (!result.ok || !Array.isArray(result.data)) {
-    fail(result)
-    return []
-  }
-  return [...result.data].sort((a, b) => b.probability - a.probability)
+  return questionsOf(result)
 }
 
 // ---------- 면접 연습 ----------

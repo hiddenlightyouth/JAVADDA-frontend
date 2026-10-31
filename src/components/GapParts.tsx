@@ -1,18 +1,24 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { careerName, categoryName, COMPANY_CATEGORIES, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, skillLogoOf, useDiagnosed, type Company, type CompanyCategory, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
-import { getLang, messages, useMessages } from '../lib/i18n'
+import { messages, useMessages } from '../lib/i18n'
 import { ConfirmDialog } from './Dialog'
 import { BriefcaseIcon, CheckIcon, CloseIcon, ConceptIcon, MapPinIcon, PersonIcon, TriangleIcon, type Concept } from './Icons'
-import { Badge, primaryButton, ProgressRing, stagger } from './ui'
+import { Badge, chipShape, primaryButton, ProgressRing, stagger } from './ui'
 
 /**
- * 취업 갭 진단의 화면들이 같이 쓰는 작은 부품이에요. 기업 머리글자, 적합도 표시, 스킬 이름표, 공고 카드, 흰 칸, 레이더와 막대 그래프가 있어요.
+ * 취업 갭 진단의 화면들이 같이 쓰는 작은 부품이에요. 기업 머리글자, 적합도 표시, 스킬 이름표, 공고 카드, 회색 칸, 레이더와 막대 그래프가 있어요.
  * 새 화면도 여기 것을 쓰고, 같은 모양을 화면마다 다시 그리지 않아요.
  */
 
 /** 올라온 지 이 날수까지는 신규로 보여줘요. */
 const NEW_DAYS = 3
+
+/** 적합도 구간의 경계예요. 이 값 이상이면 높음, FIT_MID 이상이면 중간, 그 아래는 낮음이에요. 태그, 막대, 점수 띠가 모두 이 기준이에요. */
+const FIT_HIGH = 70
+const FIT_MID = 50
+type FitBand = 'brand' | 'amber' | 'red'
+const fitBand = (fit: number): FitBand => (fit >= FIT_HIGH ? 'brand' : fit >= FIT_MID ? 'amber' : 'red')
 
 const TEXT = messages({
   ko: {
@@ -22,8 +28,8 @@ const TEXT = messages({
     toneTips: { met: '이력서에서 충분히 보여요.', partial: '이력서에 있지만 근거가 약해요.', missing: '이력서에서 보이지 않아요.' } as Partial<Record<ChipTone, string>>,
     always: '상시 채용',
     posted: (days: number) => (days <= NEW_DAYS ? '신규' : `${days}일 전`),
-    fitTag: (fit: number): string => (fit >= 70 ? '높음' : fit >= 50 ? '중간' : '낮음'),
-    dday: (days: number) => (days === 0 ? 'D-day' : `D-${days}`),
+    fitTag: (fit: number): string => ({ brand: '높음', amber: '중간', red: '낮음' })[fitBand(fit)],
+    dday: (days: number) => (days === 0 ? '오늘 마감' : `D-${days}`),
     family: '직군',
     career: '경력',
     location: '지역',
@@ -66,8 +72,8 @@ const TEXT = messages({
     toneTips: { met: 'Clearly shown in your resume.', partial: 'In your resume, but with thin evidence.', missing: 'Not found in your resume.' },
     always: 'Rolling',
     posted: (days: number) => (days <= NEW_DAYS ? 'New' : `${days} days ago`),
-    fitTag: (fit: number) => (fit >= 70 ? 'High' : fit >= 50 ? 'Medium' : 'Low'),
-    dday: (days: number) => (days === 0 ? 'D-day' : `D-${days}`),
+    fitTag: (fit: number) => ({ brand: 'High', amber: 'Medium', red: 'Low' })[fitBand(fit)],
+    dday: (days: number) => (days === 0 ? 'Closes today' : `D-${days}`),
     family: 'Role',
     career: 'Level',
     location: 'Location',
@@ -172,7 +178,7 @@ const CONCEPT_RULES: [RegExp, Concept][] = [
 ]
 
 /** 스킬 이름에 맞는 개념 아이콘이에요. */
-export const conceptOf = (skill: string): Concept => CONCEPT_RULES.find(([pattern]) => pattern.test(skill))?.[1] ?? 'code'
+const conceptOf = (skill: string): Concept => CONCEPT_RULES.find(([pattern]) => pattern.test(skill))?.[1] ?? 'code'
 
 /**
  * 기술 스택 로고를 둥근 네모에 넣어요. 기업 로고처럼 다크 모드에서도 바탕은 흰색이에요.
@@ -186,19 +192,18 @@ export function SkillMark({ skill, className = 'size-9' }: { skill: string; clas
       {logo && !broken ? (
         <img src={logo} alt="" loading="lazy" onError={() => setBroken(true)} className="size-full object-contain" />
       ) : (
-        <ConceptIcon concept={conceptOf(skill)} className="size-[70%] text-[#2e90fa]" />
+        <ConceptIcon concept={conceptOf(skill)} className="size-[70%] text-brand" />
       )}
     </span>
   )
 }
 
-/** 적합도 퍼센트예요. 숫자만 메인 컬러로 강조하고, 아래에 가는 막대로 한 번 더 보여줘요. */
 /**
  * 마우스를 올리거나 키보드로 안쪽에 가면 뜨는 짧은 설명이에요. 숫자나 색만 보고는 뜻을 모를 때 붙여요.
  * 잠깐(0.3초) 머물러야 떠서 훑고 지나갈 때는 거슬리지 않아요. 카드나 스크롤 칸이 넘치는 부분을 잘라도 가려지지 않게,
  * 말풍선은 화면 맨 바깥(body)에 고정 위치로 그려요. 위에 자리가 없으면 아래로 뒤집고, 창 가장자리를 넘지 않게 맞춰요.
+ * side가 right면 오른쪽에 꼬리 달린 말풍선으로 띄워요. 사이드바처럼 옆이 비어 있는 곳에 써요. 오른쪽에 자리가 없으면 위로 돌아가요.
  */
-/** side가 right면 오른쪽에 꼬리 달린 말풍선으로 띄워요. 사이드바처럼 옆이 비어 있는 곳에 써요. */
 export function Tip({ text, children, className = 'inline-flex max-w-full', side = 'top' }: { text: string; children: ReactNode; className?: string; side?: TipSide }) {
   const ref = useRef<HTMLSpanElement>(null)
   const timer = useRef(0)
@@ -258,53 +263,64 @@ function TipBubble({ anchor, text, side }: { anchor: DOMRect; text: string; side
   )
 }
 
-/**
- * 적합도에 맞는 색이에요. 높음(70% 이상)은 메인 컬러, 중간(50% 이상)은 노란색, 낮음은 빨간색이에요.
- * 적합도 태그(`FitTag`), 적합도 막대(`FitBadge`), 사이드바의 리포트 줄이 같은 색을 써요.
- */
-export function fitColor(fit: number): { text: string; bar: string } {
-  if (fit >= 70) return { text: 'text-brand', bar: 'bg-brand' }
-  if (fit >= 50) return { text: 'text-amber-700', bar: 'bg-amber-500' }
-  return { text: 'text-red-600', bar: 'bg-red-500' }
+/** 구간마다의 색이에요. 글자는 짙게, 막대는 그 구간의 기본 색이에요. */
+const FIT_COLORS: Record<FitBand, { text: string; bar: string }> = {
+  brand: { text: 'text-brand', bar: 'bg-brand' },
+  amber: { text: 'text-amber-700', bar: 'bg-amber-500' },
+  red: { text: 'text-red-600', bar: 'bg-red-500' },
 }
 
+/**
+ * 적합도에 맞는 색이에요. 높음(70% 이상)은 메인 컬러, 중간(50% 이상)은 노란색, 낮음은 빨간색이에요.
+ * 적합도 태그(`FitTag`), 적합도 막대(`FitBadge`), 점수 머리말(`ScoreHero`)의 구간 이름, 사이드바의 리포트 줄이 같은 색을 써요.
+ */
+export function fitColor(fit: number): { text: string; bar: string } {
+  return FIT_COLORS[fitBand(fit)]
+}
+
+/** 적합도 퍼센트예요. 가는 막대와 숫자를 구간 색으로 칠하고, 마우스를 올리면 무엇을 재는지 알려줘요. 이력서가 없으면(fit이 null) 안내 문구를, compact면 빈 자리를 둬요. */
 export function FitBadge({ fit, compact = false }: { fit: number | null; compact?: boolean }) {
   const L = useMessages(TEXT)
   if (fit === null) return <span className="text-[12px] text-gray-400">{compact ? '' : L.noFit}</span>
+  const color = fitColor(fit)
   return (
     <Tip text={L.fitTip}>
       <span className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap" aria-label={L.fit(fit)}>
         <span className="h-1.5 w-12 overflow-hidden rounded-full bg-gray-200/70" aria-hidden>
-          <span className={`block h-full rounded-full ${fitColor(fit).bar}`} style={{ width: `${fit}%` }} />
+          <span className={`block h-full rounded-full ${color.bar}`} style={{ width: `${fit}%` }} />
         </span>
-        <span className={`text-[13px] font-semibold tabular-nums ${fitColor(fit).text}`}>{fit}%</span>
+        <span className={`text-[13px] font-semibold tabular-nums ${color.text}`}>{fit}%</span>
       </span>
     </Tip>
   )
 }
 
-type ChipTone = 'plain' | 'met' | 'partial' | 'missing' | 'active'
+type ChipTone = 'plain' | 'met' | 'partial' | 'missing'
 
 const CHIP_TONES: Record<ChipTone, string> = {
   plain: 'border-gray-200 bg-white text-gray-700',
   met: 'border-brand bg-brand-soft text-brand-hover',
   partial: 'border-dashed border-gray-300 bg-white text-gray-700',
   missing: 'border-dashed border-gray-200 bg-white text-gray-400',
-  active: 'border-brand bg-brand-soft text-brand-hover',
 }
 
-/** 스킬 이름표예요. 공고와 이력서의 스킬을 같은 모양으로 늘어놓아요. onRemove가 있으면 오른쪽에 X가 붙어요. */
-export function SkillChip({ name, tone = 'plain', hint, onRemove, onClick, className = '' }: {
+/**
+ * 스킬 이름표예요. 공고와 이력서의 스킬을 같은 모양으로 늘어놓아요. onRemove가 있으면 오른쪽에 X가 붙어요.
+ * 공고 기준으로 칠한 이름표는 올리면 그 색의 뜻을 알려주고, tip을 주면 그 말을 앞에 붙여 말풍선 하나로 보여줘요(기업 상세의 공고 수).
+ */
+export function SkillChip({ name, tone = 'plain', hint, tip: extra, onRemove, onClick, className = '' }: {
   name: string
   tone?: ChipTone
   /** 이름 옆에 옅게 붙는 값(숙련도 등) */
   hint?: string
+  /** 마우스를 올리면 색의 뜻 앞에 붙여 보여줄 말 */
+  tip?: string
   onRemove?: () => void
   onClick?: () => void
   className?: string
 }) {
   const L = useMessages(TEXT)
-  const base = `inline-flex h-7 max-w-full items-center gap-1.5 rounded-md border px-2.5 text-[12.5px] ${CHIP_TONES[tone]} ${className}`
+  const base = `${chipShape} ${CHIP_TONES[tone]} ${className}`
   const body = (
     <>
       {tone === 'met' && <CheckIcon className="size-3 shrink-0" />}
@@ -312,8 +328,8 @@ export function SkillChip({ name, tone = 'plain', hint, onRemove, onClick, class
       {hint && <span className="text-[11px] opacity-70 tabular-nums">{hint}</span>}
     </>
   )
-  // 공고 기준으로 칠한 이름표는 색만으로는 뜻을 모르니, 올리면 무슨 뜻인지 알려줘요.
-  const tip = L.toneTips[tone]
+  // 말풍선을 겹쳐 띄우지 않게, 넘겨받은 말과 색의 뜻을 하나로 이어요.
+  const tip = [extra, L.toneTips[tone]].filter(Boolean).join(' ')
   if (onClick) {
     const button = (
       <button type="button" onClick={onClick} className={`${base} transition-colors hover:border-brand hover:text-brand-hover`}>
@@ -365,12 +381,8 @@ export function CheckMark({ status }: { status: RequirementCheck['status'] }) {
   return <CloseIcon className="size-4 shrink-0 text-red-500" strokeWidth={1.8} label={L.checks.missing} />
 }
 
-export const cardsGrid = 'grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4'
-/** 한 줄만 보여주는 카드 줄. 둘째 줄부터는 높이를 0으로 두고 잘라서, 화면 폭에 들어가는 만큼만 보여요. */
-export const cardsRow = 'grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] auto-rows-[0px] grid-rows-[auto] gap-x-4 overflow-hidden'
-
-/** 카드 위에 붙는 작은 태그예요. 신규와 적합도 높음은 메인 컬러, 적합도 중간은 노란색, 마감까지 남은 날과 적합도 낮음은 빨간색, 나머지는 회색이에요. 공고 탐색의 마감 태그도 같은 모양이에요. */
-export function CardTag({ tone, children }: { tone: 'brand' | 'amber' | 'red' | 'gray'; children: ReactNode }) {
+/** 카드 위에 붙는 작은 태그예요. 신규와 적합도 높음은 메인 컬러, 적합도 중간은 노란색, 적합도 낮음은 빨간색, 나머지는 회색이에요. 마감 태그(`DeadlineTag`)도 같은 모양이에요. */
+export function CardTag({ tone, children }: { tone: FitBand | 'gray'; children: ReactNode }) {
   return (
     <Badge tone={tone} strong>
       {children}
@@ -385,7 +397,20 @@ export function CardTag({ tone, children }: { tone: 'brand' | 'amber' | 'red' | 
 export function FitTag({ fit }: { fit: number | null }) {
   const L = useMessages(TEXT)
   if (fit === null) return null
-  return <CardTag tone={fit >= 70 ? 'brand' : fit >= 50 ? 'amber' : 'red'}>{L.fitTag(fit)}</CardTag>
+  return <CardTag tone={fitBand(fit)}>{L.fitTag(fit)}</CardTag>
+}
+
+/**
+ * 마감까지 남은 날 태그예요(D-12, 오늘 마감, 마감이 없으면 상시 채용). 사흘 안으로 남으면 메인 컬러로 알려요.
+ * 공고 탐색의 카드와 줄, 채용 지도의 공고 줄, 기업 상세의 공고 카드(`PostingTile`)가 같이 써요.
+ */
+export function DeadlineTag({ left }: { left: number | null }) {
+  const L = useMessages(TEXT)
+  return (
+    <CardTag tone={left !== null && left <= 3 ? 'brand' : 'gray'}>
+      <span className="tabular-nums">{left === null ? L.always : L.dday(left)}</span>
+    </CardTag>
+  )
 }
 
 /**
@@ -407,7 +432,7 @@ export function DiagnosedTag({ postingId }: { postingId: string }) {
 }
 
 /** 진행 단계 이름을 화면에 보여줄 문장으로 바꿔요. 모르는 단계면 "처리하고 있어요"예요. */
-export function useStageText(stage: string): string {
+function useStageText(stage: string): string {
   const L = useMessages(TEXT)
   return L.stages[stage] ?? L.stageFallback
 }
@@ -456,9 +481,19 @@ export function PostingMeta({ posting, size = 'sm', careerClass = 'flex', locati
 }
 
 /**
- * 기업을 로고와 이름으로 한 번에 고르는 버튼 줄이에요. 공고 탐색과 기술 블로그가 같이 써요.
- * 고른 기업을 다시 누르면 풀려요. allLabel을 넘기면 맨 앞에 전체 버튼이 생겨요. 넓은 목록에서는 여러 줄로, 좁으면 옆으로 넘겨요.
+ * 거르는 줄의 버튼 모양이에요(44px). 고른 것은 메인 컬러 테두리와 연한 바탕이에요. 기업 버튼 줄(`CompanyFilter`)과 분류 버튼 줄(`CategoryFilter`)이 같이 쓰고,
+ * 같은 줄의 검색창, 드롭다운(size="lg")과 높이가 같아요. 기업을 고르는 일이 화면의 첫 동작이라 다른 도구 버튼(36px)보다 한 단계 크게 둬서 누르기 쉽게 해요.
+ * 글자만 있는 버튼은 px-5, 로고를 앞에 붙인 버튼은 `filterLogoChip`을 덧붙여요.
  */
+const filterChip = (on: boolean) =>
+  `flex h-11 shrink-0 items-center rounded-full border text-[14.5px] font-medium transition-colors ${
+    on ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
+  }`
+/** 로고(`CompanyMark`, size-8)를 앞에 붙인 거르는 버튼의 여백이에요. */
+const filterLogoChip = 'gap-2.5 py-1 pr-4.5 pl-1.5'
+/** 거르는 버튼 줄의 바깥이에요. 넓은 목록에서는 여러 줄로, 좁으면 옆으로 넘겨요. */
+const filterRow = '-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap'
+
 /**
  * 기업의 사업 분류를 고르는 버튼 줄이에요. 기업이 많아져서 공고 탐색과 마감 달력은 기업 대신 이것으로 골라요. 공고가 있는 분류만 보여줘요.
  * 네카라쿠배당토가 아닌 기업을 골라 들어오면(기업 상세, 새 진단) 그 기업 이름을 앞에 두고, 누르면 풀려요.
@@ -474,24 +509,22 @@ export function CategoryFilter({ postings, value, onChange, label, allLabel, com
 }) {
   const present = new Set(postings.map((posting) => companyOf(posting.companyId).category))
   const categories = COMPANY_CATEGORIES.filter((category) => present.has(category) || category === value)
-  const tone = (on: boolean) => (on ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950')
-  const chip = 'flex h-10 shrink-0 items-center rounded-full border px-4 text-[14px] font-medium transition-colors'
   // 고를 분류가 없으면(서버가 분류를 주지 않을 때) 전체 버튼 하나만 남지 않게 줄을 두지 않아요.
   if (categories.length === 0 && !company) return null
   return (
-    <div role="radiogroup" aria-label={label} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap @2xl:overflow-visible">
+    <div role="radiogroup" aria-label={label} className={`${filterRow} @2xl:overflow-visible`}>
       {company && (
-        <button type="button" onClick={onClearCompany} className={`${chip} gap-2 pl-1.5 ${tone(true)}`}>
-          <CompanyMark company={company} className="size-7 rounded-full! text-[11px]" />
+        <button type="button" onClick={onClearCompany} className={`${filterChip(true)} ${filterLogoChip}`}>
+          <CompanyMark company={company} className="size-8 rounded-full! text-[12px]" />
           {company.name}
           <CloseIcon className="size-3" />
         </button>
       )}
-      <button type="button" role="radio" aria-checked={!value} onClick={() => onChange(null)} className={`${chip} ${tone(!value)}`}>
+      <button type="button" role="radio" aria-checked={!value} onClick={() => onChange(null)} className={`${filterChip(!value)} px-5`}>
         {allLabel}
       </button>
       {categories.map((category) => (
-        <button key={category} type="button" role="radio" aria-checked={value === category} onClick={() => onChange(value === category ? null : category)} className={`${chip} ${tone(value === category)}`}>
+        <button key={category} type="button" role="radio" aria-checked={value === category} onClick={() => onChange(value === category ? null : category)} className={`${filterChip(value === category)} px-5`}>
           {categoryName(category)}
         </button>
       ))}
@@ -499,6 +532,10 @@ export function CategoryFilter({ postings, value, onChange, label, allLabel, com
   )
 }
 
+/**
+ * 기업을 로고와 이름으로 한 번에 고르는 버튼 줄이에요. 공고 탐색, 마감 달력, 기술 블로그가 같이 써요.
+ * 고른 기업을 다시 누르면 풀려요. allLabel을 넘기면 맨 앞에 전체 버튼이 생겨요. 넓은 목록에서는 여러 줄로, 좁으면 옆으로 넘겨요.
+ */
 export function CompanyFilter({ companies, value, onChange, label, allLabel, oneLine = false }: {
   companies: readonly Company[]
   /** 목록 폭이 넉넉하면 한 줄만 쓰고, 들어가지 않는 기업은 숨겨요. 버튼은 늘이지 않아서 기업이 적어도 모양이 그대로예요. 폭은 화면이 아니라 목록을 보고 정해서 모니터, 사이드바, 원문 칸이 달라도 맞아요. */
@@ -508,12 +545,10 @@ export function CompanyFilter({ companies, value, onChange, label, allLabel, one
   label: string
   allLabel?: string
 }) {
-  const tone = (on: boolean) => (on ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950')
   return (
-    // 기업을 고르는 일이 화면의 첫 동작이라, 다른 도구 버튼(36px)보다 한 단계 크게(44px) 둬서 누르기 쉽게 해요.
-    <div role="radiogroup" aria-label={label} className={`-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap ${oneLine ? '@2xl:max-h-12 @2xl:overflow-hidden' : '@2xl:overflow-visible'}`}>
+    <div role="radiogroup" aria-label={label} className={`${filterRow} ${oneLine ? '@2xl:max-h-12 @2xl:overflow-hidden' : '@2xl:overflow-visible'}`}>
       {allLabel && (
-        <button type="button" role="radio" aria-checked={!value} onClick={() => onChange(null)} className={`flex h-11 shrink-0 items-center rounded-full border px-5 text-[14.5px] font-medium transition-colors ${tone(!value)}`}>
+        <button type="button" role="radio" aria-checked={!value} onClick={() => onChange(null)} className={`${filterChip(!value)} px-5`}>
           {allLabel}
         </button>
       )}
@@ -524,7 +559,7 @@ export function CompanyFilter({ companies, value, onChange, label, allLabel, one
           role="radio"
           aria-checked={value === item.id}
           onClick={() => onChange(value === item.id ? null : item.id)}
-          className={`flex h-11 shrink-0 items-center gap-2.5 rounded-full border py-1 pr-4.5 pl-1.5 text-[14.5px] font-medium transition-colors ${tone(value === item.id)}`}
+          className={`${filterChip(value === item.id)} ${filterLogoChip}`}
         >
           <CompanyMark company={item} className="size-8 rounded-full! text-[12px]" />
           {item.name}
@@ -542,10 +577,10 @@ export function skillTone(skill: string, resume: Resume | null): ChipTone {
 }
 
 /**
- * 공고 자체를 앞에 세운 카드예요. 새 진단 화면의 모든 공고 줄에서 써요.
- * 왼쪽 위 태그에 올라온 때(posted)나 마감까지 남은 날(deadline)이나 얼마나 맞는지(fit, 나와 잘 맞는 공고와 다시 볼 공고)를 적고, 그 아래에 공고 제목, 기업,
+ * 공고 자체를 앞에 세운 카드예요. 기업 상세의 채용 중인 공고와 리포트의 더 잘 맞는 다른 공고가 같이 써요.
+ * 왼쪽 위 태그에 올라온 때(posted)나 마감까지 남은 날(deadline)이나 얼마나 맞는지(fit)를 적고, 그 아래에 공고 제목, 기업,
  * 아이콘을 붙인 직군과 경력과 지역, 필수 역량을 놓아요. 테두리 없이 옅은 회색 바탕으로 구분해요.
- * 공고 카드와 크기가 같아서 같은 줄 규칙(cardsRow)에 들어가요.
+ * 마우스를 올리면 바탕이 한 단계 짙어져요(회색 칸 안에서는 흰색에서 gray-100으로).
  */
 export function PostingTile({ posting, resume, fit = fitOf(posting, resume), tag, onGray = false, order = 0, onOpen }: {
   posting: JobPosting
@@ -572,13 +607,13 @@ export function PostingTile({ posting, resume, fit = fitOf(posting, resume), tag
             {tag === 'posted' ? (
               <CardTag tone={since <= NEW_DAYS ? 'brand' : 'gray'}>{L.posted(since)}</CardTag>
             ) : tag === 'deadline' ? (
-              <CardTag tone="red">{left === null ? L.always : L.dday(left)}</CardTag>
+              <DeadlineTag left={left} />
             ) : (
               <FitTag fit={fit} />
             )}
           </span>
           <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-gray-500">
-            <CompanyMark company={company} className="size-5 rounded-md text-[9px]" />
+            <CompanyMark company={company} className="size-5 rounded-md! text-[9px]" />
             <span className="truncate">{company.name}</span>
           </span>
         </span>
@@ -603,7 +638,7 @@ export function PostingTile({ posting, resume, fit = fitOf(posting, resume), tag
   )
 }
 
-/** 회색 바탕 위의 흰 칸이에요. 제목 줄 오른쪽에 버튼을 둘 수 있어요. */
+/** 흰 바탕 위의 회색 칸이에요(테두리 없이 gray-50). 안에 놓는 이름표와 작은 칸은 흰색이에요. 제목 줄 오른쪽에 버튼을 둘 수 있어요. */
 export function Panel({ title, action, children, className = '' }: { title?: ReactNode; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section className={`rounded-2xl bg-gray-50 p-5 ${className}`}>
@@ -689,14 +724,14 @@ export function ScoreRing({ score, size = 112 }: { score: number; size?: number 
 
 /** 점수 띠의 구간이에요. 공고 카드의 얼마나 맞는지 태그와 같은 기준이에요. */
 const BANDS = [
-  { from: 0, to: 50 },
-  { from: 50, to: 70 },
-  { from: 70, to: 100 },
+  { from: 0, to: FIT_MID },
+  { from: FIT_MID, to: FIT_HIGH },
+  { from: FIT_HIGH, to: 100 },
 ]
 
 /**
- * 점수를 크게 내세우는 머리말이에요. 회색 칸 없이 흰 바탕에 놓고, 왼쪽에 한마디 평가와 설명, 오른쪽에 큰 숫자와 구간 띠를 둬요.
- * 띠는 50과 70에서 끊겨서, 점수가 어느 구간에 있는지 한눈에 보여요. 리포트의 적합도와 서류 검증의 부합도가 같이 써요.
+ * 점수를 크게 내세우는 머리말이에요. `Panel`과 같은 회색 칸에 놓고, 왼쪽에 한마디 평가와 설명, 오른쪽에 큰 숫자와 구간 이름, 구간 띠를 둬요.
+ * 띠는 50과 70에서 끊겨서, 점수가 어느 구간에 있는지 한눈에 보여요. 구간 이름은 적합도 태그(`FitTag`)와 같은 색이에요. 리포트의 적합도와 서류 검증의 부합도가 같이 써요.
  */
 export function ScoreHero({ score, label, meta, title, body }: { score: number; label: string; meta?: ReactNode; title: string; body: string }) {
   const L = useMessages(TEXT)
@@ -711,7 +746,7 @@ export function ScoreHero({ score, label, meta, title, body }: { score: number; 
         <div className="flex items-end justify-between gap-3">
           <p className="text-[13px] text-gray-500">
             {label}
-            <span className="mt-0.5 block font-medium text-brand">{L.fitTag(score)}</span>
+            <span className={`mt-0.5 block font-medium ${fitColor(score).text}`}>{L.fitTag(score)}</span>
           </p>
           <p className="text-[44px] leading-none font-semibold text-gray-900 tabular-nums">
             {score}
@@ -815,9 +850,6 @@ export function Delta({ value, unit = '' }: { value: number; unit?: string }) {
   return <span className={`text-[12.5px] font-medium tabular-nums ${value > 0 ? 'text-brand' : value < 0 ? 'text-gray-500' : 'text-gray-400'}`}>{`${sign}${value}${unit}`}</span>
 }
 
-/** 숫자를 지금 언어에 맞게 적어요. */
-export const number = (value: number) => value.toLocaleString(getLang() === 'ko' ? 'ko-KR' : 'en-US')
-
 /** 퍼센트(0에서 1)를 "49%"처럼 적어요. */
 export const percent = (value: number) => `${Math.round(value * 100)}%`
 
@@ -837,7 +869,9 @@ export function usePickConfirm() {
       }}
     />
   )
-  return { ask: (posting: JobPosting, go: () => void) => setAsking({ posting, go }), dialog }
+  // ask는 그릴 때마다 새로 만들지 않아서, 받는 쪽이 의존 목록에 넣어도 다시 돌지 않아요.
+  const ask = useCallback((posting: JobPosting, go: () => void) => setAsking({ posting, go }), [])
+  return { ask, dialog }
 }
 
 function PickConfirm({ posting, onCancel, onConfirm }: { posting: JobPosting; onCancel: () => void; onConfirm: () => void }) {

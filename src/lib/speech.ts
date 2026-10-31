@@ -197,14 +197,28 @@ export function setPracticeVoice(key: string) {
 
 /** 다음 질문의 음성을 미리 받아 둬요. 질문이 바뀔 때 기다리지 않고 바로 읽어요. 실패해도 읽을 때 다시 받아요. */
 export function prefetchVoice(text: string, voice: string | null) {
-  void fetchVoice(text, voice, new AbortController().signal)
+  const name = voiceName(text, voice)
+  if (voices.has(name) || prefetching.has(name)) return
+  const request = fetchVoice(text, voice, new AbortController().signal).finally(() => prefetching.delete(name))
+  prefetching.set(name, request)
 }
+
+const voiceName = (text: string, voice: string | null) => `${voice ?? ''}\n${text}`
+
+/** 미리 받는 중인 음성이에요. 받는 사이에 그 질문을 읽으면 같은 음성을 두 번 만들지 않고 이것을 기다려요. 미리 받기는 멈추지 않아요. */
+const prefetching = new Map<string, Promise<Voice | null>>()
 
 /** 사람 목소리 음성을 받아요. 못 받으면 null이에요. */
 async function fetchVoice(text: string, voice: string | null, signal: AbortSignal): Promise<Voice | null> {
-  const name = `${voice ?? ''}\n${text}`
+  const name = voiceName(text, voice)
   const known = voices.get(name)
   if (known) return known
+  const ahead = prefetching.get(name)
+  if (ahead) {
+    // 미리 받기가 실패했으면 아래에서 다시 받아요.
+    const got = await ahead
+    if (got) return got
+  }
   if (remoteOff) return null
   try {
     const response = await fetch('/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, voice: voice ?? undefined }), signal })
@@ -282,18 +296,24 @@ export function useSpeak() {
       const korean = /[가-힣]/.test(text)
       utterance.lang = korean ? 'ko-KR' : 'en-US'
       let boundary = -1
+      let finished = false
       const started = performance.now()
       const estimate = Math.max(1, text.length * SECONDS_PER_CHAR[korean ? 'ko' : 'en']) * 1000
       utterance.onboundary = (event) => {
         boundary = Math.min(1, (event.charIndex + (event.charLength || 0)) / Math.max(1, text.length))
       }
+      // 다 읽으면 칠하기를 멈춰요. 멈추지 않으면 끝난 뒤에도 매 프레임 돌면서 다 읽은 1을 예전 값으로 덮어써요.
       const tick = () => {
-        if (mine !== turn.current) return
+        if (finished || mine !== turn.current) return
         setProgress(boundary >= 0 ? boundary : Math.min(0.97, (performance.now() - started) / estimate))
         requestAnimationFrame(tick)
       }
-      utterance.onend = () => ended(mine)
-      utterance.onerror = () => ended(mine)
+      const done = () => {
+        finished = true
+        ended(mine)
+      }
+      utterance.onend = done
+      utterance.onerror = done
       window.speechSynthesis.speak(utterance)
       requestAnimationFrame(tick)
     },
@@ -323,7 +343,10 @@ export function useSpeak() {
         audio.current = player
         player.onended = () => ended(mine)
         player.onerror = () => {
-          if (mine === turn.current) speakInBrowser(text, mine)
+          if (mine !== turn.current || audio.current !== player) return
+          // 사람 목소리의 칠하기가 브라우저 음성의 칠하기와 겹치지 않게 놓아요. 재생 실패와 오류가 둘 다 와도 브라우저 음성은 한 번만 읽어요.
+          audio.current = null
+          speakInBrowser(text, mine)
         }
         const tick = () => {
           if (mine !== turn.current || audio.current !== player || player.ended) return
@@ -336,7 +359,9 @@ export function useSpeak() {
         await player.play().then(
           () => requestAnimationFrame(tick),
           () => {
-            if (mine === turn.current) speakInBrowser(text, mine)
+            if (mine !== turn.current || audio.current !== player) return
+            audio.current = null
+            speakInBrowser(text, mine)
           },
         )
       })()

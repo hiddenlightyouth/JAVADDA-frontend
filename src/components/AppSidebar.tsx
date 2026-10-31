@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type HTMLAttributes, type MouseEvent } from 'react'
+import { useEffect, useRef, useState, type HTMLAttributes, type ReactNode } from 'react'
 import { useDismiss } from '../hooks/useDismiss'
 import { isWebApp } from '../lib/app'
+import { followLink } from '../lib/links'
 import { track } from '../lib/analytics'
 import { signOut, useAuth, type Me } from '../lib/auth'
 import { openBugReport, useFeedback } from '../lib/feedback'
@@ -14,6 +15,7 @@ import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../li
 import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DotsIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { fitColor, Tip } from './GapParts'
+import { Avatar } from './Avatar'
 
 const TEXT = messages({
   ko: {
@@ -113,8 +115,6 @@ const tone = (active: boolean) => (active ? 'bg-gray-200/70 text-gray-900' : 'te
 /** 사이드바 아래의 아이콘 버튼이에요. 회색 사이드바 위라 한 단계 짙은 회색으로 깔려요. */
 const sideIconButton = 'flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-gray-200/50 hover:text-gray-700'
 
-const plain = (event: MouseEvent) => !(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)
-
 /** 리포트 줄을 끌어 옮길 때 놓일 자리예요. 위로 옮기면 그 줄의 위, 아래로 옮기면 아래에 메인 컬러 선이 생겨요. */
 type DropMark = 'before' | 'after' | null
 
@@ -154,11 +154,7 @@ function ReportRow({ report, urgency, active, menuOpen, pinned, drag, dragging, 
       <a
         href={`/r/${report.id}`}
         aria-current={active ? 'page' : undefined}
-        onClick={(event) => {
-          if (!plain(event)) return
-          event.preventDefault()
-          onOpen()
-        }}
+        onClick={followLink(onOpen)}
         className={`min-w-0 flex-1 px-3 py-2 ${urgency.kind === 'closed' && !active ? 'opacity-60' : ''}`}
       >
         <p className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-900">
@@ -226,7 +222,18 @@ function ResumeFolder({ group, open, onToggle }: { group: ResumeGroup; open: boo
   )
 }
 
-function NavLink({ href, active, onClick, icon, label, shortcut, locked }: { href: string; active: boolean; onClick: () => void; icon: React.ReactNode; label: string; shortcut?: string; locked?: string }) {
+/** 사이드바 위쪽의 화면 링크예요. 오른쪽 끝에 단축키(shortcut)나 다른 표시(trailing)를 붙여요. */
+function NavLink({ href, active, onClick, icon, label, shortcut, trailing, locked }: {
+  href: string
+  active: boolean
+  onClick: () => void
+  icon: ReactNode
+  label: string
+  shortcut?: string
+  trailing?: ReactNode
+  /** 아직 쓸 수 없으면 그 이유예요. 흐리게 두고 마우스를 올리면 알려줘요. */
+  locked?: string
+}) {
   // 아직 쓸 수 없는 메뉴는 흐리게 두고, 마우스를 올리면 왜 쓸 수 없는지 알려줘요.
   if (locked)
     return (
@@ -238,19 +245,11 @@ function NavLink({ href, active, onClick, icon, label, shortcut, locked }: { hre
       </Tip>
     )
   return (
-    <a
-      href={href}
-      aria-current={active ? 'page' : undefined}
-      onClick={(event) => {
-        if (!plain(event)) return
-        event.preventDefault()
-        onClick()
-      }}
-      className={`${link} mt-1.5 gap-2 ${tone(active)}`}
-    >
+    <a href={href} aria-current={active ? 'page' : undefined} onClick={followLink(onClick)} className={`${link} mt-1.5 gap-2 ${tone(active)}`}>
       {icon}
       <span className="flex-1">{label}</span>
       {shortcut && <Kbd>{shortcut}</Kbd>}
+      {trailing}
     </a>
   )
 }
@@ -317,15 +316,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
       {isWebApp ? (
         // 웹에서는 왼쪽 위의 사이드바 버튼 옆에 로고를 두고, 누르면 새 진단 화면으로 가요. 높이는 헤더와 맞춰요.
         <div className="flex h-14 shrink-0 items-center pl-12">
-          <a
-            href="/app"
-            onClick={(event) => {
-              if (!plain(event)) return
-              event.preventDefault()
-              onNew()
-            }}
-            className="inline-flex items-center"
-          >
+          <a href="/app" onClick={followLink(onNew)} className="inline-flex items-center">
             <ScriptMark className="h-6 w-auto" />
           </a>
         </div>
@@ -352,9 +343,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           }}
           label={text.explore}
           shortcut="T"
-          icon={
-<SearchIcon className="size-4 shrink-0" strokeWidth={1.4} />
-          }
+          icon={<SearchIcon className="size-4 shrink-0" strokeWidth={1.4} />}
         />
         <NavLink
           href="/recommend"
@@ -366,9 +355,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           label={text.recommend}
           shortcut="R"
           locked={resume ? undefined : text.recommendLocked}
-          icon={
-<StarIcon className="size-4 shrink-0" />
-          }
+          icon={<StarIcon className="size-4 shrink-0" />}
         />
         <NavLink
           href="/calendar"
@@ -401,26 +388,20 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           }}
           label={text.blogs}
           shortcut="G"
-          icon={
-<BookIcon className="size-4 shrink-0" />
-          }
+          icon={<BookIcon className="size-4 shrink-0" />}
         />
-        <a
+        {/* 대표 이력서가 있으면 오른쪽 끝에 체크를 붙여서, 진단과 추천을 바로 쓸 수 있다는 걸 알려요. 서류 이름은 적지 않아요. */}
+        <NavLink
           href="/resume"
-          aria-current={page === 'resume' ? 'page' : undefined}
-          onClick={(event) => {
-            if (!plain(event)) return
-            event.preventDefault()
+          active={page === 'resume'}
+          onClick={() => {
             track('resume_open', { from: 'sidebar' })
             onResume()
           }}
-          className={`${link} mt-1.5 gap-2 ${tone(page === 'resume')}`}
-        >
-          <DocumentIcon />
-          <span className="flex-1">{text.resume}</span>
-          {/* 대표 이력서가 있으면 오른쪽 끝에 체크를 붙여서, 진단과 추천을 바로 쓸 수 있다는 걸 알려요. 서류 이름은 적지 않아요. */}
-          {resume && <CheckIcon className="size-3.5 shrink-0 text-brand" label={text.resumeReady} />}
-        </a>
+          label={text.resume}
+          icon={<DocumentIcon />}
+          trailing={resume && <CheckIcon className="size-3.5 shrink-0 text-brand" label={text.resumeReady} />}
+        />
       </div>
 
       <div className="mt-5 flex items-center justify-between px-6">
@@ -429,12 +410,10 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           <a
             href="/history"
             aria-current={page === 'history' ? 'page' : undefined}
-            onClick={(event) => {
-              if (!plain(event)) return
-              event.preventDefault()
+            onClick={followLink(() => {
               track('history_open', { from: 'sidebar' })
               onHistory()
-            }}
+            })}
             className={`text-xs font-medium transition-colors ${page === 'history' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-900'}`}
           >
             {list.all}
@@ -454,7 +433,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
                   <ResumeFolder group={group} open={open} onToggle={() => toggleFolder(group.id)} />
                   {open && (
                     <ul className="mt-0.5 ml-[18px] space-y-0.5 border-l border-gray-200 pl-1">
-                      {arranged(group).map(({ report, urgency }, index, list) => (
+                      {arranged(group).map(({ report, urgency }, index, rows) => (
                         <ReportRow
                           key={report.id}
                           report={report}
@@ -465,7 +444,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
                           dragging={drag?.id === report.id}
                           mark={
                             drag && drag.folder === group.id && drag.over === report.id && drag.id !== report.id
-                              ? list.findIndex((item) => item.report.id === drag.id) < index
+                              ? rows.findIndex((item) => item.report.id === drag.id) < index
                                 ? 'after'
                                 : 'before'
                               : null
@@ -552,6 +531,7 @@ function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onLogi
   const text = useMessages(TEXT)
   const name = me?.name || text.me
   const usage = useUsage()
+  const left = usage ? resetLeft(usage.resetAt) : null
 
   useDismiss(open, ref, () => setOpen(false))
 
@@ -578,10 +558,10 @@ function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onLogi
                   {text.changePlan}
                 </button>
               </div>
-              <div className="h-1.5 overflow-hidden rounded-full bg-gray-100" aria-hidden>
+              <div className="h-1.5 overflow-hidden rounded-full bg-gray-200/70" aria-hidden>
                 <div className="h-full bg-brand" style={{ width: `${Math.min(100, (usage.used / usage.limit) * 100)}%` }} />
               </div>
-              {resetLeft(usage.resetAt) && <p className="mt-1.5 text-[11.5px] text-gray-400">{text.reset(resetLeft(usage.resetAt)!)}</p>}
+              {left && <p className="mt-1.5 text-[11.5px] text-gray-400">{text.reset(left)}</p>}
             </div>
           )}
 
@@ -636,9 +616,7 @@ function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onLogi
           className={`flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 text-left transition-colors ${tone(open || page === 'me' || page === 'articles' || page === 'admin')}`}
         >
           {/* 프로필 사진 대신 이름의 첫 글자를 동그라미에 넣어요. */}
-          <span aria-hidden className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-[13px] font-semibold text-brand-hover">
-            {[...(me?.name?.trim() || '?')][0].toUpperCase()}
-          </span>
+          <Avatar name={me?.name ?? ''} />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[13.5px] font-semibold text-gray-900">{name}</span>
             {usage?.plan && <span className="block truncate text-[12px] text-gray-500">{PLAN_NAMES[usage.plan]}</span>}
