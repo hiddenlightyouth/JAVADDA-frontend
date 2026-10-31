@@ -11,7 +11,7 @@ import { Badge, iconButton, loadCenter, LoadProgress, Segmented, toolButton } fr
 
 /**
  * 마감 달력이에요. 공고의 마감일을 달력에 놓아서, 어느 기업의 어떤 공고가 언제 마감인지 한눈에 봐요.
- * 날짜 칸에는 그날 마감하는 공고를 기업 로고와 제목으로 몇 개까지 적고, 날짜를 누르면 아래에 그날의 공고를 모두 보여줘요.
+ * 날짜 칸에는 그날 마감하는 공고를 기업 로고와 제목으로 모두 적고, 날짜를 누르면 아래에 그날의 공고를 모두 보여줘요.
  * 기업으로 거르고, 진단한 공고만 볼 수도 있어요. 상시 채용(마감 없음)은 올라온 날부터 계속 열려 있어서,
  * 날짜 칸마다 그날 열려 있던 상시 채용 수를 날짜 옆에 작게 적어요. 날짜를 고르면 아래에 그날 마감하는 공고와 그날 열려 있던 상시 채용 공고를 함께 보여줘요.
  * 공고를 누르면 해당 공고로 이동할지 한 번 더 묻고, 진단으로 가요(이미 진단했으면 그 리포트로 가요).
@@ -31,7 +31,6 @@ const TEXT = messages({
     always: (count: number) => `${count}개의 상시 채용`,
     alwaysShort: (count: number) => `상시 ${count}`,
     alwaysTitle: (month: number, date: number) => `${month + 1}월 ${date}일 상시 채용`,
-    more: (count: number) => `${count}개 더`,
     day: (month: number, date: number) => `${month + 1}월 ${date}일 마감`,
     dayEmpty: '정보를 찾을 수 없음',
     diagnosed: '진단함',
@@ -50,7 +49,6 @@ const TEXT = messages({
     always: (count: number) => `${count} rolling`,
     alwaysShort: (count: number) => `+${count}`,
     alwaysTitle: (month: number, date: number) => `Rolling on ${new Date(2000, month, date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`,
-    more: (count: number) => `${count} more`,
     day: (month: number, date: number) => `Closing ${new Date(2000, month, date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`,
     dayEmpty: 'No information found',
     diagnosed: 'Diagnosed',
@@ -60,9 +58,6 @@ const TEXT = messages({
 
 type Scope = 'all' | 'diagnosed'
 const SCOPES: Scope[] = ['all', 'diagnosed']
-
-/** 날짜 칸에 적는 공고 수예요. 나머지는 수만 적어요. */
-const SHOWN_PER_DAY = 3
 
 type Loaded = JobPosting[] | 'failed'
 
@@ -278,7 +273,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
                         </span>
                       )}
                       <span className={`hidden flex-col gap-1 @3xl:flex ${past ? 'opacity-50' : ''}`}>
-                        {list.slice(0, SHOWN_PER_DAY).map((posting) => (
+                        {list.map((posting) => (
                           <button
                             key={posting.id}
                             type="button"
@@ -297,7 +292,6 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
                             <span className="min-w-0 truncate">{posting.title}</span>
                           </button>
                         ))}
-                        {list.length > SHOWN_PER_DAY && <span className="px-1.5 text-[11.5px] text-gray-500 tabular-nums">{L.more(list.length - SHOWN_PER_DAY)}</span>}
                       </span>
                     </div>
                   )
