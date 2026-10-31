@@ -163,8 +163,8 @@ function JobCard({ posting, resume, fit, order, onOpen, onView, onAnalyze, onCom
   )
 }
 
-/** 마감까지 남은 날이에요. 사흘 안으로 남으면 메인 컬러로 알려요. */
-function DeadlineTag({ left }: { left: number | null }) {
+/** 마감까지 남은 날이에요. 사흘 안으로 남으면 메인 컬러로 알려요. 채용 지도의 공고 줄도 같이 써요. */
+export function DeadlineTag({ left }: { left: number | null }) {
   const L = useMessages(TEXT)
   return (
     <CardTag tone={left !== null && left <= 3 ? 'brand' : 'gray'}>

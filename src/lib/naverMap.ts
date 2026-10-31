@@ -1,5 +1,5 @@
 /**
- * 네이버 지도(NAVER Maps JavaScript API v3)를 불러와요. 기업 상세의 위치 칸이 써요.
+ * 네이버 지도(NAVER Maps JavaScript API v3)를 불러와요. 채용 지도와 기업 상세의 위치 칸이 써요.
  * 네이버 클라우드 플랫폼에서 받은 Client ID(`VITE_NAVER_MAP_KEY_ID`)가 있을 때만 켜지고, 없거나 인증에 실패하면 SVG 지도(`KoreaMap`)로 그려요.
  * Client ID는 브라우저에 공개되는 값이고, 대신 네이버 클라우드 콘솔에 등록한 사이트 주소에서만 동작해요.
  */
@@ -7,10 +7,30 @@
 const KEY_ID = (import.meta.env.VITE_NAVER_MAP_KEY_ID as string | undefined) || undefined
 
 /** 화면이 쓰는 만큼만 적은 네이버 지도 타입이에요. */
+export interface NaverMap {
+  destroy: () => void
+  getZoom: () => number
+  morph: (center: unknown, zoom?: number) => void
+  fitBounds: (bounds: unknown, margin?: { top: number; right: number; bottom: number; left: number }) => void
+  getProjection: () => { fromCoordToOffset: (coord: unknown) => { x: number; y: number } }
+}
+
+export interface NaverMarker {
+  setMap: (map: NaverMap | null) => void
+}
+
 export interface NaverMaps {
-  Map: new (element: HTMLElement, options: Record<string, unknown>) => { destroy: () => void }
+  Map: new (element: HTMLElement, options: Record<string, unknown>) => NaverMap
   LatLng: new (lat: number, lng: number) => unknown
-  Marker: new (options: Record<string, unknown>) => unknown
+  LatLngBounds: new (southWest: unknown, northEast: unknown) => unknown
+  Marker: new (options: Record<string, unknown>) => NaverMarker
+  Point: new (x: number, y: number) => unknown
+  Position: Record<string, number>
+  ZoomControlStyle: Record<string, number>
+  Event: {
+    addListener: (target: unknown, name: string, listener: () => void) => unknown
+    removeListener: (listener: unknown) => void
+  }
 }
 
 declare global {

@@ -96,3 +96,8 @@ export function placesOf(location: string): Place[] {
   return found.filter((item) => ids.has(item.id))
 }
 
+/** 서울, 경기, 권역 이름처럼 동네를 알 수 없는 넓은 자리예요. */
+export const isBroad = (place: Place) => !place.within
+
+/** 두 자리 사이의 대략적인 거리(km)예요. 우리나라 위도에서 경도 1도는 대체로 88km, 위도 1도는 111km예요. */
+export const kmBetween = (a: { lon: number; lat: number }, b: { lon: number; lat: number }) => Math.hypot((a.lon - b.lon) * 88, (a.lat - b.lat) * 111)

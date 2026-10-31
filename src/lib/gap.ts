@@ -1344,6 +1344,9 @@ const COMPANY_OFFICE: Record<string, CompanyOffice> = {
   bucketplace: { address: '서울 서초구 서초대로74길 4', lat: 37.4966, lon: 127.0257 },
 }
 
+/** 기업 본사 자리예요. 모르면 없어요. 채용 지도가 핀을 본사 자리에 꽂을 때 써요. */
+export const officeOf = (companyId: string): CompanyOffice | undefined => COMPANY_OFFICE[companyId]
+
 /** 스킬마다 면접에서 자주 나오는 질문이에요. 기출이 쌓이기 전이라 보기 자료예요. */
 const QUESTION_BANK: Record<string, { question: string; category: QuestionCategory }[]> = {
   'Spring Boot': [{ question: 'Spring의 빈 생명주기와 의존성 주입 방식을 설명해 주세요.', category: 'tech' }],

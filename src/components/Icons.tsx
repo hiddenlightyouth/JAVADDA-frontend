@@ -51,6 +51,26 @@ export function PlusIcon({ className = 'size-3.5', strokeWidth = 1.6, label }: I
   )
 }
 
+/** 채용 지도의 내 위치 버튼이에요. */
+export function CrosshairIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <circle cx="8" cy="8" r="4.5" />
+      <circle cx="8" cy="8" r="1.4" fill="currentColor" />
+      <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2" />
+    </Icon>
+  )
+}
+
+/** 지도의 축소 버튼이에요. */
+export function MinusIcon({ className = 'size-3.5', strokeWidth = 1.6, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M3 8h10" />
+    </Icon>
+  )
+}
+
 export function ChevronDownIcon({ className = 'size-3 text-gray-400', strokeWidth = 1.6, label }: IconProps) {
   return (
     <Icon className={className} strokeWidth={strokeWidth} label={label}>
