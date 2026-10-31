@@ -28,6 +28,8 @@ function trackPage(page: Page | null) {
       return trackPageView(page.kind)
     case 'blogs':
       return trackPageView('blogs', { company: page.company ?? 'all' })
+    case 'company':
+      return trackPageView('company', { company: page.id })
     case 'diagnose':
       return trackPageView('diagnose', { posting: page.postingId })
     case 'report':

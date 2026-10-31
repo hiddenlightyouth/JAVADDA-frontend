@@ -1096,6 +1096,84 @@ export function daysLeft(posting: JobPosting): number | null {
   return Math.max(0, Math.ceil((new Date(posting.deadline).getTime() - Date.now()) / DAY))
 }
 
+// ---------- 기업 상세 ----------
+
+export interface CompanyQuestion {
+  question: string
+  category: QuestionCategory
+  /** 이 질문이 나온 직군 */
+  family: JobFamily
+}
+
+export interface CompanyProfile {
+  company: Company
+  about: string
+  /** 지금 열려 있는 공고. 올라온 순서예요. */
+  postings: JobPosting[]
+  /** 이 기업 공고에 적힌 스킬을 레이더 축마다 묶었어요. 스킬마다 몇 개의 공고에 적혔는지 같이 있어요. */
+  stack: { axis: string; skills: { skill: string; count: number }[] }[]
+  questions: CompanyQuestion[]
+}
+
+/** 기업 소개 한 줄이에요. 기업 소개 사이트를 보고 줄여 적었어요. */
+const COMPANY_ABOUT: Record<string, string> = {
+  toss: '송금에서 시작해 증권, 은행, 결제까지 금융을 쉽게 쓰는 서비스를 만들어요.',
+  kakao: '카카오톡을 중심으로 사람과 서비스를 잇는 플랫폼을 만들어요.',
+  naver: '검색을 중심으로 커머스, 콘텐츠, 클라우드 서비스를 만들어요.',
+  woowa: '배달의민족을 만들고, 음식 주문과 배달 경험을 다듬어요.',
+  coupang: '로켓배송을 중심으로 커머스와 물류 시스템을 직접 만들어요.',
+  line: '메신저 LINE과 그 위의 서비스를 글로벌 사용자에게 만들어요.',
+  daangn: '동네 이웃을 잇는 중고거래와 지역 커뮤니티 서비스를 만들어요.',
+  musinsa: '패션 커머스 무신사와 브랜드, 물류 서비스를 만들어요.',
+  dunamu: '디지털 자산 거래소 업비트와 증권 서비스를 만들어요.',
+  zigbang: '집을 구하고 사는 과정을 온라인으로 옮기는 서비스를 만들어요.',
+  wanted: '채용 플랫폼 원티드와 HR 솔루션을 만들어요.',
+  bucketplace: '인테리어 콘텐츠와 커머스를 잇는 오늘의집을 만들어요.',
+}
+
+/** 스킬마다 면접에서 자주 나오는 질문이에요. 기출이 쌓이기 전이라 보기 자료예요. */
+const QUESTION_BANK: Record<string, { question: string; category: QuestionCategory }[]> = {
+  'Spring Boot': [{ question: 'Spring의 빈 생명주기와 의존성 주입 방식을 설명해 주세요.', category: 'tech' }],
+  JPA: [{ question: 'JPA에서 N+1 문제가 생기는 이유와 해결 방법을 말해 주세요.', category: 'tech' }],
+  Kotlin: [{ question: 'Kotlin의 null 안정성이 Java와 어떻게 다른지 설명해 주세요.', category: 'tech' }],
+  Java: [{ question: 'JVM의 메모리 구조와 GC가 동작하는 방식을 설명해 주세요.', category: 'tech' }],
+  Kafka: [{ question: 'Kafka에서 메시지 순서를 보장하려면 어떻게 해야 하나요?', category: 'tech' }],
+  Redis: [{ question: 'Redis를 캐시로 쓸 때 데이터 정합성을 어떻게 맞췄나요?', category: 'project' }],
+  MySQL: [{ question: '인덱스가 동작하는 원리와, 인덱스를 타지 않는 경우를 말해 주세요.', category: 'tech' }],
+  Kubernetes: [{ question: 'Pod가 계속 재시작될 때 어떤 순서로 원인을 찾나요?', category: 'tech' }],
+  Docker: [{ question: '컨테이너와 가상 머신의 차이를 설명해 주세요.', category: 'tech' }],
+  '테스트 코드': [{ question: '테스트하기 어려운 코드를 만났을 때 어떻게 구조를 바꿨나요?', category: 'project' }],
+  TypeScript: [{ question: 'any와 unknown의 차이와, 타입 가드를 쓴 경험을 말해 주세요.', category: 'tech' }],
+  React: [{ question: '불필요한 리렌더링을 찾고 줄인 경험을 말해 주세요.', category: 'project' }],
+  'Next.js': [{ question: '서버 렌더링과 정적 생성 중 어떤 기준으로 골랐나요?', category: 'tech' }],
+  Go: [{ question: '고루틴과 채널로 동시성을 다룬 경험을 말해 주세요.', category: 'tech' }],
+  Python: [{ question: '데이터 파이프라인에서 실패한 작업을 다시 돌리는 방법을 설명해 주세요.', category: 'project' }],
+  Swift: [{ question: 'ARC에서 순환 참조가 생기는 경우와 해결 방법을 말해 주세요.', category: 'tech' }],
+  '자료구조와 알고리즘': [{ question: '해시 테이블에서 충돌이 생기면 어떻게 처리하나요?', category: 'cs' }],
+  네트워크: [{ question: '브라우저에 주소를 입력하면 어떤 일이 일어나는지 순서대로 말해 주세요.', category: 'cs' }],
+  운영체제: [{ question: '프로세스와 스레드의 차이, 컨텍스트 스위칭 비용을 설명해 주세요.', category: 'cs' }],
+}
+
+/** 어느 기업이든 자주 나오는 컬처핏 질문이에요. */
+const CULTURE_QUESTIONS = ['우리 회사에 지원한 이유와, 입사하면 가장 먼저 해 보고 싶은 일을 말해 주세요.', '실패했던 프로젝트와 그 뒤에 바꾼 것을 말해 주세요.']
+
+/** 기업 하나의 상세예요. `loadCatalog`가 받아 둔 기업과 공고로 소개, 열린 공고, 기술 스택, 면접 질문을 만들어요. 기술 블로그 요약은 `blogs.ts`에 있어요. 없는 기업이면 null이에요. */
+export async function fetchCompany(id: string): Promise<CompanyProfile | null> {
+  const company = companyById.get(id)
+  if (!company) return null
+  const postings = POSTINGS.filter((posting) => posting.companyId === id).sort((a, b) => (a.postedAt < b.postedAt ? 1 : -1))
+  const counts = new Map<string, number>()
+  for (const posting of postings) for (const skill of [...posting.required, ...posting.preferred]) counts.set(skill, (counts.get(skill) ?? 0) + 1)
+  const skills = [...counts].sort((a, b) => b[1] - a[1]).map(([skill, count]) => ({ skill, count }))
+  const stack = SKILL_AXES.map((axis) => ({ axis: axis as string, skills: skills.filter((item) => axisOf(item.skill) === axis) })).filter((group) => group.skills.length > 0)
+  const familyOf = (skill: string) => postings.find((posting) => posting.required.includes(skill) || posting.preferred.includes(skill))?.family ?? 'backend'
+  const questions: CompanyQuestion[] = [
+    ...skills.flatMap(({ skill }) => (QUESTION_BANK[skill] ?? []).map((item) => ({ ...item, family: familyOf(skill) }))),
+    ...CULTURE_QUESTIONS.map((question) => ({ question, category: 'culture' as const, family: postings[0]?.family ?? 'backend' })),
+  ].slice(0, 6)
+  return { company, about: COMPANY_ABOUT[id] ?? '', postings, stack, questions }
+}
+
 
 // ---------- 저장소 ----------
 
@@ -1602,3 +1680,4 @@ export async function submitAnswer(reportId: string, question: InterviewQuestion
   }
   return result.data
 }
+
