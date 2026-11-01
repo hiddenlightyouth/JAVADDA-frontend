@@ -167,7 +167,7 @@ const cardBorder = (left: number | null) => (left === 0 ? 'border-red-400' : 'bo
 
 /**
  * 홈 바깥으로 이어지는 둥근 모서리예요. 흰 칸 안에 카드와 같은 바탕의 칸을 넣고 오른쪽 위만 카드 모서리와 같이 둥글려서(rounded-2xl),
- * 카드 테두리가 홈으로 휘어 들어가는 곳도 카드의 다른 모서리와 똑같은 선으로 그려져요. 테두리 1px은 홈의 테두리와 겹치게 놓아요.
+ * 카드 테두리가 홈으로 휘어 들어가는 곳도 카드의 다른 모서리와 똑같은 선으로 그려져요. 자리는 홈의 테두리 안쪽에서 재서, 100%만큼 떨어뜨리면 모서리의 테두리 1px이 홈의 테두리와 딱 겹쳐요.
  */
 function NotchCorner({ className, border }: { className: string; border: string }) {
   return (
@@ -190,8 +190,8 @@ function DeadlineNotch({ left }: { left: number | null }) {
       className={`absolute -top-px -right-px flex items-center rounded-bl-2xl border-b border-l bg-white pr-5 pl-5 text-[15px] font-bold tabular-nums ${cardBorder(left)} ${tone}`}
       style={{ height: NOTCH_HEIGHT }}
     >
-      <NotchCorner className="top-0 right-[calc(100%-1px)]" border={cardBorder(left)} />
-      <NotchCorner className="top-[calc(100%-1px)] right-0" border={cardBorder(left)} />
+      <NotchCorner className="top-0 right-full" border={cardBorder(left)} />
+      <NotchCorner className="top-full right-0" border={cardBorder(left)} />
       {left === null ? L.always : left === 0 ? L.today : `D-${left}`}
     </span>
   )
