@@ -1470,26 +1470,44 @@ const COMPANY_OFFICE: Record<string, CompanyOffice> = {
 }
 
 /**
- * 기업 규모예요. 고용24에서 온 기업은 서버가 업종 자리에 규모(공공기관, 공기업, 대기업, 중견기업)를 적어 보내서 그걸 읽어요.
- * 서버가 업종을 적어 주는 기업은 공정거래위원회가 기업집단으로 지정한 곳만 화면에 적어 뒀어요. 서버가 규모를 주게 되면 그쪽으로 옮겨요.
+ * 기업 규모예요. 채용 사이트가 흔히 쓰는 분류(대기업, 중견기업, 중소기업, 스타트업, 외국계, 공기업, 공공기관)를 따라요.
+ * 고용24에서 온 기업은 서버가 업종 자리에 규모(공공기관, 공기업, 대기업, 중견기업)를 적어 보내서 그걸 읽어요. 그냥 "기업"으로 온 곳은 규모를 몰라요.
+ * 서버가 업종을 적어 주는 기업은 화면에 적어 뒀어요. 공정거래위원회가 기업집단으로 지정한 곳과 그 계열사는 대기업,
+ * 해외 기업이 대주주인 곳은 외국계, 투자를 받아 크고 있는 곳은 스타트업이에요. 서버가 규모를 주게 되면 그쪽으로 옮겨요.
  */
-const SIZE_WORDS = ['공공기관', '공기업', '대기업', '중견기업', '중소기업']
-const COMPANY_SIZE: Record<string, string> = { kakao: '대기업', naver: '대기업', coupang: '대기업', dunamu: '대기업', krafton: '대기업' }
-
-export const isSizeWord = (industry: string) => SIZE_WORDS.includes(industry)
-export const companySizeOf = (company: Company): string | undefined => (isSizeWord(company.industry) ? company.industry : COMPANY_SIZE[company.id])
-
-/** 공고 탐색의 규모 메뉴에서 고르는 묶음이에요. 공기업은 공공기관에 같이 넣어요. 규모를 모르는 기업은 어느 묶음에도 들지 않아요. */
-export type SizeGroup = 'large' | 'mid' | 'small' | 'public'
-export const SIZE_GROUPS: SizeGroup[] = ['large', 'mid', 'small', 'public']
-const SIZE_GROUP_OF: Record<string, SizeGroup> = { 대기업: 'large', 중견기업: 'mid', 중소기업: 'small', 공공기관: 'public', 공기업: 'public' }
-const SIZE_GROUP_NAMES: Record<SizeGroup, string> = { large: '대기업', mid: '중견기업', small: '중소기업', public: '공공기관' }
-const SIZE_GROUP_NAMES_EN: Record<SizeGroup, string> = { large: 'Large', mid: 'Mid-sized', small: 'Small', public: 'Public' }
-export const sizeGroupOf = (company: Company): SizeGroup | undefined => {
-  const size = companySizeOf(company)
-  return size ? SIZE_GROUP_OF[size] : undefined
+export type CompanySize = '대기업' | '중견기업' | '중소기업' | '스타트업' | '외국계' | '공기업' | '공공기관'
+export const COMPANY_SIZES: CompanySize[] = ['대기업', '중견기업', '중소기업', '스타트업', '외국계', '공기업', '공공기관']
+const COMPANY_SIZE: Record<string, CompanySize> = {
+  kakao: '대기업',
+  naver: '대기업',
+  coupang: '대기업',
+  dunamu: '대기업',
+  krafton: '대기업',
+  line: '대기업',
+  woowa: '외국계',
+  toss: '스타트업',
+  daangn: '스타트업',
+  musinsa: '스타트업',
+  zigbang: '스타트업',
+  bucketplace: '스타트업',
+  yanolja: '스타트업',
+  miso: '스타트업',
+  kurly: '스타트업',
+  myrealtrip: '스타트업',
 }
-export const sizeGroupName = (group: SizeGroup) => (getLang() === 'en' ? SIZE_GROUP_NAMES_EN[group] : SIZE_GROUP_NAMES[group])
+const SIZE_NAMES_EN: Record<CompanySize, string> = {
+  대기업: 'Large',
+  중견기업: 'Mid-sized',
+  중소기업: 'Small',
+  스타트업: 'Startup',
+  외국계: 'Foreign-owned',
+  공기업: 'State-owned',
+  공공기관: 'Public',
+}
+
+export const isSizeWord = (industry: string): industry is CompanySize => (COMPANY_SIZES as string[]).includes(industry)
+export const companySizeOf = (company: Company): CompanySize | undefined => (isSizeWord(company.industry) ? company.industry : COMPANY_SIZE[company.id])
+export const sizeName = (size: CompanySize) => (getLang() === 'en' ? SIZE_NAMES_EN[size] : size)
 
 /** 기업 본사 자리예요. 모르면 없어요. 채용 지도가 핀을 본사 자리에 꽂을 때 써요. */
 export const officeOf = (companyId: string): CompanyOffice | undefined => COMPANY_OFFICE[companyId]

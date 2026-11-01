@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
-import { careerName, companyOf, SIZE_GROUPS, sizeGroupName, sizeGroupOf, type SizeGroup, type CompanyCategory, majorCompanies, familyName, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort } from '../lib/gap'
+import { careerName, companyOf, COMPANY_SIZES, companySizeOf, sizeName, type CompanySize, type CompanyCategory, majorCompanies, familyName, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { readFlag, writeFlag } from '../lib/storage'
 import { PageHeader, ScrollPage } from './AppPage'
@@ -70,7 +70,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   const [sort, setSort] = useState<PostingSort>(resume ? 'fit' : 'recent')
   const [company, setCompany] = useState<string | null>(initialCompany)
   const [category, setCategory] = useState<CompanyCategory | null>(null)
-  const [size, setSize] = useState<SizeGroup | null>(null)
+  const [size, setSize] = useState<CompanySize | null>(null)
   const browser = useJobBrowser()
   const [layout, setLayout] = useState<Layout>(readLayout)
   const [hideRolling, setHideRolling] = useState(() => readFlag(HIDE_ROLLING_KEY))
@@ -79,10 +79,14 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요.
   const suggestion = useSuggestion(!query)
   const majors = useMemo(majorCompanies, [])
-  // 규모 메뉴에는 받아 온 공고에 있는 규모만 둬요. 규모를 모르는 기업이 많아서 없는 묶음을 고르면 비기만 해요.
-  const sizes = useMemo(() => {
-    const present = new Set((postings ?? []).map((posting) => sizeGroupOf(companyOf(posting.companyId))))
-    return SIZE_GROUPS.filter((group) => present.has(group))
+  // 규모 메뉴는 분류를 늘 모두 두고, 받아 온 공고 중 그 규모인 공고 수를 옆에 적어요.
+  const sizeCounts = useMemo(() => {
+    const counts = new Map<CompanySize, number>()
+    for (const posting of postings ?? []) {
+      const value = companySizeOf(companyOf(posting.companyId))
+      if (value) counts.set(value, (counts.get(value) ?? 0) + 1)
+    }
+    return counts
   }, [postings])
 
   function analyze(posting: JobPosting) {
@@ -99,7 +103,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
           (posting) =>
             (family || posting.family !== 'other') &&
             (!company || posting.companyId === company) && (!category || companyOf(posting.companyId).category === category) &&
-            (!size || sizeGroupOf(companyOf(posting.companyId)) === size) &&
+            (!size || companySizeOf(companyOf(posting.companyId)) === size) &&
             (!hideRolling || posting.deadline),
         ),
         sort,
@@ -168,26 +172,25 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
               },
             ]}
           />
-          {sizes.length > 0 && (
-            <Dropdown
-              size="lg"
-              active={size !== null}
-              label={L.size}
-              value={size ? sizeGroupName(size) : L.all}
-              groups={[
-                {
-                  items: [null, ...sizes].map((value) => ({
-                    label: value ? sizeGroupName(value) : L.all,
-                    checked: size === value,
-                    onSelect: () => {
-                      track('jobs_size_select', { size: value ?? 'all' })
-                      setSize(value)
-                    },
-                  })),
-                },
-              ]}
-            />
-          )}
+          <Dropdown
+            size="lg"
+            active={size !== null}
+            label={L.size}
+            value={size ? sizeName(size) : L.all}
+            groups={[
+              {
+                items: [null, ...COMPANY_SIZES].map((value) => ({
+                  label: value ? sizeName(value) : L.all,
+                  hint: value ? String(sizeCounts.get(value) ?? 0) : undefined,
+                  checked: size === value,
+                  onSelect: () => {
+                    track('jobs_size_select', { size: value ?? 'all' })
+                    setSize(value)
+                  },
+                })),
+              },
+            ]}
+          />
           <Dropdown
             size="lg"
             label={L.sort}

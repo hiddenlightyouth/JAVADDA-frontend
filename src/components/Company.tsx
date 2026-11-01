@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { track } from '../lib/analytics'
 import { fetchBlogDigests, isStale, type BlogDigest } from '../lib/blogs'
-import { canEmbed, categoryName, companyOf, companySizeOf, daysLeft, daysSince, familyName, fetchCompany, isSizeWord, sortPostings, useResume, type CompanyProfile, type QuestionCategory, type Resume, type JobFamily } from '../lib/gap'
+import { canEmbed, categoryName, companyOf, companySizeOf, daysLeft, daysSince, familyName, fetchCompany, isSizeWord, sizeName, sortPostings, useResume, type CompanyProfile, type QuestionCategory, type Resume, type JobFamily } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { isPlainClick } from '../lib/links'
@@ -236,7 +236,7 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
     const nearest = postings.filter((posting) => posting.deadline).sort((a, b) => a.deadline!.localeCompare(b.deadline!))[0]
     const recent = postings.length > 0 ? Math.min(...postings.map(daysSince)) : null
     return [
-      size && { label: L.facts.size, value: size },
+      size && { label: L.facts.size, value: sizeName(size) },
       industry && { label: L.facts.industry, value: industry },
       { label: L.facts.open, value: L.openCount(postings.length) },
       postings.length > 0 && { label: L.facts.entry, value: L.openCount(entry) },
