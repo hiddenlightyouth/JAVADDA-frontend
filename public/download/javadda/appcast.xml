@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Javadda</title>
+    <item>
+      <title>2.0</title>
+      <pubDate>Sun, 01 Nov 2026 16:54:56 +0000</pubDate>
+      <sparkle:version>1</sparkle:version>
+      <sparkle:shortVersionString>2.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>27.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://lofy.hidly.dev/download/javadda/Javadda-2.0.zip" type="application/octet-stream" sparkle:edSignature="P2jKBtEYz0twYDgLOWDa0TS3K8TobcLoJLzUOkrFhWYZlm+RaJT9sdO+uGoP/RMgFhI/E6zUl87h9hzXgT+MCw==" length="1139142" />
+    </item>
+  </channel>
+</rss>
