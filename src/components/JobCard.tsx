@@ -162,17 +162,20 @@ function ViewButton({ onClick, className = 'inline-flex' }: { onClick: () => voi
 /** 카드 오른쪽 위를 파낸 홈의 높이(px)와, 홈 둘레가 휘는 반지름(px)이에요. 반지름은 카드 모서리(rounded-2xl)와 같아요. */
 const NOTCH_HEIGHT = 52
 const NOTCH_RADIUS = 16
-/**
- * 홈 바깥으로 이어지는 오목한 모서리예요. 바깥은 카드가 놓인 흰 바탕색으로 칠하고, 그 경계에 카드 테두리와 같은 1px 선을 그어서
- * 카드 테두리가 끊기지 않고 홈을 따라 휘어 들어가요.
- */
-const notchCorner = (line: string) => ({
-  width: NOTCH_RADIUS,
-  height: NOTCH_RADIUS,
-  background: `radial-gradient(circle at 0 100%, transparent ${NOTCH_RADIUS - 1.5}px, ${line} ${NOTCH_RADIUS - 1}px, ${line} ${NOTCH_RADIUS - 0.5}px, var(--color-white) ${NOTCH_RADIUS}px)`,
-})
 /** 오늘 마감하는 공고는 카드 테두리와 홈의 글자를 빨간색으로 칠해서 바로 눈에 띄게 해요. */
 const cardBorder = (left: number | null) => (left === 0 ? 'border-red-400' : 'border-gray-200')
+
+/**
+ * 홈 바깥으로 이어지는 둥근 모서리예요. 흰 칸 안에 카드와 같은 바탕의 칸을 넣고 오른쪽 위만 카드 모서리와 같이 둥글려서(rounded-2xl),
+ * 카드 테두리가 홈으로 휘어 들어가는 곳도 카드의 다른 모서리와 똑같은 선으로 그려져요. 테두리 1px은 홈의 테두리와 겹치게 놓아요.
+ */
+function NotchCorner({ className, border }: { className: string; border: string }) {
+  return (
+    <span aria-hidden className={`absolute bg-white ${className}`} style={{ width: NOTCH_RADIUS, height: NOTCH_RADIUS }}>
+      <span className={`block size-full rounded-tr-2xl border-t border-r bg-gray-50 transition-colors group-hover:bg-gray-100 ${border}`} />
+    </span>
+  )
+}
 
 /**
  * 공고 카드 오른쪽 위를 서울 버스 정류장 안내판처럼 둥글게 파낸 홈이에요. 카드 테두리가 홈을 따라 이어지고, 홈 안에 마감까지 남은 날(D-6, 오늘 마감, 상시)을 크게 적어요.
@@ -182,15 +185,13 @@ const cardBorder = (left: number | null) => (left === 0 ? 'border-red-400' : 'bo
 function DeadlineNotch({ left }: { left: number | null }) {
   const L = useMessages(TEXT)
   const tone = left === null ? 'text-gray-500' : left === 0 ? 'text-red-500' : left <= 3 ? 'text-brand' : 'text-gray-900'
-  const corner = notchCorner(left === 0 ? 'var(--color-red-400)' : 'var(--color-gray-200)')
   return (
     <span
       className={`absolute -top-px -right-px flex items-center rounded-bl-2xl border-b border-l bg-white pr-5 pl-5 text-[15px] font-bold tabular-nums ${cardBorder(left)} ${tone}`}
       style={{ height: NOTCH_HEIGHT }}
     >
-      {/* 바깥 모서리 조각은 홈의 테두리 1px과 겹치게 놓아서 선이 어긋나지 않아요. */}
-      <span aria-hidden className="absolute top-0 right-[calc(100%-1px)]" style={corner} />
-      <span aria-hidden className="absolute top-[calc(100%-1px)] right-0" style={corner} />
+      <NotchCorner className="top-0 right-[calc(100%-1px)]" border={cardBorder(left)} />
+      <NotchCorner className="top-[calc(100%-1px)] right-0" border={cardBorder(left)} />
       {left === null ? L.always : left === 0 ? L.today : `D-${left}`}
     </span>
   )
