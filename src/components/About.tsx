@@ -48,7 +48,6 @@ const ABOUT_TEXT = messages({
     rollAfter: '까지 진단해요',
     rollLabel: '공고 하나를 기준으로 필수 역량, 우대 역량, 자기소개서, 면접 질문까지 진단해요',
     title: '내 역량과 공고 사이, 얼마나 멀까요?',
-    meta: '로그인하고 바로 진단해요',
     start: '시작하기',
     download: 'macOS 앱 다운로드',
     featuresTitle: '지원하기 전,\n다시 한 번 체크.',
@@ -87,7 +86,6 @@ const ABOUT_TEXT = messages({
     rollAfter: '',
     rollLabel: 'Pick one posting and check your required skills, preferred skills, cover letter, and interview',
     title: 'How far are you from the job you want?',
-    meta: 'Sign in and start right away',
     start: 'Get started',
     download: 'Download for macOS',
     featuresTitle: 'Before you apply,\ncheck once more.',
@@ -480,8 +478,7 @@ function Hero({ onStart }: { onStart: (event: MouseEvent) => void }) {
           {revealed && <LofyScript className="h-[clamp(64px,8vw,104px)] w-auto" />}
           {!revealed && <span className="h-[clamp(64px,8vw,104px)]" aria-hidden />}
           <h1 className="mt-6 text-balance break-keep text-[clamp(26px,3.6vw,48px)] leading-[1.35] font-bold tracking-[-0.04em]">{text.title}</h1>
-          <p className="mt-3 text-[clamp(15px,1.4vw,19px)] font-bold text-white/60">{text.meta}</p>
-          <div className="mt-8 flex flex-wrap justify-center gap-2.5">
+          <div className="mt-9 flex flex-wrap justify-center gap-2.5">
             <a href="/app" onClick={onStart} className={`${primaryPill} min-w-[clamp(180px,15vw,220px)] text-[18px]`}>
               {text.start}
             </a>
