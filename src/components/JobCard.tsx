@@ -6,7 +6,6 @@ import { readItem, writeItem } from '../lib/storage'
 import { CompanyMark, DeadlineTag, DiagnosedTag, FitBadge, FitTag, PostingMeta, SkillChip, skillTone, Tip } from './GapParts'
 import { ExternalLinkIcon, GridIcon, ListIcon } from './Icons'
 import { PostingBrowser } from './PostingBrowser'
-import { shortDate } from './ScreenParts'
 import { iconButton, primaryButton, Segmented, stagger, useShowMore } from './ui'
 
 /**
@@ -219,8 +218,8 @@ export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onComp
           {posting.title}
         </button>
       </h3>
-      {/* 직군, 경력, 지역은 아이콘을 붙여 한 줄에 늘어놓아서, 훑어볼 때 바로 눈에 들어와요. */}
-      <PostingMeta posting={posting} size="md" className="mt-2" />
+      {/* 직군, 경력, 지역, 마감 날짜는 아이콘을 붙여 한 줄에 늘어놓아서, 훑어볼 때 바로 눈에 들어와요. 남은 날은 오른쪽 위 홈에 있어요. */}
+      <PostingMeta posting={posting} size="md" deadline className="mt-2" />
       {/* 소개가 제목을 그대로 되풀이하면(규칙으로 읽은 공고) 줄을 두지 않아요. */}
       {posting.summary.trim() !== posting.title.trim() && <p className="mt-3 line-clamp-2 text-[13px] leading-relaxed text-gray-500">{posting.summary}</p>}
 
@@ -235,8 +234,6 @@ export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onComp
       <div className="mt-5 flex items-center gap-1.5 border-t border-gray-200 pt-3">
         <DiagnosedTag postingId={posting.id} />
         <FitTag fit={fit} />
-        {/* 마감 날짜는 태그로 세우지 않고 태그 줄 끝에 옅게 적어요. 남은 날은 오른쪽 위 홈에 있어요. */}
-        {posting.deadline && <span className="ml-1 text-[12.5px] text-gray-400 tabular-nums">~ {shortDate(posting.deadline)}</span>}
         <span className="ml-auto flex shrink-0 items-center gap-2">
           <FitBadge fit={fit} compact />
           <ViewButton onClick={onOpen} />

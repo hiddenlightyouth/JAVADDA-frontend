@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom'
 import { careerName, categoryName, COMPANY_CATEGORIES, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, skillLogoOf, useDiagnosed, type Company, type CompanyCategory, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { ConfirmDialog } from './Dialog'
-import { BriefcaseIcon, BuildingIcon, CheckIcon, CloseIcon, ConceptIcon, MapPinIcon, PersonIcon, TriangleIcon, type Concept } from './Icons'
+import { BriefcaseIcon, BuildingIcon, CalendarIcon, CheckIcon, CloseIcon, ConceptIcon, MapPinIcon, PersonIcon, TriangleIcon, type Concept } from './Icons'
+import { shortDate } from './ScreenParts'
 import { Badge, chipShape, primaryButton, ProgressRing, stagger } from './ui'
 
 /**
@@ -33,6 +34,7 @@ const TEXT = messages({
     family: '직군',
     career: '경력',
     location: '지역',
+    deadlineDate: '마감일',
     required: '필수',
     preferred: '우대',
     kinds: { missing: '부족', partial: '보완', strength: '강점' } as Record<GapKind, string>,
@@ -77,6 +79,7 @@ const TEXT = messages({
     family: 'Role',
     career: 'Level',
     location: 'Location',
+    deadlineDate: 'Deadline',
     required: 'Required',
     preferred: 'Preferred',
     kinds: { missing: 'Missing', partial: 'Weak', strength: 'Strength' },
@@ -431,11 +434,13 @@ export function AiProgress({ progress, stage, title, className = '' }: { progres
  * 공고의 직군, 경력, 지역을 작은 선 아이콘과 함께 한 줄에 늘어놓아요. 공고 카드(`PostingTile`), 공고 탐색의 카드와 줄이 같이 써요.
  * 줄이 좁을 때 경력이나 지역을 숨기려면 careerClass, locationClass에 `hidden @xl:flex` 같은 것을 넘겨요. 앞에 기업 이름 같은 것을 붙이려면 children으로 넘겨요.
  */
-export function PostingMeta({ posting, size = 'sm', careerClass = 'flex', locationClass = 'flex', className = '', children }: {
+export function PostingMeta({ posting, size = 'sm', careerClass = 'flex', locationClass = 'flex', deadline = false, className = '', children }: {
   posting: JobPosting
   size?: 'sm' | 'md'
   careerClass?: string
   locationClass?: string
+  /** 지역 뒤에 달력 아이콘과 마감 날짜(~ 11.06)를 붙여요. 마감이 없는 공고는 두지 않아요. 공고 탐색의 카드가 써요. */
+  deadline?: boolean
   className?: string
   children?: ReactNode
 }) {
@@ -456,6 +461,11 @@ export function PostingMeta({ posting, size = 'sm', careerClass = 'flex', locati
         <MapPinIcon label={L.location} />
         <span className="truncate">{posting.location}</span>
       </span>
+      {deadline && posting.deadline && (
+        <span className={`flex shrink-0 tabular-nums ${item}`}>
+          <CalendarIcon className="size-3.5 shrink-0 text-gray-400" label={L.deadlineDate} />~ {shortDate(posting.deadline)}
+        </span>
+      )}
     </span>
   )
 }
