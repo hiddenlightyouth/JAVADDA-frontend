@@ -263,6 +263,15 @@ export function UploadIcon({ className = 'size-4', strokeWidth = 1.4, label }: I
   )
 }
 
+/** 파일을 받는 화살표예요. */
+export function DownloadIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M8 2.5V10M5 7l3 3 3-3M2.75 10v2.25a1 1 0 0 0 1 1h8.5a1 1 0 0 0 1-1V10" />
+    </Icon>
+  )
+}
+
 /** 링크를 나타내는 사슬이에요. */
 export function LinkIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
   return (

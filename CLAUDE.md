@@ -45,7 +45,7 @@
 - 새 진단 화면은 손글씨 Javadda, 타이틀 "어떤 기업에 맞춰 볼까요?"(어절이 하나씩 떠올라요), 설명 한 문단, 검색창 하나로 시작하고, 아래로 공고 줄이 이어져요. 검색창은 반투명 배경에 블러를 주고, 포커스가 가도 테두리 색이 바뀌지 않아요. 타이틀은 데스크톱 30px이에요.
 - 손글씨 Javadda의 움직임은 전과 같아요(`src/index.css`의 lofy 규칙). 글자는 Pacifico 글꼴(SIL Open Font License)을 도형으로 바꿔 넣은 것이라 글꼴을 따로 불러오지 않아요.
 - 헤더는 화면 위에 겹쳐 있고 반투명 흰 배경에 배경 블러를 줘요. 앱 화면에서는 헤더가 비어 있고 창을 옮기는 자리로만 써요. 소개와 아티클 화면의 헤더에는 로고, 앱 다운로드 드롭다운, 언어 바꾸기, 메인 컬러의 "시작하기" 버튼(`/app`으로 가요)이 있어요.
-- macOS 앱 다운로드는 `src/lib/app.ts`의 `MAC_DOWNLOAD_OPEN`으로 켜고 꺼요. 지금은 꺼져 있어서 헤더의 앱 다운로드 메뉴에 macOS와 Windows가 모두 준비 중으로 흐리게 보이고, 소개 화면의 앱 다운로드 버튼과 앱 질문은 보이지 않아요. 아티클 화면은 남아 있지만 헤더 메뉴와 단축키는 없앴어요.
+- macOS 앱 다운로드는 `src/lib/app.ts`의 `MAC_DOWNLOAD_OPEN`으로 켜고 꺼요. 지금은 켜져 있어서 헤더의 앱 다운로드 메뉴에서 macOS를 받을 수 있고(Windows는 준비 중으로 흐리게), 소개 화면의 앱 다운로드 버튼과 앱 질문, 웹 앱 사이드바 아래의 "앱 다운로드"가 보여요. 받는 파일은 `public/download/javadda/Javadda.dmg`예요(`MAC_DOWNLOAD`). 아티클 화면은 남아 있지만 헤더 메뉴와 단축키는 없앴어요.
 - 모바일(640px 미만)에서는 헤더 링크를 햄버거 버튼 안에 접어 둬요.
 
 ## 기술 스택
@@ -121,7 +121,7 @@ src/
   components/AppGate.tsx     앱에서 로그인하지 않았을 때 보여주는 로그인 화면
   components/AppFrame.tsx    앱의 배치. 왼쪽 사이드바와 접기 버튼, 설정 창, 화면 공유 중 가리는 막을 두르고, 로그인하지 않았을 때의 화면(`AppSignedOut`)도 여기 있어요
   components/PageView.tsx    주소로 여는 화면(공고 탐색, 추천 공고, 내 이력서, 기술 블로그, 기업 상세, 진단 시작, 리포트, 면접 연습, 관리자, 소개, 아티클, 계정, 앱 로그인)을 고르고, 화면 코드는 열 때만 받아요
-  components/AppSidebar.tsx  앱 화면 왼쪽의 사이드바 (새 진단, 공고 탐색, 추천 공고, 마감 달력, 채용 지도, 기술 블로그, 내 이력서, 내 리포트 목록, 계정 메뉴)
+  components/AppSidebar.tsx  앱 화면 왼쪽의 사이드바 (새 진단, 공고 탐색, 추천 공고, 마감 달력, 채용 지도, 기술 블로그, 내 이력서, 내 리포트 목록, 앱 다운로드, 계정 메뉴)
   components/Home.tsx        새 진단 화면 (앱의 메인). 손글씨 Javadda, 타이틀, 기업과 공고 검색창, 그 아래 공고 줄(나와 잘 맞는 공고, 따끈따끈 공고, 마감이 가까운 공고, 다시 볼 공고)
   components/Jobs.tsx        공고 탐색 (/explore). 검색창과 직군, 경력, 정렬 드롭다운 한 줄, 기업 분류 버튼 줄(CategoryFilter), 갤러리형 카드(JobCard)와 리스트형 줄(JobRow)
   components/Blogs.tsx       기술 블로그 (/blogs, /blogs/기업). 모든 기업의 글을 기업과 주제로 걸러 보는 갤러리, 많이 다룬 주제 칸, 기업을 고르면 그 기업의 요즘 고민과 면접에서 쓸 점. 글은 미니 브라우저로 열어요
@@ -376,7 +376,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 앱 화면인지(`appShell`)는 macOS 앱이거나(`isApp`) 주소가 `/app`으로 시작할 때(`isWebApp`)예요. 페이지를 처음 열 때 정해져서, 소개 화면과 `/app` 사이는 페이지를 새로 열어서 오가요.
 - 진단, 리포트, 계정, 탐색, 추천, 기업 상세, 이력서, 관리자 화면은 모두 `/app` 아래에 있어요(`/app/r/아이디`, `/app/login`, `/app/explore` 등). 예전 주소(`/r/아이디`, `/login` 등)로 들어오면 `/app`을 붙인 주소로 옮겨요. 예전 소개 주소(`/about`)는 메인 주소로 옮겨요. 주소를 만들 때는 `localizePath`가 `/app`을 붙이고, 화면을 고를 때는 `currentPath`가 `/app`을 떼요. 주소 모양은 `routes.ts`의 `pathOf` 한 곳에서 정해요. 소개, 아티클, 앱 로그인(`/app-login`), 소셜 로그인에서 돌아오는 주소는 `/app` 밖에 있어요. `/app`에는 언어 주소(`/en`)를 붙이지 않아요.
 - 배치는 macOS 앱과 같아요. 사이드바 맨 위에는 사이드바 버튼과 로고가 있고, 로고를 누르면 새 진단 화면으로 가요. 창 버튼과 창 옮기기, 화면 녹화 가리기, 앱 버전과 업데이트 확인, 단축키 안내(`ShortcutTip`)는 macOS 앱에서만 써요.
-- 공고 탐색과 기술 블로그는 로그인하지 않아도 써요. 이력서, 리포트, 서류 검증, 예상 질문, 면접 연습, 보완 계획, 면접 노트는 로그인해야 하고(서버가 401로 답해요), 로그인하지 않았으면 내 이력서와 내 리포트가 비어 있어요. 로그인하지 않았으면 사이드바의 계정 버튼 자리에 로그인 버튼을 보여줘요. 리포트를 보다가 로그인하러 가면 로그인한 뒤에 그 리포트로 돌아오고, 로그인하지 않고 리포트 주소로 들어오면 로그인 안내를 보여줘요. 진단하거나 서류를 올리려다 로그인하러 가면 하던 화면으로 돌아와요. 그 밖에는 로그인하면 새 진단 화면으로 가요.
+- 공고 탐색과 기술 블로그는 로그인하지 않아도 써요. 이력서, 리포트, 서류 검증, 예상 질문, 면접 연습, 보완 계획, 면접 노트는 로그인해야 하고(서버가 401로 답해요), 로그인하지 않았으면 내 이력서와 내 리포트가 비어 있어요. 로그인하지 않았으면 사이드바의 계정 버튼 자리에 로그인 버튼을 보여줘요. 계정 칸 바로 위에는 macOS 앱을 받는 "앱 다운로드" 줄(받기 아이콘)이 있어요. 브라우저의 /app에서만 보이고 macOS 앱 안에서는 두지 않아요. 리포트를 보다가 로그인하러 가면 로그인한 뒤에 그 리포트로 돌아오고, 로그인하지 않고 리포트 주소로 들어오면 로그인 안내를 보여줘요. 진단하거나 서류를 올리려다 로그인하러 가면 하던 화면으로 돌아와요. 그 밖에는 로그인하면 새 진단 화면으로 가요.
 - 떠나기 확인 창은 두지 않아요. 리포트는 서버가 만들고 계정에 저장해서, 만드는 중에 화면을 옮겨도 끝까지 만들어져요.
 - 설정 창에서 화면 모드, 언어, 단축키 항상 표시, AI 모델, 면접관 목소리를 바꿔요. 다크 모드도 `/app`에서는 켜져요. AI 모델 줄과 면접관 목소리 줄은 설정 창(사이드바 맨 아래 톱니바퀴)과 내 정보 화면(`/app/me`, 계정 칸 아래 AI 칸과 면접 연습 칸) 두 곳에 같은 부품(`AiModelRow`, `VoiceRow`, `SettingRow`)으로 있고 늘 보여요. 설정 창을 열 때마다 `/config`를 다시 물어서(`refreshConfig`) 서버를 나중에 켰거나 키를 바꿔도 바로 맞춰요. 드롭다운 버튼에는 "서버 기본" 대신 늘 지금 쓰는 모델의 이름(고른 모델, 고르지 않았으면 서버의 기본 모델 `ai.defaultModel`)을 적어요. 메뉴는 공급자(OpenAI, Claude)마다 묶어 `ai.models`(서버에 키가 있는 모델만)를 늘어놓고, 서버의 기본 모델 오른쪽에 "기본"을 옅게 붙여요. 고른 것은 localStorage의 `whoisloafing:ai-model`에 두고, 서버의 기본 모델을 고르면 지워요(헤더를 보내지 않아요). 고른 모델이 목록에서 빠졌으면 서버의 기본 모델이 체크되어 보여요. 받는 동안은 드롭다운 메뉴 안에 막대와 퍼센트 한 줄(`Dropdown` 그룹의 `progress`), 서버에 닿지 못하면 연결하지 못했다는 설명, 키가 없어서 목록이 비면 "고를 수 있는 모델이 없어요"와 규칙으로 분석한다는 설명을 보여줘요.
 - 좁은 화면(768px 미만)에서는 사이드바를 숨겨 두고, 왼쪽 위 버튼을 누르면 왼쪽에서 서랍으로 미끄러져 나와요(`animate-slide-in-left`). 화면을 고르면 서랍이 닫히고, 바깥의 어두운 부분이나 Esc를 눌러도 닫혀요.
@@ -503,7 +503,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `admin_tab_view`, `admin_period_change`, `admin_user_open`, `admin_user_action`, `admin_call_open`, `admin_call_copy`, `admin_chat_action` | 관리자 화면 | 전과 같아요 |
 | `language_change` | 헤더나 앱의 설정 창에서 언어를 바꿨을 때 | `lang`(ko, en), `from`(header, settings) |
 | `about_faq_open` | 소개 화면에서 자주 묻는 질문을 펼쳤을 때 | `id` |
-| `team_link_click`, `article_nav_click`, `article_cta_click`, `team_articles_click`, `about_nav_click`, `about_cta_click`, `try_app_click`, `app_download_click` | 소개와 아티클, 헤더의 링크 | `from` |
+| `team_link_click`, `article_nav_click`, `article_cta_click`, `team_articles_click`, `about_nav_click`, `about_cta_click`, `try_app_click`, `app_download_click` | 소개와 아티클, 헤더의 링크, 웹 앱 사이드바의 앱 다운로드 | `from`(앱 다운로드는 header, about, sidebar) |
 | `account_nav_click`, `auth_login`, `auth_signup`, `auth_social_click`, `auth_social`, `auth_logout`, `auth_social_unlink`, `auth_withdraw`, `session_revoke` | 계정 | 전과 같아요 |
 | `app_login_browser_click`, `app_login_approve`, `app_login_cancel`, `app_login` | 앱 로그인 | `success` |
 | `settings_open`, `app_theme_change`, `app_update_check`, `app_shield_change`, `capture_shield_view`, `capture_shield_allow`, `app_shortcut_hints_change`, `app_ai_model_change`(`model`), `app_menu_open`, `plans_open` | 앱의 설정과 메뉴 | 전과 같아요 |

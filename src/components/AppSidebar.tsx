@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type HTMLAttributes, type ReactNode } from 'react'
 import { useDismiss } from '../hooks/useDismiss'
-import { isWebApp } from '../lib/app'
+import { isWebApp, MAC_DOWNLOAD, MAC_DOWNLOAD_OPEN } from '../lib/app'
 import { followLink } from '../lib/links'
 import { track } from '../lib/analytics'
 import { signOut, useAuth, type Me } from '../lib/auth'
@@ -12,7 +12,7 @@ import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { readJson, writeJson } from '../lib/storage'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
-import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DotsIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
+import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { fitColor, Tip } from './GapParts'
 import { Avatar } from './Avatar'
@@ -37,6 +37,7 @@ const TEXT = messages({
     settings: '설정',
     bug: '버그 신고',
     login: '로그인',
+    download: '앱 다운로드',
   },
   en: {
     new: 'New diagnosis',
@@ -58,6 +59,7 @@ const TEXT = messages({
     settings: 'Settings',
     bug: 'Report a bug',
     login: 'Sign in',
+    download: 'Download app',
   },
 })
 
@@ -489,6 +491,21 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           </ul>
         )}
       </nav>
+
+      {/* 브라우저의 /app에서만 macOS 앱을 받을 수 있게 둬요. 앱 안에서는 이미 앱이라 두지 않아요. */}
+      {isWebApp && MAC_DOWNLOAD_OPEN && (
+        <div className="shrink-0 px-3 pb-2">
+          <a
+            href={MAC_DOWNLOAD}
+            download
+            onClick={() => track('app_download_click', { os: 'macos', from: 'sidebar' })}
+            className={`${link} gap-2 ${tone(false)}`}
+          >
+            <DownloadIcon className="size-4 shrink-0" />
+            <span className="flex-1">{text.download}</span>
+          </a>
+        </div>
+      )}
 
       <AccountMenu me={signedIn ? me : null} page={page} onMe={onMe} onSettings={onSettings} settingsOpen={settingsOpen} onAdmin={onAdmin} onLogin={signedIn ? undefined : onLogin} />
 
