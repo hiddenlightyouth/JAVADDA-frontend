@@ -24,7 +24,7 @@
 
 ## 브랜딩 규칙
 
-- 서비스명: 화면에 보이는 이름은 Javadda예요(미리보기 태그, 푸터, 안내 문구, 아티클). 탭 제목만 화면 언어와 상관없이 잡아따예요(`src/lib/meta.ts`의 `SITE_TITLE`, `index.html`의 `<title>`). 아티클과 계정 화면의 탭 제목은 "아티클 | 잡아따", "Sign in | 잡아따"처럼 뒤에 붙여요. 그 전 이름은 Lofy였고, 패키지명(lofy)과 코드 안의 이름(`LofyScript`, lofy 규칙)은 그대로 둬요. 더 예전 이름은 WhoIsLoafing이었어요. API 서버 주소(api.whoisloafing.hidly.dev), Workers 이름, localStorage 키(`whoisloafing:`)는 바꾸면 저장된 값이 사라져서 예전 이름 그대로 둬요. macOS 앱은 JAVADDA-app 레포의 Javadda 앱이고, 앱과 약속한 값은 Javadda 이름이에요(User-Agent의 `JavaddaApp`, `javadda://` 주소, 웹뷰 메시지 이름 `javadda`, 이벤트 이름 `javadda:app-login`, `javadda:app-settings`, `javadda:app-capture`, 설치 파일 `/download/javadda/Javadda.dmg`). 바꾸면 앱의 `AppConfig`와 `Info.plist`도 같이 바꿔요. 예전 Lofy 앱(`WhoIsLoafingApp`)은 이 웹을 앱 화면으로 열지 못해요.
+- 서비스명: 화면에 보이는 이름은 Javadda예요(미리보기 태그, 푸터, 안내 문구, 아티클). 탭 제목만 화면 언어와 상관없이 잡아따예요(`src/lib/meta.ts`의 `SITE_TITLE`, `index.html`의 `<title>`). 아티클과 계정 화면의 탭 제목은 "아티클 | 잡아따", "Sign in | 잡아따"처럼 뒤에 붙여요. 그 전 이름은 Lofy였고, 패키지명(lofy)과 코드 안의 이름(`LofyScript`, lofy 규칙)은 그대로 둬요. 더 예전 이름은 WhoIsLoafing이었어요. Workers 이름과 localStorage 키(`whoisloafing:`)는 바꾸면 저장된 값이 사라져서 예전 이름 그대로 둬요. API 서버는 https://javadda-api.hidly.dev예요. macOS 앱은 JAVADDA-app 레포의 Javadda 앱이고, 앱과 약속한 값은 Javadda 이름이에요(User-Agent의 `JavaddaApp`, `javadda://` 주소, 웹뷰 메시지 이름 `javadda`, 이벤트 이름 `javadda:app-login`, `javadda:app-settings`, `javadda:app-capture`, 설치 파일 `/download/javadda/Javadda.dmg`). 바꾸면 앱의 `AppConfig`와 `Info.plist`도 같이 바꿔요. 예전 Lofy 앱(`WhoIsLoafingApp`)은 이 웹을 앱 화면으로 열지 못해요.
 - 로고: 화면에 보이는 로고는 모두 Javadda라고 쓴 손글씨예요. 헤더(`Logo`), 앱 로그인 화면, 웹 앱 사이드바 맨 위는 움직임 없이 그린 것(`ScriptMark`)이고, 소개 화면 첫 화면에서는 흰색으로 써져요. 예전의 중절모와 Lofy 글자 그림(`public/logo.svg`)은 더 이상 화면에 쓰지 않아요. 손글씨(`LofyScript`)는 Javadda라고 쓰고, 새 진단 화면, 소개 화면 맨 위, 앱 로그인 화면에 써요. 웹 앱 사이드바 맨 위의 로고도 같은 손글씨를 움직임 없이 그린 것(`ScriptMark`)이에요. 색은 짙은 회색(#2C2C2C) 한 가지예요. 파비콘과 미리보기 이미지는 따로 만든 파일이라 같이 고쳐야 해요.
 - 본문 폰트: Pretendard. 전체 자간은 -0.02em
 - 메인 컬러: #2E90FA, hover는 #1570EF, 연한 배경은 #EFF8FF
@@ -191,7 +191,7 @@ src/
 ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사, 커밋하지 않아요)에 넣고, 배포에는 `npx wrangler secret put ELEVENLABS_API_KEY`로 넣어요.
 
 - 로컬 개발(`npm run dev`)은 로컬 백엔드를 써요. `.env.development`의 `VITE_API_BASE_URL`이 비어 있어서 요청이 `/api/v1`로 가고, `vite.config.ts`의 proxy가 `http://localhost:8080`(JAVADDA-server를 `./gradlew bootRun`으로 띄운 곳)으로 넘겨요. 같은 주소라 CORS 설정이 필요 없어요. 다른 서버를 보려면 커밋하지 않는 `.env.development.local`에 주소를 적어요.
-- 운영은 대기 중이에요. `.env.production`은 아직 예전 서버(api.whoisloafing.hidly.dev)를 가리켜서 진단 기능이 동작하지 않아요. 새 백엔드의 운영 주소가 정해지면 이 값과 백엔드의 `CORS_ALLOWED_ORIGINS`를 같이 바꾸고 배포해요. 그 전까지 운영 배포(`npm run build` 뒤 Workers 배포)는 하지 않아요. `npm run preview`와 `npm run worker:dev`도 운영 값으로 빌드해서 예전 서버를 봐요.
+- 운영 빌드는 새 백엔드의 운영 주소(https://javadda-api.hidly.dev)를 봐요(`.env.production`의 `VITE_API_BASE_URL`). Cloudflare 빌드 변수에 같은 이름이 있으면 그 값이 우선해서, 대시보드의 값도 같은 주소로 맞춰 둬요. 주소를 바꾸면 백엔드의 `CORS_ALLOWED_ORIGINS`(https://javadda.hidly.dev)도 같이 맞춰요. `npm run preview`와 `npm run worker:dev`도 운영 값으로 빌드해서 이 서버를 봐요.
 
 ## 진단 자료와 계산 규칙
 
