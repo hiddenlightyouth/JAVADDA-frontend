@@ -20,6 +20,7 @@ const TEXT = messages({
     layout: '보기 방식',
     layouts: { gallery: '갤러리형으로 보기', list: '리스트형으로 보기' } as Record<Layout, string>,
     always: '상시 채용',
+    today: '오늘 마감',
     view: '채용 공고 열기',
     analyze: '분석하기',
     more: (count: number) => `외 ${count}개`,
@@ -30,6 +31,7 @@ const TEXT = messages({
     layout: 'View',
     layouts: { gallery: 'Gallery view', list: 'List view' },
     always: 'Rolling',
+    today: 'Today',
     view: 'Open posting',
     analyze: 'Analyze',
     more: (count: number) => `+${count} more`,
@@ -156,14 +158,41 @@ function ViewButton({ onClick, className = 'inline-flex' }: { onClick: () => voi
  * 이력서가 있으면 필수 역량 이름표를 진단 시작 화면과 같은 기준으로 칠해서, 카드만 보고도 무엇이 비는지 보여요.
  * 카드의 나머지 자리를 누르면 원문을 미니 브라우저로 열고, 분석하기는 바로 진단해요.
  */
+/** 마감 칸이 카드 모서리를 파고든 둥근 홈의 크기(px)예요. 카드 모서리(rounded-2xl)와 같아요. */
+const NOTCH_RADIUS = 16
+/** 홈 바깥으로 이어지는 오목한 모서리예요. 카드가 놓인 흰 바탕색으로 칠해서, 카드 가장자리가 홈으로 부드럽게 휘어 들어가요. */
+const notchCorner = { width: NOTCH_RADIUS, height: NOTCH_RADIUS, background: `radial-gradient(circle at 0 100%, transparent ${NOTCH_RADIUS - 0.5}px, var(--color-white) ${NOTCH_RADIUS}px)` }
+
+/**
+ * 공고 카드 오른쪽 위를 서울 버스 정류장 안내판처럼 둥글게 파내고, 그 홈에 마감을 알약으로 적어요. 마감이 가장 중요한 정보라 가장 눈에 띄는 자리에 둬요.
+ * D-12와 마감 날짜를 같이 적고, 사흘 안으로 남으면 메인 컬러, 마감이 없으면 회색의 상시 채용이에요.
+ * 홈은 카드가 놓인 흰 바탕색이라, 마우스를 올려 카드가 짙어져도 홈은 그대로예요.
+ */
+function DeadlineNotch({ posting, left }: { posting: JobPosting; left: number | null }) {
+  const L = useMessages(TEXT)
+  const tone = left === null ? 'bg-gray-200/70 text-gray-600' : left <= 3 ? 'bg-brand text-white' : 'bg-gray-900 text-gray-50'
+  return (
+    <div className="absolute top-0 right-0 rounded-bl-2xl bg-white pb-2 pl-2">
+      <span aria-hidden className="absolute top-0 right-full" style={notchCorner} />
+      <span aria-hidden className="absolute top-full right-0" style={notchCorner} />
+      <span className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-bold tabular-nums ${tone}`}>
+        {left === null ? L.always : left === 0 ? L.today : `D-${left}`}
+        {posting.deadline && <span className="text-[12px] font-medium opacity-70">{shortDate(posting.deadline)}</span>}
+      </span>
+    </div>
+  )
+}
+
 export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onCompany }: JobItemProps) {
   const L = useMessages(TEXT)
   const company = companyOf(posting.companyId)
   const left = daysLeft(posting)
   return (
     // 제목 버튼을 카드 전체에 늘여 덮으면, 누른 곳과 뗀 곳이 달라져 클릭이 한 번 씹혀서 카드가 직접 받아요.
-    <li onClick={onBlankClick(onOpen)} className="group flex animate-rise cursor-pointer flex-col rounded-2xl bg-gray-50 p-5 transition-colors hover:bg-gray-100" style={stagger(order)}>
-      <div className="flex items-center gap-3">
+    <li onClick={onBlankClick(onOpen)} className="group relative flex animate-rise cursor-pointer flex-col rounded-2xl bg-gray-50 p-5 transition-colors hover:bg-gray-100" style={stagger(order)}>
+      <DeadlineNotch posting={posting} left={left} />
+      {/* 오른쪽 위는 마감 칸이 파고들어 있어서, 기업 줄은 그 자리를 비워 둬요. */}
+      <div className="flex items-center gap-3 pr-28">
         {/* 로고와 기업 이름을 누르면 기업 소개를 미니 브라우저로 열어요. */}
         <button type="button" onClick={onCompany} aria-label={L.companyInfo(company.name)} className="group/company -m-1 flex min-w-0 items-center gap-3 rounded-xl p-1 text-left">
           <CompanyMark company={company} className="size-10 text-[15px] transition-opacity group-hover/company:opacity-80" />
@@ -172,11 +201,6 @@ export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onComp
             <span className="block truncate text-[12px] text-gray-400">{company.industry}</span>
           </span>
         </button>
-        {/* 기업 옆에 적합도와, 원문을 앱 안의 미니 브라우저로 여는 아이콘을 둬요. */}
-        <span className="ml-auto flex shrink-0 items-center gap-2">
-          <FitBadge fit={fit} compact />
-          <ViewButton onClick={onOpen} />
-        </span>
       </div>
 
       <h3 className="mt-4 text-[16px] leading-snug font-semibold text-gray-900">
@@ -196,13 +220,13 @@ export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onComp
         {posting.required.length > SKILLS_SHOWN && <span className="inline-flex h-7 items-center px-1 text-[12px] text-gray-400">{L.more(posting.required.length - SKILLS_SHOWN)}</span>}
       </div>
 
-      {/* 진단한 공고는 진단함 태그를 앞에 붙이고, 이력서가 있으면 적합도(높음, 중간, 낮음)를 그 뒤에 붙여요. 마감이 사흘 안으로 남으면 메인 컬러로 알려요. */}
+      {/* 진단한 공고는 진단함 태그를 앞에 붙이고, 이력서가 있으면 적합도(높음, 중간, 낮음)를 그 뒤에 붙여요. 오른쪽에 적합도와 원문을 여는 아이콘, 분석하기가 있어요. */}
       <div className="mt-5 flex items-center gap-1.5 border-t border-gray-200 pt-3">
         <DiagnosedTag postingId={posting.id} />
         <FitTag fit={fit} />
-        <DeadlineTag left={left} />
-        <span className="ml-1 min-w-0 flex-1 truncate text-[12.5px] text-gray-400 tabular-nums">
-          {shortDate(posting.postedAt)} ~ {posting.deadline ? shortDate(posting.deadline) : L.always}
+        <span className="ml-auto flex shrink-0 items-center gap-2">
+          <FitBadge fit={fit} compact />
+          <ViewButton onClick={onOpen} />
         </span>
         <button type="button" onClick={onAnalyze} className={`${primaryButton} shrink-0`}>
           {L.analyze}
