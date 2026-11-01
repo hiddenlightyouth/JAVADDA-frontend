@@ -2,14 +2,14 @@ import type { MouthPose } from './lipsync'
 
 /**
  * 면접관 사진의 입과 턱을 실제로 움직여요. 위에 입 그림을 덧그리지 않고 화면의 픽셀마다 사진의 어느 자리를 읽을지 바꿔요.
- * 윗입술은 위로, 아랫입술과 턱은 아래로 밀고, 벌어진 틈에만 입안(이, 혀)을 그려요. 턱은 목과 옷깃을 덮으며 내려와요.
- * 숫자는 모두 `public/images/interviewer.png`(1254px)의 자리라서, 사진을 바꾸면 같이 재요.
+ * 입술 주변만 작게 움직이고 벌어진 틈에 입안을 그려요. 눈, 턱 외곽, 목은 변형하지 않아요.
+ * 숫자는 모두 `public/images/interviewer-balanced.png`(1254px)의 자리라서, 사진을 바꾸면 같이 재요.
  */
 
-export const PORTRAIT_URL = '/images/interviewer.png'
+export const PORTRAIT_URL = '/images/interviewer-balanced.png'
 export const PORTRAIT_SIZE = 1254
 /** 사진에서 보여줄 정사각형이에요. 입이 잘 보이게 얼굴 쪽으로 당겨요. CSS의 배경 자리와 같아야 해요. */
-export const PORTRAIT_WINDOW = { x: 182, y: 40, size: 860 }
+export const PORTRAIT_WINDOW = { x: 188, y: 40, size: 860 }
 
 const VERTEX = `#version 300 es
 out vec2 vUv;
@@ -28,22 +28,14 @@ uniform vec3 uWindow;
 uniform float uOpen, uWide, uRound, uEdge, uLod;
 
 const float SIZE = ${PORTRAIT_SIZE.toFixed(1)};
-// 두 입꼬리의 가운데, 입꼬리를 잇는 방향(사진의 얼굴이 조금 기울어 있어요), 입 폭의 절반이에요.
-const vec2 CENTER = vec2(611.0, 617.0);
-const vec2 ALONG = vec2(0.9956, -0.0941);
-const vec2 DOWN = vec2(0.0941, 0.9956);
+// 정면 보정된 사진의 입꼬리(538, 618), (698, 618)를 기준으로 해요.
+const vec2 CENTER = vec2(618.0, 618.0);
+const vec2 ALONG = vec2(1.0, 0.0);
+const vec2 DOWN = vec2(0.0, 1.0);
 const float HALF = 80.0;
-// 턱선의 높이예요. x가 440부터 40px마다예요.
-const float JAW[10] = float[10](644.0, 693.0, 731.0, 756.0, 767.0, 762.0, 748.0, 728.0, 691.0, 625.0);
 
 vec3 portrait(vec2 at) {
   return textureLod(uPortrait, at / SIZE, uLod).rgb;
-}
-
-float jawLine(float x) {
-  float at = clamp((x - 440.0) / 40.0, 0.0, 8.999);
-  int index = int(at);
-  return mix(JAW[index], JAW[index + 1], at - float(index));
 }
 
 // 벌어진 틈 안이에요. 위에서 아래로 깊이가 바뀌고, 윗니와 혀가 있어요.
@@ -66,32 +58,29 @@ void main() {
   float t = dot(fromCenter, DOWN);
 
   // 입꼬리를 옆으로 당기거나 가운데로 모아요. 입에서 멀어질수록 힘이 줄어요.
-  float width = 1.0 + 0.14 * uWide - 0.24 * uRound;
-  float reach = 1.0 - smoothstep(0.85, 1.7, length(vec2(x, t * 1.15)) / HALF);
+  float width = 1.0 + 0.09 * uWide - 0.16 * uRound;
+  // 코끝은 입에서 50px 위라서, 그 아래에서 힘을 없애요. 없애지 않으면 말할 때 콧볼이 입 모양을 따라 넓어지고 좁아져요.
+  float belowNose = smoothstep(-42.0, -24.0, t);
+  float reach = (1.0 - smoothstep(0.85, 1.7, length(vec2(x, t * 1.15)) / HALF)) * belowNose;
   float sourceX = x * mix(1.0, 1.0 / width, reach);
   float s = sourceX / HALF;
 
   float inner = max(0.0, 1.0 - s * s);
-  float lipLine = inner * (6.86 - 8.2 * s);
+  float lipLine = inner * 6.0;
   float shape = pow(inner, mix(0.75, 0.5, uRound));
-  float lift = (8.0 + 6.0 * uRound) * uOpen;
-  float drop = 54.0 * uOpen;
+  float lift = (5.0 + 3.0 * uRound) * uOpen;
+  float drop = 30.0 * uOpen;
   float top = lipLine - lift * shape;
   float bottom = lipLine + drop * shape;
 
-  // 턱은 가운데가 가장 많이 내려가고 귀 쪽으로 갈수록 덜 내려가요.
-  float jaw = 0.8 * (1.0 - smoothstep(60.0, 190.0, abs(x)));
-  float lowerT = t - drop * mix(shape, jaw, smoothstep(0.0, 80.0, t - bottom));
-  float upperT = t + lift * shape * (1.0 - smoothstep(0.0, 34.0, top - t));
+  // 입 아래의 변형을 턱선에 닿기 전에 부드럽게 없애요.
+  // 턱을 잘라 목 위에 덮는 방식은 이중 윤곽과 좌우 비대칭을 만들어요.
+  float lowerWeight = 1.0 - smoothstep(28.0, 112.0, t - lipLine);
+  float lowerT = t - drop * shape * lowerWeight;
+  float upperT = t + lift * shape * (1.0 - smoothstep(0.0, 30.0, top - t));
   bool lower = t > (top + bottom) * 0.5;
   vec2 source = CENTER + ALONG * sourceX + DOWN * (lower ? lowerT : upperT);
-
   vec3 face = portrait(source);
-  if (lower) {
-    // 턱선 밖(목, 옷깃)은 그대로 두고, 내려온 턱이 그 위를 덮어요.
-    float onFace = smoothstep(-2.0, 2.0, jawLine(source.x) - source.y);
-    face = mix(portrait(pixel), face, onFace);
-  }
 
   float gap = smoothstep(top - uEdge, top + uEdge, t) * (1.0 - smoothstep(bottom - uEdge, bottom + uEdge, t));
   gap *= smoothstep(0.1, 1.2, bottom - top);

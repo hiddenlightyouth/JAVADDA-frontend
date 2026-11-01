@@ -10,7 +10,7 @@
 /* 사진을 먼저 깔아 둬요. 캔버스가 준비되기 전이나 그릴 수 없는 환경에서도 같은 자리에 같은 얼굴이 보여요. 자리는 mouthRenderer의 PORTRAIT_WINDOW와 같아요. */
 .interviewer-portrait {
   aspect-ratio: 1;
-  background: url('/images/interviewer.png') 46.2% 10.2% / 145.8% no-repeat;
+  background: url('/images/interviewer-balanced.png') 47.7% 10.2% / 145.8% no-repeat;
   transform-origin: 50% 90%;
   animation: interviewer-breathe 5s ease-in-out infinite;
 }
@@ -31,8 +31,8 @@
   50% { transform: scale(1.035) translateY(-1px); }
 }
 @keyframes interviewer-talk {
-  0%, 100% { transform: scale(1.035) rotate(-0.35deg); }
-  45% { transform: scale(1.045) rotate(0.45deg) translateY(1px); }
+  0%, 100% { transform: scale(1.03); }
+  45% { transform: scale(1.035) translateY(0.5px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .interviewer .interviewer-portrait { animation: none; }
