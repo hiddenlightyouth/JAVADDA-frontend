@@ -9,7 +9,7 @@ import { createLoadTracker, LOAD_HOLD_MS, LOAD_SHOW_AFTER_MS } from './lib/load'
 import { aboutFromPath } from './lib/routes'
 import './index.css'
 
-const RELOADED_KEY = 'whoisloafing:chunk-reloaded'
+const RELOADED_KEY = 'javadda:chunk-reloaded'
 const RELOAD_GAP_MS = 10_000
 
 // 새로 배포하면 예전 코드 조각의 주소가 사라져요. 열어 둔 화면이 그 조각을 받으려다 실패하면 화면이 하얗게 비니,

@@ -101,7 +101,7 @@ export function loadConfig(): Promise<ServerConfig> {
   return configOnce
 }
 
-const AI_MODEL_KEY = 'whoisloafing:ai-model'
+const AI_MODEL_KEY = 'javadda:ai-model'
 
 /** 설정 창에서 고른 AI 모델의 아이디예요. 고르지 않았으면 null이고, 그때는 서버의 기본 모델을 써요. */
 const aiModel = createStore<string | null>(readItem(AI_MODEL_KEY))

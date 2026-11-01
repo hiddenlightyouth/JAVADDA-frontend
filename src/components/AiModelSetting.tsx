@@ -33,7 +33,7 @@ const TEXT = messages({
  * AI 모델 고르기예요. 이름, 설명, 고르는 칸을 돌려주고, 설정 창과 내 정보 화면은 이것을 한 줄로 그린 `AiModelRow`를 써요.
  * 쓸 때마다 서버에 `/config`를 다시 물어서(`refreshConfig`), 화면을 연 뒤에 서버를 켰거나 키를 바꿔도 바로 맞춰요.
  * 드롭다운에는 늘 모델 이름을 보여줘요. 공급자(OpenAI, Claude)마다 묶어 서버에 키가 있는 모델만 늘어놓고, 서버의 기본 모델에는 "기본"을 옅게 붙여요.
- * 고른 것은 localStorage의 `whoisloafing:ai-model`에 두고, 서버의 기본 모델을 고르면 지워서 헤더를 보내지 않아요.
+ * 고른 것은 localStorage의 `javadda:ai-model`에 두고, 서버의 기본 모델을 고르면 지워서 헤더를 보내지 않아요.
  */
 export function useAiModelSetting() {
   const text = useMessages(TEXT)

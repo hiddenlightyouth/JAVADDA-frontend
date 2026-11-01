@@ -50,7 +50,7 @@ const TEXT = messages({
   },
 })
 
-const WIDTH_KEY = 'whoisloafing:posting-browser-width'
+const WIDTH_KEY = 'javadda:posting-browser-width'
 const DEFAULT_WIDTH = 560
 const MIN_WIDTH = 360
 // 왼쪽 화면이 이보다 좁아지지 않게 해요.

@@ -5,7 +5,7 @@ import { readJson, writeJson } from './storage'
 // 내 컴퓨터의 .env.development.local에 VITE_MOCK=true가 있을 때만 켜지고(main.tsx), 배포 빌드에는 들어가지 않아요.
 // 리포트 계산은 서버와 연결하기 전의 프론트 코드를 옮겨 왔어요. 대충 그럴듯한 값이면 돼서 꼼꼼히 맞추지는 않았어요.
 
-const KEY = 'whoisloafing:mock:v1'
+const KEY = 'javadda:mock:v1'
 
 type MockResume = Omit<Resume, 'id'> & { id: number }
 type MockReport = Omit<Report, 'id' | 'resumeId'> & { id: number; resumeId: number; readyAt: number }

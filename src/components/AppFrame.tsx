@@ -16,7 +16,7 @@ const CaptureShield = lazy(() => import('./CaptureShield').then((module) => ({ d
 // 설정 창은 앱에서만 쓰여서, 열 때만 받아요.
 const Settings = lazy(() => import('./Settings').then((module) => ({ default: module.Settings })))
 
-const SIDEBAR_CLOSED_KEY = 'whoisloafing:app-sidebar-closed'
+const SIDEBAR_CLOSED_KEY = 'javadda:app-sidebar-closed'
 
 const TEXT = messages({
   ko: {

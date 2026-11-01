@@ -15,7 +15,7 @@ export const LANGS: Lang[] = ['ko', 'en']
 /** 언어를 고르는 칸에 보여주는 이름. 각 언어로 적어요. */
 export const LANG_NAMES: Record<Lang, string> = { ko: '한국어', en: 'English' }
 
-const KEY = 'whoisloafing:lang'
+const KEY = 'javadda:lang'
 const EN_PREFIX = /^\/en(?=\/|$)/
 
 /** 언어마다 주소가 따로 있는 화면이에요. 그 밖의 화면(채팅, 계정 등)은 언어와 상관없이 같은 주소예요. */

@@ -74,11 +74,11 @@ function resetLeft(value: string): { days: number; hours: number } | null {
 type SidebarPage = 'explore' | 'recommend' | 'calendar' | 'map' | 'resume' | 'blogs' | 'articles' | 'me' | 'history' | 'admin' | null
 
 /** 접어 둔 이력서 폴더의 아이디예요. 이 기기에 기억해요. */
-const CLOSED_FOLDERS_KEY = 'whoisloafing:sidebar-closed-resumes'
+const CLOSED_FOLDERS_KEY = 'javadda:sidebar-closed-resumes'
 /** 폴더마다 끌어 옮겨 정한 리포트 순서예요. 서버에는 순서를 두지 않아서 이 기기에 기억해요. */
-const REPORT_ORDER_KEY = 'whoisloafing:sidebar-report-order'
+const REPORT_ORDER_KEY = 'javadda:sidebar-report-order'
 /** 고정한 리포트의 아이디예요. 고정한 리포트는 폴더 맨 위에 와요. 이 기기에 기억해요. */
-const PINNED_REPORTS_KEY = 'whoisloafing:sidebar-pinned-reports'
+const PINNED_REPORTS_KEY = 'javadda:sidebar-pinned-reports'
 
 interface Props {
   /** 지금 열려 있는 리포트. 목록에서 강조해요. */

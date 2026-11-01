@@ -1,4 +1,4 @@
-const OWNER_KEY_STORAGE = 'whoisloafing:owner'
+const OWNER_KEY_STORAGE = 'javadda:owner'
 
 /**
  * 이 브라우저에서 만든 채팅을 알아보기 위한 무작위 값이에요. 로그인 정보나 토큰이 아니에요.

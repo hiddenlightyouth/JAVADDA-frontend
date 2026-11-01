@@ -33,7 +33,7 @@ interface Pending {
   returnTo: string
 }
 
-const STORAGE = 'whoisloafing:social'
+const STORAGE = 'javadda:social'
 const CALLBACK_PATH = /^\/auth\/(github|kakao)\/callback\/?$/
 
 const AUTHORIZE_URLS: Record<SocialProvider, string> = {

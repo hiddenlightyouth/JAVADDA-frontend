@@ -21,7 +21,7 @@ const FAMILIES: JobFamily[] = ['backend', 'frontend', 'mobile', 'data', 'devops'
 const CAREERS: CareerLevel[] = ['entry', 'junior', 'any']
 const SORTS: PostingSort[] = ['fit', 'recent', 'deadline']
 /** 상시 채용 숨기기를 켰는지 이 기기에 기억해요. */
-const HIDE_ROLLING_KEY = 'whoisloafing:jobs-hide-rolling'
+const HIDE_ROLLING_KEY = 'javadda:jobs-hide-rolling'
 
 const TEXT = messages({
   ko: {

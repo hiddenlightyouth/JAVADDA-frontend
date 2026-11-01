@@ -49,7 +49,7 @@ const SKILLS_SHOWN = 4
 // 갤러리형은 카드를 여러 칸으로, 리스트형은 한 줄에 공고 하나씩 늘어놓아요. 고른 것은 이 기기에 기억하고, 두 화면이 같이 써요.
 export type Layout = 'gallery' | 'list'
 const LAYOUTS: Layout[] = ['gallery', 'list']
-const LAYOUT_KEY = 'whoisloafing:jobs-layout'
+const LAYOUT_KEY = 'javadda:jobs-layout'
 export const readLayout = (): Layout => (readItem(LAYOUT_KEY) === 'list' ? 'list' : 'gallery')
 
 /** 갤러리형과 리스트형을 고르는 버튼 두 개예요. 고른 것은 이 기기에 기억해요. */

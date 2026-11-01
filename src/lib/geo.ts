@@ -9,7 +9,7 @@ import { readJson, writeJson } from './storage'
  */
 const LOOKUP_URL = 'https://ipwho.is/'
 /** 도시와 나라 코드를 적어 두고, 나라 이름은 보여줄 때 화면 언어로 바꿔요. */
-const STORAGE_KEY = 'whoisloafing:ip-places:v2'
+const STORAGE_KEY = 'javadda:ip-places:v2'
 /** 이 기기에 적어 두는 주소 수. 넘으면 오래된 것부터 버려요. */
 const STORED_LIMIT = 200
 const LOCAL_PLACE_TEXT = messages({ ko: '내부 네트워크', en: 'Local network' })

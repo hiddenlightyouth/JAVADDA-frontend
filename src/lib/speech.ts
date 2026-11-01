@@ -180,7 +180,7 @@ function spokenChars(timing: number[], time: number) {
 let remoteOff = false
 
 /** 면접관 목소리는 이 기기에 기억해요. 설정 창과 내 정보 화면에서 고르고, 면접 연습이 읽어요. */
-const VOICE_KEY = 'whoisloafing:practice-voice'
+const VOICE_KEY = 'javadda:practice-voice'
 const readVoice = () => {
   const key = readItem(VOICE_KEY)
   return key && voiceOf(key) ? key : null

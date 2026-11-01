@@ -36,7 +36,7 @@ export function useShortcuts(keys: ShortcutMap, enabled = true) {
   }, [enabled])
 }
 
-const PINNED_KEY = 'whoisloafing:shortcut-hints'
+const PINNED_KEY = 'javadda:shortcut-hints'
 
 const readPinned = () => readFlag(PINNED_KEY)
 

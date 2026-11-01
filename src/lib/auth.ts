@@ -3,8 +3,8 @@ import { getLang, messages, pick } from './i18n'
 import { readJson, writeItem, writeJson } from './storage'
 import { createStore, useStore } from './store'
 
-const TOKEN_STORAGE = 'whoisloafing:auth'
-const ME_STORAGE = 'whoisloafing:me'
+const TOKEN_STORAGE = 'javadda:auth'
+const ME_STORAGE = 'javadda:me'
 const REFRESH_MARGIN_MS = 30_000
 
 export interface Tokens {
