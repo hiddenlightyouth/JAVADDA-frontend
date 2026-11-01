@@ -161,7 +161,7 @@ function ViewButton({ onClick, className = 'inline-flex' }: { onClick: () => voi
  * 카드의 나머지 자리를 누르면 원문을 미니 브라우저로 열고, 분석하기는 바로 진단해요.
  */
 /** 카드 오른쪽 위를 파낸 홈의 높이(px)와, 홈 둘레가 휘는 반지름(px)이에요. 반지름은 카드 모서리(rounded-2xl)와 같아요. */
-const NOTCH_HEIGHT = 40
+const NOTCH_HEIGHT = 52
 const NOTCH_RADIUS = 16
 /**
  * 홈 바깥으로 이어지는 오목한 모서리예요. 바깥은 카드가 놓인 흰 바탕색으로 칠하고, 그 경계에 카드 테두리와 같은 1px 선을 그어서
@@ -183,7 +183,7 @@ function DeadlineNotch({ left }: { left: number | null }) {
   const tone = left === null ? 'text-gray-500' : left <= 3 ? 'text-brand' : 'text-gray-900'
   return (
     <span
-      className={`absolute -top-px -right-px flex items-center rounded-bl-2xl border-b border-l border-gray-200 bg-white pr-4 pl-3.5 text-[14px] font-bold tabular-nums ${tone}`}
+      className={`absolute -top-px -right-px flex items-center rounded-bl-2xl border-b border-l border-gray-200 bg-white pr-5 pl-5 text-[15px] font-bold tabular-nums ${tone}`}
       style={{ height: NOTCH_HEIGHT }}
     >
       {/* 바깥 모서리 조각은 홈의 테두리 1px과 겹치게 놓아서 선이 어긋나지 않아요. */}
@@ -203,7 +203,7 @@ export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onComp
     <li onClick={onBlankClick(onOpen)} className="group relative flex animate-rise cursor-pointer flex-col rounded-2xl border border-gray-200 bg-gray-50 p-5 transition-colors hover:bg-gray-100" style={stagger(order)}>
       <DeadlineNotch left={left} />
       {/* 오른쪽 위는 홈이 파고들어 있어서, 기업 줄은 그 자리를 비워 둬요. */}
-      <div className="flex items-center gap-3 pr-20">
+      <div className="flex items-center gap-3 pr-24">
         {/* 로고와 기업 이름을 누르면 기업 소개를 미니 브라우저로 열어요. */}
         <button type="button" onClick={onCompany} aria-label={L.companyInfo(company.name)} className="group/company -m-1 flex min-w-0 items-center gap-3 rounded-xl p-1 text-left">
           <CompanyMark company={company} className="size-10 text-[15px] transition-opacity group-hover/company:opacity-80" />
