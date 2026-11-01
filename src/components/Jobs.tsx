@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
-import { careerName, companyOf, type CompanyCategory, majorCompanies, familyName, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort } from '../lib/gap'
+import { careerName, companyOf, SIZE_GROUPS, sizeGroupName, sizeGroupOf, type SizeGroup, type CompanyCategory, majorCompanies, familyName, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { readFlag, writeFlag } from '../lib/storage'
 import { PageHeader, ScrollPage } from './AppPage'
@@ -30,6 +30,7 @@ const TEXT = messages({
     all: '전체',
     family: '직군',
     career: '경력',
+    size: '기업 규모',
     sort: '정렬',
     sorts: { fit: '적합도순', recent: '최신순', deadline: '마감 임박순' } as Record<PostingSort, string>,
     none: '맞는 공고가 없어요.',
@@ -45,6 +46,7 @@ const TEXT = messages({
     all: 'All',
     family: 'Role',
     career: 'Level',
+    size: 'Company size',
     sort: 'Sort',
     sorts: { fit: 'Best fit', recent: 'Newest', deadline: 'Closing soon' },
     none: 'No postings match.',
@@ -66,6 +68,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   const [sort, setSort] = useState<PostingSort>(resume ? 'fit' : 'recent')
   const [company, setCompany] = useState<string | null>(initialCompany)
   const [category, setCategory] = useState<CompanyCategory | null>(null)
+  const [size, setSize] = useState<SizeGroup | null>(null)
   const browser = useJobBrowser()
   const [layout, setLayout] = useState<Layout>(readLayout)
   const [hideRolling, setHideRolling] = useState(() => readFlag(HIDE_ROLLING_KEY))
@@ -74,6 +77,11 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요.
   const suggestion = useSuggestion(!query)
   const majors = useMemo(majorCompanies, [])
+  // 규모 메뉴에는 받아 온 공고에 있는 규모만 둬요. 규모를 모르는 기업이 많아서 없는 묶음을 고르면 비기만 해요.
+  const sizes = useMemo(() => {
+    const present = new Set((postings ?? []).map((posting) => sizeGroupOf(companyOf(posting.companyId))))
+    return SIZE_GROUPS.filter((group) => present.has(group))
+  }, [postings])
 
   function analyze(posting: JobPosting) {
     track('posting_select', { posting: posting.id, from: 'explore' })
@@ -87,12 +95,14 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
       sortPostings(
         postings.filter(
           (posting) =>
-            (!company || posting.companyId === company) && (!category || companyOf(posting.companyId).category === category) && (!hideRolling || posting.deadline),
+            (!company || posting.companyId === company) && (!category || companyOf(posting.companyId).category === category) &&
+            (!size || sizeGroupOf(companyOf(posting.companyId)) === size) &&
+            (!hideRolling || posting.deadline),
         ),
         sort,
         resume,
       ),
-    [postings, company, category, hideRolling, sort, resume],
+    [postings, company, category, size, hideRolling, sort, resume],
   )
 
   return (
@@ -155,6 +165,26 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
               },
             ]}
           />
+          {sizes.length > 0 && (
+            <Dropdown
+              size="lg"
+              active={size !== null}
+              label={L.size}
+              value={size ? sizeGroupName(size) : L.all}
+              groups={[
+                {
+                  items: [null, ...sizes].map((value) => ({
+                    label: value ? sizeGroupName(value) : L.all,
+                    checked: size === value,
+                    onSelect: () => {
+                      track('jobs_size_select', { size: value ?? 'all' })
+                      setSize(value)
+                    },
+                  })),
+                },
+              ]}
+            />
+          )}
           <Dropdown
             size="lg"
             label={L.sort}
@@ -226,12 +256,13 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
                 <Notice
                   title={L.none}
                   body={L.noneBody}
-                  action={query || family || career || company || category || hideRolling ? L.reset : undefined}
+                  action={query || family || career || size || company || category || hideRolling ? L.reset : undefined}
                   onAction={() => {
                     track('jobs_filter_reset')
                     setQuery('')
                     setFamily(null)
                     setCareer(null)
+                    setSize(null)
                     setCompany(null)
                     setCategory(null)
                     setHideRolling(false)

@@ -1479,6 +1479,18 @@ const COMPANY_SIZE: Record<string, string> = { kakao: '대기업', naver: '대�
 export const isSizeWord = (industry: string) => SIZE_WORDS.includes(industry)
 export const companySizeOf = (company: Company): string | undefined => (isSizeWord(company.industry) ? company.industry : COMPANY_SIZE[company.id])
 
+/** 공고 탐색의 규모 메뉴에서 고르는 묶음이에요. 공기업은 공공기관에 같이 넣어요. 규모를 모르는 기업은 어느 묶음에도 들지 않아요. */
+export type SizeGroup = 'large' | 'mid' | 'small' | 'public'
+export const SIZE_GROUPS: SizeGroup[] = ['large', 'mid', 'small', 'public']
+const SIZE_GROUP_OF: Record<string, SizeGroup> = { 대기업: 'large', 중견기업: 'mid', 중소기업: 'small', 공공기관: 'public', 공기업: 'public' }
+const SIZE_GROUP_NAMES: Record<SizeGroup, string> = { large: '대기업', mid: '중견기업', small: '중소기업', public: '공공기관' }
+const SIZE_GROUP_NAMES_EN: Record<SizeGroup, string> = { large: 'Large', mid: 'Mid-sized', small: 'Small', public: 'Public' }
+export const sizeGroupOf = (company: Company): SizeGroup | undefined => {
+  const size = companySizeOf(company)
+  return size ? SIZE_GROUP_OF[size] : undefined
+}
+export const sizeGroupName = (group: SizeGroup) => (getLang() === 'en' ? SIZE_GROUP_NAMES_EN[group] : SIZE_GROUP_NAMES[group])
+
 /** 기업 본사 자리예요. 모르면 없어요. 채용 지도가 핀을 본사 자리에 꽂을 때 써요. */
 export const officeOf = (companyId: string): CompanyOffice | undefined => COMPANY_OFFICE[companyId]
 
