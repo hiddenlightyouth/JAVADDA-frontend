@@ -3,7 +3,7 @@ import { track } from '../lib/analytics'
 import { companyOf, daysLeft, fitOf, type Company, type JobPosting, type Resume } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { readItem, writeItem } from '../lib/storage'
-import { CardTag, CompanyMark, DeadlineTag, DiagnosedTag, FitBadge, FitTag, PostingMeta, SkillChip, skillTone, Tip } from './GapParts'
+import { CompanyMark, DeadlineTag, DiagnosedTag, FitBadge, FitTag, PostingMeta, SkillChip, skillTone, Tip } from './GapParts'
 import { ExternalLinkIcon, GridIcon, ListIcon } from './Icons'
 import { PostingBrowser } from './PostingBrowser'
 import { shortDate } from './ScreenParts'
@@ -21,7 +21,6 @@ const TEXT = messages({
     layouts: { gallery: '갤러리형으로 보기', list: '리스트형으로 보기' } as Record<Layout, string>,
     always: '상시',
     today: '오늘 마감',
-    until: (date: string) => `${date} 마감`,
     view: '채용 공고 열기',
     analyze: '분석하기',
     more: (count: number) => `외 ${count}개`,
@@ -33,7 +32,6 @@ const TEXT = messages({
     layouts: { gallery: 'Gallery view', list: 'List view' },
     always: 'Rolling',
     today: 'Today',
-    until: (date: string) => `Closes ${date}`,
     view: 'Open posting',
     analyze: 'Analyze',
     more: (count: number) => `+${count} more`,
@@ -235,7 +233,8 @@ export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onComp
       <div className="mt-5 flex items-center gap-1.5 border-t border-gray-200 pt-3">
         <DiagnosedTag postingId={posting.id} />
         <FitTag fit={fit} />
-        {posting.deadline && <CardTag tone="gray">{L.until(shortDate(posting.deadline))}</CardTag>}
+        {/* 마감 날짜는 태그로 세우지 않고 태그 줄 끝에 옅게 적어요. 남은 날은 오른쪽 위 홈에 있어요. */}
+        {posting.deadline && <span className="ml-1 text-[12.5px] text-gray-400 tabular-nums">~ {shortDate(posting.deadline)}</span>}
         <span className="ml-auto flex shrink-0 items-center gap-2">
           <FitBadge fit={fit} compact />
           <ViewButton onClick={onOpen} />
