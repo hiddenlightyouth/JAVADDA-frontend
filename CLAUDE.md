@@ -390,6 +390,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 ## Git 작업 규칙
 
+- 작업은 따로 브랜치를 만들지 않고 develop에 바로 커밋하고 푸시해요. 다른 브랜치나 워크트리에서 시작했으면 끝내기 전에 develop 최신 위로 옮겨서 develop에 올려요.
 - 요청받은 작업이 끝나면 승인을 기다리지 않고 바로 커밋과 푸시를 함께 진행해요.
 - 커밋 메시지는 "태그: 구현한 내용" 형식으로, 가장 간단한 한국어로 써요. 예: `feat: 회원가입 기능 구현`
 - 사용할 수 있는 태그: `feat`, `fix`, `docs`, `refactor`, `build`, `ci`, `chore`, `remove`
