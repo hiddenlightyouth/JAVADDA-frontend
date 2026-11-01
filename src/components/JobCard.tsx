@@ -166,28 +166,31 @@ const NOTCH_RADIUS = 16
  * 홈 바깥으로 이어지는 오목한 모서리예요. 바깥은 카드가 놓인 흰 바탕색으로 칠하고, 그 경계에 카드 테두리와 같은 1px 선을 그어서
  * 카드 테두리가 끊기지 않고 홈을 따라 휘어 들어가요.
  */
-const notchCorner = {
+const notchCorner = (line: string) => ({
   width: NOTCH_RADIUS,
   height: NOTCH_RADIUS,
-  background: `radial-gradient(circle at 0 100%, transparent ${NOTCH_RADIUS - 1.5}px, var(--color-gray-200) ${NOTCH_RADIUS - 1}px, var(--color-gray-200) ${NOTCH_RADIUS - 0.5}px, var(--color-white) ${NOTCH_RADIUS}px)`,
-}
+  background: `radial-gradient(circle at 0 100%, transparent ${NOTCH_RADIUS - 1.5}px, ${line} ${NOTCH_RADIUS - 1}px, ${line} ${NOTCH_RADIUS - 0.5}px, var(--color-white) ${NOTCH_RADIUS}px)`,
+})
+/** 오늘 마감하는 공고는 카드 테두리와 홈의 글자를 빨간색으로 칠해서 바로 눈에 띄게 해요. */
+const cardBorder = (left: number | null) => (left === 0 ? 'border-red-400' : 'border-gray-200')
 
 /**
  * 공고 카드 오른쪽 위를 서울 버스 정류장 안내판처럼 둥글게 파낸 홈이에요. 카드 테두리가 홈을 따라 이어지고, 홈 안에 마감까지 남은 날(D-6, 오늘 마감, 상시)을 크게 적어요.
- * 마감이 가장 중요한 정보라 가장 눈에 띄는 자리에 두고, 사흘 안으로 남으면 메인 컬러예요. 구체적인 날짜는 아래 태그 줄에 있어요.
+ * 마감이 가장 중요한 정보라 가장 눈에 띄는 자리에 두고, 사흘 안으로 남으면 메인 컬러, 오늘 마감이면 글자와 카드 테두리가 빨간색이에요. 구체적인 날짜는 아래 태그 줄에 있어요.
  * 홈은 카드가 놓인 흰 바탕색이라, 마우스를 올려 카드가 짙어져도 홈은 그대로예요.
  */
 function DeadlineNotch({ left }: { left: number | null }) {
   const L = useMessages(TEXT)
-  const tone = left === null ? 'text-gray-500' : left <= 3 ? 'text-brand' : 'text-gray-900'
+  const tone = left === null ? 'text-gray-500' : left === 0 ? 'text-red-500' : left <= 3 ? 'text-brand' : 'text-gray-900'
+  const corner = notchCorner(left === 0 ? 'var(--color-red-400)' : 'var(--color-gray-200)')
   return (
     <span
-      className={`absolute -top-px -right-px flex items-center rounded-bl-2xl border-b border-l border-gray-200 bg-white pr-5 pl-5 text-[15px] font-bold tabular-nums ${tone}`}
+      className={`absolute -top-px -right-px flex items-center rounded-bl-2xl border-b border-l bg-white pr-5 pl-5 text-[15px] font-bold tabular-nums ${cardBorder(left)} ${tone}`}
       style={{ height: NOTCH_HEIGHT }}
     >
       {/* 바깥 모서리 조각은 홈의 테두리 1px과 겹치게 놓아서 선이 어긋나지 않아요. */}
-      <span aria-hidden className="absolute top-0 right-[calc(100%-1px)]" style={notchCorner} />
-      <span aria-hidden className="absolute top-[calc(100%-1px)] right-0" style={notchCorner} />
+      <span aria-hidden className="absolute top-0 right-[calc(100%-1px)]" style={corner} />
+      <span aria-hidden className="absolute top-[calc(100%-1px)] right-0" style={corner} />
       {left === null ? L.always : left === 0 ? L.today : `D-${left}`}
     </span>
   )
@@ -199,7 +202,7 @@ export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onComp
   const left = daysLeft(posting)
   return (
     // 제목 버튼을 카드 전체에 늘여 덮으면, 누른 곳과 뗀 곳이 달라져 클릭이 한 번 씹혀서 카드가 직접 받아요.
-    <li onClick={onBlankClick(onOpen)} className="group relative flex animate-rise cursor-pointer flex-col rounded-2xl border border-gray-200 bg-gray-50 p-5 transition-colors hover:bg-gray-100" style={stagger(order)}>
+    <li onClick={onBlankClick(onOpen)} className={`group relative flex animate-rise cursor-pointer flex-col rounded-2xl border bg-gray-50 p-5 transition-colors hover:bg-gray-100 ${cardBorder(left)}`} style={stagger(order)}>
       <DeadlineNotch left={left} />
       {/* 오른쪽 위는 홈이 파고들어 있어서, 기업 줄은 그 자리를 비워 둬요. */}
       <div className="flex items-center gap-3 pr-24">
