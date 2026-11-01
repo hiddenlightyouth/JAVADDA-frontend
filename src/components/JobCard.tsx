@@ -233,14 +233,11 @@ export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onComp
         {posting.required.length > SKILLS_SHOWN && <span className="inline-flex h-7 items-center px-1 text-[12px] text-gray-400">{L.more(posting.required.length - SKILLS_SHOWN)}</span>}
       </div>
 
-      {/* 진단한 공고는 진단함 태그를 앞에 붙이고, 이력서가 있으면 적합도(높음, 중간, 낮음), 마감 날짜를 그 뒤에 붙여요. 오른쪽에 적합도와 원문을 여는 아이콘, 분석하기가 있어요. */}
+      {/* 진단한 공고는 진단함 태그를 앞에 붙이고, 이력서가 있으면 적합도(낮음 38%)를 그 뒤에 붙여요. 카드가 좁아도 버튼이 밀려나지 않게 막대는 두지 않고 숫자를 태그 안에 적어요. 오른쪽에 원문을 여는 아이콘과 분석하기가 있어요. */}
       <div className="mt-5 flex items-center gap-1.5 border-t border-gray-200 pt-3">
         <DiagnosedTag postingId={posting.id} />
-        <FitTag fit={fit} />
-        <span className="ml-auto flex shrink-0 items-center gap-2">
-          <FitBadge fit={fit} compact />
-          <ViewButton onClick={onOpen} />
-        </span>
+        <FitTag fit={fit} percent />
+        <ViewButton onClick={onOpen} className="ml-auto inline-flex shrink-0" />
         <button type="button" onClick={onAnalyze} className={`${primaryButton} shrink-0`}>
           {L.analyze}
         </button>

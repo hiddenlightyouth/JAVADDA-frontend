@@ -377,10 +377,18 @@ export function CardTag({ tone, children }: { tone: FitBand | 'gray'; children: 
  * 적합도를 높음(70% 이상, 메인 컬러), 중간(50% 이상, 노란색), 낮음(빨간색)으로 나눈 카드 태그예요. 추천 공고와 공고 탐색의 카드, 줄이 같이 써요.
  * 이력서가 없어 적합도를 모르면(fit이 null) 아무것도 그리지 않아요.
  */
-export function FitTag({ fit }: { fit: number | null }) {
+export function FitTag({ fit, percent = false }: { fit: number | null; /** 태그 안에 적합도 숫자도 적어요(낮음 38%). 자리가 좁은 공고 탐색 카드가 막대 대신 써요. */ percent?: boolean }) {
   const L = useMessages(TEXT)
   if (fit === null) return null
-  return <CardTag tone={fitBand(fit)}>{L.fitTag(fit)}</CardTag>
+  if (!percent) return <CardTag tone={fitBand(fit)}>{L.fitTag(fit)}</CardTag>
+  return (
+    <Tip text={L.fitTip}>
+      <CardTag tone={fitBand(fit)}>
+        {L.fitTag(fit)}
+        <span className="ml-1 tabular-nums">{fit}%</span>
+      </CardTag>
+    </Tip>
+  )
 }
 
 /**
