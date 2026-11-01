@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEven
 import { track } from '../lib/analytics'
 import { COMPANIES, companyOf, fitOf, majorCompanies, POSTINGS, postingOf, RECOMMEND_MIN_FIT, sortPostings, useReports, useResume, type Company, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
+import { Carousel } from './Carousel'
 import { CompanyMark, DiagnosedTag, FitBadge } from './GapParts'
 import { JobCard, useJobBrowser } from './JobCard'
 import { ChevronRightIcon, SearchIcon } from './Icons'
@@ -106,115 +107,28 @@ function browseCompanies() {
 /** 기업 칸 하나의 폭과 칸 사이 간격(px)이에요. 칸을 늘이지 않아서 화면이 넓어도 로고 사이가 벌어지지 않아요. */
 const CAROUSEL_ITEM = 96
 const CAROUSEL_GAP = 4
-/** 한 칸 넘어가는 간격과 넘어가는 동안의 시간(ms)이에요. */
-const CAROUSEL_EVERY = 2600
-const CAROUSEL_SLIDE = 600
 
-/**
- * 기업으로 둘러보기 줄이에요. 한 줄에 들어가는 만큼 보여주고, 기업이 더 있으면 잠깐마다 왼쪽으로 한 칸씩 밀려나며 새 기업이 오른쪽에서 들어와요.
- * 끝에 닿으면 처음 기업으로 이어져서 계속 돌아요. 움직이는 칸은 누르기 어려워서 마우스를 올리거나 키보드로 들어오면 멈추고,
- * 줄이 화면 밖에 있거나 탭을 보고 있지 않을 때도 멈춰요. 움직임 줄이기 설정이면 움직이지 않아요.
- * 칸 폭은 늘 같고, 오른쪽 끝에 걸친 칸은 잘린 채로 보여서 뒤에 기업이 더 있다는 걸 알려요.
- */
+/** 기업으로 둘러보기 줄이에요. 한 줄에 들어가는 만큼 보여주고, 기업이 더 있으면 잠깐마다 한 칸씩 밀려나며 돌아요(`Carousel`). */
 function CompanyCarousel({ companies, onSelect }: { companies: Company[]; onSelect: (company: Company) => void }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(0)
-  const [first, setFirst] = useState(0)
-  const [sliding, setSliding] = useState(false)
-  const [paused, setPaused] = useState(false)
-  const [onScreen, setOnScreen] = useState(true)
-  const [tabVisible, setTabVisible] = useState(() => !document.hidden)
-  const [still] = useState(() => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
-
-  useEffect(() => {
-    const element = ref.current
-    if (!element) return
-    const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width))
-    observer.observe(element)
-    const seen = new IntersectionObserver(([entry]) => setOnScreen(entry.isIntersecting))
-    seen.observe(element)
-    const onVisibility = () => setTabVisible(!document.hidden)
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => {
-      observer.disconnect()
-      seen.disconnect()
-      document.removeEventListener('visibilitychange', onVisibility)
-    }
-  }, [])
-
-  // 다 보이는 칸 수예요. 그 뒤로 걸친 칸은 잘려 보이고, 누를 수 없어요.
-  const visible = Math.max(1, Math.floor((width + CAROUSEL_GAP) / (CAROUSEL_ITEM + CAROUSEL_GAP)))
-  const itemWidth = CAROUSEL_ITEM
-  const moving = !still && companies.length > visible
-
-  // 한 칸을 다 밀고 나서 다음 칸을 기다려요. 따로 도는 타이머를 두면 밀리는 중과 겹치거나, 멈췄다 풀릴 때 간격이 들쭉날쭉해요.
-  useEffect(() => {
-    if (!moving || paused || !onScreen || !tabVisible || sliding) return
-    const timer = window.setTimeout(() => setSliding(true), CAROUSEL_EVERY)
-    return () => window.clearTimeout(timer)
-  }, [moving, paused, onScreen, tabVisible, sliding, first])
-
-  // 밀기가 끝나면 첫 칸을 하나 넘기고 자리를 되돌려요. transitionend가 오지 않는 때(탭을 옮긴 사이 등)에도 멈춰 있지 않게, 시간이 지나면 직접 끝내요.
-  const finishing = useRef(false)
-  const finish = () => {
-    if (finishing.current) return
-    finishing.current = true
-    setSliding(false)
-    setFirst((value) => (value + 1) % companies.length)
-  }
-  useEffect(() => {
-    if (!sliding) {
-      finishing.current = false
-      return
-    }
-    const timer = window.setTimeout(finish, CAROUSEL_SLIDE + 150)
-    return () => window.clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sliding])
-
-  // 걸친 칸과 그다음 칸까지 그려 두고, 밀려날 때 그 칸들이 들어와요. 다 밀리면 첫 칸을 하나 넘기고 자리를 되돌려요.
-  const count = Math.min(companies.length, moving ? visible + 2 : visible)
-  const shown = Array.from({ length: count }, (_, index) => companies[(first + index) % companies.length])
   return (
-    <div
-      ref={ref}
-      className="mt-2 overflow-hidden"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={() => setPaused(false)}
-    >
-      <ul
-        className="flex"
-        style={{
-          gap: CAROUSEL_GAP,
-          transform: sliding ? `translateX(-${itemWidth + CAROUSEL_GAP}px)` : undefined,
-          transition: sliding ? `transform ${CAROUSEL_SLIDE}ms cubic-bezier(0.4, 0, 0.2, 1)` : undefined,
-        }}
-        onTransitionEnd={(event) => {
-          // 안쪽 버튼의 hover 색 바뀜도 transitionend로 올라와서, 줄이 밀린 것(transform)만 받아요. 안 거르면 마우스를 올릴 때마다 한 칸씩 넘어가요.
-          if (event.target !== event.currentTarget || event.propertyName !== 'transform') return
-          finish()
-        }}
-      >
-        {shown.map((company, index) => {
-          const hidden = index >= visible
-          return (
-            <li key={company.id} className="shrink-0" style={{ width: itemWidth }} aria-hidden={hidden || undefined}>
-              <button
-                type="button"
-                tabIndex={hidden ? -1 : undefined}
-                onClick={() => onSelect(company)}
-                className="group flex w-full flex-col items-center gap-2.5 rounded-2xl px-2 py-3.5 transition-colors hover:bg-gray-50"
-              >
-                <CompanyMark company={company} className="size-14 rounded-2xl! text-[19px]" />
-                <span className="w-full truncate text-center text-[13px] text-gray-700 transition-colors group-hover:text-gray-950">{company.name}</span>
-              </button>
-            </li>
-          )
-        })}
-      </ul>
-    </div>
+    <Carousel
+      className="mt-2"
+      items={companies}
+      itemWidth={CAROUSEL_ITEM}
+      gap={CAROUSEL_GAP}
+      keyOf={(company) => company.id}
+      render={(company, hidden) => (
+        <button
+          type="button"
+          tabIndex={hidden ? -1 : undefined}
+          onClick={() => onSelect(company)}
+          className="group flex w-full flex-col items-center gap-2.5 rounded-2xl px-2 py-3.5 transition-colors hover:bg-gray-50"
+        >
+          <CompanyMark company={company} className="size-14 rounded-2xl! text-[19px]" />
+          <span className="w-full truncate text-center text-[13px] text-gray-700 transition-colors group-hover:text-gray-950">{company.name}</span>
+        </button>
+      )}
+    />
   )
 }
 

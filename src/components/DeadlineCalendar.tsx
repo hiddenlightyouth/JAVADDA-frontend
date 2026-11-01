@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { track } from '../lib/analytics'
-import { companyOf, type CompanyCategory, majorCompanies, fitOf, useReports, useResume, type JobPosting } from '../lib/gap'
+import { type Company, companyOf, type CompanyCategory, daysLeft, daysSince, fitOf, majorCompanies, useReports, useResume, type JobPosting } from '../lib/gap'
 import { holidayOf } from '../lib/holidays'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { PageHeader, ScrollPage } from './AppPage'
-import { CategoryFilter, CompanyFilter, CompanyMark, DiagnosedTag, FitTag, usePickConfirm } from './GapParts'
+import { Carousel } from './Carousel'
+import { CategoryFilter, CompanyMark, DeadlineTag, DiagnosedTag, FitTag, usePickConfirm } from './GapParts'
 import { ChevronRightIcon } from './Icons'
 import { PickRow } from './JobCard'
 import { LoadGate, usePostings } from './ScreenParts'
@@ -13,7 +14,7 @@ import { Segmented, toolButton, useShowMore } from './ui'
 /**
  * 마감 달력이에요. 공고의 마감일을 달력에 놓아서, 어느 기업의 어떤 공고가 언제 마감인지 한눈에 봐요.
  * 날짜 칸에는 그날 마감하는 공고를 기업 로고와 제목으로 모두 적고, 날짜를 누르면 아래에 그날의 공고를 모두 보여줘요.
- * 기업으로 거르고, 진단한 공고만 볼 수도 있어요. 상시 채용(마감 없음)은 올라온 날부터 계속 열려 있어서,
+ * 맨 위의 지금 뜨는 기업 카드나 기업 분류로 거르고, 진단한 공고만 볼 수도 있어요. 상시 채용(마감 없음)은 올라온 날부터 계속 열려 있어서,
  * 고른 날짜 칸에만 그날 열려 있던 상시 채용 수를 날짜 옆에 작게 적어요. 날짜 칸의 마감 공고는 기업마다 한 줄로 묶어 모두 보여줘요. 날짜를 고르면 그날 마감하는 공고와 그날 열려 있던 상시 채용 공고를 함께 보여줘요.
  * 공고를 누르면 해당 공고로 이동할지 한 번 더 묻고, 진단으로 가요(이미 진단했으면 그 리포트로 가요).
  */
@@ -27,7 +28,9 @@ const TEXT = messages({
     next: '다음 달',
     today: '오늘',
     category: '기업 분류',
-    majors: '주요 기업',
+    hot: '지금 뜨는 기업',
+    open: (count: number) => `채용 중 ${count}개`,
+    fresh: (count: number) => `새 공고 ${count}`,
     allCategories: '전체',
     scope: '보기',
     scopes: { all: '전체 공고', diagnosed: '진단한 공고' } as Record<Scope, string>,
@@ -47,7 +50,9 @@ const TEXT = messages({
     next: 'Next month',
     today: 'Today',
     category: 'Company type',
-    majors: 'Major companies',
+    hot: 'Trending companies',
+    open: (count: number) => `${count} open`,
+    fresh: (count: number) => `${count} new`,
     allCategories: 'All',
     scope: 'Show',
     scopes: { all: 'All postings', diagnosed: 'Diagnosed' },
@@ -87,6 +92,68 @@ function groupByCompany(postings: JobPosting[]): { companyId: string; postings: 
   return [...groups.entries()].map(([companyId, list]) => ({ companyId, postings: list })).sort((a, b) => b.postings.length - a.postings.length)
 }
 
+/** 지금 뜨는 기업 카드 하나의 폭과 카드 사이 간격(px)이에요. */
+const HOT_CARD = 208
+const HOT_GAP = 12
+/** 이 날 수 안에 올라온 공고를 새 공고로 쳐요. 지금 뜨는 기업은 새 공고가 많은 순서예요. */
+const FRESH_DAYS = 14
+const HOT_LIMIT = 20
+
+interface HotCompany {
+  company: Company
+  open: number
+  fresh: number
+  /** 가장 가까운 마감까지 남은 날이에요. 마감이 있는 공고가 없으면 null(상시 채용)이에요. */
+  nearest: number | null
+}
+
+/**
+ * 지금 뜨는 기업이에요. 네카라쿠배당토 같은 유명 기업(`majorCompanies`)이 앞이고, 그 안에서는 최근 2주 사이에 새 공고를 많이 올린 순서,
+ * 같으면 채용 중인 공고가 많은 순서예요. 카드는 로고를 크게 보여줘서 로고가 있는 기업만 두고,
+ * 공공기관은 정부 상징만 줄지어 보여서 빼요.
+ */
+function hotCompanies(postings: JobPosting[]): HotCompany[] {
+  const majors = new Set(majorCompanies().map((company) => company.id))
+  const byCompany = new Map<string, HotCompany>()
+  for (const posting of postings) {
+    const company = companyOf(posting.companyId)
+    if (!company.logo || company.category === 'public' || company.industry === '공공기관' || company.industry === '공기업') continue
+    const item = byCompany.get(company.id) ?? { company, open: 0, fresh: 0, nearest: null }
+    item.open += 1
+    if (daysSince(posting) <= FRESH_DAYS) item.fresh += 1
+    const left = daysLeft(posting)
+    if (left !== null && left >= 0 && (item.nearest === null || left < item.nearest)) item.nearest = left
+    byCompany.set(company.id, item)
+  }
+  return [...byCompany.values()]
+    .sort((a, b) => Number(majors.has(b.company.id)) - Number(majors.has(a.company.id)) || b.fresh - a.fresh || b.open - a.open)
+    .slice(0, HOT_LIMIT)
+}
+
+/** 지금 뜨는 기업 카드예요. 누르면 달력을 그 기업 공고로 거르고, 한 번 더 누르면 풀려요. 고른 카드는 연한 메인 컬러예요. */
+function HotCard({ item, hidden, selected, onSelect }: { item: HotCompany; hidden: boolean; selected: boolean; onSelect: () => void }) {
+  const L = useMessages(TEXT)
+  return (
+    <button
+      type="button"
+      tabIndex={hidden ? -1 : undefined}
+      aria-pressed={selected}
+      onClick={onSelect}
+      className={`group flex h-[132px] w-full flex-col rounded-2xl p-4 text-left transition-colors ${selected ? 'bg-brand-soft' : 'bg-gray-50 hover:bg-gray-100'}`}
+    >
+      <span className="flex items-start justify-between gap-2">
+        <CompanyMark company={item.company} className="size-11 rounded-xl! text-[15px]" />
+        {item.fresh > 0 && <span className="text-[12px] font-medium text-brand tabular-nums">{L.fresh(item.fresh)}</span>}
+      </span>
+      <span className={`mt-3 truncate text-[14.5px] font-semibold transition-colors ${selected ? 'text-brand' : 'text-gray-900 group-hover:text-brand'}`}>{item.company.name}</span>
+      <span className="mt-auto flex items-center justify-between gap-2">
+        <span className="text-[12px] text-gray-500 tabular-nums">{L.open(item.open)}</span>
+        <DeadlineTag left={item.nearest} />
+      </span>
+    </button>
+  )
+}
+
 export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => void }) {
   const L = useMessages(TEXT)
   const resume = useResume()
@@ -99,7 +166,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
   const [scope, setScope] = useState<Scope>('all')
   const [selected, setSelected] = useState<string>(todayKey)
   const { loaded, postings, waiting, percent, retry } = usePostings()
-  const majors = useMemo(majorCompanies, [])
+  const hot = useMemo(() => hotCompanies(postings ?? []), [postings])
 
   // 진단한 공고예요. 진단함 태그(`DiagnosedTag`)처럼 만들지 못한 리포트는 빼요.
   const diagnosed = useMemo(() => new Set(reports.filter((report) => report.status !== 'failed').map((report) => report.postingId)), [reports])
@@ -175,16 +242,31 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
 
   return (
     <ScrollPage header={<PageHeader title={L.title} />} className="@container">
-      <CompanyFilter
-        oneLine
-        companies={majors}
-        value={company}
-        label={L.majors}
-        onChange={(next) => {
-          setCompany(next)
-          setCategory(null)
-        }}
-      />
+      {hot.length > 0 && (
+        <section aria-labelledby="calendar-hot" className="mb-5">
+          <h2 id="calendar-hot" className="text-[15px] font-semibold text-gray-900">
+            {L.hot}
+          </h2>
+          <Carousel
+            className="mt-3"
+            items={hot}
+            itemWidth={HOT_CARD}
+            gap={HOT_GAP}
+            keyOf={(item) => item.company.id}
+            render={(item, hidden) => (
+              <HotCard
+                item={item}
+                hidden={hidden}
+                selected={company === item.company.id}
+                onSelect={() => {
+                  setCompany(company === item.company.id ? null : item.company.id)
+                  setCategory(null)
+                }}
+              />
+            )}
+          />
+        </section>
+      )}
       <div className="mt-2">
         <CategoryFilter
           postings={postings ?? []}
