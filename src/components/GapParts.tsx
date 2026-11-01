@@ -26,7 +26,7 @@ const TEXT = messages({
     noFit: '이력서를 올리면 적합도가 보여요',
     fitTip: '내 이력서가 이 공고의 요구 역량을 얼마나 채우는지예요. 필수 역량을 가장 크게 보고, 우대 역량과 역량의 폭을 더해요.',
     toneTips: { met: '이력서에서 충분히 보여요.', partial: '이력서에 있지만 근거가 약해요.', missing: '이력서에서 보이지 않아요.' } as Partial<Record<ChipTone, string>>,
-    always: '상시 채용',
+    always: '상시',
     posted: (days: number) => (days <= NEW_DAYS ? '신규' : `${days}일 전`),
     fitTag: (fit: number): string => ({ brand: '높음', amber: '중간', red: '낮음' })[fitBand(fit)],
     dday: (days: number) => (days === 0 ? '오늘 마감' : `D-${days}`),
