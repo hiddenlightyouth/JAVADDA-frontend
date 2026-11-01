@@ -165,19 +165,19 @@ const notchCorner = { width: NOTCH_RADIUS, height: NOTCH_RADIUS, background: `ra
 
 /**
  * 공고 카드 오른쪽 위를 서울 버스 정류장 안내판처럼 둥글게 파내고, 그 홈에 마감을 알약으로 적어요. 마감이 가장 중요한 정보라 가장 눈에 띄는 자리에 둬요.
- * D-12와 마감 날짜를 같이 적고, 사흘 안으로 남으면 메인 컬러, 마감이 없으면 회색의 상시 채용이에요.
+ * 알약은 채우지 않고 테두리만 둘러요. D-12와 마감 날짜를 같이 적고, 사흘 안으로 남으면 메인 컬러, 마감이 없으면 옅은 회색의 상시 채용이에요.
  * 홈은 카드가 놓인 흰 바탕색이라, 마우스를 올려 카드가 짙어져도 홈은 그대로예요.
  */
 function DeadlineNotch({ posting, left }: { posting: JobPosting; left: number | null }) {
   const L = useMessages(TEXT)
-  const tone = left === null ? 'bg-gray-200/70 text-gray-600' : left <= 3 ? 'bg-brand text-white' : 'bg-gray-900 text-gray-50'
+  const tone = left === null ? 'border-gray-200 text-gray-500' : left <= 3 ? 'border-brand text-brand' : 'border-gray-300 text-gray-900'
   return (
     <div className="absolute top-0 right-0 rounded-bl-2xl bg-white pb-2 pl-2">
       <span aria-hidden className="absolute top-0 right-full" style={notchCorner} />
       <span aria-hidden className="absolute top-full right-0" style={notchCorner} />
-      <span className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-bold tabular-nums ${tone}`}>
+      <span className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-[13px] font-bold tabular-nums ${tone}`}>
         {left === null ? L.always : left === 0 ? L.today : `D-${left}`}
-        {posting.deadline && <span className="text-[12px] font-medium opacity-70">{shortDate(posting.deadline)}</span>}
+        {posting.deadline && <span className="text-[12px] font-medium opacity-60">{shortDate(posting.deadline)}</span>}
       </span>
     </div>
   )
