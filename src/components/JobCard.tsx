@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
 import { companyOf, daysLeft, fitOf, type Company, type JobPosting, type Resume } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
@@ -159,41 +159,74 @@ function ViewButton({ onClick, className = 'inline-flex' }: { onClick: () => voi
  * 이력서가 있으면 필수 역량 이름표를 진단 시작 화면과 같은 기준으로 칠해서, 카드만 보고도 무엇이 비는지 보여요.
  * 카드의 나머지 자리를 누르면 원문을 미니 브라우저로 열고, 분석하기는 바로 진단해요.
  */
-/** 카드 오른쪽 위를 파낸 홈의 높이(px)와, 홈 둘레가 휘는 반지름(px)이에요. 반지름은 카드 모서리(rounded-2xl)와 같아요. */
+/** 카드 오른쪽 위를 파낸 홈의 높이(px)와, 카드와 홈 둘레가 휘는 반지름(px)이에요. 반지름은 다른 카드 모서리(rounded-2xl)와 같아요. */
 const NOTCH_HEIGHT = 52
 const NOTCH_RADIUS = 16
-/** 오늘 마감하는 공고는 카드 테두리와 홈의 글자를 빨간색으로 칠해서 바로 눈에 띄게 해요. */
-const cardBorder = (left: number | null) => (left === 0 ? 'border-red-400' : 'border-gray-200')
 
 /**
- * 홈 바깥으로 이어지는 둥근 모서리예요. 흰 칸 안에 카드와 같은 바탕의 칸을 넣고 오른쪽 위만 카드 모서리와 같이 둥글려서(rounded-2xl),
- * 카드 테두리가 홈으로 휘어 들어가는 곳도 카드의 다른 모서리와 똑같은 선으로 그려져요. 자리는 홈의 테두리 안쪽에서 재서, 100%만큼 떨어뜨리면 모서리의 테두리 1px이 홈의 테두리와 딱 겹쳐요.
+ * 오른쪽 위가 파인 카드의 바깥선이에요. 테두리를 조각으로 이어 붙이면 이음매가 어긋나 보여서, 한 줄의 선으로 처음부터 끝까지 그려요.
+ * 선 굵기 1px이 픽셀에 딱 맞게 0.5px 안쪽을 지나가요. w, h는 카드 크기, nw는 홈의 폭이에요.
  */
-function NotchCorner({ className, border }: { className: string; border: string }) {
-  return (
-    <span aria-hidden className={`absolute bg-white ${className}`} style={{ width: NOTCH_RADIUS, height: NOTCH_RADIUS }}>
-      <span className={`block size-full rounded-tr-2xl border-t border-r bg-gray-50 transition-colors group-hover:bg-gray-100 ${border}`} />
-    </span>
-  )
+function notchedPath(w: number, h: number, nw: number) {
+  const r = NOTCH_RADIUS
+  const [x0, y0, x1, y1] = [0.5, 0.5, w - 0.5, h - 0.5]
+  const nx = w - nw + 0.5
+  const ny = NOTCH_HEIGHT - 0.5
+  return [
+    `M ${x0} ${y0 + r}`,
+    `A ${r} ${r} 0 0 1 ${x0 + r} ${y0}`,
+    `H ${nx - r}`,
+    `A ${r} ${r} 0 0 1 ${nx} ${y0 + r}`,
+    `V ${ny - r}`,
+    `A ${r} ${r} 0 0 0 ${nx + r} ${ny}`,
+    `H ${x1 - r}`,
+    `A ${r} ${r} 0 0 1 ${x1} ${ny + r}`,
+    `V ${y1 - r}`,
+    `A ${r} ${r} 0 0 1 ${x1 - r} ${y1}`,
+    `H ${x0 + r}`,
+    `A ${r} ${r} 0 0 1 ${x0} ${y1 - r}`,
+    'Z',
+  ].join(' ')
+}
+
+/** 요소의 크기를 재요. 크기가 바뀌면 다시 재요. */
+function useElementSize<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+  const [size, setSize] = useState({ width: 0, height: 0 })
+  useLayoutEffect(() => {
+    const element = ref.current
+    if (!element) return
+    const observer = new ResizeObserver(() => setSize({ width: element.offsetWidth, height: element.offsetHeight }))
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+  return [ref, size] as const
 }
 
 /**
- * 공고 카드 오른쪽 위를 서울 버스 정류장 안내판처럼 둥글게 파낸 홈이에요. 카드 테두리가 홈을 따라 이어지고, 홈 안에 마감까지 남은 날(D-6, 오늘 마감, 상시)을 크게 적어요.
- * 마감이 가장 중요한 정보라 가장 눈에 띄는 자리에 두고, 사흘 안으로 남으면 메인 컬러, 오늘 마감이면 글자와 카드 테두리가 빨간색이에요. 구체적인 날짜는 아래 태그 줄에 있어요.
- * 홈은 카드가 놓인 흰 바탕색이라, 마우스를 올려 카드가 짙어져도 홈은 그대로예요.
+ * 공고 카드 오른쪽 위를 서울 버스 정류장 안내판처럼 둥글게 파낸 홈이에요. 카드 바깥선이 홈을 따라 이어지고(`notchedPath`), 홈 안에 마감까지 남은 날(D-6, 오늘 마감, 상시)을 크게 적어요.
+ * 마감이 가장 중요한 정보라 가장 눈에 띄는 자리에 두고, 사흘 안으로 남으면 메인 컬러, 오늘 마감이면 글자와 카드 바깥선이 빨간색이에요. 구체적인 날짜는 직군과 지역 줄에 있어요.
+ * 카드 바탕과 바깥선은 그 아래의 SVG가 그려서, 홈은 카드가 놓인 흰 바탕이 그대로 보이고 마우스를 올려 카드가 짙어져도 홈은 그대로예요.
  */
-function DeadlineNotch({ left }: { left: number | null }) {
+function NotchedFrame({ left, card }: { left: number | null; card: { width: number; height: number } }) {
   const L = useMessages(TEXT)
+  const [label, labelSize] = useElementSize<HTMLSpanElement>()
   const tone = left === null ? 'text-gray-500' : left === 0 ? 'text-red-500' : left <= 3 ? 'text-brand' : 'text-gray-900'
+  const ready = card.width > 0 && labelSize.width > 0
   return (
-    <span
-      className={`absolute -top-px -right-px flex items-center rounded-bl-2xl border-b border-l bg-white pr-5 pl-5 text-[15px] font-bold tabular-nums ${cardBorder(left)} ${tone}`}
-      style={{ height: NOTCH_HEIGHT }}
-    >
-      <NotchCorner className="top-0 right-full" border={cardBorder(left)} />
-      <NotchCorner className="top-full right-0" border={cardBorder(left)} />
-      {left === null ? L.always : left === 0 ? L.today : `D-${left}`}
-    </span>
+    <>
+      {ready && (
+        <svg aria-hidden className="pointer-events-none absolute inset-0 -z-10" width={card.width} height={card.height}>
+          <path
+            d={notchedPath(card.width, card.height, labelSize.width)}
+            className={`fill-gray-50 transition-colors group-hover:fill-gray-100 ${left === 0 ? 'stroke-red-400' : 'stroke-gray-200'}`}
+          />
+        </svg>
+      )}
+      <span ref={label} className={`absolute top-0 right-0 flex items-center px-5 text-[15px] font-bold tabular-nums ${tone}`} style={{ height: NOTCH_HEIGHT }}>
+        {left === null ? L.always : left === 0 ? L.today : `D-${left}`}
+      </span>
+    </>
   )
 }
 
@@ -201,10 +234,12 @@ export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onComp
   const L = useMessages(TEXT)
   const company = companyOf(posting.companyId)
   const left = daysLeft(posting)
+  const [ref, size] = useElementSize<HTMLLIElement>()
   return (
     // 제목 버튼을 카드 전체에 늘여 덮으면, 누른 곳과 뗀 곳이 달라져 클릭이 한 번 씹혀서 카드가 직접 받아요.
-    <li onClick={onBlankClick(onOpen)} className={`group relative flex animate-rise cursor-pointer flex-col rounded-2xl border bg-gray-50 p-5 transition-colors hover:bg-gray-100 ${cardBorder(left)}`} style={stagger(order)}>
-      <DeadlineNotch left={left} />
+    // 바탕과 바깥선은 NotchedFrame의 SVG가 그려서, 카드(isolate) 안쪽 맨 뒤에 깔아요.
+    <li ref={ref} onClick={onBlankClick(onOpen)} className="group relative isolate flex animate-rise cursor-pointer flex-col p-5" style={stagger(order)}>
+      <NotchedFrame left={left} card={size} />
       {/* 오른쪽 위는 홈이 파고들어 있어서, 기업 줄은 그 자리를 비워 둬요. */}
       <div className="flex items-center gap-3 pr-24">
         {/* 로고와 기업 이름을 누르면 기업 소개를 미니 브라우저로 열어요. */}
