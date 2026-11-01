@@ -19,7 +19,7 @@ function replaceOnce(html, pattern, replacement) {
 }
 
 const SHELL_GUARD =
-  '<script>if(location.pathname!=="/"||/WhoIsLoafingApp\\//.test(navigator.userAgent))document.documentElement.dataset.shell=""</script>' +
+  '<script>if(location.pathname!=="/"||/JavaddaApp\\//.test(navigator.userAgent))document.documentElement.dataset.shell=""</script>' +
   '<style>html[data-shell] #root{display:none}</style>'
 
 const { pages } = await import(pathToFileURL(path.join(ssrDir, 'prerender.js')).href)

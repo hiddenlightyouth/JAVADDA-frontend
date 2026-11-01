@@ -5,7 +5,7 @@ import { isApp } from './shell'
 export { appShell, isApp, isWebApp } from './shell'
 
 /** 앱의 버전 (예: 1.1). 앱 안이 아니면 null이에요. */
-export const appVersion = typeof navigator !== 'undefined' ? (/WhoIsLoafingApp\/([\d.]+)/.exec(navigator.userAgent)?.[1] ?? null) : null
+export const appVersion = typeof navigator !== 'undefined' ? (/JavaddaApp\/([\d.]+)/.exec(navigator.userAgent)?.[1] ?? null) : null
 
 /** 앱이 이 버전 이상인지. 새로 생긴 앱 기능을 예전 앱에서 숨길 때 써요. */
 export function appAtLeast(minimum: string): boolean {
@@ -20,16 +20,16 @@ export function appAtLeast(minimum: string): boolean {
 }
 
 /** macOS 앱 설치 파일. 앱 레포에서 만든 DMG를 `public/download`에 넣어 둬요. 새 버전도 같은 이름으로 덮어써서 주소가 바뀌지 않아요. */
-export const MAC_DOWNLOAD = '/download/WhoIsLoafing.dmg'
+export const MAC_DOWNLOAD = '/download/javadda/Javadda.dmg'
 export const MAC_SUPPORT = 'for Apple Silicon'
 /** macOS 앱을 받을 수 있게 열어 뒀는지. false로 바꾸면 헤더의 macOS가 준비 중으로 보이고, 앱을 권하는 툴팁과 안내도 띄우지 않아요. */
 export const MAC_DOWNLOAD_OPEN: boolean = false
 
 /** 앱이 로그인 코드를 받아 왔을 때 웹뷰에 보내는 이벤트예요. */
-export const APP_LOGIN_EVENT = 'whoisloafing:app-login'
+export const APP_LOGIN_EVENT = 'javadda:app-login'
 
 /** 브라우저가 앱을 다시 열 때 쓰는 주소예요. */
-export const APP_CALLBACK_URL = 'whoisloafing://auth'
+export const APP_CALLBACK_URL = 'javadda://auth'
 
 export interface AppLoginDetail {
   code: string
@@ -49,7 +49,7 @@ type AppMessage =
   | { type: 'update' }
 
 /** 화면 공유나 녹화가 시작되거나 끝나면 앱이 웹뷰에 보내는 이벤트예요(앱 1.2부터). */
-const APP_CAPTURE_EVENT = 'whoisloafing:app-capture'
+const APP_CAPTURE_EVENT = 'javadda:app-capture'
 
 /** 지금 화면이 공유되거나 녹화되고 있는지. 화면을 가리는 막이 뜨기 전에 온 알림도 놓치지 않게 여기서 받아 둬요. */
 const captured = createStore(false)
@@ -65,11 +65,11 @@ export function useAppCaptured(): boolean {
 }
 
 interface AppBridge {
-  webkit?: { messageHandlers?: { whoisloafing?: { postMessage: (message: AppMessage) => void } } }
+  webkit?: { messageHandlers?: { javadda?: { postMessage: (message: AppMessage) => void } } }
 }
 
 export function postToApp(message: AppMessage) {
-  ;(window as unknown as AppBridge).webkit?.messageHandlers?.whoisloafing?.postMessage(message)
+  ;(window as unknown as AppBridge).webkit?.messageHandlers?.javadda?.postMessage(message)
 }
 
 const DRAG_AREA = '[data-app-drag]'

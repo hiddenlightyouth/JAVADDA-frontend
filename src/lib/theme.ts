@@ -5,7 +5,7 @@ import { createStore, useStore } from './store'
 const THEME_STORAGE = 'whoisloafing:app-theme'
 const SHIELD_STORAGE = 'whoisloafing:app-capture-shield'
 /** 앱의 설정 창에서 화면 설정을 바꾸면 웹뷰에 보내는 이벤트예요. */
-const SETTINGS_EVENT = 'whoisloafing:app-settings'
+const SETTINGS_EVENT = 'javadda:app-settings'
 
 const THEMES: AppTheme[] = ['system', 'light', 'dark']
 

@@ -252,7 +252,7 @@ export function describeDevice(userAgent: string | null | undefined): string {
           : /Linux/.test(ua)
             ? 'Linux'
             : ''
-  if (/WhoIsLoafingApp\//.test(ua)) return en ? (os ? `${os} app` : 'App') : os ? `${os} 앱` : '앱'
+  if (/JavaddaApp\//.test(ua)) return en ? (os ? `${os} app` : 'App') : os ? `${os} 앱` : '앱'
   return os ? (en ? `${browser} on ${os}` : `${os}의 ${browser}`) : browser
 }
 

@@ -6,8 +6,8 @@
 
 const browser = typeof window !== 'undefined'
 
-/** macOS 앱의 웹뷰는 User-Agent 끝에 WhoIsLoafingApp/버전을 붙여요. */
-export const isApp = typeof navigator !== 'undefined' && /WhoIsLoafingApp\//.test(navigator.userAgent)
+/** macOS 앱의 웹뷰는 User-Agent 끝에 JavaddaApp/버전을 붙여요. */
+export const isApp = typeof navigator !== 'undefined' && /JavaddaApp\//.test(navigator.userAgent)
 
 const APP_PREFIX = /^\/app(?=\/|$)/
 

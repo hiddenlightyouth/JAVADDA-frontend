@@ -24,7 +24,7 @@
 
 ## 브랜딩 규칙
 
-- 서비스명: 화면에 보이는 이름은 Javadda예요(미리보기 태그, 푸터, 안내 문구, 아티클). 탭 제목만 화면 언어와 상관없이 잡아따예요(`src/lib/meta.ts`의 `SITE_TITLE`, `index.html`의 `<title>`). 아티클과 계정 화면의 탭 제목은 "아티클 | 잡아따", "Sign in | 잡아따"처럼 뒤에 붙여요. 그 전 이름은 Lofy였고, 패키지명(lofy)과 코드 안의 이름(`LofyScript`, lofy 규칙)은 그대로 둬요. 더 예전 이름은 WhoIsLoafing이었어요. API 서버 주소(api.whoisloafing.hidly.dev), Workers 이름, localStorage 키(`whoisloafing:`), 앱과 약속한 값(User-Agent의 `WhoIsLoafingApp`, `whoisloafing://` 주소, 웹뷰 메시지 이름 `whoisloafing`, 설치 파일 이름 `WhoIsLoafing.dmg`)은 바꾸면 저장된 값이 사라지거나 앱과 어긋나서 예전 이름 그대로 둬요. 화면에 보이는 이름만 Javadda예요.
+- 서비스명: 화면에 보이는 이름은 Javadda예요(미리보기 태그, 푸터, 안내 문구, 아티클). 탭 제목만 화면 언어와 상관없이 잡아따예요(`src/lib/meta.ts`의 `SITE_TITLE`, `index.html`의 `<title>`). 아티클과 계정 화면의 탭 제목은 "아티클 | 잡아따", "Sign in | 잡아따"처럼 뒤에 붙여요. 그 전 이름은 Lofy였고, 패키지명(lofy)과 코드 안의 이름(`LofyScript`, lofy 규칙)은 그대로 둬요. 더 예전 이름은 WhoIsLoafing이었어요. API 서버 주소(api.whoisloafing.hidly.dev), Workers 이름, localStorage 키(`whoisloafing:`)는 바꾸면 저장된 값이 사라져서 예전 이름 그대로 둬요. macOS 앱은 JAVADDA-app 레포의 Javadda 앱이고, 앱과 약속한 값은 Javadda 이름이에요(User-Agent의 `JavaddaApp`, `javadda://` 주소, 웹뷰 메시지 이름 `javadda`, 이벤트 이름 `javadda:app-login`, `javadda:app-settings`, `javadda:app-capture`, 설치 파일 `/download/javadda/Javadda.dmg`). 바꾸면 앱의 `AppConfig`와 `Info.plist`도 같이 바꿔요. 예전 Lofy 앱(`WhoIsLoafingApp`)은 이 웹을 앱 화면으로 열지 못해요.
 - 로고: 화면에 보이는 로고는 모두 Javadda라고 쓴 손글씨예요. 헤더(`Logo`), 앱 로그인 화면, 웹 앱 사이드바 맨 위는 움직임 없이 그린 것(`ScriptMark`)이고, 소개 화면 첫 화면에서는 흰색으로 써져요. 예전의 중절모와 Lofy 글자 그림(`public/logo.svg`)은 더 이상 화면에 쓰지 않아요. 손글씨(`LofyScript`)는 Javadda라고 쓰고, 새 진단 화면, 소개 화면 맨 위, 앱 로그인 화면에 써요. 웹 앱 사이드바 맨 위의 로고도 같은 손글씨를 움직임 없이 그린 것(`ScriptMark`)이에요. 색은 짙은 회색(#2C2C2C) 한 가지예요. 파비콘과 미리보기 이미지는 따로 만든 파일이라 같이 고쳐야 해요.
 - 본문 폰트: Pretendard. 전체 자간은 -0.02em
 - 메인 컬러: #2E90FA, hover는 #1570EF, 연한 배경은 #EFF8FF
@@ -69,8 +69,9 @@ public/og-en.png      영어 주소의 미리보기 카드 이미지 (1200x630).
 public/logos/         기업 로고. 기업 사이트의 아이콘을 받아 둔 거예요. 우아한형제들은 배민 아이콘이에요. 처음 열두 곳은 기업 아이디.png이고, 서버가 로고를 주지 않는 워크넷 기업은 아이디가 바뀔 수 있어서 `gap.ts`의 `LOGO_BY_NAME`이 기업 이름으로 붙여요. 계열사는 그룹 로고(SK, 롯데, BGF, GC, 두산, GS, 하나, KB, HD현대)를 같이 쓰고, 흐리거나 알아보기 어려운 아이콘은 넣지 않고 회색 건물 아이콘으로 둬요. 로고가 없는 공공기관과 공기업은 정부 상징(`gov.svg`, 위키미디어 공용)을 붙여요. 고용24가 공공기관으로 보내는 국립대 병원과 대학은 서버가 업종을 병원, 대학으로 바꿔 보내서 정부 상징이 붙지 않아요. 크래프톤은 시드에 로고가 비어 있어서 화면이 붙여요. 작은 아이콘만 있는 곳은 사이트 머리글의 로고를 정사각형 SVG로 잘라 썼어요(한온시스템은 글자 로고, 한전KDN, 국방기술품질원, 한국원자력의학원은 로고의 기호 부분). 한국문화예술위원회와 독립기념관은 쓸 만한 로고 그림이 없어 정부 상징이고, 현대종합금속은 채용 사이트(사람인 채용관리)의 글자 로고예요.
 public/providers/     강의 플랫폼 로고 (인프런). `gap.ts`의 `PROVIDER_LOGOS`가 가리켜요.
 public/skills/        기술 스택 로고 (스킬마다 SVG, 120개쯤). Devicon(MIT 라이선스)의 그림을 받아 둔 거예요. `gap.ts`의 `SKILL_LOGOS`가 스킬 이름과 파일을 잇고(대소문자, 띄어쓰기, 점과 줄표는 가리지 않아요. 적힌 이름, 사전의 이름, `Spring Cloud`나 `AWS Lambda` 같은 가족 순서로 찾아요), `GapParts`의 `SkillMark`가 기업 로고처럼 흰 칸에 그려요. 서버 스킬 사전(50개)은 모두 로고나 개념 아이콘이 있어요. 로고가 없는 스킬은 이름을 보고(`CONCEPT_RULES`) 두 톤 개념 아이콘(`Icons`의 `ConceptIcon`: 테스트 코드와 코딩 테스트 키보드, 보안, 알고리즘, AI, 분산 서비스, 설계, 운영체제, 네트워크, API, 데이터베이스, 데이터 분석, 클라우드, 배포, 모니터링, 성능, 모바일, 협업, 문서, 웹)을 메인 컬러로 그리고, 맞는 것이 없으면 코드 괄호예요.
-public/download/appcast.xml  macOS 앱이 새 버전이 있는지 읽어 가는 업데이트 목록. 지우지 않아요.
-public/download/WhoIsLoafing.dmg  macOS 앱 설치 파일. 앱 레포가 만들어서 넣어요.
+public/download/appcast.xml  예전 Lofy 앱이 새 버전이 있는지 읽어 가는 업데이트 목록. 지우지 않아요.
+public/download/WhoIsLoafing.dmg  예전 Lofy 앱 설치 파일.
+public/download/javadda/  Javadda 앱의 설치 파일(Javadda.dmg), 업데이트 파일, 업데이트 목록(appcast.xml). JAVADDA-app 레포의 `PUBLISH=1 ./scripts/make-dmg.sh`가 만들어 넣어요.
 public/robots.txt     검색 로봇 안내 (API, /app 아래 주소, 리포트, 진단, 추천, 이력서, 기업 상세, 탐색, 내 정보와 내 리포트, 앱 로그인 화면, 관리자 화면은 막고, 사이트맵 위치를 알려줘요)
 scripts/korea-map.mjs 채용 지도의 경계선(`src/lib/koreaMap.ts`)을 만들어요. 통계청 행정구역 경계를 줄인 southkorea-maps(kostat 2013)와 Natural Earth의 강(퍼블릭 도메인, 한강, 남한강, 낙동강)을 받아 돌리고, 자료에 없는 독도를 더해요. 강은 점이 드물어서 곡선으로 이어요. 한 번 만들어 커밋해 두고 경계가 바뀔 때만 다시 돌려요
 scripts/prerender.mjs 빌드 마지막에 소개 화면(메인 주소 `index.html`, 영어 `en.html`)과 아티클 화면을 언어별, 페이지별 HTML 파일로 만들고 사이트맵을 만들어요
