@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { voiceOf } from '../../shared/voices'
 import { track } from './analytics'
+import { charPose, REST, withLoudness, type MouthPose } from './lipsync'
 import { readItem, writeItem } from './storage'
 import { createStore, useStore } from './store'
 
@@ -239,6 +240,24 @@ async function fetchVoice(text: string, voice: string | null, signal: AbortSigna
 /** 브라우저 음성이 글자 위치를 알려 주지 않을 때, 한 글자를 읽는 데 걸린다고 보는 시간(초)이에요. */
 const SECONDS_PER_CHAR = { ko: 0.14, en: 0.065 }
 
+/** 입은 소리보다 살짝 먼저 움직여야 맞아 보여요. 입을 따라가는 시간만큼 앞을 읽어요. */
+const MOUTH_LEAD_SECONDS = 0.05
+/** 소리 크기를 재는 구간(초)이에요. 목소리의 떨림 한 번보다 길어야 숫자가 튀지 않아요. */
+const LOUDNESS_WINDOW_SECONDS = 0.04
+
+/** 음성의 time초 언저리의 소리 크기(0에서 1)예요. */
+function loudnessAt(samples: AudioBuffer, time: number) {
+  const data = samples.getChannelData(0)
+  const middle = Math.floor(time * samples.sampleRate)
+  const half = Math.floor((samples.sampleRate * LOUDNESS_WINDOW_SECONDS) / 2)
+  const start = Math.max(0, middle - half)
+  const end = Math.min(data.length, middle + half)
+  let energy = 0
+  for (let index = start; index < end; index += 1) energy += data[index] * data[index]
+  const rms = Math.sqrt(energy / Math.max(1, end - start))
+  return Math.min(1, Math.max(0, (rms - 0.012) * 9))
+}
+
 /**
  * 글자를 사람 목소리로 읽어 줘요(`worker/tts.ts`의 ElevenLabs). 키가 없거나 실패하면 브라우저 음성으로 읽어요.
  * 다른 글을 읽으면 앞의 것은 멈춰요. speak는 다 읽거나 멈추면 끝나는 약속을 돌려줘서, 다 읽은 뒤에 할 일을 이어 붙일 수 있어요.
@@ -252,9 +271,10 @@ export function useSpeak() {
   /** 사람 목소리를 쓸 수 있는지예요. 서버에 키가 없으면 목소리를 고를 수 없어요. */
   const [remote, setRemote] = useState(!remoteOff)
   const [progress, setProgress] = useState(0)
-  const [mouth, setMouth] = useState(0)
   /** 가장 최근의 읽기예요. 음성을 받는 동안 멈추면 늦게 온 음성을 틀지 않아요. */
   const turn = useRef(0)
+  /** 지금 입 모양이에요. 매 프레임 바뀌어서 화면을 다시 그리지 않게 ref로 둬요. 면접관 그림이 읽어요. */
+  const pose = useRef<MouthPose>(REST)
   const request = useRef<AbortController | null>(null)
   const audio = useRef<HTMLAudioElement | null>(null)
   /** 지금 읽기가 끝나면 풀어 줄 약속이에요. */
@@ -273,7 +293,7 @@ export function useSpeak() {
     audio.current?.pause()
     audio.current = null
     if ('speechSynthesis' in window) window.speechSynthesis.cancel()
-    setMouth(0)
+    pose.current = REST
     setSpeaking(false)
     setPreparing(false)
     finish()
@@ -284,7 +304,7 @@ export function useSpeak() {
     (mine: number) => {
       if (mine !== turn.current) return
       setProgress(1)
-      setMouth(0)
+      pose.current = REST
       setSpeaking(false)
       finish()
     },
@@ -299,11 +319,12 @@ export function useSpeak() {
       const korean = /[가-힣]/.test(text)
       utterance.lang = korean ? 'ko-KR' : 'en-US'
       let boundary = -1
+      let boundaryIndex = 0
       let finished = false
       let started = 0
       let lastBoundary = 0
-      let boundaryChar = ''
-      const estimate = Math.max(1, text.length * SECONDS_PER_CHAR[korean ? 'ko' : 'en']) * 1000
+      const charMs = SECONDS_PER_CHAR[korean ? 'ko' : 'en'] * 1000
+      const estimate = Math.max(1000, text.length * charMs)
       utterance.onstart = () => {
         if (mine !== turn.current) return
         started = performance.now()
@@ -311,17 +332,17 @@ export function useSpeak() {
       }
       utterance.onboundary = (event) => {
         lastBoundary = performance.now()
-        boundaryChar = text[event.charIndex] ?? ''
+        boundaryIndex = event.charIndex
         boundary = Math.min(1, (event.charIndex + (event.charLength || 0)) / Math.max(1, text.length))
       }
       // 다 읽으면 칠하기를 멈춰요. 멈추지 않으면 끝난 뒤에도 매 프레임 돌면서 다 읽은 1을 예전 값으로 덮어써요.
       const tick = () => {
         if (finished || mine !== turn.current) return
         const now = performance.now()
-        const position = Math.floor((now - started) / estimate * text.length)
-        const char = boundary >= 0 ? boundaryChar : text[position] ?? ''
-        const audible = !window.speechSynthesis.paused && /[\p{L}\p{N}]/u.test(char) && (boundary < 0 || now - lastBoundary < 650)
-        setMouth(audible ? 0.2 + 0.65 * Math.abs(Math.sin((now - started) / 85)) : 0)
+        // 브라우저 음성은 소리를 읽을 수 없어서 글자 위치만으로 입 모양을 정해요. 알림이 끊기면 다 읽은 것으로 보고 닫아요.
+        const position = boundary >= 0 ? boundaryIndex + (now - lastBoundary) / charMs : ((now - started) / estimate) * text.length
+        const audible = !window.speechSynthesis.paused && (boundary < 0 || now - lastBoundary < 650)
+        pose.current = audible ? charPose(text, position) : REST
         setProgress(boundary >= 0 ? boundary : Math.min(0.97, (performance.now() - started) / estimate))
         requestAnimationFrame(tick)
       }
@@ -376,22 +397,15 @@ export function useSpeak() {
         }
         const tick = () => {
           if (mine !== turn.current || audio.current !== player || player.ended) return
-          let opening = 0
           if (!player.paused && !player.seeking && player.readyState >= 3) {
-            if (samples) {
-              const data = samples.getChannelData(0)
-              const start = Math.floor(player.currentTime * samples.sampleRate)
-              const end = Math.min(data.length, start + Math.floor(samples.sampleRate * 0.025))
-              let energy = 0
-              for (let i = start; i < end; i += 1) energy += data[i] * data[i]
-              const rms = Math.sqrt(energy / Math.max(1, end - start))
-              opening = Math.min(1, Math.max(0, (rms - 0.012) * 9))
-            } else {
-              const chars = timing ? spokenChars(timing, player.currentTime) : player.currentTime / SECONDS_PER_CHAR[/[가-힣]/.test(text) ? 'ko' : 'en']
-              if (/[\p{L}\p{N}]/u.test(text[Math.floor(chars)] ?? '')) opening = 0.65 * Math.abs(Math.sin(player.currentTime * 18))
-            }
+            const time = player.currentTime + MOUTH_LEAD_SECONDS
+            const perChar = SECONDS_PER_CHAR[/[가-힣]/.test(text) ? 'ko' : 'en']
+            const position = timing ? spokenChars(timing, time) : player.duration > 0 ? (time / player.duration) * text.length : time / perChar
+            const mouth = charPose(text, position)
+            pose.current = samples ? withLoudness(mouth, loudnessAt(samples, time)) : mouth
+          } else {
+            pose.current = REST
           }
-          setMouth(opening)
           // 글자 시각이 있으면 지금 읽는 글자까지 정확히 칠하고, 없으면(예전 음성) 재생한 비율로 어림해요.
           if (timing) setProgress(spokenChars(timing, player.currentTime) / Math.max(1, text.length))
           else if (player.duration > 0) setProgress(Math.min(1, player.currentTime / player.duration))
@@ -414,7 +428,7 @@ export function useSpeak() {
 
   useEffect(() => stop, [stop])
 
-  return { speaking, preparing, remote, progress, mouth, speak, stop }
+  return { speaking, preparing, remote, progress, pose, speak, stop }
 }
 
 /** 띵 소리를 낼 오디오예요. 처음 누를 때 만들어 둬야 브라우저가 막지 않아요. */

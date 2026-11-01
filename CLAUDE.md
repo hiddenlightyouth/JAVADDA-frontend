@@ -91,7 +91,9 @@ src/
   index.css           Tailwind 테마 토큰, 자간, 애니메이션
   lib/blogs.ts        기업 기술 블로그 요약. 서버에서 받기(fetchBlogDigests, GET /blogs), 요약이 있는 기업(blogCompaniesOf), 자주 나온 기술(topSkills), 여러 기업에 걸친 흐름(themeTrends), 서버에 닿지 못할 때 보여줄 기업 열한 곳의 글(DIGESTS)
   lib/gap.ts          진단의 자료와 API. 타입(기업, 공고, 이력서, 리포트, 갭, 서류 검증, 면접 질문, 연습 피드백), 기업과 공고 받기(loadCatalog, COMPANIES, POSTINGS, 서버에 닿지 못할 때의 목록), 서버 API(fetchPostings, uploadResume, saveResumeSkills, setPrimaryResume, removeResume, startDiagnosis, rerunReport, deleteReport, fetchReview, fetchQuestions, submitAnswer, togglePlan, saveNote), AI 진행 상황 묻기(withProgress, ProgressState, PROGRESS_START), 계정 자료 받기와 비우기(startAccountSync), 저장소(useResume는 대표 이력서, useResumeShelf는 올린 서류 전부, useReports, useReport, usePlans, useNotes, 공고를 진단한 최근 리포트 useDiagnosed), 로그인 화면 열기(setLoginHandler, requestLogin), 적합도 계산(fitOf, levelOf), 스킬 이름 정규화(canonical)
-  lib/speech.ts       면접 연습의 음성 기능. 말을 글자로 바꾸기(useDictation), 사람 목소리로 읽고 안 되면 브라우저 음성으로 읽기(useSpeak), 지원 여부(canDictate, canSpeak)
+  lib/speech.ts       면접 연습의 음성 기능. 말을 글자로 바꾸기(useDictation), 사람 목소리로 읽고 안 되면 브라우저 음성으로 읽기(useSpeak, 읽는 동안의 입 모양 pose), 지원 여부(canDictate, canSpeak)
+  lib/lipsync.ts      읽고 있는 글자를 입 모양(open, wide, round)으로 바꾸기(charPose)와 소리 크기 곱하기(withLoudness). 한글은 초성, 중성, 종성으로 나눠요
+  lib/mouthRenderer.ts 면접관 사진의 입과 턱을 WebGL2로 움직여 그리기(createMouthRenderer). 입술과 턱선 자리가 사진 기준 숫자로 적혀 있어서 사진을 바꾸면 같이 재요
   lib/i18n.ts         화면 언어(한국어, 영어) 정하기와 저장, 언어별 주소(/en), 문구 묶음(messages, useMessages, pick)
   lib/meta.ts         탭 제목과 링크 미리보기 태그를 화면과 언어에 맞게 바꾸기, 언어별 메인 화면 값(HOME_META)
   lib/http.ts         API 기본 주소, 응답의 data와 오류 코드 꺼내기(readResult), 본문을 조금씩 읽으며 받은 바이트 알리기(readJsonWithProgress, readWithLoad, OnLoad), 브라우저 소유자 키
@@ -146,6 +148,7 @@ src/
   components/ReportReview.tsx   리포트의 서류 검증 탭
   components/ReportQuestions.tsx 리포트의 예상 질문 탭
   components/Practice.tsx    면접 연습 (/r/아이디/practice). 질문에 글이나 말로 답하면 피드백을 줘요
+  components/Interviewer.tsx 면접 연습의 가상 면접관. 사진(`public/images/interviewer.png`)을 배경에 깔고 그 위 캔버스에 입을 움직여 그려요
   components/GapParts.tsx    진단 화면이 같이 쓰는 부품. 기업 로고(CompanyMark, 로고가 없거나 못 불러오면 회색 칸에 건물 아이콘), 기술 로고(SkillMark), 적합도(FitBadge, ScoreRing, 점수 머리말 ScoreHero, fitColor), 짧은 설명 말풍선(Tip), 스킬 이름표(SkillChip, 색의 뜻 말풍선 앞에 덧붙이는 tip), 공고의 직군과 경력과 지역 한 줄(PostingMeta), 기업 고르는 버튼 줄(CompanyFilter, 공고 탐색과 기술 블로그)과 사업 분류 줄(CategoryFilter), 카드 태그(CardTag, 적합도 높음과 중간과 낮음 FitTag, 마감까지 남은 날 DeadlineTag), 이미 진단한 공고의 태그(DiagnosedTag), AI를 기다리는 칸(AiProgress, 모양은 ui의 ProgressRing), 부족과 보완과 강점 이름표(KindLabel), 필수와 우대 이름표(RequirementLabel), 체크 표시(CheckMark), 공고 카드(PostingTile), 회색 칸(Panel), 안내(Notice, Failed), 막대(Meter), 레이더(Radar), 작은 막대 그래프(Sparkline), 변화량(Delta), 공고를 분석할지 묻는 창(usePickConfirm)
   components/History.tsx     내 리포트 화면(/history)과, 사이드바와 리포트 화면이 같이 쓰는 리포트 지우기 창(DeleteReportDialog, removeReport)과 문구
   components/ReportParts.tsx 리포트, 예상 질문, 면접 연습이 같이 쓰는 부품. 연한 메인 컬러 안내 칸(Callout), 모범 답변 칸(ModelAnswer), 답변 피드백 묶음(FeedbackSections), 리포트 화면 안에서 다른 리포트로 주소 바꾸기(switchReport)
@@ -354,6 +357,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 - 실제 면접처럼 질문을 하나씩 주고받는 가상 면접이에요. 들어오면 화면이 검게 바뀌고, 시작 화면에 "가상 면접 시작", 한 줄 안내, "면접관의 목소리는 설정에서 변경할 수 있습니다.", 시작 버튼이 있어요. 질문 하나만 연습할 때도 시작 화면은 같아요. 질문을 받는 동안(처음이면 AI가 만들어요)은 AI를 기다리는 칸(`AiProgress`)이에요.
 - 단계는 시작 전(intro), 면접관이 묻는 중(asking), 내가 답하는 중(answering), 다음 질문으로 넘어가는 중(moving), 끝(finished)이에요. 위에 "3 / 8" 진행 표시와 질문 수만큼 나눈 가는 막대가 있고, 오른쪽 위 "면접 나가기"는 "여기까지 평가받기"와 "계속하기"를 묻는 창을 띄워요.
+- 가상 면접관(`Interviewer`)의 입은 음성에 맞춰 실제로 벌어져요. 사진 위에 입 그림을 덧그리지 않고, 픽셀마다 사진의 읽을 자리를 바꿔서 윗입술은 올리고 아랫입술과 턱은 내리고(턱은 목과 옷깃을 덮어요), 벌어진 틈에만 이와 혀를 그려요(`mouthRenderer`). 입 모양은 서버가 준 글자 시각으로 지금 읽는 글자를 찾아 정해요(`lipsync`의 `charPose`). ㅏ는 크게 벌리고, ㅗ와 ㅜ는 오므리고, ㅣ는 옆으로 당기고, ㅁ, ㅂ, ㅍ은 입술이 닫혀요. 여기에 음성의 소리 크기를 곱해서 쉬는 자리에서는 입이 닫혀요. 입은 소리보다 0.05초 앞서 움직여요. 입 모양은 매 프레임 바뀌어서 React 상태가 아니라 ref(`useSpeak`의 `pose`)로 넘기고, `Interviewer`가 자기 프레임에서 부드럽게 따라가요. 브라우저 음성은 소리를 읽을 수 없어서 글자 위치만 써요. WebGL2가 없거나 움직임 줄이기 설정이면 움직이지 않는 사진이에요.
 - 묻는 동안 면접관이 질문을 소리로 읽고(`useSpeak`), 글자가 노래방 자막처럼 읽은 만큼 왼쪽부터 밝아져요(`Karaoke`). 다 읽으면 띵 소리(`chime`)가 나고 듣기 시작해요. "바로 답하기"로 기다리지 않고 답할 수 있고, "다시 듣기"로 한 번 더 들어요.
 - 답하는 동안 말한 내용이 음성 인식(`useDictation`)으로 화면에 바로 나와요. 열 글자 넘게 말한 뒤 잠시 조용하면 답을 마친 것으로 보고 다음 질문으로 넘어가요. "답변 끝내기"는 짧아도 바로 넘기고, "건너뛰기"는 답하지 않고 넘겨요. "텍스트로 입력"으로 글로 답할 수 있어요. 음성 인식이 없는 환경(Firefox)이나 마이크 권한이 없거나 마이크를 못 찾으면 글로 답하고 토스트로 알려요. macOS 앱은 2.1부터 마이크 권한을 물어서 말로 답할 수 있고, 2.0은 마이크 권한이 없어서 글로 답해요.
 - 채점은 다음 질문을 하는 동안 뒤에서 받아요(`submitAnswer`). 끝나면 "가상 면접이 종료됨"에 평균 점수와, 질문마다 내 답변, 점수, 피드백(`FeedbackSections`의 좋았어요, 보완할 점, 이렇게 말해 보세요), 꼬리 질문, 모범 답변이 나와요. 채점이 덜 끝난 질문은 끝나는 대로 채워지고, 답하지 않은 질문은 "답변하지 않음"이에요. "다시 연습하기"와 "리포트로 돌아가기"가 있어요. 질문 하나만 연습하면 답하자마자 점수와 피드백, 모범 답변, "다시 답하기"를 보여줘요. 기획서의 10이에요.

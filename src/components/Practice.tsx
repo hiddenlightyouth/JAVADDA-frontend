@@ -395,7 +395,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     body = (
       <div key={current.id} className="mx-auto flex h-full w-full max-w-4xl flex-col">
         <div className="flex flex-1 flex-col justify-center pb-6">
-          <Interviewer mouth={phase === 'asking' ? voice.mouth : 0} speaking={phase === 'asking' && voice.speaking && !voice.preparing} label={lang === 'ko' ? '가상 면접관' : 'Virtual interviewer'} />
+          <Interviewer pose={voice.pose} speaking={phase === 'asking' && voice.speaking && !voice.preparing} label={lang === 'ko' ? '가상 면접관' : 'Virtual interviewer'} />
           <p className="flex items-center gap-2 text-[13px] font-medium text-[#fff]/45">
             <span>{phase === 'asking' ? (voice.preparing ? L.preparing : L.speaking) : phase === 'moving' ? (index + 1 >= total ? L.last : L.moving) : L.listening}</span>
           </p>
