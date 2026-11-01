@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
-import { COMPANIES, companyOf, daysLeft, daysSince, fitOf, majorCompanies, POSTINGS, postingOf, RECOMMEND_MIN_FIT, sortPostings, useReports, useResume, type Company, type JobPosting } from '../lib/gap'
+import { COMPANIES, companyOf, fitOf, majorCompanies, POSTINGS, postingOf, RECOMMEND_MIN_FIT, sortPostings, useReports, useResume, type Company, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { Carousel } from './Carousel'
-import { CompanyMark, DeadlineTag, DiagnosedTag, FitBadge } from './GapParts'
+import { CompanyMark, DiagnosedTag, FitBadge } from './GapParts'
 import { JobCard, useJobBrowser } from './JobCard'
 import { ChevronRightIcon, SearchIcon } from './Icons'
 import { LofyScript } from './LofyScript'
@@ -26,7 +26,6 @@ const TEXT = messages({
     companies: '기업으로 둘러보기',
     hot: '요즘 뜨는 기업',
     open: (count: number) => `채용 중 ${count}개`,
-    fresh: (count: number) => `새 공고 ${count}`,
     seeAll: '전체 보기',
     results: (count: number) => `${count}개의 공고`,
   },
@@ -40,7 +39,6 @@ const TEXT = messages({
     companies: 'Browse by company',
     hot: 'Trending companies',
     open: (count: number) => `${count} open`,
-    fresh: (count: number) => `${count} new`,
     seeAll: 'See all',
     results: (count: number) => `${count} ${count === 1 ? 'posting' : 'postings'}`,
   },
@@ -139,63 +137,37 @@ function CompanyCarousel({ companies, onSelect }: { companies: Company[]; onSele
 }
 
 /** 요즘 뜨는 기업 카드 하나의 폭과 카드 사이 간격(px), 카드 하나가 지나가는 데 걸리는 시간(초)이에요. */
-const HOT_CARD = 208
+const HOT_CARD = 236
 const HOT_GAP = 12
 const HOT_SECONDS = 3.2
-/** 이 날 수 안에 올라온 공고를 새 공고로 쳐요. */
-const FRESH_DAYS = 14
 
-interface HotCompany {
-  company: Company
-  open: number
-  fresh: number
-  /** 가장 가까운 마감까지 남은 날이에요. 마감이 있는 공고가 없으면 null(상시 채용)이에요. */
-  nearest: number | null
+/** 요즘 뜨는 기업이에요. 네카라쿠배당토 같은 유명 기업(`majorCompanies`) 열다섯 곳만, 정해 둔 순서 그대로 두고 채용 중인 공고 수를 세요. */
+function hotCompanies(): { company: Company; open: number }[] {
+  return majorCompanies().map((company) => ({ company, open: POSTINGS.filter((posting) => posting.companyId === company.id).length }))
 }
 
 /**
- * 요즘 뜨는 기업이에요. 네카라쿠배당토 같은 유명 기업(`majorCompanies`) 열다섯 곳만, 정해 둔 순서 그대로 둬요.
- * 카드마다 채용 중인 공고 수, 최근 2주 사이에 올라온 새 공고 수, 가장 가까운 마감을 세요.
+ * 요즘 뜨는 기업 줄이에요. 왼쪽에 로고, 오른쪽에 기업 이름과 채용 중인 공고 수를 적은 회색 카드가 오른쪽에서 왼쪽으로 멈추지 않고 흘러가요.
+ * 같은 줄을 두 번 이어 붙여서 끝에 닿아도 끊기지 않아요. 마우스를 올리거나 키보드로 들어오면 멈추고,
+ * 움직임 줄이기 설정이면 흐르지 않아요. 누르면 기업 상세로 가요.
  */
-function hotCompanies(): HotCompany[] {
-  return majorCompanies().map((company) => {
-    const item: HotCompany = { company, open: 0, fresh: 0, nearest: null }
-    for (const posting of POSTINGS) {
-      if (posting.companyId !== company.id) continue
-      item.open += 1
-      if (daysSince(posting) <= FRESH_DAYS) item.fresh += 1
-      const left = daysLeft(posting)
-      if (left !== null && left >= 0 && (item.nearest === null || left < item.nearest)) item.nearest = left
-    }
-    return item
-  })
-}
-
-/**
- * 요즘 뜨는 기업 줄이에요. 회색 카드에 로고, 새 공고 수, 기업 이름, 채용 중인 공고 수, 가장 가까운 마감을 적고,
- * 카드가 오른쪽에서 왼쪽으로 멈추지 않고 흘러가요. 같은 줄을 두 번 이어 붙여서 끝에 닿아도 끊기지 않아요.
- * 마우스를 올리거나 키보드로 들어오면 멈추고, 움직임 줄이기 설정이면 흐르지 않아요. 누르면 기업 상세로 가요.
- */
-function HotCompanies({ companies, onSelect }: { companies: HotCompany[]; onSelect: (company: Company) => void }) {
+function HotCompanies({ companies, onSelect }: { companies: { company: Company; open: number }[]; onSelect: (company: Company) => void }) {
   const L = useMessages(TEXT)
   // 카드 사이 간격은 gap 대신 카드 오른쪽 여백으로 둬서, 이어 붙인 두 줄의 폭이 똑같아 반만큼 밀면 처음 모습과 딱 맞아요.
-  const card = (item: HotCompany, copy: boolean) => (
-    <li key={`${copy ? 'copy-' : ''}${item.company.id}`} className="shrink-0" style={{ width: HOT_CARD + HOT_GAP, paddingRight: HOT_GAP }} aria-hidden={copy || undefined}>
+  const card = ({ company, open }: { company: Company; open: number }, copy: boolean) => (
+    <li key={`${copy ? 'copy-' : ''}${company.id}`} className="shrink-0" style={{ width: HOT_CARD + HOT_GAP, paddingRight: HOT_GAP }} aria-hidden={copy || undefined}>
       <button
         type="button"
         tabIndex={copy ? -1 : undefined}
-        onClick={() => onSelect(item.company)}
-        className="group flex h-[132px] w-full flex-col rounded-2xl bg-gray-50 p-4 text-left transition-colors hover:bg-gray-100"
+        onClick={() => onSelect(company)}
+        className="group flex w-full items-center gap-3.5 rounded-2xl bg-gray-50 p-3.5 pr-4 text-left transition-colors hover:bg-gray-100"
       >
-        <span className="flex items-start justify-between gap-2">
-          <CompanyMark company={item.company} className="size-11 rounded-xl! text-[15px]" />
-          {item.fresh > 0 && <span className="text-[12px] font-medium text-brand tabular-nums">{L.fresh(item.fresh)}</span>}
+        <CompanyMark company={company} className="size-12 shrink-0 rounded-xl! text-[16px]" />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[15px] font-semibold text-gray-900 transition-colors group-hover:text-brand">{company.name}</span>
+          <span className="mt-0.5 block text-[12.5px] text-gray-500 tabular-nums">{L.open(open)}</span>
         </span>
-        <span className="mt-3 truncate text-[14.5px] font-semibold text-gray-900 transition-colors group-hover:text-brand">{item.company.name}</span>
-        <span className="mt-auto flex items-center justify-between gap-2">
-          <span className="text-[12px] text-gray-500 tabular-nums">{L.open(item.open)}</span>
-          {item.open > 0 && <DeadlineTag left={item.nearest} />}
-        </span>
+        <ChevronRightIcon className="size-4 shrink-0 text-gray-300 transition-colors group-hover:text-brand" />
       </button>
     </li>
   )
