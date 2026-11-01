@@ -1,0 +1,30 @@
+.interviewer {
+  width: clamp(136px, 23vh, 232px);
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 28px;
+  background: #dfe9f1;
+  border: 1px solid #ffffff26;
+  box-shadow: 0 12px 45px #0003;
+}
+.interviewer-portrait {
+  display: block;
+  width: 100%;
+  transform-origin: 50% 90%;
+  animation: interviewer-breathe 5s ease-in-out infinite;
+}
+.interviewer[data-speaking='true'] .interviewer-portrait {
+  animation: interviewer-talk 1.8s ease-in-out infinite;
+}
+@keyframes interviewer-breathe {
+  0%, 100% { transform: scale(1.025); }
+  50% { transform: scale(1.035) translateY(-1px); }
+}
+@keyframes interviewer-talk {
+  0%, 100% { transform: scale(1.035) rotate(-0.35deg); }
+  45% { transform: scale(1.045) rotate(0.45deg) translateY(1px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .interviewer .interviewer-portrait { animation: none; }
+  .interviewer-mouth { display: none; }
+}

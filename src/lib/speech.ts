@@ -252,6 +252,7 @@ export function useSpeak() {
   /** 사람 목소리를 쓸 수 있는지예요. 서버에 키가 없으면 목소리를 고를 수 없어요. */
   const [remote, setRemote] = useState(!remoteOff)
   const [progress, setProgress] = useState(0)
+  const [mouth, setMouth] = useState(0)
   /** 가장 최근의 읽기예요. 음성을 받는 동안 멈추면 늦게 온 음성을 틀지 않아요. */
   const turn = useRef(0)
   const request = useRef<AbortController | null>(null)
@@ -272,6 +273,7 @@ export function useSpeak() {
     audio.current?.pause()
     audio.current = null
     if ('speechSynthesis' in window) window.speechSynthesis.cancel()
+    setMouth(0)
     setSpeaking(false)
     setPreparing(false)
     finish()
@@ -282,6 +284,7 @@ export function useSpeak() {
     (mine: number) => {
       if (mine !== turn.current) return
       setProgress(1)
+      setMouth(0)
       setSpeaking(false)
       finish()
     },
@@ -297,14 +300,28 @@ export function useSpeak() {
       utterance.lang = korean ? 'ko-KR' : 'en-US'
       let boundary = -1
       let finished = false
-      const started = performance.now()
+      let started = 0
+      let lastBoundary = 0
+      let boundaryChar = ''
       const estimate = Math.max(1, text.length * SECONDS_PER_CHAR[korean ? 'ko' : 'en']) * 1000
+      utterance.onstart = () => {
+        if (mine !== turn.current) return
+        started = performance.now()
+        requestAnimationFrame(tick)
+      }
       utterance.onboundary = (event) => {
+        lastBoundary = performance.now()
+        boundaryChar = text[event.charIndex] ?? ''
         boundary = Math.min(1, (event.charIndex + (event.charLength || 0)) / Math.max(1, text.length))
       }
       // 다 읽으면 칠하기를 멈춰요. 멈추지 않으면 끝난 뒤에도 매 프레임 돌면서 다 읽은 1을 예전 값으로 덮어써요.
       const tick = () => {
         if (finished || mine !== turn.current) return
+        const now = performance.now()
+        const position = Math.floor((now - started) / estimate * text.length)
+        const char = boundary >= 0 ? boundaryChar : text[position] ?? ''
+        const audible = !window.speechSynthesis.paused && /[\p{L}\p{N}]/u.test(char) && (boundary < 0 || now - lastBoundary < 650)
+        setMouth(audible ? 0.2 + 0.65 * Math.abs(Math.sin((now - started) / 85)) : 0)
         setProgress(boundary >= 0 ? boundary : Math.min(0.97, (performance.now() - started) / estimate))
         requestAnimationFrame(tick)
       }
@@ -315,7 +332,6 @@ export function useSpeak() {
       utterance.onend = done
       utterance.onerror = done
       window.speechSynthesis.speak(utterance)
-      requestAnimationFrame(tick)
     },
     [ended],
   )
@@ -341,6 +357,16 @@ export function useSpeak() {
         const { url, timing } = result
         const player = new Audio(url)
         audio.current = player
+        // Decode a separate copy: never route or interrupt the audible player.
+        let samples: AudioBuffer | null = null
+        try {
+          const context = new AudioContext()
+          void fetch(url).then((response) => response.arrayBuffer())
+            .then((bytes) => context.decodeAudioData(bytes))
+            .then((buffer) => { if (mine === turn.current) samples = buffer })
+            .catch(() => {})
+            .finally(() => { void context.close().catch(() => {}) })
+        } catch { /* Character timing remains available without Web Audio. */ }
         player.onended = () => ended(mine)
         player.onerror = () => {
           if (mine !== turn.current || audio.current !== player) return
@@ -350,6 +376,22 @@ export function useSpeak() {
         }
         const tick = () => {
           if (mine !== turn.current || audio.current !== player || player.ended) return
+          let opening = 0
+          if (!player.paused && !player.seeking && player.readyState >= 3) {
+            if (samples) {
+              const data = samples.getChannelData(0)
+              const start = Math.floor(player.currentTime * samples.sampleRate)
+              const end = Math.min(data.length, start + Math.floor(samples.sampleRate * 0.025))
+              let energy = 0
+              for (let i = start; i < end; i += 1) energy += data[i] * data[i]
+              const rms = Math.sqrt(energy / Math.max(1, end - start))
+              opening = Math.min(1, Math.max(0, (rms - 0.012) * 9))
+            } else {
+              const chars = timing ? spokenChars(timing, player.currentTime) : player.currentTime / SECONDS_PER_CHAR[/[가-힣]/.test(text) ? 'ko' : 'en']
+              if (/[\p{L}\p{N}]/u.test(text[Math.floor(chars)] ?? '')) opening = 0.65 * Math.abs(Math.sin(player.currentTime * 18))
+            }
+          }
+          setMouth(opening)
           // 글자 시각이 있으면 지금 읽는 글자까지 정확히 칠하고, 없으면(예전 음성) 재생한 비율로 어림해요.
           if (timing) setProgress(spokenChars(timing, player.currentTime) / Math.max(1, text.length))
           else if (player.duration > 0) setProgress(Math.min(1, player.currentTime / player.duration))
@@ -372,7 +414,7 @@ export function useSpeak() {
 
   useEffect(() => stop, [stop])
 
-  return { speaking, preparing, remote, progress, speak, stop }
+  return { speaking, preparing, remote, progress, mouth, speak, stop }
 }
 
 /** 띵 소리를 낼 오디오예요. 처음 누를 때 만들어 둬야 브라우저가 막지 않아요. */
