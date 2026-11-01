@@ -19,20 +19,14 @@
   width: 100%;
   height: 100%;
   opacity: 0;
+  transition: opacity 0.2s;
 }
 .interviewer-portrait canvas[data-ready='true'] {
   opacity: 1;
 }
-.interviewer[data-speaking='true'] .interviewer-portrait {
-  animation: interviewer-talk 1.8s ease-in-out infinite;
-}
 @keyframes interviewer-breathe {
   0%, 100% { transform: scale(1.025); }
   50% { transform: scale(1.035) translateY(-1px); }
-}
-@keyframes interviewer-talk {
-  0%, 100% { transform: scale(1.03); }
-  45% { transform: scale(1.035) translateY(0.5px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .interviewer .interviewer-portrait { animation: none; }

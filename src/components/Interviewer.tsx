@@ -33,7 +33,7 @@ const follow = (from: number, to: number, seconds: number, elapsed: number) => {
  * 가상 면접관이에요. 입 모양은 `useSpeak`이 매 순간 정한 값(pose)을 자기 프레임으로 따라가요.
  * 그릴 수 없는 환경이나 움직임 줄이기 설정에서는 배경에 깔린 사진만 보여요.
  */
-export function Interviewer({ pose, speaking, label }: { pose: RefObject<MouthPose>; speaking: boolean; label: string }) {
+export function Interviewer({ pose, label }: { pose: RefObject<MouthPose>; label: string }) {
   const canvas = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -97,7 +97,7 @@ export function Interviewer({ pose, speaking, label }: { pose: RefObject<MouthPo
   }, [pose])
 
   return (
-    <div className="interviewer mb-6 self-center" data-speaking={speaking} role="img" aria-label={label}>
+    <div className="interviewer mb-6 self-center" role="img" aria-label={label}>
       <div className="interviewer-portrait">
         <canvas ref={canvas} aria-hidden="true" />
       </div>

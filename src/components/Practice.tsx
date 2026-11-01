@@ -393,13 +393,14 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     body = <Summary answers={answers} single={single} onAgain={begin} onBack={exit} />
   } else {
     body = (
-      <div key={current.id} className="mx-auto flex h-full w-full max-w-4xl flex-col">
-        <div className="flex flex-1 flex-col justify-center pb-6">
-          <Interviewer pose={voice.pose} speaking={phase === 'asking' && voice.speaking && !voice.preparing} label={lang === 'ko' ? '가상 면접관' : 'Virtual interviewer'} />
+      <div className="mx-auto flex h-full w-full max-w-4xl flex-col">
+        {/* 면접관은 질문이 바뀌어도 같은 자리에 그대로 있어요. 위에서부터 놓아서 질문 길이나 답변 칸 때문에 얼굴이 움직이지 않아요. */}
+        <div className="flex flex-1 flex-col pt-[5vh] pb-6">
+          <Interviewer pose={voice.pose} label={lang === 'ko' ? '가상 면접관' : 'Virtual interviewer'} />
           <p className="flex items-center gap-2 text-[13px] font-medium text-[#fff]/45">
             <span>{phase === 'asking' ? (voice.preparing ? L.preparing : L.speaking) : phase === 'moving' ? (index + 1 >= total ? L.last : L.moving) : L.listening}</span>
           </p>
-          <Karaoke text={current.question} progress={progressValue} dim={phase === 'moving'} />
+          <Karaoke key={current.id} text={current.question} progress={progressValue} dim={phase === 'moving'} />
 
           {/* 내 답이에요. 말하는 동안 확정된 글자는 밝게, 아직 바뀔 수 있는 글자는 옅게 보여요. */}
           {phase !== 'asking' && (
