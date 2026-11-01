@@ -32,7 +32,7 @@
   - 나머지는 흰 배경과 회색 계열 텍스트로 절제해요. 빨간색은 빠진 필수 역량의 엑스 표시, 지우기 버튼, 적합도 낮음(50% 아래), 마감 달력의 일요일과 공휴일, 공고 카드의 오늘 마감(홈 글자와 카드 테두리)에만 써요. 적합도 중간(50% 이상 70% 아래)은 노란색(amber)이에요. 경계 값은 `GapParts`의 `FIT_HIGH`, `FIT_MID` 한 곳에 있어요.
 - 컬러와 폰트는 `src/index.css`의 `@theme`에 토큰으로 등록되어 있어요. (`brand`, `brand-hover`, `brand-soft`, `font-sans`)
 - 탭 제목은 잡아따예요(영어 화면도 같아요). 파비콘(`public/favicon.svg`)은 흰 둥근 칸 가운데에 손글씨 로고의 J 한 글자(`LofyScript`의 첫 글자 도형을 그대로 옮긴 것, 짙은 회색 #2C2C2C)예요. 로고 글자를 바꾸면 파비콘도 같이 바꿔요.
-- 링크를 카카오톡이나 디스코드에 붙이면 뜨는 미리보기 카드는 `index.html`의 og 태그와 `public/og.png`로 정해요. 영어 주소(`/en`으로 시작)의 카드는 `public/og-en.png`와 영어 문구를 써요. 주소는 실제 서비스 주소(https://lofy.hidly.dev)로 적혀 있어서, 도메인이 바뀌면 같이 바꿔야 해요(`index.html`, `src/lib/meta.ts`의 `SITE`, `scripts/prerender.mjs`의 `SITE`, `public/robots.txt`, 업데이트 목록과 앱 레포). 예전 주소(https://whoisloafing.hidly.dev)는 1.3까지의 macOS 앱이 열어서 같은 Worker에 계속 연결해 둬요.
+- 링크를 카카오톡이나 디스코드에 붙이면 뜨는 미리보기 카드는 `index.html`의 og 태그와 `public/og.png`로 정해요. 영어 주소(`/en`으로 시작)의 카드는 `public/og-en.png`와 영어 문구를 써요. 주소는 실제 서비스 주소(https://javadda.hidly.dev)로 적혀 있어서, 도메인이 바뀌면 같이 바꿔야 해요(`index.html`, `src/lib/meta.ts`의 `SITE`, `scripts/prerender.mjs`의 `SITE`, `public/robots.txt`, `public/download/javadda/appcast.xml`, 앱 레포의 `AppConfig.productionURL`과 `Info.plist`의 `SUFeedURL`, `scripts/make-dmg.sh`의 `DOWNLOAD_URL`). 예전 Lofy 주소(https://lofy.hidly.dev)는 Lofy 앱이 열어요. 예전 주소(https://whoisloafing.hidly.dev)는 1.3까지의 macOS 앱이 열어서 같은 Worker에 계속 연결해 둬요.
 - 화면 맨 아래나 제목 옆에 "하루 한 번 모아요", "이렇게 셌어요" 같은 출처와 계산 설명을 작게 덧붙이지 않아요. 꼭 필요하면 숫자에 `Tip`으로 달아요.
 - 디자인 원칙: 여백 위주의 미니멀. 장식, 그라데이션, 이모지, 아이콘 남발 금지. 공고 카드의 직군, 경력, 지역처럼 훑어보는 정보에만 작은 선 아이콘을 붙여요(공고 탐색과 새 진단 화면의 `JobCard`, 기업 상세와 리포트의 `PostingTile`). 기업 로고는 그 회사의 색 그대로 보여줘서 메인 컬러 규칙의 예외예요. 타이틀 위에 태그, 뱃지, 라벨을 붙이지 않아요.
 - 숫자나 색만으로는 뜻을 모르는 것에는 마우스를 올리면 뜨는 짧은 설명(`Tip`)을 붙여요. 적합도(`FitBadge`)는 무엇을 재는지, 공고 기준으로 칠한 스킬 이름표(`SkillChip`의 met, partial, missing)는 충분히 보여요, 근거가 약해요, 보이지 않아요를 알려줘요. 잠깐(0.3초) 머물러야 뜨고, 짙은 회색 말풍선이에요. 카드나 스크롤 칸에 잘리지 않게 말풍선은 body에 고정 위치로 그리고, 위에 자리가 없으면 아래로 뒤집고 창 가장자리 안으로 맞춰요. 사이드바처럼 옆이 빈 곳에서는 `side="right"`로 오른쪽에 꼬리 달린 말풍선을 띄우고, 오른쪽에 자리가 없으면 위로 돌아가요.
@@ -524,7 +524,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 ## 남은 작업
 
 - 기업 본사 주소와 좌표를 서버의 기업 자료로 받아요. 지금은 화면의 `COMPANY_OFFICE`에 열 곳만 적어 두었어요.
-- 네이버 클라우드 콘솔의 Maps 서비스 주소에 운영 주소(lofy.hidly.dev)가 등록되어 있는지 배포 전에 확인해요. localhost:5173은 동작해요.
+- 네이버 클라우드 콘솔의 Maps 서비스 주소에 운영 주소(javadda.hidly.dev)가 등록되어 있는지 배포 전에 확인해요. localhost:5173은 동작해요.
 - 워크넷 기업의 실제 주소를 서버가 주면 채용 지도의 핀을 동네 가운데가 아니라 그 주소에 꽂아요.
 - 기업 규모를 서버의 기업 자료로 받아요. 지금은 고용24 기업의 업종 자리와 화면의 `COMPANY_SIZE`로 읽어서, 그냥 "기업"으로 온 곳은 규모를 몰라요(중소기업이 비어요).
 - 서버가 공고에 붙여 주는 적합도(`fitScore`)와 화면의 `fitOf` 중 하나로 맞추기

@@ -4,7 +4,7 @@
  */
 import { localizePath, messages, type Lang } from './i18n'
 
-export const SITE = 'https://lofy.hidly.dev'
+export const SITE = 'https://javadda.hidly.dev'
 /** 탭 제목에 붙는 서비스 이름이에요. 화면 언어와 상관없이 잡아따예요. */
 export const SITE_TITLE = '잡아따'
 
