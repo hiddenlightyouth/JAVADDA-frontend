@@ -135,7 +135,7 @@ interface Answer {
  * 면접관이 질문을 소리로 읽는 동안 글자가 노래방 자막처럼 차례로 밝아지고(`useSpeak`의 progress), 다 읽으면 띵 소리가 나요.
  * 그 뒤로 말하는 내용이 음성 인식으로 화면에 바로 나오고, 말을 마치고 잠시(SILENCE_MS) 조용하면 다음 질문으로 넘어가요.
  * 채점은 다음 질문을 하는 동안 뒤에서 받아서, 면접이 끝나면 질문마다 점수와 피드백을 한 번에 보여줘요.
- * 음성 인식이 없는 브라우저(macOS 앱의 웹뷰, Firefox)나 마이크를 쓸 수 없으면 글로 답해요. 면접관 목소리는 설정에서 골라요(`VoiceSetting`).
+ * 음성 인식이 없는 브라우저(Firefox)나 마이크를 쓸 수 없으면(macOS 앱 2.0 등) 글로 답해요. 면접관 목소리는 설정에서 골라요(`VoiceSetting`).
  * 질문 하나를 골라 들어오면 그 질문만 연습하고, 답하면 바로 점수와 피드백, 모범 답변을 보여줘요. 시작 화면은 전체 연습과 같은 "가상 면접 시작"이에요.
  */
 export function Practice({ id, question: startId, onBack }: { id: string; question?: string; onBack: () => void }) {
