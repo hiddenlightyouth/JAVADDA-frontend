@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
 import { careerName, companyOf, type CompanyCategory, majorCompanies, familyName, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
+import { readFlag, writeFlag } from '../lib/storage'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
 import { CategoryFilter, CompanyFilter, Notice } from './GapParts'
@@ -9,6 +10,7 @@ import { SearchIcon } from './Icons'
 import { PostingCountBar, PostingList, readLayout, useJobBrowser, type Layout } from './JobCard'
 import { SplitView } from './PostingBrowser'
 import { LoadGate, SuggestionHint, usePostings, useSuggestion } from './ScreenParts'
+import { Checkbox } from './ui'
 
 /**
  * 공고 탐색 화면이에요. 공고를 화면 가득 펼쳐 놓고 직군과 경력으로 걸러 보다가, 눌러서 원문을 보거나 분석하기로 진단을 시작해요.
@@ -18,6 +20,8 @@ import { LoadGate, SuggestionHint, usePostings, useSuggestion } from './ScreenPa
 const FAMILIES: JobFamily[] = ['backend', 'frontend', 'mobile', 'data', 'devops', 'other']
 const CAREERS: CareerLevel[] = ['entry', 'junior', 'any']
 const SORTS: PostingSort[] = ['fit', 'recent', 'deadline']
+/** 상시 채용 숨기기를 켰는지 이 기기에 기억해요. */
+const HIDE_ROLLING_KEY = 'whoisloafing:jobs-hide-rolling'
 
 const TEXT = messages({
   ko: {
@@ -33,6 +37,7 @@ const TEXT = messages({
     reset: '조건 초기화',
     category: '기업 분류',
     majors: '주요 기업',
+    hideRolling: '상시 채용 숨기기',
   },
   en: {
     title: 'Explore jobs',
@@ -47,6 +52,7 @@ const TEXT = messages({
     reset: 'Clear filters',
     category: 'Company type',
     majors: 'Major companies',
+    hideRolling: 'Hide rolling postings',
   },
 })
 
@@ -62,6 +68,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   const [category, setCategory] = useState<CompanyCategory | null>(null)
   const browser = useJobBrowser()
   const [layout, setLayout] = useState<Layout>(readLayout)
+  const [hideRolling, setHideRolling] = useState(() => readFlag(HIDE_ROLLING_KEY))
   // 검색어는 잠깐 멈췄을 때 보내요.
   const { loaded, postings, waiting, percent, retry } = usePostings({ query, family, career })
   // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요.
@@ -73,16 +80,19 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
     onPick(posting.id)
   }
 
-  // 기업은 받아 온 공고에서 바로 걸러요. 기업마다 공고가 몇 개뿐이라 서버에 다시 묻지 않아요. 거른 뒤에 정렬해서 정렬할 공고를 줄여요.
+  // 기업과 상시 채용 숨기기는 받아 온 공고에서 바로 걸러요. 기업마다 공고가 몇 개뿐이라 서버에 다시 묻지 않아요. 거른 뒤에 정렬해서 정렬할 공고를 줄여요.
   const list = useMemo(
     () =>
       postings &&
       sortPostings(
-        postings.filter((posting) => (!company || posting.companyId === company) && (!category || companyOf(posting.companyId).category === category)),
+        postings.filter(
+          (posting) =>
+            (!company || posting.companyId === company) && (!category || companyOf(posting.companyId).category === category) && (!hideRolling || posting.deadline),
+        ),
         sort,
         resume,
       ),
-    [postings, company, category, sort, resume],
+    [postings, company, category, hideRolling, sort, resume],
   )
 
   return (
@@ -194,7 +204,18 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
           />
         </div>
 
-        <PostingCountBar count={list ? list.length : null} layout={layout} onLayout={setLayout} />
+        <PostingCountBar count={list ? list.length : null} layout={layout} onLayout={setLayout}>
+          <Checkbox
+            checked={hideRolling}
+            onChange={(next) => {
+              track('jobs_hide_rolling', { hidden: next })
+              setHideRolling(next)
+              writeFlag(HIDE_ROLLING_KEY, next)
+            }}
+          >
+            {L.hideRolling}
+          </Checkbox>
+        </PostingCountBar>
 
         <div className="mt-4">
           <LoadGate waiting={waiting} failed={loaded === 'failed'} percent={percent} onRetry={retry}>
@@ -205,7 +226,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
                 <Notice
                   title={L.none}
                   body={L.noneBody}
-                  action={query || family || career || company || category ? L.reset : undefined}
+                  action={query || family || career || company || category || hideRolling ? L.reset : undefined}
                   onAction={() => {
                     track('jobs_filter_reset')
                     setQuery('')
@@ -213,6 +234,8 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
                     setCareer(null)
                     setCompany(null)
                     setCategory(null)
+                    setHideRolling(false)
+                    writeFlag(HIDE_ROLLING_KEY, false)
                   }}
                   className="mt-16"
                 />

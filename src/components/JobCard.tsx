@@ -71,11 +71,13 @@ export function LayoutToggle({ value, onChange }: { value: Layout; onChange: (la
 }
 
 /** 목록 위의 한 줄이에요. 왼쪽에 공고 수(받는 동안은 비워요), 오른쪽에 보기 방식 버튼이 있어요. 공고 탐색과 추천 공고가 같이 써요. */
-export function PostingCountBar({ count, layout, onLayout }: { count: number | null; layout: Layout; onLayout: (layout: Layout) => void }) {
+export function PostingCountBar({ count, layout, onLayout, children }: { count: number | null; layout: Layout; onLayout: (layout: Layout) => void; children?: ReactNode }) {
   const L = useMessages(TEXT)
   return (
-    <div className="mt-4 flex h-8 items-center justify-between gap-3">
-      <p className="text-[13px] text-gray-500 tabular-nums">{count === null ? '' : L.items(count)}</p>
+    <div className="mt-4 flex h-8 items-center gap-3">
+      <p className="mr-auto text-[13px] text-gray-500 tabular-nums">{count === null ? '' : L.items(count)}</p>
+      {/* 화면마다 더하는 거르기(공고 탐색의 상시 채용 숨기기)는 보기 방식 버튼 앞에 둬요. */}
+      {children}
       <LayoutToggle value={layout} onChange={onLayout} />
     </div>
   )

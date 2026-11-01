@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { messages, useMessages } from '../lib/i18n'
 import { LOAD_SHOW_AFTER_MS } from '../lib/load'
+import { CheckIcon } from './Icons'
 import { Kbd } from './Shortcuts'
 
 /** 기다리는 동안만 보이는 로봇 애니메이션이라, 플레이어와 엔진은 그때 따로 받아요. */
@@ -174,6 +175,19 @@ const SEGMENTED = {
   sm: { box: 'rounded-lg p-0.5', item: 'h-7 rounded-md px-2.5 text-[12.5px]', icon: 'size-7 rounded-md' },
   // md는 바깥 높이가 36px라 같은 줄의 도구 버튼, 드롭다운과 높이가 같아요.
   md: { box: 'rounded-lg p-0.5', item: 'h-8 rounded-md px-3.5 text-[13px]', icon: 'size-8 rounded-md' },
+}
+
+/** 켜고 끄는 작은 체크 칸과 이름이에요. 켜면 메인 컬러 칸에 흰 체크가 들어가요. */
+export function Checkbox({ checked, onChange, children, className = '' }: { checked: boolean; onChange: (checked: boolean) => void; children: ReactNode; className?: string }) {
+  return (
+    <label className={`inline-flex cursor-pointer items-center gap-2 text-[13px] text-gray-600 select-none ${className}`}>
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="peer sr-only" />
+      <span className={`flex size-4 items-center justify-center rounded-[5px] border transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand ${checked ? 'border-brand bg-brand' : 'border-gray-300 bg-white'}`}>
+        {checked && <CheckIcon className="size-3 text-white" strokeWidth={2.2} />}
+      </span>
+      {children}
+    </label>
+  )
 }
 
 /**
