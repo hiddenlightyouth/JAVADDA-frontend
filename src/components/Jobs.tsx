@@ -29,6 +29,7 @@ const TEXT = messages({
     label: '공고 찾기',
     all: '전체',
     family: '직군',
+    devAll: '개발 직군 전체',
     career: '경력',
     size: '기업 규모',
     sort: '정렬',
@@ -45,6 +46,7 @@ const TEXT = messages({
     label: 'Search postings',
     all: 'All',
     family: 'Role',
+    devAll: 'All dev roles',
     career: 'Level',
     size: 'Company size',
     sort: 'Sort',
@@ -88,13 +90,14 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
     onPick(posting.id)
   }
 
-  // 기업과 상시 채용 숨기기는 받아 온 공고에서 바로 걸러요. 기업마다 공고가 몇 개뿐이라 서버에 다시 묻지 않아요. 거른 뒤에 정렬해서 정렬할 공고를 줄여요.
+  // 직군을 고르지 않았으면 추천 공고처럼 개발 직군만 보여줘요(기타는 메뉴에서 골라요). 기업과 상시 채용 숨기기는 받아 온 공고에서 바로 걸러요. 기업마다 공고가 몇 개뿐이라 서버에 다시 묻지 않아요. 거른 뒤에 정렬해서 정렬할 공고를 줄여요.
   const list = useMemo(
     () =>
       postings &&
       sortPostings(
         postings.filter(
           (posting) =>
+            (family || posting.family !== 'other') &&
             (!company || posting.companyId === company) && (!category || companyOf(posting.companyId).category === category) &&
             (!size || sizeGroupOf(companyOf(posting.companyId)) === size) &&
             (!hideRolling || posting.deadline),
@@ -133,14 +136,14 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
             size="lg"
             active={family !== null}
             label={L.family}
-            value={family ? familyName(family) : L.all}
+            value={family ? familyName(family) : L.devAll}
             groups={[
               {
                 items: [null, ...FAMILIES].map((value) => ({
-                  label: value ? familyName(value) : L.all,
+                  label: value ? familyName(value) : L.devAll,
                   checked: family === value,
                   onSelect: () => {
-                    track('jobs_family_select', { family: value ?? 'all' })
+                    track('jobs_family_select', { family: value ?? 'dev' })
                     setFamily(value)
                   },
                 })),
