@@ -189,14 +189,22 @@ function notchedPath(w: number, h: number, nw: number) {
   ].join(' ')
 }
 
-/** 요소의 크기를 재요. 크기가 바뀌면 다시 재요. */
+/**
+ * 요소의 크기를 재요. 크기가 바뀌면 다시 재요. 카드는 그리드 안에서 0.5px 같은 소수 크기가 되는데, 반올림하면 바깥선이 카드 밖으로 넘어가
+ * 공고 줄(overflow-hidden)에 잘려 가늘게 보여서 내림해요.
+ */
 function useElementSize<T extends HTMLElement>() {
   const ref = useRef<T>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
   useLayoutEffect(() => {
     const element = ref.current
     if (!element) return
-    const observer = new ResizeObserver(() => setSize({ width: element.offsetWidth, height: element.offsetHeight }))
+    const observer = new ResizeObserver(([entry]) => {
+      const box = entry.borderBoxSize?.[0]
+      const width = box ? box.inlineSize : element.getBoundingClientRect().width
+      const height = box ? box.blockSize : element.getBoundingClientRect().height
+      setSize({ width: Math.floor(width), height: Math.floor(height) })
+    })
     observer.observe(element)
     return () => observer.disconnect()
   }, [])
