@@ -5,9 +5,11 @@ import { axisOf, canonical, MAX_GITHUB_PROJECTS, PROGRESS_START, removeResume, r
 import { isGithubReturn } from '../lib/githubConnect'
 import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
+import { resumeMarkdown, type ResumeMarkdownPart } from '../lib/resumeMarkdown'
 import { showToast } from '../lib/toast'
 import { canvas, pageFrame, PageHeader } from './AppPage'
 import { ConfirmDialog } from './Dialog'
+import { Dropdown } from './Dropdown'
 import { AiProgress, Notice, SkillChip, Tip } from './GapParts'
 import { GithubResume } from './GithubResume'
 import { GitHubMark } from './Social'
@@ -36,6 +38,21 @@ const TEXT = messages({
     addPlaceholder: '역량 더하기',
     add: '더하기',
     paragraphs: '주요 경력',
+    copy: '마크다운 복사',
+    copyParts: { all: '이력서와 포트폴리오', resume: '이력서만', portfolio: '포트폴리오만' } as Record<ResumeMarkdownPart, string>,
+    copied: '마크다운을 복사했어요. 노션이나 GitHub에 붙여 넣으면 돼요.',
+    copyFailed: '복사하지 못했어요. 잠시 뒤에 다시 해 주세요.',
+    md: {
+      skills: '기술 스택',
+      paragraphs: '주요 경력',
+      projects: '프로젝트',
+      portfolio: '포트폴리오',
+      role: '맡은 역할',
+      stack: '기술 스택',
+      problems: '문제 해결 경험',
+      kinds: { team: '팀 프로젝트', personal: '개인 프로젝트' },
+      parts: { problem: '문제', cause: '원인', solution: '개선', effect: '효과', decision: '판단' },
+    },
     addRepos: 'GitHub에서 불러오기',
     cancel: '취소',
     addDoc: '서류 추가',
@@ -76,6 +93,21 @@ const TEXT = messages({
     addPlaceholder: 'Add a skill',
     add: 'Add',
     paragraphs: 'Key experience',
+    copy: 'Copy markdown',
+    copyParts: { all: 'Resume and portfolio', resume: 'Resume only', portfolio: 'Portfolio only' },
+    copied: 'Markdown copied. Paste it into Notion or GitHub.',
+    copyFailed: "Couldn't copy. Please try again.",
+    md: {
+      skills: 'Skills',
+      paragraphs: 'Key experience',
+      projects: 'Projects',
+      portfolio: 'Portfolio',
+      role: 'Role',
+      stack: 'Tech stack',
+      problems: 'Problem solving',
+      kinds: { team: 'Team project', personal: 'Personal project' },
+      parts: { problem: 'Problem', cause: 'Cause', solution: 'Fix', effect: 'Result', decision: 'Trade-off' },
+    },
     addRepos: 'Import from GitHub',
     cancel: 'Cancel',
     addDoc: 'Add document',
@@ -516,6 +548,18 @@ function ResumeDetail({ resume, primary, onPrimary, onExplore, onBack, onRemoved
   /** 더한 레포를 AI가 쓰는 동안이에요. 그동안은 화면을 떠날 수 없어요. */
   const [writing, setWriting] = useState(false)
   const canAdd = resume.source === 'github' && resume.projects.length > 0 && resume.projects.length < MAX_GITHUB_PROJECTS
+  const hasPortfolio = resume.projects.some((project) => project.portfolio.length > 0)
+
+  /** 서류 전체를 마크다운으로 복사해요. GitHub 서류는 이력서와 포트폴리오 중 고른 만큼이에요. */
+  async function copy(part: ResumeMarkdownPart) {
+    try {
+      await navigator.clipboard.writeText(resumeMarkdown(resume, part, pick(TEXT).md))
+      track('resume_markdown_copy', { part, source: resume.source })
+      showToast(pick(TEXT).copied)
+    } catch {
+      showToast(pick(TEXT).copyFailed)
+    }
+  }
 
   return (
     <main className={pageFrame}>
@@ -525,6 +569,17 @@ function ResumeDetail({ resume, primary, onPrimary, onExplore, onBack, onRemoved
         backLabel={L.title}
         actions={
           <>
+            {hasPortfolio ? (
+              <Dropdown
+                label={L.copy}
+                align="right"
+                groups={[{ items: (['all', 'resume', 'portfolio'] as const).map((part) => ({ label: L.copyParts[part], onSelect: () => void copy(part) })) }]}
+              />
+            ) : (
+              <button type="button" onClick={() => void copy('resume')} className={toolButton}>
+                {L.copy}
+              </button>
+            )}
             <button type="button" disabled={writing} onClick={() => setRemoving(true)} className={toolDangerButton}>
               <TrashIcon className="size-4" />
               {L.remove}
