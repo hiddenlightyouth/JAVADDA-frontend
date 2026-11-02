@@ -5,7 +5,8 @@ import { companyOf, fetchQuestions, PROGRESS_START, submitAnswer, useReport, use
 import { messages, pick, useLang, useMessages } from '../lib/i18n'
 import { greetingOf, INTERVIEWERS, setInterviewer, useInterviewer, type InterviewerKey, type InterviewerProfile } from '../lib/interviewers'
 import { useLoadHold, useLoadProgress } from '../lib/load'
-import { canDictate, canSpeak, chime, joinSpeech, prefetchVoice, setPracticeVolume, unlockChime, useDictation, usePracticeVolume, useSpeak } from '../lib/speech'
+import { canDictate, canSpeak, chime, joinSpeech, prefetchVoice, setPracticeVolume, unlockChime, useDictation, useMicLevel, usePracticeVolume, useSpeak } from '../lib/speech'
+import type { MouthPose } from '../lib/lipsync'
 import { showToast } from '../lib/toast'
 import { AiProgress, CompanyMark, Notice, ScoreRing } from './GapParts'
 import { isApp } from '../lib/app'
@@ -35,7 +36,7 @@ const TEXT = messages({
     start: '면접 시작하기',
     startNote: (name: string) => `${name} 면접관과 면접을 시작해요`,
     writing: '질문을 만들고 있어요',
-    volumeHint: '면접관을 고르면 인사를 들려드려요. 소리가 크면 오른쪽 위에서 음량을 조절해 주세요.',
+    ready: '이제 면접 질문이 준비되었어요. 첫 번째 질문을 시작할게요.',
     gradedBy: (name: string) => `${name} 면접관의 평가예요`,
     preparing: '면접관이 질문을 준비하고 있어요',
     speaking: '질문 중',
@@ -89,7 +90,7 @@ const TEXT = messages({
     start: 'Start interview',
     startNote: (name: string) => `Your interview with ${name}`,
     writing: 'Writing your questions',
-    volumeHint: 'Pick an interviewer to hear a quick hello. If it is too loud, adjust the volume at the top right.',
+    ready: 'Your interview questions are ready. Let us start with the first one.',
     gradedBy: (name: string) => `Graded by ${name}`,
     preparing: 'The interviewer is getting ready',
     speaking: 'Asking',
@@ -208,6 +209,9 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
       showToast(denied ? L.micDenied : code === 'audio-capture' ? L.micMissing : L.micFailed)
     },
   )
+  /** 말로 답하는 동안의 마이크 소리 크기예요. 오른쪽 위 소리 막대가 읽어요. */
+  const mic = useMicLevel(dictation.listening)
+
   /** 말하는 동안에는 아직 확정되지 않은 글자까지 보여줘요. */
   const shown = joinSpeech(answer, dictation.interim)
   const transcript = useRef<HTMLDivElement>(null)
@@ -296,16 +300,29 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     const mine = ++run.current
     const [first, ...rest] = who.smallTalk[lang]
     const lines = [first, ...rest.sort(() => Math.random() - 0.5)]
-    for (let at = 0; mine === run.current; at += 1) {
-      // 한 바퀴를 다 돌면 첫 말은 빼고 다시 돌아요.
-      const line = at < lines.length ? lines[at] : lines[1 + ((at - 1) % (lines.length - 1))]
+    const say = async (line: string) => {
       setChatLine(line)
       if (canSpeak()) await voice.speak(line, who.voice)
       else await wait(CHAT_SILENT_MS)
+    }
+    for (let at = 0; mine === run.current; at += 1) {
+      // 한 바퀴를 다 돌면 첫 말은 빼고 다시 돌아요.
+      await say(at < lines.length ? lines[at] : lines[1 + ((at - 1) % (lines.length - 1))])
       if (mine !== run.current) return
+      // 질문이 오면 하던 말을 끝까지 하고, 준비됐다고 알린 뒤에 첫 질문을 읽어요.
+      if (questionsReady.current) {
+        await wait(CHAT_PAUSE_MS / 2)
+        if (mine !== run.current) return
+        await say(L.ready)
+        if (mine !== run.current) return
+        setStarting(false)
+        return startRef.current()
+      }
       await wait(CHAT_PAUSE_MS)
     }
   }
+  /** 잡담하는 동안 질문이 왔는지예요. 잡담이 한 말을 마칠 때마다 봐요. */
+  const questionsReady = useRef(false)
 
   /** 시작 화면에서 면접관이 인사하는 중인지예요. 인사하는 동안 오른쪽 위 음량 조절에 테두리를 둘러요. */
   const [greeting, setGreeting] = useState(false)
@@ -327,8 +344,8 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   // 고른 면접관의 잡담도 미리 받아 둬서, 질문을 기다릴 때 바로 말을 걸어요.
   useEffect(() => {
     if (phase !== 'intro' || !canSpeak()) return
-    for (const line of interviewer.smallTalk[lang]) prefetchVoice(line, interviewer.voice)
-  }, [phase, lang, interviewer])
+    for (const line of [...interviewer.smallTalk[lang], L.ready]) prefetchVoice(line, interviewer.voice)
+  }, [phase, lang, interviewer, L.ready])
 
   function begin() {
     // 띵 소리와 음성은 사용자가 누른 순간에 준비해야 브라우저가 막지 않아요.
@@ -340,6 +357,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
       setSets((prev) => ({ ...prev, [setKey]: undefined }))
       setProgresses((prev) => ({ ...prev, [setKey]: PROGRESS_START }))
     }
+    questionsReady.current = false
     setStarting(true)
     // 누른 순간에 말을 시작해야 브라우저가 소리를 막지 않아요.
     void chatter(interviewer)
@@ -354,11 +372,14 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   const startRef = useRef(start)
   startRef.current = start
 
-  // 시작을 누른 뒤에 질문이 오면 바로 첫 질문을 읽어요. 받지 못했으면 기다리기를 멈추고 안내를 보여줘요.
+  // 시작을 누른 뒤에 질문이 오면 잡담이 하던 말을 마치고 첫 질문으로 넘어가요(chatter). 받지 못했으면 기다리기를 멈추고 안내를 보여줘요.
   useEffect(() => {
     if (!starting || questions === undefined) return
+    if (questions) {
+      questionsReady.current = true
+      return
+    }
     setStarting(false)
-    if (questions) return startRef.current()
     // 받지 못했으면 잡담을 멈춰요.
     run.current += 1
     voice.stop()
@@ -523,7 +544,6 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
             }}
           />
         </div>
-        <p className="mt-4 text-[12.5px] text-[#fff]/40">{L.volumeHint}</p>
         {/* 시작 줄이에요. 누구와 면접하는지 한 번 더 적고 바로 시작해요. */}
         <div className="mt-6 flex w-full max-w-xl items-center justify-between gap-4 rounded-[22px] bg-[#fff] py-3 pr-3 pl-6">
           <p className="min-w-0 truncate text-left text-[15px] font-semibold text-[#000]/85">{L.startNote(pick(interviewer.name))}</p>
@@ -647,6 +667,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
           <p className="min-w-0 flex-1 truncate text-[13px] text-[#fff]/55">{L.title}</p>
         )}
         {total > 0 && phase !== 'intro' && phase !== 'finished' && <span className="shrink-0 text-[13px] font-medium text-[#fff]/55 tabular-nums">{L.progress(index + 1, total)}</span>}
+        {phase !== 'finished' && <AudioMeter voice={voice.pose} mic={mic} />}
         {canSpeak() && <VolumeControl highlight={greeting && voice.speaking} />}
       </header>
       {/* 질문 수만큼 나눈 가는 막대예요. 답한 질문은 밝게 채워요. */}
@@ -725,6 +746,48 @@ function Karaoke({ text, progress, dim }: { text: string; progress: number; dim:
 }
 
 /** 면접관 목소리의 소리 크기예요. 스피커를 누르면 끄고 켜고, 옆 막대로 크기를 맞춰요. 면접관이 음량 안내를 하는 동안에는 테두리로 자리를 알려요(highlight). */
+/** 막대마다 소리를 받는 정도예요. 가운데가 가장 크게 움직여서 애플의 음성 표시처럼 보여요. */
+const METER_BARS = [0.45, 0.75, 1, 0.75, 0.45]
+
+/**
+ * 오른쪽 위의 작은 소리 막대예요. 면접관이 말하는 소리(입 모양의 열림)와 내가 말하는 소리(마이크)를 하나로 합쳐 보여줘요.
+ * 매 프레임 바뀌어서 React 상태 대신 막대의 높이를 직접 바꿔요. 조용하면 작은 점으로 남아요.
+ */
+function AudioMeter({ voice, mic }: { voice: { current: MouthPose }; mic: { current: number } }) {
+  const bars = useRef<(HTMLSpanElement | null)[]>([])
+  useEffect(() => {
+    const smooth = METER_BARS.map(() => 0)
+    let frame = 0
+    const tick = (now: number) => {
+      const level = Math.max(voice.current.open, mic.current)
+      METER_BARS.forEach((weight, at) => {
+        // 막대마다 조금씩 다른 속도로 흔들려서 한 덩어리로 움직이지 않아요.
+        const wobble = 0.75 + 0.25 * Math.sin(now / (90 + at * 23) + at * 1.7)
+        const target = Math.min(1, level * weight * wobble)
+        smooth[at] += (target - smooth[at]) * (target > smooth[at] ? 0.5 : 0.18)
+        const bar = bars.current[at]
+        if (bar) bar.style.transform = `scaleY(${0.2 + smooth[at] * 0.8})`
+      })
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [voice, mic])
+  return (
+    <span aria-hidden className="flex h-10 shrink-0 items-center gap-[3px] px-1">
+      {METER_BARS.map((_, at) => (
+        <span
+          key={at}
+          ref={(node) => {
+            bars.current[at] = node
+          }}
+          className="h-5 w-[3px] origin-center scale-y-[0.2] rounded-full bg-white/85"
+        />
+      ))}
+    </span>
+  )
+}
+
 function VolumeControl({ highlight = false }: { highlight?: boolean }) {
   const L = useMessages(TEXT)
   const volume = usePracticeVolume()

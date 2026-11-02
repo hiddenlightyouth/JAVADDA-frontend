@@ -475,3 +475,46 @@ export function chime() {
     oscillator.stop(now + delay + 0.75)
   }
 }
+
+/**
+ * 말로 답하는 동안 마이크 소리 크기(0에서 1)를 재요. 음성 인식과 따로 마이크를 열어서 오른쪽 위 소리 막대가 내 목소리에도 움직여요.
+ * 매 프레임 바뀌어서 ref로 돌려줘요. 마이크를 열 수 없으면 0에 머물러요.
+ */
+export function useMicLevel(active: boolean) {
+  const level = useRef(0)
+  useEffect(() => {
+    if (!active || !navigator.mediaDevices?.getUserMedia) return
+    let stopped = false
+    let stream: MediaStream | null = null
+    let context: AudioContext | null = null
+    let frame = 0
+    void navigator.mediaDevices.getUserMedia({ audio: true }).then(
+      (media) => {
+        if (stopped) return media.getTracks().forEach((track) => track.stop())
+        stream = media
+        context = new AudioContext()
+        const analyser = context.createAnalyser()
+        analyser.fftSize = 1024
+        context.createMediaStreamSource(media).connect(analyser)
+        const data = new Float32Array(analyser.fftSize)
+        const tick = () => {
+          analyser.getFloatTimeDomainData(data)
+          let energy = 0
+          for (const value of data) energy += value * value
+          level.current = Math.min(1, Math.max(0, (Math.sqrt(energy / data.length) - 0.01) * 8))
+          frame = requestAnimationFrame(tick)
+        }
+        tick()
+      },
+      () => {},
+    )
+    return () => {
+      stopped = true
+      cancelAnimationFrame(frame)
+      stream?.getTracks().forEach((track) => track.stop())
+      void context?.close().catch(() => {})
+      level.current = 0
+    }
+  }, [active])
+  return level
+}
