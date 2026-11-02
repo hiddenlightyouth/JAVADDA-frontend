@@ -4,7 +4,7 @@ import { companyOf, type CompanyCategory, majorCompanies, fitOf, useReports, use
 import { holidayOf } from '../lib/holidays'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { PageHeader, ScrollPage } from './AppPage'
-import { CategoryFilter, CompanyFilter, CompanyMark, DiagnosedTag, FitTag, usePickConfirm } from './GapParts'
+import { CategoryFilter, CompanyFilter, DiagnosedTag, FitTag, usePickConfirm } from './GapParts'
 import { ChevronRightIcon } from './Icons'
 import { PickRow } from './JobCard'
 import { LoadGate, usePostings } from './ScreenParts'
@@ -74,17 +74,6 @@ const dayKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() +
 function monthDays(year: number, month: number): Date[] {
   const first = new Date(year, month, 1)
   return Array.from({ length: 42 }, (_, index) => new Date(year, month, 1 - first.getDay() + index))
-}
-
-/** 공고를 기업별로 묶어요. 공고가 많은 기업이 앞이고, 같으면 받은 순서예요. */
-function groupByCompany(postings: JobPosting[]): { companyId: string; postings: JobPosting[] }[] {
-  const groups = new Map<string, JobPosting[]>()
-  for (const posting of postings) {
-    const list = groups.get(posting.companyId)
-    if (list) list.push(posting)
-    else groups.set(posting.companyId, [posting])
-  }
-  return [...groups.entries()].map(([companyId, list]) => ({ companyId, postings: list })).sort((a, b) => b.postings.length - a.postings.length)
 }
 
 export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => void }) {
@@ -255,7 +244,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
                             setSelected(key)
                           }
                         }}
-                        className={`flex min-h-20 cursor-pointer flex-col gap-1 p-1.5 text-left transition-colors outline-none focus-visible:bg-brand-soft @3xl:min-h-28 ${index % 7 !== 6 ? 'border-r' : ''} ${
+                        className={`flex min-h-20 cursor-pointer flex-col gap-1 p-1.5 text-left transition-colors outline-none focus-visible:bg-brand-soft ${index % 7 !== 6 ? 'border-r' : ''} ${
                           index < days.length - 7 ? 'border-b' : ''
                         } border-gray-200 ${isSelected ? 'bg-brand-soft/60' : inMonth ? 'hover:bg-gray-50' : 'bg-gray-50/60 hover:bg-gray-100/60'}`}
                       >
@@ -287,42 +276,13 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
                             </button>
                           )}
                         </span>
-                        {/* 좁은 화면에서는 이름표 대신 점과 수만 보여요. */}
+                        {/* 화면 폭과 상관없이 그날 마감하는 공고는 파란 점과 수로만 보여요. 공고는 날짜를 골라 옆 목록에서 봐요. */}
                         {list.length > 0 && (
-                          <span className="flex items-center gap-1 px-1 @3xl:hidden">
+                          <span className="flex items-center gap-1 px-1">
                             <span className={`size-1.5 rounded-full ${past ? 'bg-gray-300' : 'bg-brand'}`} />
                             <span className="text-[11px] text-gray-500 tabular-nums">{list.length}</span>
                           </span>
                         )}
-                        <span className={`hidden flex-col gap-1 @3xl:flex ${past ? 'opacity-50' : ''}`}>
-                          {/* 그날 마감 공고를 기업별로 묶어 한 줄씩 둬요. 같은 기업 공고가 칸을 다 차지하지 않게요. 줄이지 않고 모두 보여줘서, 기업이 많으면 칸이 그만큼 길어져요. */}
-                          {groupByCompany(list).map(({ companyId, postings }) => {
-                            const company = companyOf(companyId)
-                            const one = postings.length === 1 ? postings[0] : null
-                            return (
-                              <button
-                                key={companyId}
-                                type="button"
-                                data-no-press
-                                title={one ? `${company.name}, ${one.title}` : `${company.name} ${L.companyCount(postings.length)}`}
-                                aria-label={one ? L.pick(one.title) : `${company.name} ${L.companyCount(postings.length)}`}
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  // 공고가 하나면 그 공고로, 여러 개면 그날을 골라 오른쪽에 다 보여줘요.
-                                  if (one) pick(one, 'cell')
-                                  else setSelected(key)
-                                }}
-                                className={`flex h-6 min-w-0 items-center gap-1.5 rounded-md px-1.5 text-left text-[12px] transition-colors ${
-                                  postings.some((posting) => diagnosed.has(posting.id)) ? 'bg-brand-soft text-brand-hover hover:bg-brand-soft/70' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                              >
-                                <CompanyMark company={company} className="size-4 rounded-[4px]! text-[8px]" />
-                                <span className="min-w-0 truncate">{one ? one.title : company.name}</span>
-                                {!one && <span className="ml-auto shrink-0 font-medium tabular-nums">{postings.length}</span>}
-                              </button>
-                            )
-                          })}
-                        </span>
                       </div>
                     )
                   })}
