@@ -4,12 +4,16 @@ import { loadConfig } from '../lib/api'
 import { isApp } from '../lib/app'
 import { fetchSocialLinkTarget, type SocialLinkTarget } from '../lib/auth'
 import { appLinkFromLocation, finishAppLink, finishSocial, SOCIAL_LABELS, startSocial, startSocialFromApp, type SocialMode, type SocialProvider, type SocialResult } from '../lib/social'
+import { appGithubLink } from '../lib/githubConnect'
 import { showToast } from '../lib/toast'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { primaryButtonMd, quietButton } from './ui'
 
 const TEXT = messages({
   ko: {
+    backToAppTitle: 'Javadda 앱으로 돌아가요',
+    backToAppBody: '앱에서 GitHub 연결을 마무리해요. 이 창은 닫아도 돼요.',
+    openApp: '앱 열기',
     continueWith: (name: string) => `${name}로 계속하기`,
     finishInBrowser: '브라우저에서 연결을 마무리해 주세요.',
     startFailed: '연결을 시작하지 못했어요. 잠시 뒤에 다시 시도해 주세요.',
@@ -29,6 +33,9 @@ const TEXT = messages({
     backToLogin: '로그인 화면으로 돌아가기',
   },
   en: {
+    backToAppTitle: 'Heading back to the Javadda app',
+    backToAppBody: 'The app finishes connecting GitHub. You can close this window.',
+    openApp: 'Open the app',
     continueWith: (name: string) => `Continue with ${name}`,
     finishInBrowser: 'Finish connecting in your browser.',
     startFailed: "Couldn't start connecting. Please try again in a moment.",
@@ -273,6 +280,29 @@ function BrowserCallback({ provider }: { provider: SocialProvider }) {
           <button type="button" onClick={() => window.location.replace(back)} className={`mt-7 ${primaryButtonMd}`}>
             {failed.mode === 'link' ? text.backToMe : text.backToLogin}
           </button>
+        </Message>
+      </div>
+    </main>
+  )
+}
+
+/**
+ * 앱에서 연 GitHub 권한 화면이 돌려보내는 브라우저 화면이에요(/github/callback). 받은 값을 그대로 붙여 javadda://github로 앱을 다시 열어요.
+ * 브라우저가 앱을 여는지 묻고 막을 수 있어서, 앱 열기 버튼도 둬요.
+ */
+export function GithubAppCallback() {
+  const text = useMessages(TEXT)
+  const [link] = useState(appGithubLink)
+  useEffect(() => {
+    window.location.href = link
+  }, [link])
+  return (
+    <main className={shell}>
+      <div className="w-full max-w-sm animate-rise text-center">
+        <Message title={text.backToAppTitle} body={text.backToAppBody}>
+          <a href={link} className={`mt-7 ${primaryButtonMd}`}>
+            {text.openApp}
+          </a>
         </Message>
       </div>
     </main>

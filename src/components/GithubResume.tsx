@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
 import { isApp, openInBrowser } from '../lib/app'
 import { addGithubProjects, connectGithub, createGithubResume, disconnectGithub, fetchGithubConnection, fetchGithubRepos, MAX_GITHUB_PROJECTS, MAX_GITHUB_REPOS, PROGRESS_START, type GithubConnection, type GithubRepo, type ProgressState, type Resume } from '../lib/gap'
-import { isGithubReturn, startGithubConnect, takeGithubReturn } from '../lib/githubConnect'
+import { appGithubConnect, isGithubReturn, onAppGithubReturn, startAppGithubConnect, startGithubConnect, takeGithubReturn, type GithubReturn } from '../lib/githubConnect'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { SITE } from '../lib/meta'
@@ -26,6 +26,8 @@ const TEXT = messages({
     connectBody: '연결하면 비공개 레포까지 읽어서, 내가 남긴 커밋과 PR로 이력서의 프로젝트 경험과 역량을 써 드려요. 코드는 저장하지 않고, 연결은 언제든 끊을 수 있어요.',
     connect: 'GitHub 연결하기',
     appConnectBody: '연결은 브라우저에서 해요. 연결한 뒤에 돌아와서 다시 확인을 눌러 주세요.',
+    appWaiting: '브라우저에서 GitHub 권한을 허용하면 앱으로 돌아와 바로 연결돼요.',
+    reopen: '브라우저 다시 열기',
     openBrowser: '브라우저에서 연결하기',
     linkCopied: '주소를 복사했어요. 브라우저 주소창에 붙여 넣어 연결해 주세요.',
     recheck: '다시 확인',
@@ -60,6 +62,8 @@ const TEXT = messages({
     connectBody: 'We read your repositories, private ones included, and write resume projects and skills from your own commits and pull requests. We never store your code, and you can disconnect at any time.',
     connect: 'Connect GitHub',
     appConnectBody: 'Connecting happens in your browser. Come back and press Check again once you are done.',
+    appWaiting: 'Allow access to GitHub in your browser and you will come right back here, connected.',
+    reopen: 'Open browser again',
     openBrowser: 'Connect in browser',
     linkCopied: 'Link copied. Paste it into your browser to connect.',
     recheck: 'Check again',
@@ -101,6 +105,31 @@ export function GithubResume({ addTo, onDone, onWorking }: { addTo?: Resume; onD
   const [connection, setConnection] = useState<ConnectionState>(undefined)
   const [attempt, setAttempt] = useState(0)
   const disconnected = useCallback(() => setConnection({ connected: false }), [])
+  const recheck = useCallback(() => setAttempt((value) => value + 1), [])
+  /** 앱에서 브라우저로 GitHub 권한 화면을 열어 두고 돌아오기를 기다리는 중이에요. */
+  const [browserOpen, setBrowserOpen] = useState(false)
+
+  /** GitHub에서 돌아온 값으로 연결을 마쳐요. 브라우저의 서류 추가 화면과 앱이 같이 써요. */
+  const finish = useCallback(async (back: GithubReturn): Promise<GithubConnection | null> => {
+    if (!back.ok) {
+      showToast(back.canceled ? pick(TEXT).canceled : pick(TEXT).invalid)
+      return null
+    }
+    const connected = await connectGithub(back.code, back.redirectUri)
+    track('github_connect', { success: !!connected })
+    if (connected) showToast(pick(TEXT).connected)
+    return connected
+  }, [])
+
+  // 앱에서는 브라우저에서 권한을 허용하면 앱이 다시 열리며 값을 넘겨 줘요. 받으면 바로 연결해요.
+  useEffect(() => {
+    if (!appGithubConnect) return
+    return onAppGithubReturn((back) => {
+      setBrowserOpen(false)
+      setConnection(undefined)
+      void finish(back).then((connected) => setConnection(connected ?? { connected: false }))
+    })
+  }, [finish])
 
   useEffect(() => {
     let stale = false
@@ -108,17 +137,10 @@ export function GithubResume({ addTo, onDone, onWorking }: { addTo?: Resume; onD
     async function load() {
       // GitHub 권한 화면에서 돌아왔으면 받은 코드로 먼저 연결해요.
       if (isGithubReturn()) {
-        const back = takeGithubReturn()
-        if (back.ok) {
-          const connected = await connectGithub(back.code, back.redirectUri)
-          track('github_connect', { success: !!connected })
-          if (connected) {
-            showToast(pick(TEXT).connected)
-            if (!stale) setConnection(connected)
-            return
-          }
-        } else {
-          showToast(back.canceled ? pick(TEXT).canceled : pick(TEXT).invalid)
+        const connected = await finish(takeGithubReturn())
+        if (connected) {
+          if (!stale) setConnection(connected)
+          return
         }
       }
       const next = await fetchGithubConnection()
@@ -128,7 +150,7 @@ export function GithubResume({ addTo, onDone, onWorking }: { addTo?: Resume; onD
     return () => {
       stale = true
     }
-  }, [attempt])
+  }, [attempt, finish])
 
   const waiting = useLoadHold(connection === undefined || config === null)
   if (waiting) return <LoadProgress percent={connection === undefined ? 40 : 100} compact className="max-w-md" />
@@ -136,7 +158,18 @@ export function GithubResume({ addTo, onDone, onWorking }: { addTo?: Resume; onD
   if (!connection?.connected) {
     const clientId = config?.githubConnectClientId
     if (!clientId) return <Notice title={L.notReady} className="mt-10" />
-    return <ConnectCard clientId={clientId} onRecheck={() => setAttempt((value) => value + 1)} />
+    return (
+      <ConnectCard
+        clientId={clientId}
+        waiting={browserOpen}
+        onStart={() => {
+          track('github_connect_click', { from: 'app' })
+          startAppGithubConnect(clientId)
+          setBrowserOpen(true)
+        }}
+        onRecheck={recheck}
+      />
+    )
   }
   return <RepoPicker connection={connection} addTo={addTo} onDone={onDone} onWorking={onWorking} onDisconnected={disconnected} />
 }
@@ -154,18 +187,30 @@ function openConnectInBrowser() {
     .catch(() => showToast(CONNECT_IN_BROWSER))
 }
 
-/** 연결하지 않았을 때의 칸이에요. 앱은 우리 주소를 앱 안에서 열어서, open 메시지로 기본 브라우저에 넘기고 연결한 뒤 돌아와 다시 확인해요. */
-function ConnectCard({ clientId, onRecheck }: { clientId: string; onRecheck: () => void }) {
+/**
+ * 연결하지 않았을 때의 칸이에요. 앱 2.4부터는 GitHub 권한 화면을 기본 브라우저로 열고, 허용하면 앱이 다시 열리며 바로 연결돼요(waiting 동안 기다려요).
+ * 그 전 앱은 웹의 서류 추가 화면을 브라우저로 열어 그곳에서 연결하고, 앱으로 돌아오면(창이 다시 앞에 오면) 알아서 다시 확인해요.
+ */
+function ConnectCard({ clientId, waiting, onStart, onRecheck }: { clientId: string; waiting: boolean; onStart: () => void; onRecheck: () => void }) {
   const L = useMessages(TEXT)
+  const legacyApp = isApp && !appGithubConnect
+
+  // 예전 앱은 브라우저에서 연결하고 돌아오면 창이 다시 앞에 와서, 그때 연결됐는지 다시 물어요.
+  useEffect(() => {
+    if (!legacyApp) return
+    window.addEventListener('focus', onRecheck)
+    return () => window.removeEventListener('focus', onRecheck)
+  }, [legacyApp, onRecheck])
+
   return (
     <div className="flex flex-col items-start rounded-2xl bg-gray-50 p-7">
       <span className="flex size-14 items-center justify-center rounded-full bg-white text-gray-900">
         <GitHubMark className="size-6" />
       </span>
       <h2 className="mt-6 text-[17px] font-semibold text-gray-900">{L.connectTitle}</h2>
-      <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-gray-500">{isApp ? L.appConnectBody : L.connectBody}</p>
+      <p className="mt-2 max-w-xl text-[13.5px] leading-relaxed text-gray-500">{legacyApp ? L.appConnectBody : waiting ? L.appWaiting : L.connectBody}</p>
       <div className="mt-6 flex items-center gap-2">
-        {isApp ? (
+        {legacyApp ? (
           <>
             <button type="button" onClick={openConnectInBrowser} className={primaryButton}>
               <GitHubMark className="size-4" />
@@ -175,6 +220,11 @@ function ConnectCard({ clientId, onRecheck }: { clientId: string; onRecheck: () 
               {L.recheck}
             </button>
           </>
+        ) : appGithubConnect ? (
+          <button type="button" onClick={onStart} className={waiting ? quietButton : primaryButton}>
+            <GitHubMark className="size-4" />
+            {waiting ? L.reopen : L.connect}
+          </button>
         ) : (
           <button
             type="button"

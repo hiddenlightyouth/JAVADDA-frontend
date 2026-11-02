@@ -13,6 +13,7 @@ import { appShell, isApp } from './lib/app'
 import './lib/theme'
 import { isAdmin, loadMe, useAuth } from './lib/auth'
 import { socialFromPath } from './lib/social'
+import { isAppGithubCallback } from './lib/githubConnect'
 import { useFeedback } from './lib/feedback'
 import { useShortcuts } from './lib/shortcuts'
 import { localizePath, messages, pick, useLang } from './lib/i18n'
@@ -24,6 +25,7 @@ import type { AccountPage } from './components/Account'
 
 // 소셜 로그인에서 돌아온 화면과 새 진단 화면은 필요할 때만 받아요.
 const SocialCallback = lazy(() => import('./components/Social').then((module) => ({ default: module.SocialCallback })))
+const GithubAppCallback = lazy(() => import('./components/Social').then((module) => ({ default: module.GithubAppCallback })))
 const PlansModal = lazy(() => import('./components/Plans').then((module) => ({ default: module.PlansModal })))
 const Home = lazy(() => import('./components/Home').then((module) => ({ default: module.Home })))
 const BugReport = lazy(() => import('./components/Feedback').then((module) => ({ default: module.BugReport })))
@@ -60,6 +62,7 @@ export default function App() {
 
   /** 소셜 로그인에서 돌아온 주소면 어느 서비스인지. 이 화면은 끝나면 페이지를 새로 여니, 처음 한 번만 읽어요. */
   const [social] = useState(socialFromPath)
+  const [githubBack] = useState(isAppGithubCallback)
   const [sidebarOpen, toggleSidebar] = useSidebarOpen()
   const { tokens, me } = useAuth()
   const feedback = useFeedback()
@@ -181,6 +184,15 @@ export default function App() {
     return (
       <Suspense fallback={<div className="h-dvh bg-white" />}>
         <SocialCallback provider={social} />
+      </Suspense>
+    )
+  }
+
+  // 앱에서 연 GitHub 권한 화면이 돌려보낸 브라우저 화면이면 앱을 다시 여는 안내만 보여줘요.
+  if (githubBack) {
+    return (
+      <Suspense fallback={<div className="h-dvh bg-white" />}>
+        <GithubAppCallback />
       </Suspense>
     )
   }
