@@ -557,7 +557,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 목 자료의 한국어 조사("을(를)", "이(가)")를 서버가 글을 만들 때 자연스럽게 고쳐요.
 - 기업 북마크와 북마크한 기업의 새 공고 알림(앱 푸시)
 - GitHub 연결용 OAuth App을 만들어 서버에 `GITHUB_CONNECT_CLIENT_ID`, `GITHUB_CONNECT_CLIENT_SECRET`을 넣어요. 넣기 전에는 GitHub 단계가 "알 수 없는 오류가 발생했습니다."만 보여요. 실제 GitHub로 연결과 이력서 만들기는 아직 확인하지 않았어요(화면은 응답을 흉내 내서 확인했어요).
-- 앱 2.4를 내보내면(Archive, 공증, `PUBLISH=1 ./scripts/make-dmg.sh`) 앱에서 GitHub 연결이 브라우저 로그인 없이 바로 끝나요. 실제 GitHub와 앱으로 이 흐름을 끝까지 확인하지 않았어요.
+- 앱 2.4의 GitHub 연결(브라우저에서 허용하고 javadda://github로 돌아오기)을 실제 GitHub로 끝까지 확인하지 않았어요.
 - GitHub에서 레포 재료를 모으는 부분은 실제 OAuth 토큰으로 아직 확인하지 않았어요. 경험 고치기와 포트폴리오는 서버에 재료를 넣어 두고 실제 AI로 확인했어요.
 - 테스트 코드
 - 영어 화면의 목 자료 문구
