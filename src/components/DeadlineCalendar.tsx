@@ -5,7 +5,7 @@ import { holidayOf } from '../lib/holidays'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { readFlag, readJson, writeFlag, writeJson } from '../lib/storage'
 import { PageHeader, ScrollPage } from './AppPage'
-import { CategoryFilter, CompanyFilter, DiagnosedTag, FitTag, usePickConfirm } from './GapParts'
+import { CategoryFilter, CompanyFilter, CompanyMark, DiagnosedTag, FitTag, usePickConfirm } from './GapParts'
 import { ChevronRightIcon } from './Icons'
 import { PickRow } from './JobCard'
 import { CAREERS, FAMILIES, matchesFilters, pickOption, PostingFilterBar, serverFamily, type FamilyFilter } from './PostingFilters'
@@ -64,6 +64,9 @@ const TEXT = messages({
     hideRolling: 'Hide rolling postings',
   },
 })
+
+/** 날짜 칸에 로고와 제목으로 적는 진단한 공고 수예요. 넘으면 "+2"처럼 접어요. */
+const MINE_IN_CELL = 3
 
 type Scope = 'all' | 'diagnosed'
 const SCOPES: Scope[] = ['all', 'diagnosed']
@@ -335,13 +338,48 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
                             </button>
                           )}
                         </span>
-                        {/* 화면 폭과 상관없이 그날 마감하는 공고는 파란 점과 수로만 보여요. 공고는 날짜를 골라 옆 목록에서 봐요. */}
-                        {list.length > 0 && (
-                          <span className="flex items-center gap-1 px-1">
-                            <span className={`size-1.5 rounded-full ${past ? 'bg-gray-300' : 'bg-brand'}`} />
-                            <span className="text-[11px] text-gray-500 tabular-nums">{list.length}</span>
+                        {/* 내 리포트로 진단한 공고는 기업 로고와 제목을 한 줄씩 적고(칸이 좁으면 제목이 말줄임으로 잘려요), 나머지는 파란 점과 수로만 보여요. 나머지 공고는 날짜를 골라 옆 목록에서 봐요. */}
+                        {list.some((posting) => diagnosed.has(posting.id)) && (
+                          <span className={`flex flex-col gap-1 ${past ? 'opacity-50' : ''}`}>
+                            {list
+                              .filter((posting) => diagnosed.has(posting.id))
+                              .slice(0, MINE_IN_CELL)
+                              .map((posting) => (
+                                <button
+                                  key={posting.id}
+                                  type="button"
+                                  data-no-press
+                                  title={`${companyOf(posting.companyId).name}, ${posting.title}`}
+                                  aria-label={L.pick(posting.title)}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    pick(posting, 'cell')
+                                  }}
+                                  className="flex h-6 min-w-0 items-center gap-1.5 rounded-md bg-brand-soft px-1.5 text-left text-[12px] text-brand-hover transition-colors hover:bg-brand-soft/70"
+                                >
+                                  <CompanyMark company={companyOf(posting.companyId)} className="size-4 rounded-[4px]! text-[8px]" />
+                                  <span className="min-w-0 truncate">{posting.title}</span>
+                                </button>
+                              ))}
                           </span>
                         )}
+                        {(() => {
+                          // 진단한 공고가 칸에 다 들어가지 않으면 남은 수를 "+2"로 점 옆에 접어요. 칸 높이가 들쭉날쭉하지 않게요.
+                          const others = list.filter((posting) => !diagnosed.has(posting.id)).length
+                          const hidden = Math.max(0, list.length - others - MINE_IN_CELL)
+                          if (others === 0 && hidden === 0) return null
+                          return (
+                            <span className="flex items-center gap-1 px-1">
+                              {others > 0 && (
+                                <>
+                                  <span className={`size-1.5 rounded-full ${past ? 'bg-gray-300' : 'bg-brand'}`} />
+                                  <span className="text-[11px] text-gray-500 tabular-nums">{others}</span>
+                                </>
+                              )}
+                              {hidden > 0 && <span className={`text-[11px] font-medium text-brand-hover tabular-nums ${past ? 'opacity-50' : ''}`}>+{hidden}</span>}
+                            </span>
+                          )
+                        })()}
                       </div>
                     )
                   })}
