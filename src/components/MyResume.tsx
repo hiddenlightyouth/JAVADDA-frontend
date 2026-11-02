@@ -8,7 +8,8 @@ import { showToast } from '../lib/toast'
 import { canvas, pageFrame, PageHeader } from './AppPage'
 import { ConfirmDialog, panelBody, SidePanel } from './Dialog'
 import { AiProgress, Notice, SkillChip, Tip } from './GapParts'
-import { CloseButton, CloseIcon, LinkIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
+import { GitHubMark } from './Social'
+import { BackIcon, ChevronRightIcon, CloseButton, CloseIcon, LinkIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
 import { Badge, FormError, menuPanel, NumberedList, primaryButton, textField, textFieldSm, toolButton, toolDangerButton } from './ui'
 
 /**
@@ -39,6 +40,12 @@ const TEXT = messages({
     add: '더하기',
     paragraphs: '주요 경력',
     addDoc: '서류 추가',
+    uploadTitle: '이력서 또는 포트폴리오 업로드',
+    uploadBody: '가지고 있는 PDF나 GitHub, 노션 링크를 올리면 역량을 읽어요.',
+    generateTitle: 'GitHub Repository로 이력서와 포트폴리오 생성하기',
+    generateBody: '레포지토리의 코드와 기록을 읽어 이력서와 포트폴리오를 만들어 드려요.',
+    soon: '준비 중',
+    otherWay: '다른 방법 고르기',
     addTitle: '서류 추가',
     emptyTitle: '아직 올린 이력서가 없어요',
     emptyBody: '이력서나 포트폴리오를 올려 두면 공고마다 얼마나 맞는지 보여줘요. 여러 개 올리고 하나를 대표로 정할 수 있어요.',
@@ -76,6 +83,12 @@ const TEXT = messages({
     add: 'Add',
     paragraphs: 'Key experience',
     addDoc: 'Add document',
+    uploadTitle: 'Upload a resume or portfolio',
+    uploadBody: 'Upload a PDF, or a GitHub or Notion link, and we will read your skills.',
+    generateTitle: 'Create a resume and portfolio from a GitHub repository',
+    generateBody: 'We read the code and history of your repository and write a resume and portfolio for you.',
+    soon: 'Coming soon',
+    otherWay: 'Choose another way',
     addTitle: 'Add a document',
     emptyTitle: 'No resumes yet',
     emptyBody: 'Upload a resume or portfolio to see how well you fit each posting. You can keep several and pick one as your main resume.',
@@ -96,6 +109,35 @@ const TEXT = messages({
 const LINK = /^https?:\/\/(?:www\.)?(?:github\.com|notion\.so|[\w-]+\.notion\.site)\/\S+/i
 
 /** 서류를 올리는 칸이에요. PDF 끌어다 놓기와 링크 두 가지를 받아요. 올리면 onDone으로 알려줘요. */
+/** 서류 추가를 열면 먼저 고르는 두 방법이에요. 올리기와, 아직 준비 중인 GitHub 레포지토리로 만들기예요. */
+function AddChoice({ onUpload }: { onUpload: () => void }) {
+  const L = useMessages(TEXT)
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <button type="button" onClick={onUpload} className="group flex items-start gap-4 rounded-2xl bg-gray-50 p-5 text-left transition-colors hover:bg-gray-100">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-gray-500 transition-colors group-hover:text-brand">
+          <UploadIcon className="size-5" strokeWidth={1.2} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold text-gray-900 transition-colors group-hover:text-brand">{L.uploadTitle}</span>
+          <span className="mt-1 block text-[13px] leading-relaxed text-gray-500">{L.uploadBody}</span>
+        </span>
+        <ChevronRightIcon className="mt-3.5 size-4 shrink-0 text-gray-300 transition-colors group-hover:text-brand" />
+      </button>
+      <div aria-disabled className="flex items-start gap-4 rounded-2xl bg-gray-50 p-5">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-gray-400">
+          <GitHubMark className="size-5" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold text-gray-400">{L.generateTitle}</span>
+          <span className="mt-1 block text-[13px] leading-relaxed text-gray-400">{L.generateBody}</span>
+        </span>
+        <Badge tone="white" className="mt-2.5">{L.soon}</Badge>
+      </div>
+    </div>
+  )
+}
+
 export function ResumeUploader({ onDone, onWorking }: {
   onDone?: (resume: Resume) => void
   /** 읽기 시작하고 끝날 때 알려요. 창이 그동안 닫히지 않게 할 때 써요. */
@@ -347,11 +389,17 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
   const L = useMessages(TEXT)
   const shelf = useResumeShelf()
   const [adding, setAdding] = useState(false)
+  /** 서류 추가를 열면 먼저 올릴지 만들지 고르고(choose), 올리기를 고르면 올리는 칸(upload)이 나와요. */
+  const [step, setStep] = useState<'choose' | 'upload'>('choose')
   /** 서류를 읽는 동안이에요. 그동안은 올리는 칸을 닫을 수 없어요. */
   const [uploading, setUploading] = useState(false)
   const signedIn = useAuth().tokens !== null
   /** 서류는 계정에 저장돼서, 로그인하지 않았으면 올리는 칸 대신 로그인 화면으로 가요. */
-  const addDocument = () => (signedIn ? setAdding(true) : requestLogin())
+  const addDocument = () => {
+    if (!signedIn) return requestLogin()
+    setStep('choose')
+    setAdding(true)
+  }
   const [openId, setOpenId] = useState<string | null>(null)
   const open = shelf.list.find((resume) => resume.id === openId) ?? null
 
@@ -380,12 +428,22 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
           {adding && (
             <section aria-labelledby="resume-add-title" className="mb-8 max-w-3xl">
               <div className="mb-4 flex items-center justify-between gap-4">
-                <h2 id="resume-add-title" className="text-[17px] font-semibold text-gray-900">
-                  {L.addTitle}
-                </h2>
+                <div className="flex items-center gap-1.5">
+                  {step === 'upload' && !uploading && (
+                    <button type="button" onClick={() => setStep('choose')} aria-label={L.otherWay} className="-ml-1.5 flex size-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900">
+                      <BackIcon />
+                    </button>
+                  )}
+                  <h2 id="resume-add-title" className="text-[17px] font-semibold text-gray-900">
+                    {L.addTitle}
+                  </h2>
+                </div>
                 {/* 읽는 동안 닫으면 결과를 볼 곳이 없어서, 닫기 버튼을 숨겨 둬요. */}
                 {!uploading && <CloseButton label={L.close} size="md" onClick={() => setAdding(false)} />}
               </div>
+              {step === 'choose' ? (
+                <AddChoice onUpload={() => setStep('upload')} />
+              ) : (
               <ResumeUploader
                 onWorking={setUploading}
                 onDone={(resume) => {
@@ -393,6 +451,7 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
                   setOpenId(resume.id)
                 }}
               />
+              )}
             </section>
           )}
           {shelf.list.length === 0 ? (
