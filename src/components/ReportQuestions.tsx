@@ -5,7 +5,7 @@ import { formatDate, formatDateTime, parseServerTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
 import { AiProgress, Failed, Notice, Tip } from './GapParts'
 import { ConfirmDialog, panelBody, SidePanel } from './Dialog'
-import { CheckIcon, ClockIcon, MicIcon, RefreshIcon } from './Icons'
+import { CheckIcon, ChevronDownIcon, ClockIcon, RefreshIcon } from './Icons'
 import { Callout, FeedbackSections, ModelAnswer } from './ReportParts'
 import { Badge, Bullets, ghostButton, label, loadCenter, primaryButton, Segmented, stagger, toolButton } from './ui'
 
@@ -18,6 +18,11 @@ const TEXT = messages({
     type: '유형',
     practiceAll: '전체 연습',
     practiceOne: '이 질문 연습',
+    showDetail: '답변 포인트 보기',
+    hideDetail: '답변 포인트 접기',
+    fromStrength: (skill: string) => `내 강점인 ${skill} 역량을 깊이 묻는 질문`,
+    fromGap: (skill: string) => `부족한 ${skill} 역량을 어떻게 채울지 묻는 질문`,
+    fromParagraph: (label: string) => `${label}에서 나온 질문`,
     intent: '의도',
     points: '답변 포인트',
     followUp: '꼬리 질문',
@@ -60,6 +65,11 @@ const TEXT = messages({
     type: 'Type',
     practiceAll: 'Practice all',
     practiceOne: 'Practice this',
+    showDetail: 'Show answer points',
+    hideDetail: 'Hide answer points',
+    fromStrength: (skill: string) => `Digs into your strength, ${skill}`,
+    fromGap: (skill: string) => `Asks how you'd fill the ${skill} gap`,
+    fromParagraph: (label: string) => `From ${label}`,
     intent: 'What they look for',
     points: 'Answer points',
     followUp: 'Follow-up',
@@ -97,6 +107,18 @@ const TEXT = messages({
     notYet: 'No practice yet',
   },
 })
+
+/**
+ * 질문 아래의 출처 한 줄이에요. 서버는 "강점 MySQL", "부족 Kafka"처럼 짧게 줘서 뜻을 알기 어려워요.
+ * 강점과 갭에서 나온 질문은 무엇을 묻는 질문인지 풀어 쓰고, 서류 문단은 그 문단에서 나왔다고 적어요.
+ */
+function sourceText(source: InterviewQuestion['source'], L: (typeof TEXT)['ko']): string {
+  const skill = source.label.replace(/^(강점|부족|보완|strength|gap)\s*/i, '').trim() || source.label
+  if (source.type === 'strength') return L.fromStrength(skill)
+  if (source.type === 'gap') return L.fromGap(skill)
+  if (source.type === 'paragraph') return L.fromParagraph(source.label)
+  return source.label
+}
 
 /** 질문의 의도와 답변 포인트, 꼬리 질문이에요. 회색 줄 안의 흰 칸으로 펼쳐져요. */
 function QuestionDetail({ question }: { question: InterviewQuestion }) {
@@ -149,8 +171,8 @@ function PastAnswers({ records }: { records: PracticeRecord[] }) {
 }
 
 /**
- * 질문 한 줄이에요. 프로그래머스나 LeetCode의 문제 목록처럼 왼쪽에 연습 상태(체크와 점수), 가운데에 질문과 출처, 오른쪽에 유형, 나올 확률, 연습 버튼을 한 줄에 둬요.
- * 줄을 누르면 그 자리에서 의도, 답변 포인트, 꼬리 질문과 지난 답변이 펼쳐져요.
+ * 질문 한 줄이에요. 프로그래머스나 LeetCode의 문제 목록처럼 왼쪽에 연습 상태(체크와 점수), 가운데에 질문과 출처, 오른쪽에 나올 확률과 펼치기 꺾쇠를 한 줄에 둬요.
+ * 질문을 누르면 그 질문으로 면접 연습을 시작하고, 꺾쇠를 누르면 그 자리에서 의도, 답변 포인트, 꼬리 질문과 지난 답변이 펼쳐져요.
  */
 function Row({ question, index, order, records, onPractice }: { question: InterviewQuestion; index: number; order: number; records: PracticeRecord[]; onPractice: () => void }) {
   const L = useMessages(TEXT)
@@ -173,25 +195,27 @@ function Row({ question, index, order, records, onPractice }: { question: Interv
             <span className="flex size-6 items-center justify-center rounded-full bg-gray-100 text-[12px] font-semibold text-gray-500 tabular-nums">{index}</span>
           )}
         </span>
-        {/* 질문 글은 읽기 좋은 폭(약 70자)에서 줄을 바꿔요. 화면 끝까지 늘어지면 눈이 길을 잃어요. */}
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => {
-            if (!open) track('question_expand', { id: question.id })
-            setOpen((value) => !value)
-          }}
-          className="min-w-0 flex-1 text-left"
-        >
+        {/* 질문을 누르면 바로 그 질문 하나로 면접 연습을 시작해요. 질문 글은 읽기 좋은 폭(약 70자)에서 줄을 바꿔요. */}
+        <button type="button" onClick={onPractice} className="min-w-0 flex-1 text-left">
           <span className="block max-w-[68ch] text-[14.5px] leading-relaxed text-gray-900 transition-colors group-hover:text-brand">{question.question}</span>
-          <span className="mt-1 block max-w-[68ch] truncate text-[12px] text-gray-400">{question.source.label}</span>
+          <span className="mt-1 block max-w-[68ch] truncate text-[12px] text-gray-400">{sourceText(question.source, L)}</span>
         </button>
         <Tip text={L.likelihood} className="mt-1 hidden shrink-0 sm:inline-flex">
           <span className="w-10 text-right text-[13px] font-medium text-gray-500 tabular-nums">{L.percent(Math.round(question.probability * 100))}</span>
         </Tip>
-        <Tip text={L.practiceOne} className="inline-flex shrink-0">
-          <button type="button" onClick={onPractice} aria-label={L.practiceOne} className="flex size-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-brand-soft hover:text-brand">
-            <MicIcon className="size-4" />
+        {/* 의도와 답변 포인트, 지난 답변은 오른쪽 꺾쇠로 그 자리에서 펼쳐요. */}
+        <Tip text={open ? L.hideDetail : L.showDetail} className="inline-flex shrink-0">
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-label={open ? L.hideDetail : L.showDetail}
+            onClick={() => {
+              if (!open) track('question_expand', { id: question.id })
+              setOpen((value) => !value)
+            }}
+            className="flex size-8 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-200/70 hover:text-gray-700"
+          >
+            <ChevronDownIcon className={`size-3.5 transition-transform ${open ? 'rotate-180' : ''}`} />
           </button>
         </Tip>
       </div>
