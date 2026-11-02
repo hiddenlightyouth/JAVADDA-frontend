@@ -67,7 +67,7 @@ export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExp
       ) : page.kind === 'explore' ? (
         <Jobs key={page.company ?? 'all'} onPick={onDiagnose} initialCompany={page.company ?? null} />
       ) : page.kind === 'recommend' ? (
-        <Recommend onPick={onDiagnose} onResume={onResume} />
+        <Recommend onPick={onDiagnose} onResume={onResume} onExplore={onExplore} />
       ) : page.kind === 'calendar' ? (
         <DeadlineCalendar onPick={onDiagnose} />
       ) : page.kind === 'map' ? (
