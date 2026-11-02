@@ -24,9 +24,9 @@ const TEXT = messages({
     role: '맡은 역할',
     parts: { problem: '문제', cause: '원인', solution: '개선', effect: '효과', decision: '판단' },
     saved: '고친 내용을 저장했어요.',
-    fix: '고치기',
-    fixSelf: '직접 고치기',
-    fixAi: 'AI로 고치기',
+    fix: '수정',
+    fixSelf: '직접 수정',
+    fixAi: 'AI로 수정',
     revisions: { shorter: '더 짧게', concrete: '더 구체적으로', numbers: '수치 넣기', rewrite: '다시 쓰기', another: '다른 경험으로 바꾸기' } as Record<Exclude<ProjectRevision, 'add'>, string>,
     revised: '고쳐 썼어요.',
     add: '경험 더하기',
@@ -536,12 +536,12 @@ function ProblemCard({ problem, progress, locked, onRevise, onSave, onRemove }: 
     )
   }
   return (
-    <li className="group/card rounded-xl bg-white p-4">
+    <li className="rounded-xl bg-white p-4">
       <Editable value={problem.title} placeholder={L.empty.title} onSave={(value) => save('title', value)} {...field('title')} className="text-[13.5px] font-semibold text-gray-900" />
       <dl className="mt-1 flex flex-col text-[12.5px] leading-relaxed">
         {PARTS.map((part) => (
-          // 빈 칸은 카드에 마우스를 올리거나 고치는 중일 때만 보여서 채울 수 있어요.
-          <div key={part} className={`flex gap-3 ${problem[part] || editing === part ? '' : 'hidden group-hover/card:flex group-focus-within/card:flex'}`}>
+          // 빈 칸도 늘 보여서 바로 눌러 채워요.
+          <div key={part} className="flex gap-3">
             <dt className="w-10 shrink-0 py-1 text-gray-400">{L.parts[part]}</dt>
             <dd className="min-w-0 flex-1">
               <Editable value={problem[part]} placeholder={L.empty.part(L.parts[part])} multiline onSave={(value) => save(part, value)} {...field(part)} className="whitespace-pre-line text-gray-700">
