@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { voiceOf } from '../../shared/voices'
 import { track } from './analytics'
 import { charPose, REST, withLoudness, type MouthPose } from './lipsync'
 import { readItem, writeItem } from './storage'
@@ -180,21 +179,6 @@ function spokenChars(timing: number[], time: number) {
 /** 서버에 키가 없으면 다시 묻지 않고 바로 브라우저 음성으로 읽어요. */
 let remoteOff = false
 
-/** 면접관 목소리는 이 기기에 기억해요. 설정 창과 내 정보 화면에서 고르고, 면접 연습이 읽어요. */
-const VOICE_KEY = 'javadda:practice-voice'
-const readVoice = () => {
-  const key = readItem(VOICE_KEY)
-  return key && voiceOf(key) ? key : null
-}
-const practiceVoice = createStore<string | null>(typeof window === 'undefined' ? null : readVoice())
-
-/** 고른 면접관 목소리의 key예요. 고르지 않았으면 null이고, 그때는 맨 앞의 기본 목소리예요. */
-export const usePracticeVoice = () => useStore(practiceVoice, (value) => value, null)
-
-export function setPracticeVoice(key: string) {
-  writeItem(VOICE_KEY, key)
-  practiceVoice.set(key)
-}
 
 /** 면접관 목소리의 소리 크기(0에서 1)예요. 면접 연습 위쪽에서 바꾸고 이 기기에 기억해요. 띵 소리도 같이 따라가요. */
 const VOLUME_KEY = 'javadda:practice-volume'

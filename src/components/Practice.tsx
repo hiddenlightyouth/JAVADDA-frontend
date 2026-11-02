@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { track } from '../lib/analytics'
 import { companyOf, fetchQuestions, PROGRESS_START, submitAnswer, useReport, useReportPosting, type InterviewQuestion, type PracticeFeedback, type ProgressState } from '../lib/gap'
 import { messages, pick, useLang, useMessages } from '../lib/i18n'
-import { questionsFor, setInterviewer, useInterviewer } from '../lib/interviewers'
+import { setInterviewer, useInterviewer, type InterviewerKey } from '../lib/interviewers'
 import { useLoadHold, useLoadProgress } from '../lib/load'
-import { canDictate, canSpeak, chime, joinSpeech, prefetchVoice, setPracticeVolume, unlockChime, useDictation, usePracticeVoice, usePracticeVolume, useSpeak } from '../lib/speech'
+import { canDictate, canSpeak, chime, joinSpeech, prefetchVoice, setPracticeVolume, unlockChime, useDictation, usePracticeVolume, useSpeak } from '../lib/speech'
 import { showToast } from '../lib/toast'
 import { AiProgress, CompanyMark, Notice, ScoreRing } from './GapParts'
 import { isApp } from '../lib/app'
@@ -32,7 +32,6 @@ const TEXT = messages({
     progress: (current: number, total: number) => `${current} / ${total}`,
     introTitle: '가상 면접 시작',
     introBody: '함께할 면접관을 골라 주세요. 면접관의 성격에 따라 묻는 질문과 채점이 달라져요.',
-    voiceTip: '이 면접관의 목소리는 설정에서 변경할 수 있습니다.',
     start: '면접 시작하기',
     startNote: (name: string) => `${name} 면접관과 면접을 시작해요`,
     gradedBy: (name: string) => `${name} 면접관의 평가예요`,
@@ -85,7 +84,6 @@ const TEXT = messages({
     progress: (current: number, total: number) => `${current} / ${total}`,
     introTitle: 'Start a mock interview',
     introBody: "Pick your interviewer. Their personality changes the questions they ask and how they grade.",
-    voiceTip: "You can change this interviewer's voice in Settings.",
     start: 'Start interview',
     startNote: (name: string) => `Your interview with ${name}`,
     gradedBy: (name: string) => `Graded by ${name}`,
@@ -130,6 +128,8 @@ const MIN_CHARS = 10
 const SILENCE_MS = 3200
 /** 다음 질문으로 넘어가기 전에 잠깐 쉬어요. 면접관이 고개를 끄덕이는 정도예요. */
 const MOVE_MS = 1100
+/** 시작 화면에서 면접관 카드에 이만큼(ms) 머물면 그 면접관의 질문을 미리 만들어요. */
+const PREFETCH_DELAY_MS = 900
 /** 띵 소리가 마이크에 들어가지 않게, 소리가 끝난 뒤에 듣기 시작해요. */
 const LISTEN_AFTER_MS = 450
 
@@ -149,7 +149,7 @@ interface Answer {
  * 면접관이 질문을 소리로 읽는 동안 글자가 노래방 자막처럼 차례로 밝아지고(`useSpeak`의 progress), 다 읽으면 띵 소리가 나요.
  * 그 뒤로 말하는 내용이 음성 인식으로 화면에 바로 나오고, 말을 마치고 잠시(SILENCE_MS) 조용하면 다음 질문으로 넘어가요.
  * 채점은 다음 질문을 하는 동안 뒤에서 받아서, 면접이 끝나면 질문마다 점수와 피드백을 한 번에 보여줘요.
- * 음성 인식이 없는 브라우저(Firefox)나 마이크를 쓸 수 없으면(macOS 앱 2.0 등) 글로 답해요. 면접관 목소리는 설정에서 골라요(`VoiceSetting`).
+ * 음성 인식이 없는 브라우저(Firefox)나 마이크를 쓸 수 없으면(macOS 앱 2.0 등) 글로 답해요. 면접관은 시작 화면에서 고르고, 면접관마다 목소리와 질문, 채점이 달라요(`interviewers.ts`).
  * 질문 하나를 골라 들어오면 그 질문만 연습하고, 답하면 바로 점수와 피드백, 모범 답변을 보여줘요. 시작 화면은 전체 연습과 같은 "가상 면접 시작"이에요.
  */
 export function Practice({ id, question: startId, onBack }: { id: string; question?: string; onBack: () => void }) {
@@ -159,8 +159,15 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   const report = useReport(id, reportLoad.one)
   // 리포트 상세는 자료를 받는 것이라 받은 바이트로, 질문은 AI가 만드는 것이라 서버의 단계로 퍼센트를 보여줘요.
   const waitingReport = useLoadHold(report === undefined)
-  const [fetched, setFetched] = useState<InterviewQuestion[] | null | undefined>(undefined)
-  const [loadProgress, setLoadProgress] = useState<ProgressState>(PROGRESS_START)
+  /** 면접관마다 AI가 따로 만든 질문이에요. 받는 중이면 없고, 받지 못했거나 비었으면 null이에요. */
+  const [sets, setSets] = useState<Partial<Record<InterviewerKey, InterviewQuestion[] | null>>>({})
+  const [progresses, setProgresses] = useState<Partial<Record<InterviewerKey, ProgressState>>>({})
+  /** 시작을 눌렀지만 질문이 아직 오지 않아서 기다리는 중이에요. 오면 바로 첫 질문을 읽어요. */
+  const [starting, setStarting] = useState(false)
+  /** 질문 하나를 골라 들어왔는지예요. 그 질문은 예상 질문 탭의 질문(실무 팀장)이라, 고른 면접관과 상관없이 그 묶음에서 찾고 채점만 면접관을 따라요. */
+  const single = !!startId
+  const interviewer = useInterviewer()
+  const setKey: InterviewerKey = single ? 'balanced' : interviewer.key
   const [phase, setPhase] = useState<Phase>('intro')
   const [index, setIndex] = useState(0)
   const [answer, setAnswer] = useState('')
@@ -172,11 +179,8 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   /** 질문을 다 읽은 뒤에 볼 최신 값이에요. 읽는 동안 글로 답하기로 바꿀 수 있어요. */
   const typingRef = useRef(typing)
   typingRef.current = typing
-  /** 고른 면접관이에요. 시작 화면에서만 바꿔서, 면접 중에는 그대로예요. */
-  const interviewer = useInterviewer()
-  const chosenVoice = usePracticeVoice()
-  // 실무 팀장은 설정에서 고른 목소리로, 다른 면접관은 저마다의 목소리로 읽어요.
-  const speaker = interviewer.voice ?? chosenVoice
+  // 고른 면접관은 시작 화면에서만 바꿔서, 면접 중에는 그대로예요. 면접관마다 목소리가 정해져 있어요.
+  const speaker = interviewer.voice
   const voice = useSpeak()
   /** 지금 진행 중인 질문 차례예요. 건너뛰거나 나가면 하나 올려서, 늦게 끝난 읽기와 타이머가 다음 단계를 건드리지 않게 해요. */
   const run = useRef(0)
@@ -199,21 +203,31 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   const shown = joinSpeech(answer, dictation.interim)
   const transcript = useRef<HTMLDivElement>(null)
 
+  /** 이미 요청한 면접관이에요. 시작 화면에서 면접관을 고르는 순간 그 면접관의 질문을 미리 받아서, 시작을 누를 때 덜 기다려요. */
+  const requested = useRef(new Set<InterviewerKey>())
+
   useEffect(() => {
-    let stale = false
-    setLoadProgress(PROGRESS_START)
-    void fetchQuestions(id, (next) => {
-      if (!stale) setLoadProgress(next)
-    }).then((list) => {
-      if (stale) return
+    if (requested.current.has(setKey)) return
+    // 카드를 넘겨 보기만 해도 질문을 만들지 않게, 처음 면접관과 시작을 누른 때가 아니면 잠깐 머문 뒤에 받아요.
+    const first = requested.current.size === 0
+    const timer = setTimeout(() => load(setKey), first || starting ? 0 : PREFETCH_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [id, startId, setKey, starting])
+
+  function load(key: InterviewerKey) {
+    if (requested.current.has(key)) return
+    requested.current.add(key)
+    void fetchQuestions(
+      id,
+      (next) => setProgresses((prev) => ({ ...prev, [key]: next })),
+      false,
+      key,
+    ).then((list) => {
       // 질문 하나를 골라 들어오면 그 질문 하나만 연습하고 바로 피드백을 보여줘요.
       const picked = startId ? list.filter((item) => item.id === startId) : list
-      setFetched(picked.length > 0 ? picked : null)
+      setSets((prev) => ({ ...prev, [key]: picked.length > 0 ? picked : null }))
     })
-    return () => {
-      stale = true
-    }
-  }, [id, startId])
+  }
 
   // 화면을 떠나면 진행 중인 차례를 끊어서, 늦게 끝난 읽기가 듣기를 다시 켜지 않게 해요.
   useEffect(
@@ -228,10 +242,8 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     if (transcript.current) transcript.current.scrollTop = transcript.current.scrollHeight
   }, [shown])
 
-  /** 질문 하나만 연습하는지예요. 시작 화면과 결과 화면의 글이 달라요. */
-  const single = !!startId
-  // 면접관마다 먼저 묻는 질문 유형이 달라요. 질문 하나만 연습할 때는 그 질문 그대로예요.
-  const questions = useMemo(() => (fetched && !single ? questionsFor(interviewer, fetched) : fetched), [fetched, single, interviewer])
+  const questions = sets[setKey]
+  const loadProgress = progresses[setKey] ?? PROGRESS_START
   const posting = useReportPosting(report?.postingId)
   const company = report ? companyOf(report.companyId) : null
   const current = questions?.[index]
@@ -265,13 +277,33 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   }
 
   function begin() {
-    if (!questions) return
     // 띵 소리와 음성은 사용자가 누른 순간에 준비해야 브라우저가 막지 않아요.
     unlockChime()
+    if (questions) return start()
+    // 받지 못했으면 한 번 더 받아 봐요.
+    if (questions === null) {
+      requested.current.delete(setKey)
+      setSets((prev) => ({ ...prev, [setKey]: undefined }))
+      setProgresses((prev) => ({ ...prev, [setKey]: PROGRESS_START }))
+    }
+    setStarting(true)
+  }
+
+  function start() {
+    if (!questions) return
     track('practice_start', { count: questions.length, voice: !typing, interviewer: interviewer.key })
     setAnswers([])
     void ask(0)
   }
+  const startRef = useRef(start)
+  startRef.current = start
+
+  // 시작을 누른 뒤에 질문이 오면 바로 첫 질문을 읽어요. 받지 못했으면 기다리기를 멈추고 안내를 보여줘요.
+  useEffect(() => {
+    if (!starting || questions === undefined) return
+    setStarting(false)
+    if (questions) startRef.current()
+  }, [starting, questions])
 
   /** 질문 하나의 답을 결과에 남기고, 답했으면 뒤에서 채점을 받아요. 한 글자라도 답했으면 채점하고, 아무 말도 없으면 답변하지 않음이에요. */
   function record(at: number, question: InterviewQuestion, text: string) {
@@ -379,12 +411,14 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   const total = questions?.length ?? 0
 
   let body
-  if (report === null || questions === null) {
+  if (report === null || (questions === null && phase !== 'intro')) {
     body = <Notice title={L.missing} body={L.missingBody} action={L.back} onAction={exit} className="mt-[18vh]" />
   } else if (waitingReport || report === undefined) {
     body = <LoadProgress percent={reportLoad.percent} className={loadCenter} />
-  } else if (questions === undefined || !current) {
-    // AI가 질문을 만드는 동안이에요. 이미 만들어 둔 질문이면 금방 지나가요.
+  } else if (questions === null && single) {
+    body = <Notice title={L.missing} body={L.missingBody} action={L.back} onAction={exit} className="mt-[18vh]" />
+  } else if (starting || (phase !== 'intro' && phase !== 'finished' && !current)) {
+    // 시작을 누른 뒤 AI가 이 면접관의 질문을 만드는 동안이에요. 이미 만들어 둔 질문이면 금방 지나가요.
     // 시작 화면처럼 위의 나가기 줄 높이만큼 아래를 비워서, 화면 전체의 가운데에 오게 해요.
     body = (
       <div className="flex min-h-full items-center justify-center pb-16">
@@ -407,7 +441,6 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
             }}
           />
         </div>
-        {canSpeak() && interviewer.voice === null && <p className="mt-3 text-[12.5px] text-[#fff]/40">{L.voiceTip}</p>}
         {/* 시작 줄이에요. 누구와 면접하는지 한 번 더 적고 바로 시작해요. */}
         <div className="mt-6 flex w-full max-w-xl items-center justify-between gap-4 rounded-[22px] bg-[#fff] py-3 pr-3 pl-6">
           <p className="min-w-0 truncate text-left text-[15px] font-semibold text-[#000]/85">{L.startNote(pick(interviewer.name))}</p>
@@ -420,7 +453,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     )
   } else if (phase === 'finished') {
     body = <Summary answers={answers} single={single} interviewer={pick(interviewer.name)} onAgain={begin} onBack={exit} />
-  } else {
+  } else if (current) {
     body = (
       <div className="mx-auto flex h-full w-full max-w-4xl flex-col">
         {/* 면접관은 질문이 바뀌어도 같은 자리에 그대로 있어요. 위에서부터 놓아서 질문 길이나 답변 칸 때문에 얼굴이 움직이지 않아요. */}

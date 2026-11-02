@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { track } from '../lib/analytics'
 import { AiModelRow } from './AiModelSetting'
-import { VoiceRow } from './VoiceSetting'
 import { Modal } from './Dialog'
 import { appAtLeast, appVersion, postToApp, type AppTheme } from '../lib/app'
 import { setShortcutHintsPinned, useShortcutHintsPinned } from '../lib/shortcuts'
@@ -28,7 +27,6 @@ const TEXT = messages({
     shield: '화면 녹화 감지 시 가리기',
     shieldNote: 'macOS에서 화면 녹화가 감지되면 해제 시까지 화면을 가립니다.',
     ai: 'AI',
-    practice: '면접 연습',
     app: '앱',
     version: '버전',
     update: '업데이트 확인',
@@ -46,7 +44,6 @@ const TEXT = messages({
     shield: 'Hide screen while recording',
     shieldNote: 'When screen recording is detected on macOS, the screen stays hidden until you reveal it.',
     ai: 'AI',
-    practice: 'Interview practice',
     app: 'App',
     version: 'Version',
     update: 'Check for updates',
@@ -138,10 +135,6 @@ export function Settings({ onClose }: { onClose: () => void }) {
         {/* 고를 모델이 없어도 칸은 늘 보여주고, 왜 고를 수 없는지 알려요. */}
         <Section title={text.ai}>
           <AiModelRow />
-        </Section>
-
-        <Section title={text.practice}>
-          <VoiceRow />
         </Section>
 
         {/* 화면 공유를 알아채는 것은 앱 1.2부터라, 그보다 낮은 앱에서는 보여주지 않아요. */}

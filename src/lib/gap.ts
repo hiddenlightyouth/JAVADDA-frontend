@@ -2328,8 +2328,10 @@ function questionsOf(result: ApiResult<InterviewQuestion[]>, quiet = false): Int
  * 예상 면접 질문이에요(GET /reports/{id}/questions). 나올 확률 순서예요. onProgress를 주면 진행 상황을 알려줘요. 실패하면 토스트로 알리고 빈 목록이에요.
  * quiet면 실패해도 토스트를 띄우지 않아요. 서류 검증 탭이 문단과 질문을 잇느라 부를 때처럼 덤으로 받을 때 써요.
  */
-export async function fetchQuestions(reportId: string, onProgress?: OnProgress, quiet = false): Promise<InterviewQuestion[]> {
-  const result = await withProgress(onProgress, (headers) => call<InterviewQuestion[]>(`/reports/${Number(currentId(reportId))}/questions`, {}, true, headers))
+export async function fetchQuestions(reportId: string, onProgress?: OnProgress, quiet = false, interviewer?: string): Promise<InterviewQuestion[]> {
+  // 면접 연습에서 고른 면접관(friendly, strict)의 질문은 따로 만들어요. 비우면 실무 팀장의 질문이고, 예상 질문 탭도 이 질문을 봐요.
+  const query = interviewer && interviewer !== 'balanced' ? `?interviewer=${interviewer}` : ''
+  const result = await withProgress(onProgress, (headers) => call<InterviewQuestion[]>(`/reports/${Number(currentId(reportId))}/questions${query}`, {}, true, headers))
   return questionsOf(result, quiet)
 }
 

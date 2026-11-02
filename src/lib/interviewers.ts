@@ -1,11 +1,10 @@
-import type { InterviewQuestion, QuestionCategory } from './gap'
 import type { Portrait } from './mouthRenderer'
 import { readItem, writeItem } from './storage'
 import { createStore, useStore } from './store'
 
 /**
  * 면접 연습의 가상 면접관 세 명이에요. 사진(입 자리), 목소리, 성격이 다르고,
- * 성격에 따라 묻는 질문의 순서와 고르는 질문(`questionsFor`), 서버의 채점 기준(답변을 보낼 때의 `interviewer`)이 달라져요.
+ * 성격에 따라 서버의 AI가 질문을 따로 만들고(질문을 받을 때의 `interviewer`), 채점 기준도 달라져요(답변을 보낼 때의 `interviewer`).
  */
 
 export type InterviewerKey = 'balanced' | 'friendly' | 'strict'
@@ -21,10 +20,8 @@ export interface InterviewerProfile {
   intro: Text
   /** 성격을 한눈에 보여주는 이름표 세 개예요. */
   traits: { ko: string[]; en: string[] }
-  /** 이 면접관이 읽는 목소리(`shared/voices.ts`의 key)예요. null이면 설정에서 고른 목소리예요. */
-  voice: string | null
-  /** 먼저 묻는 질문 유형의 순서예요. 비어 있으면 서버가 준 순서(나올 확률 순서) 그대로예요. 없는 유형은 묻지 않아요. */
-  focus: QuestionCategory[]
+  /** 이 면접관이 읽는 목소리(`shared/voices.ts`의 key)예요. 면접관마다 다른 목소리로 고정이에요. */
+  voice: string
   /** 고르기 카드의 바탕색이에요. 사진의 바탕과 같은 색이라 사진이 카드에 이어져요. */
   card: string
   portrait: Portrait
@@ -40,8 +37,7 @@ export const INTERVIEWERS: InterviewerProfile[] = [
       en: 'Asks about skills and experience evenly, starting with the most likely questions, and gives balanced feedback.',
     },
     traits: { ko: ['차분함', '균형 잡힌 채점', '실전형 질문'], en: ['Calm', 'Balanced grading', 'Realistic'] },
-    voice: null,
-    focus: [],
+    voice: 'chris',
     card: '#d4e1f3',
     portrait: {
       url: '/images/interviewer-balanced.png',
@@ -58,8 +54,7 @@ export const INTERVIEWERS: InterviewerProfile[] = [
       en: 'Starts with your projects and teamwork like a casual chat. Praises what went well first, then gently shows how to say it better.',
     },
     traits: { ko: ['편안함', '경험과 협업 중심', '격려형 피드백'], en: ['Relaxed', 'Projects and teamwork', 'Encouraging'] },
-    voice: 'harry',
-    focus: ['project', 'culture', 'tech', 'cs'],
+    voice: 'taehyung',
     card: '#9dc7f8',
     portrait: {
       url: '/images/interviewer-friendly.jpg',
@@ -76,8 +71,7 @@ export const INTERVIEWERS: InterviewerProfile[] = [
       en: 'Digs deep into tech and CS fundamentals. Grades answers without evidence or numbers harshly and follows up on every gap.',
     },
     traits: { ko: ['압박 면접', '기술 깊이', '엄격한 채점'], en: ['Pressure', 'Technical depth', 'Strict grading'] },
-    voice: 'kyungduk',
-    focus: ['tech', 'cs', 'project'],
+    voice: 'minjoon',
     card: '#9fc9f5',
     portrait: {
       url: '/images/interviewer-strict.jpg',
@@ -100,16 +94,4 @@ export const useInterviewer = () => interviewerOf(useStore(chosen, (value) => va
 export function setInterviewer(key: InterviewerKey) {
   writeItem(STORE_KEY, key)
   chosen.set(key)
-}
-
-/**
- * 이 면접관이 물을 질문이에요. 먼저 묻는 유형의 순서대로, 같은 유형 안에서는 나올 확률 순서로 늘어놓아요.
- * 관심 없는 유형은 빼지만, 빼고 나서 하나도 남지 않으면 원래 질문을 그대로 물어요.
- */
-export function questionsFor(interviewer: InterviewerProfile, questions: InterviewQuestion[]): InterviewQuestion[] {
-  if (interviewer.focus.length === 0) return questions
-  const rank = (item: InterviewQuestion) => interviewer.focus.indexOf(item.category)
-  const picked = questions.filter((item) => rank(item) >= 0)
-  if (picked.length === 0) return questions
-  return [...picked].sort((a, b) => rank(a) - rank(b) || b.probability - a.probability)
 }

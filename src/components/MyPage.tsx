@@ -22,7 +22,6 @@ import { isApp } from '../lib/app'
 import { SOCIAL_LABELS, type SocialProvider } from '../lib/social'
 import { IpPlace } from './IpPlace'
 import { AiModelRow } from './AiModelSetting'
-import { VoiceRow } from './VoiceSetting'
 import { lineList, settingList } from './SettingRow'
 import { MoreButton } from './MoreButton'
 import { SocialButtons, useSocialClients } from './Social'
@@ -53,7 +52,6 @@ const TEXT = messages({
     email: '이메일',
     joined: '가입한 날',
     ai: 'AI',
-    practice: '면접 연습',
     devices: '로그인한 기기',
     history: '로그인 기록',
     withdraw: '회원탈퇴',
@@ -83,7 +81,6 @@ const TEXT = messages({
     email: 'Email',
     joined: 'Joined',
     ai: 'AI',
-    practice: 'Interview practice',
     devices: 'Signed-in devices',
     history: 'Sign-in history',
     withdraw: 'Delete account',
@@ -418,16 +415,10 @@ export function MyPage({ onSignedOut }: Props) {
           </div>
         </Section>
 
-        {/* 설정 창(사이드바 아래 톱니바퀴)과 같은 AI 모델 고르기와 면접관 목소리 고르기예요. */}
+        {/* 설정 창(사이드바 아래 톱니바퀴)과 같은 AI 모델 고르기예요. */}
         <Section title={text.ai}>
           <dl className={settingList}>
             <AiModelRow />
-          </dl>
-        </Section>
-
-        <Section title={text.practice}>
-          <dl className={settingList}>
-            <VoiceRow />
           </dl>
         </Section>
 
