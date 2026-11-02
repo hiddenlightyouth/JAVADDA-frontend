@@ -604,6 +604,17 @@ export function MicIcon({ className = 'size-4', strokeWidth = 1.4, label }: Icon
   )
 }
 
+/** 소리 크기의 스피커예요. muted면 소리가 꺼진 X를, 아니면 크기만큼 물결을 그려요. */
+export function SpeakerIcon({ className = 'size-4', strokeWidth = 1.4, label, level = 1 }: IconProps & { level?: number }) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M2.5 6v4h2.5l3.5 3V3L5 6H2.5z" />
+      {level <= 0 ? <path d="M11 6.25l3 3.5M14 6.25l-3 3.5" /> : <path d="M10.75 6.25a2.5 2.5 0 0 1 0 3.5" />}
+      {level > 0.5 && <path d="M12.5 4.5a5 5 0 0 1 0 7" />}
+    </Icon>
+  )
+}
+
 /** 알려 줄 것이 있다는 동그라미 느낌표예요. */
 export function AlertIcon({ className = 'size-4 shrink-0', strokeWidth = 1.6, label }: IconProps) {
   return (

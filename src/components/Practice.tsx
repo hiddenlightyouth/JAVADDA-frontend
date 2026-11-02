@@ -5,10 +5,10 @@ import { companyOf, fetchQuestions, PROGRESS_START, submitAnswer, useReport, use
 import { messages, pick, useLang, useMessages } from '../lib/i18n'
 import { questionsFor, setInterviewer, useInterviewer } from '../lib/interviewers'
 import { useLoadHold, useLoadProgress } from '../lib/load'
-import { canDictate, canSpeak, chime, joinSpeech, prefetchVoice, unlockChime, useDictation, usePracticeVoice, useSpeak } from '../lib/speech'
+import { canDictate, canSpeak, chime, joinSpeech, prefetchVoice, setPracticeVolume, unlockChime, useDictation, usePracticeVoice, usePracticeVolume, useSpeak } from '../lib/speech'
 import { showToast } from '../lib/toast'
 import { AiProgress, CompanyMark, Notice, ScoreRing } from './GapParts'
-import { ChevronRightIcon, CloseIcon } from './Icons'
+import { ChevronRightIcon, CloseIcon, SpeakerIcon } from './Icons'
 import { Interviewer } from './Interviewer'
 import { InterviewerPicker } from './InterviewerPicker'
 import { FeedbackSections } from './ReportParts'
@@ -21,6 +21,9 @@ const TEXT = messages({
     missingBody: '리포트가 지워졌거나 아직 질문을 만들지 못했어요.',
     back: '돌아가기',
     exit: '면접 나가기',
+    volume: '면접관 소리 크기',
+    mute: '소리 끄기',
+    unmute: '소리 켜기',
     exitTitle: '면접을 여기서 마칠까요?',
     exitBody: '지금까지 답변한 질문은 안전하게 저장돼요.',
     stay: '계속하기',
@@ -71,6 +74,9 @@ const TEXT = messages({
     missingBody: 'The report was deleted or questions are not ready.',
     back: 'Go back',
     exit: 'Leave interview',
+    volume: 'Interviewer volume',
+    mute: 'Mute',
+    unmute: 'Unmute',
     exitTitle: 'End the interview here?',
     exitBody: 'Your answers so far are saved safely.',
     stay: 'Keep going',
@@ -523,6 +529,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
           <p className="min-w-0 flex-1 truncate text-[13px] text-[#fff]/55">{L.title}</p>
         )}
         {total > 0 && phase !== 'intro' && phase !== 'finished' && <span className="shrink-0 text-[13px] font-medium text-[#fff]/55 tabular-nums">{L.progress(index + 1, total)}</span>}
+        {canSpeak() && <VolumeControl />}
       </header>
       {/* 질문 수만큼 나눈 가는 막대예요. 답한 질문은 밝게 채워요. */}
       {total > 0 && phase !== 'intro' && phase !== 'finished' && (
@@ -600,6 +607,37 @@ function Karaoke({ text, progress, dim }: { text: string; progress: number; dim:
 }
 
 /** 면접이 끝나고 보여주는 결과예요. 평균 점수와 질문마다 내 답, 점수, 피드백이 있어요. 채점이 덜 끝난 질문은 끝나는 대로 채워져요. */
+/** 면접관 목소리의 소리 크기예요. 스피커를 누르면 끄고 켜고, 옆 막대로 크기를 맞춰요. */
+function VolumeControl() {
+  const L = useMessages(TEXT)
+  const volume = usePracticeVolume()
+  /** 끄기 전의 크기예요. 다시 켜면 이 크기로 돌아가요. */
+  const before = useRef(volume > 0 ? volume : 1)
+  if (volume > 0) before.current = volume
+  return (
+    <div className="flex shrink-0 items-center gap-2">
+      <button
+        type="button"
+        onClick={() => setPracticeVolume(volume > 0 ? 0 : before.current)}
+        aria-label={volume > 0 ? L.mute : L.unmute}
+        className="flex size-10 items-center justify-center rounded-full bg-[#fff]/10 text-white transition-colors hover:bg-[#fff]/20"
+      >
+        <SpeakerIcon className="size-4" strokeWidth={1.6} level={volume} />
+      </button>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={Math.round(volume * 100)}
+        onChange={(event) => setPracticeVolume(Number(event.target.value) / 100)}
+        aria-label={L.volume}
+        className="hidden w-24 cursor-pointer accent-white sm:block"
+      />
+    </div>
+  )
+}
+
 function Summary({ answers, single, interviewer, onAgain, onBack }: { answers: Answer[]; single: boolean; interviewer: string; onAgain: () => void; onBack: () => void }) {
   const L = useMessages(TEXT)
   const scores = answers.flatMap((item) => (typeof item.feedback === 'object' ? [item.feedback.score] : []))

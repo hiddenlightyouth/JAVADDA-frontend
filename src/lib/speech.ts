@@ -196,6 +196,22 @@ export function setPracticeVoice(key: string) {
   practiceVoice.set(key)
 }
 
+/** 면접관 목소리의 소리 크기(0에서 1)예요. 면접 연습 위쪽에서 바꾸고 이 기기에 기억해요. 띵 소리도 같이 따라가요. */
+const VOLUME_KEY = 'javadda:practice-volume'
+const readVolume = () => {
+  const value = Number(readItem(VOLUME_KEY) ?? 1)
+  return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1
+}
+const practiceVolume = createStore<number>(typeof window === 'undefined' ? 1 : readVolume())
+
+export const usePracticeVolume = () => useStore(practiceVolume, (value) => value, 1)
+
+export function setPracticeVolume(value: number) {
+  const next = Math.min(1, Math.max(0, value))
+  writeItem(VOLUME_KEY, String(next))
+  practiceVolume.set(next)
+}
+
 /** 다음 질문의 음성을 미리 받아 둬요. 질문이 바뀔 때 기다리지 않고 바로 읽어요. 실패해도 읽을 때 다시 받아요. */
 export function prefetchVoice(text: string, voice: string | null) {
   const name = voiceName(text, voice)
@@ -279,6 +295,12 @@ export function useSpeak() {
   const audio = useRef<HTMLAudioElement | null>(null)
   /** 지금 읽기가 끝나면 풀어 줄 약속이에요. */
   const settle = useRef<(() => void) | null>(null)
+  const volume = usePracticeVolume()
+
+  // 읽는 도중에 소리 크기를 바꾸면 바로 따라가요. 브라우저 음성은 다음 질문부터예요.
+  useEffect(() => {
+    if (audio.current) audio.current.volume = volume
+  }, [volume])
 
   const finish = useCallback(() => {
     const resolve = settle.current
@@ -318,6 +340,7 @@ export function useSpeak() {
       // 질문 자료는 화면 언어와 달리 한국어일 수 있어서, 글자를 보고 읽을 언어를 정해요.
       const korean = /[가-힣]/.test(text)
       utterance.lang = korean ? 'ko-KR' : 'en-US'
+      utterance.volume = practiceVolume.get()
       let boundary = -1
       let boundaryIndex = 0
       let finished = false
@@ -377,6 +400,7 @@ export function useSpeak() {
         if (!result) return speakInBrowser(text, mine)
         const { url, timing } = result
         const player = new Audio(url)
+        player.volume = practiceVolume.get()
         audio.current = player
         // Decode a separate copy: never route or interrupt the audible player.
         let samples: AudioBuffer | null = null
@@ -447,7 +471,8 @@ export function unlockChime() {
 /** 이제 답할 차례라는 띵 소리예요. 두 음을 짧게 겹쳐 울려요. 소리를 낼 수 없으면 조용히 넘어가요. */
 export function chime() {
   const context = chimeContext
-  if (!context) return
+  const volume = practiceVolume.get()
+  if (!context || volume === 0) return
   const now = context.currentTime
   const notes: [number, number][] = [
     [1318.5, 0],
@@ -459,7 +484,7 @@ export function chime() {
     oscillator.type = 'sine'
     oscillator.frequency.value = frequency
     gain.gain.setValueAtTime(0, now + delay)
-    gain.gain.linearRampToValueAtTime(0.16, now + delay + 0.01)
+    gain.gain.linearRampToValueAtTime(0.16 * volume, now + delay + 0.01)
     gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + 0.7)
     oscillator.connect(gain).connect(context.destination)
     oscillator.start(now + delay)
