@@ -19,7 +19,7 @@ import { Badge, ghostDangerButton, Segmented, toolButton } from './ui'
 
 const TEXT = messages({
   ko: {
-    openRepo: '레포 열기',
+    openRepo: 'GitHub',
     kinds: { team: '팀 프로젝트', personal: '개인 프로젝트' } as Record<ResumeProject['kind'], string>,
     role: '맡은 역할',
     parts: { problem: '문제', cause: '원인', solution: '개선', effect: '효과', decision: '판단' },
@@ -47,7 +47,7 @@ const TEXT = messages({
     portfolioRevisions: { shorter: '더 짧게', longer: '더 자세하게', numbers: '수치 넣기', formal: '더 단정하게', list: '목록으로', story: '문장으로', rewrite: '다시 쓰기' } as Record<PortfolioRevision, string>,
   },
   en: {
-    openRepo: 'Open repository',
+    openRepo: 'GitHub',
     kinds: { team: 'Team project', personal: 'Personal project' },
     role: 'Role',
     parts: { problem: 'Problem', cause: 'Cause', solution: 'Fix', effect: 'Result', decision: 'Trade-off' },
