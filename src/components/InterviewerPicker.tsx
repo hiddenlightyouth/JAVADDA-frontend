@@ -5,7 +5,7 @@ import './InterviewerPicker.css'
 
 /**
  * 면접 연습 시작 화면의 면접관 고르기예요. 고른 면접관 카드가 가운데에 크게 서고, 나머지는 양옆으로 비스듬히 물러나요.
- * 옆 카드를 누르거나 좌우 방향키로 바꾸고, 카드 아래에 고른 면접관의 성격 소개가 나와요.
+ * 옆 카드를 누르거나 좌우 방향키로 바꾸고, 카드 아래에 고른 면접관의 성격 소개가 나와요. 가운데 카드를 다시 눌러도 onChange를 불러서 인사를 한 번 더 들어요.
  */
 export function InterviewerPicker({ value, onChange }: { value: InterviewerProfile; onChange: (next: InterviewerProfile) => void }) {
   const lang = useLang()

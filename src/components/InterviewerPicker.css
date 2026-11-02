@@ -20,7 +20,6 @@
 .picker-card[data-offset='0'] {
   z-index: 2;
   transform: translateX(-50%);
-  cursor: default;
 }
 .picker-card[data-offset='-1'] {
   z-index: 1;

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { track } from '../lib/analytics'
 import { companyOf, fetchQuestions, PROGRESS_START, submitAnswer, useReport, useReportPosting, type InterviewQuestion, type PracticeFeedback, type ProgressState } from '../lib/gap'
 import { messages, pick, useLang, useMessages } from '../lib/i18n'
-import { setInterviewer, useInterviewer, type InterviewerKey } from '../lib/interviewers'
+import { greetingOf, INTERVIEWERS, setInterviewer, useInterviewer, type InterviewerKey, type InterviewerProfile } from '../lib/interviewers'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { canDictate, canSpeak, chime, joinSpeech, prefetchVoice, setPracticeVolume, unlockChime, useDictation, usePracticeVolume, useSpeak } from '../lib/speech'
 import { showToast } from '../lib/toast'
@@ -34,6 +34,7 @@ const TEXT = messages({
     introBody: '함께할 면접관을 골라 주세요. 면접관의 성격에 따라 묻는 질문과 채점이 달라져요.',
     start: '면접 시작하기',
     startNote: (name: string) => `${name} 면접관과 면접을 시작해요`,
+    volumeHint: '면접관을 고르면 인사를 들려드려요. 소리가 크면 오른쪽 위에서 음량을 조절해 주세요.',
     gradedBy: (name: string) => `${name} 면접관의 평가예요`,
     preparing: '면접관이 질문을 준비하고 있어요',
     speaking: '질문 중',
@@ -86,6 +87,7 @@ const TEXT = messages({
     introBody: "Pick your interviewer. Their personality changes the questions they ask and how they grade.",
     start: 'Start interview',
     startNote: (name: string) => `Your interview with ${name}`,
+    volumeHint: 'Pick an interviewer to hear a quick hello. If it is too loud, adjust the volume at the top right.',
     gradedBy: (name: string) => `Graded by ${name}`,
     preparing: 'The interviewer is getting ready',
     speaking: 'Asking',
@@ -276,6 +278,23 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     }
   }
 
+  /** 시작 화면에서 면접관이 인사하는 중인지예요. 인사하는 동안 오른쪽 위 음량 조절에 테두리를 둘러요. */
+  const [greeting, setGreeting] = useState(false)
+
+  /** 면접관이 자기 목소리로 인사 한 줄과 음량 안내를 읽어요. 카드를 누른 순간이라 브라우저가 소리를 막지 않아요. */
+  function greet(next: InterviewerProfile) {
+    if (!canSpeak()) return
+    unlockChime()
+    setGreeting(true)
+    void voice.speak(greetingOf(next, lang), next.voice).then(() => setGreeting(false))
+  }
+
+  // 시작 화면에 오면 세 면접관의 인사를 미리 받아 둬서, 카드를 바꾸는 순간 바로 들려요.
+  useEffect(() => {
+    if (phase !== 'intro' || !canSpeak()) return
+    for (const item of INTERVIEWERS) prefetchVoice(greetingOf(item, lang), item.voice)
+  }, [phase, lang])
+
   function begin() {
     // 띵 소리와 음성은 사용자가 누른 순간에 준비해야 브라우저가 막지 않아요.
     unlockChime()
@@ -435,12 +454,16 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
           <InterviewerPicker
             value={interviewer}
             onChange={(next) => {
-              if (next.key === interviewer.key) return
-              setInterviewer(next.key)
-              track('practice_interviewer_select', { interviewer: next.key })
+              if (next.key !== interviewer.key) {
+                setInterviewer(next.key)
+                track('practice_interviewer_select', { interviewer: next.key })
+              }
+              // 고르거나 고른 카드를 다시 누르면 그 면접관이 자기 목소리로 인사하고 음량 안내를 해요.
+              greet(next)
             }}
           />
         </div>
+        <p className="mt-4 text-[12.5px] text-[#fff]/40">{L.volumeHint}</p>
         {/* 시작 줄이에요. 누구와 면접하는지 한 번 더 적고 바로 시작해요. */}
         <div className="mt-6 flex w-full max-w-xl items-center justify-between gap-4 rounded-[22px] bg-[#fff] py-3 pr-3 pl-6">
           <p className="min-w-0 truncate text-left text-[15px] font-semibold text-[#000]/85">{L.startNote(pick(interviewer.name))}</p>
@@ -564,7 +587,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
           <p className="min-w-0 flex-1 truncate text-[13px] text-[#fff]/55">{L.title}</p>
         )}
         {total > 0 && phase !== 'intro' && phase !== 'finished' && <span className="shrink-0 text-[13px] font-medium text-[#fff]/55 tabular-nums">{L.progress(index + 1, total)}</span>}
-        {canSpeak() && <VolumeControl />}
+        {canSpeak() && <VolumeControl highlight={greeting && voice.speaking} />}
       </header>
       {/* 질문 수만큼 나눈 가는 막대예요. 답한 질문은 밝게 채워요. */}
       {total > 0 && phase !== 'intro' && phase !== 'finished' && (
@@ -641,16 +664,15 @@ function Karaoke({ text, progress, dim }: { text: string; progress: number; dim:
   )
 }
 
-/** 면접이 끝나고 보여주는 결과예요. 평균 점수와 질문마다 내 답, 점수, 피드백이 있어요. 채점이 덜 끝난 질문은 끝나는 대로 채워져요. */
-/** 면접관 목소리의 소리 크기예요. 스피커를 누르면 끄고 켜고, 옆 막대로 크기를 맞춰요. */
-function VolumeControl() {
+/** 면접관 목소리의 소리 크기예요. 스피커를 누르면 끄고 켜고, 옆 막대로 크기를 맞춰요. 면접관이 음량 안내를 하는 동안에는 테두리로 자리를 알려요(highlight). */
+function VolumeControl({ highlight = false }: { highlight?: boolean }) {
   const L = useMessages(TEXT)
   const volume = usePracticeVolume()
   /** 끄기 전의 크기예요. 다시 켜면 이 크기로 돌아가요. */
   const before = useRef(volume > 0 ? volume : 1)
   if (volume > 0) before.current = volume
   return (
-    <div className="flex shrink-0 items-center gap-2">
+    <div className={`flex shrink-0 items-center gap-2 rounded-full transition-shadow duration-300 ${highlight ? 'ring-2 ring-white/70 ring-offset-4 ring-offset-black' : ''}`}>
       <button
         type="button"
         onClick={() => setPracticeVolume(volume > 0 ? 0 : before.current)}
@@ -673,6 +695,7 @@ function VolumeControl() {
   )
 }
 
+/** 면접이 끝나고 보여주는 결과예요. 평균 점수와 질문마다 내 답, 점수, 피드백이 있어요. 채점이 덜 끝난 질문은 끝나는 대로 채워져요. */
 function Summary({ answers, single, interviewer, onAgain, onBack }: { answers: Answer[]; single: boolean; interviewer: string; onAgain: () => void; onBack: () => void }) {
   const L = useMessages(TEXT)
   const scores = answers.flatMap((item) => (typeof item.feedback === 'object' ? [item.feedback.score] : []))
