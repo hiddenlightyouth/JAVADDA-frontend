@@ -47,6 +47,7 @@ type AppMessage =
   | { type: 'theme'; theme: AppTheme }
   | { type: 'shield'; on: boolean }
   | { type: 'update' }
+  | { type: 'open'; url: string }
 
 /** 화면 공유나 녹화가 시작되거나 끝나면 앱이 웹뷰에 보내는 이벤트예요(앱 1.2부터). */
 const APP_CAPTURE_EVENT = 'javadda:app-capture'
@@ -70,6 +71,16 @@ interface AppBridge {
 
 export function postToApp(message: AppMessage) {
   ;(window as unknown as AppBridge).webkit?.messageHandlers?.javadda?.postMessage(message)
+}
+
+/**
+ * 앱은 우리 사이트 주소를 새 탭으로 열어도 앱 안에서 열어서, 브라우저로 넘길 주소는 앱에 open 메시지로 보내요(앱 2.3부터).
+ * 예전 앱이면 보내지 않고 false를 돌려줘요.
+ */
+export function openInBrowser(url: string): boolean {
+  if (!appAtLeast('2.3')) return false
+  postToApp({ type: 'open', url })
+  return true
 }
 
 const DRAG_AREA = '[data-app-drag]'

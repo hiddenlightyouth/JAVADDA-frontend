@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
-import { isApp } from '../lib/app'
+import { isApp, openInBrowser } from '../lib/app'
 import { connectGithub, createGithubResume, disconnectGithub, fetchGithubConnection, fetchGithubRepos, MAX_GITHUB_REPOS, PROGRESS_START, type GithubConnection, type GithubRepo, type ProgressState, type Resume } from '../lib/gap'
 import { isGithubReturn, startGithubConnect, takeGithubReturn } from '../lib/githubConnect'
 import { formatWhen } from '../lib/format'
@@ -28,6 +28,7 @@ const TEXT = messages({
     connect: 'GitHub 연결하기',
     appConnectBody: '연결은 브라우저에서 해요. 연결한 뒤에 돌아와서 다시 확인을 눌러 주세요.',
     openBrowser: '브라우저에서 연결하기',
+    linkCopied: '주소를 복사했어요. 브라우저 주소창에 붙여 넣어 연결해 주세요.',
     recheck: '다시 확인',
     notReady: '알 수 없는 오류가 발생했습니다.',
     connected: '연결했어요. 이력서로 만들 레포를 골라 주세요.',
@@ -58,6 +59,7 @@ const TEXT = messages({
     connect: 'Connect GitHub',
     appConnectBody: 'Connecting happens in your browser. Come back and press Check again once you are done.',
     openBrowser: 'Connect in browser',
+    linkCopied: 'Link copied. Paste it into your browser to connect.',
     recheck: 'Check again',
     notReady: 'An unknown error occurred.',
     connected: 'Connected. Pick the repositories to turn into a resume.',
@@ -133,7 +135,20 @@ export function GithubResume({ onDone, onWorking }: { onDone: (resume: Resume) =
   return <RepoPicker connection={connection} onDone={onDone} onWorking={onWorking} onDisconnected={disconnected} />
 }
 
-/** 연결하지 않았을 때의 칸이에요. 앱은 바깥 주소를 기본 브라우저로 넘겨서, 연결을 브라우저에서 하고 돌아와 다시 확인해요. */
+/** 앱에서 연결하라고 브라우저로 여는 주소예요. 웹의 서류 추가 화면이 GitHub 단계로 바로 열려요. */
+const CONNECT_IN_BROWSER = `${SITE}/app/resume/new?github=1`
+
+/** 앱이 브라우저로 넘겨 주게 해요. 넘길 수 없는 예전 앱(2.2까지)이면 주소를 복사해서 붙여 넣게 해요. */
+function openConnectInBrowser() {
+  track('github_connect_click', { from: 'app' })
+  if (openInBrowser(CONNECT_IN_BROWSER)) return
+  void navigator.clipboard
+    .writeText(CONNECT_IN_BROWSER)
+    .then(() => showToast(pick(TEXT).linkCopied))
+    .catch(() => showToast(CONNECT_IN_BROWSER))
+}
+
+/** 연결하지 않았을 때의 칸이에요. 앱은 우리 주소를 앱 안에서 열어서, open 메시지로 기본 브라우저에 넘기고 연결한 뒤 돌아와 다시 확인해요. */
 function ConnectCard({ clientId, onRecheck }: { clientId: string; onRecheck: () => void }) {
   const L = useMessages(TEXT)
   return (
@@ -146,10 +161,10 @@ function ConnectCard({ clientId, onRecheck }: { clientId: string; onRecheck: () 
       <div className="mt-6 flex items-center gap-2">
         {isApp ? (
           <>
-            <a href={`${SITE}/app/resume/new?github=1`} target="_blank" rel="noreferrer" onClick={() => track('github_connect_click', { from: 'app' })} className={primaryButton}>
+            <button type="button" onClick={openConnectInBrowser} className={primaryButton}>
               <GitHubMark className="size-4" />
               {L.openBrowser}
-            </a>
+            </button>
             <button type="button" onClick={onRecheck} className={quietButton}>
               {L.recheck}
             </button>
