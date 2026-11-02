@@ -136,19 +136,45 @@ const TEXT = messages({
   },
 })
 
-/** 서류 추가를 열면 먼저 고르는 두 방법이에요. PDF 올리기와 GitHub 레포지토리로 만들기예요. */
-function AddChoice({ onUpload, onGithub }: { onUpload: () => void; onGithub: () => void }) {
+/**
+ * 서류 추가를 열면 먼저 고르는 두 방법이에요. PDF 올리기와 GitHub 레포지토리로 만들기예요.
+ * PDF 올리기를 누르면 그 자리에서 바로 파일 고르는 창(Finder)이 떠요. 고르면 onFile로 넘겨서 바로 읽기 시작해요.
+ * PDF를 이 칸에 끌어다 놓아도 바로 올려요.
+ */
+function AddChoice({ onFile, onGithub }: { onFile: (file: File) => void; onGithub: () => void }) {
   const L = useMessages(TEXT)
+  const fileRef = useRef<HTMLInputElement>(null)
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <button type="button" onClick={onUpload} className="group flex min-h-60 flex-col items-start rounded-2xl bg-gray-50 p-7 text-left transition-colors hover:bg-gray-100">
+      <input
+        ref={fileRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        hidden
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          // 같은 파일을 다시 골라도 onChange가 오게 비워요.
+          event.target.value = ''
+          if (file) onFile(file)
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => {
+          event.preventDefault()
+          const file = event.dataTransfer.files[0]
+          if (file) onFile(file)
+        }}
+        className="group flex min-h-60 flex-col items-start rounded-2xl bg-gray-50 p-7 text-left transition-colors hover:bg-gray-100">
         <span className="flex size-14 items-center justify-center rounded-full bg-white text-gray-500 transition-colors group-hover:text-brand">
           <UploadIcon className="size-6" strokeWidth={1.2} />
         </span>
         <span className="mt-6 text-[17px] font-semibold text-gray-900 transition-colors group-hover:text-brand">{L.uploadTitle}</span>
         <span className="mt-2 text-[13.5px] leading-relaxed text-gray-500">{L.uploadBody}</span>
         <span className="mt-auto flex items-center gap-1 pt-6 text-[13px] font-medium text-gray-500 transition-colors group-hover:text-brand">
-          {L.start}
+          {L.choose}
           <ChevronRightIcon className="size-3.5 shrink-0" />
         </span>
       </button>
@@ -170,9 +196,11 @@ function AddChoice({ onUpload, onGithub }: { onUpload: () => void; onGithub: () 
 /** GitHub 권한 화면에서 돌아왔거나(?code), 앱이 연결하라고 브라우저로 열었으면(?github=1) 서류 추가 화면이 GitHub 단계로 바로 열려요. */
 const opensGithub = () => isGithubReturn() || new URLSearchParams(window.location.search).has('github')
 
-/** 서류를 올리는 칸이에요. PDF를 끌어다 놓거나 눌러서 골라요. 올리면 onDone으로 알려줘요. */
-export function ResumeUploader({ onDone, onWorking }: {
+/** 서류를 올리는 칸이에요. PDF를 끌어다 놓거나 눌러서 골라요. 올리면 onDone으로 알려줘요. file을 주면 열리자마자 그 파일을 올려요. */
+export function ResumeUploader({ onDone, onWorking, file: initialFile }: {
   onDone?: (resume: Resume) => void
+  /** 앞에서 이미 고른 파일이에요(서류 추가의 PDF 올리기). */
+  file?: File
   /** 읽기 시작하고 끝날 때 알려요. 창이 그동안 닫히지 않게 할 때 써요. */
   onWorking?: (working: boolean) => void
 }) {
@@ -204,6 +232,15 @@ export function ResumeUploader({ onDone, onWorking }: {
     }
     void upload({ file })
   }
+
+  // 앞에서 고른 파일은 열리자마자 한 번만 올려요. 개발 모드에서 효과가 두 번 돌아도 두 번 올리지 않아요.
+  const took = useRef<File | null>(null)
+  useEffect(() => {
+    if (!initialFile || took.current === initialFile) return
+    took.current = initialFile
+    takeFile(initialFile)
+    // takeFile은 렌더마다 새로 만들어지지만 파일이 바뀔 때만 올려요.
+  }, [initialFile])
 
   function drop(event: DragEvent) {
     event.preventDefault()
@@ -391,6 +428,8 @@ export function MyResume({ add, docId, onAdd, onList, onDoc, onExplore }: {
   const shelf = useResumeShelf()
   /** 서류 추가 화면은 먼저 올릴지 만들지 고르고(choose), 올리기를 고르면 올리는 칸(upload), GitHub를 고르면 레포 고르는 칸(github)이 나와요. */
   const [step, setStep] = useState<'choose' | 'upload' | 'github'>(() => (add && opensGithub() ? 'github' : 'choose'))
+  /** 고르는 단계에서 PDF 올리기로 고른 파일이에요. 올리는 칸이 열리자마자 이 파일을 읽어요. */
+  const [picked, setPicked] = useState<File | undefined>(undefined)
   /** 서류를 읽는 동안이에요. 그동안은 서류 추가 화면을 떠날 수 없어요. */
   const [uploading, setUploading] = useState(false)
   const signedIn = useAuth().tokens !== null
@@ -431,6 +470,7 @@ export function MyResume({ add, docId, onAdd, onList, onDoc, onExplore }: {
   useEffect(() => {
     if (add) setStep(opensGithub() ? 'github' : 'choose')
     else addFromList = false
+    setPicked(undefined)
   }, [add])
 
   function makePrimary(resume: Resume) {
@@ -454,12 +494,18 @@ export function MyResume({ add, docId, onAdd, onList, onDoc, onExplore }: {
           <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
             <div className="max-w-3xl">
               {step === 'choose' ? (
-                <AddChoice onUpload={() => setStep('upload')} onGithub={() => setStep('github')} />
+                <AddChoice
+                  onFile={(file) => {
+                    setPicked(file)
+                    setStep('upload')
+                  }}
+                  onGithub={() => setStep('github')}
+                />
               ) : step === 'github' ? (
                 <GithubResume onWorking={setUploading} onDone={openMade} />
               ) : (
                 // 다 읽으면 그 서류의 상세 화면으로 가요.
-                <ResumeUploader onWorking={setUploading} onDone={openMade} />
+                <ResumeUploader file={picked} onWorking={setUploading} onDone={openMade} />
               )}
             </div>
           </div>
