@@ -29,8 +29,7 @@ const TEXT = messages({
     appConnectBody: '연결은 브라우저에서 해요. 연결한 뒤에 돌아와서 다시 확인을 눌러 주세요.',
     openBrowser: '브라우저에서 연결하기',
     recheck: '다시 확인',
-    notReadyTitle: 'GitHub 연결을 준비하고 있어요',
-    notReadyBody: '서버에 GitHub 연결이 아직 켜져 있지 않아요. 지금은 이력서 PDF를 올려 주세요.',
+    notReady: '알 수 없는 오류가 발생했습니다.',
     connected: '연결했어요. 이력서로 만들 레포를 골라 주세요.',
     canceled: 'GitHub 연결을 취소했어요.',
     invalid: '연결 요청을 확인하지 못했어요. 처음부터 다시 시도해 주세요.',
@@ -60,8 +59,7 @@ const TEXT = messages({
     appConnectBody: 'Connecting happens in your browser. Come back and press Check again once you are done.',
     openBrowser: 'Connect in browser',
     recheck: 'Check again',
-    notReadyTitle: 'GitHub connection is not ready yet',
-    notReadyBody: "The server hasn't turned on GitHub connection yet. Please upload a resume PDF for now.",
+    notReady: 'An unknown error occurred.',
     connected: 'Connected. Pick the repositories to turn into a resume.',
     canceled: 'GitHub connection was canceled.',
     invalid: "We couldn't verify the request. Please start over.",
@@ -129,7 +127,7 @@ export function GithubResume({ onDone, onWorking }: { onDone: (resume: Resume) =
   if (connection === null) return <Failed onRetry={() => setAttempt((value) => value + 1)} className="mt-10" />
   if (!connection?.connected) {
     const clientId = config?.githubConnectClientId
-    if (!clientId) return <Notice title={L.notReadyTitle} body={L.notReadyBody} className="mt-10" />
+    if (!clientId) return <Notice title={L.notReady} className="mt-10" />
     return <ConnectCard clientId={clientId} onRecheck={() => setAttempt((value) => value + 1)} />
   }
   return <RepoPicker connection={connection} onDone={onDone} onWorking={onWorking} onDisconnected={disconnected} />
