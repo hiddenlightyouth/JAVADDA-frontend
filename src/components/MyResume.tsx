@@ -38,7 +38,7 @@ const TEXT = messages({
     generateTitle: 'GitHub Repository로 이력서와 포트폴리오 생성하기',
     generateBody: '레포지토리의 코드와 기록을 읽어 이력서와 포트폴리오를 만들어 드려요.',
     soon: '준비 중',
-    start: '올리러 가기',
+    start: '시작하기',
     otherWay: '다른 방법 고르기',
     addTitle: '서류 추가',
     emptyTitle: '아직 올린 이력서가 없어요',
