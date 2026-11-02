@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
-import { blogCompaniesOf, COLLECTED_AT, fetchBlogDigests, isStale, THEME_NAMES, themeTrends, topSkills, type BlogDigest, type BlogPost, type BlogTheme, type ThemeTrend } from '../lib/blogs'
-import { canEmbed, companyOf, POSTINGS } from '../lib/gap'
+import { blogCompaniesOf, blogOutlook, COLLECTED_AT, fetchBlogDigests, isStale, THEME_NAMES, themeTrends, topSkills, type BlogDigest, type BlogPost, type BlogTheme, type ThemeTrend } from '../lib/blogs'
+import { canEmbed, companyOf, POSTINGS, useResume } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { isPlainClick } from '../lib/links'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
 import { Modal } from './Dialog'
-import { CompanyFilter, CompanyMark, Notice, SkillChip } from './GapParts'
+import { CompanyFilter, CompanyMark, Notice, SkillChip, skillTone, Tip } from './GapParts'
 import { PostingBrowser, SplitView, type BrowserPage } from './PostingBrowser'
 import { LoadGate } from './ScreenParts'
 import { Badge, Bullets, label, primaryButton, quietButton, stagger, toolButton } from './ui'
@@ -51,6 +51,16 @@ const TEXT = messages({
     missing: '이 기업의 기술 블로그 요약은 아직 없어요.',
     missingBody: '다른 기업을 골라 보세요.',
     missingAction: '전체 보기',
+    // 총정리 칸의 머리 문장이에요. 주제 이름 사이에는 와/과, 마지막 주제 뒤에는 을/를이 받침에 맞춰 붙어요.
+    outlookLead: '요즘 기업들은 ',
+    outlookAnd: (name: string) => `${hasBatchim(name) ? '과' : '와'} `,
+    outlookTail: (name: string) => `${hasBatchim(name) ? '을' : '를'} 가장 많이 고민하고 있어요`,
+    rising: '늘고 있어요',
+    risingTip: '최근 두 달에 그 전 두 달보다 이 주제의 글이 더 많이 올라왔어요.',
+    outlookSkills: '따라가려면 이런 역량이 필요해요',
+    outlookMissing: (count: number) => (count ? `내 대표 이력서에 아직 충분히 보이지 않는 역량이 ${count}개예요.` : '대표 이력서에 이 역량이 모두 보여요.'),
+    outlookPrepare: '지금 해 볼 준비',
+    skillDemand: (count: number) => (count ? `지금 열린 공고 ${count}개가 이 역량을 적었어요.` : '아직 이 역량을 적은 공고는 없어요.'),
   },
   en: {
     title: 'Tech blogs',
@@ -75,6 +85,15 @@ const TEXT = messages({
     missing: "We don't have a summary for this company's blog yet.",
     missingBody: 'Try another company.',
     missingAction: 'View all',
+    outlookLead: 'Companies are focused on ',
+    outlookAnd: () => ' and ',
+    outlookTail: () => '',
+    rising: 'Rising',
+    risingTip: 'More posts on this topic in the last two months than the two before.',
+    outlookSkills: 'Skills to keep up',
+    outlookMissing: (count: number) => (count ? `${count} of these aren't clear on your main resume yet.` : 'Your main resume shows all of these.'),
+    outlookPrepare: 'What to try now',
+    skillDemand: (count: number) => (count ? `${count} open ${count === 1 ? 'posting lists' : 'postings list'} this skill.` : 'No open posting lists this skill yet.'),
   },
 })
 
@@ -168,6 +187,7 @@ export function Blogs({ company, onCompany, onJobs }: {
   }
   // 고른 것이 바뀔 때만 갤러리 칸을 다시 만들어요. 미니 브라우저를 열고 닫을 때는 그대로 써요.
   const trends = useMemo(() => (digests && !company && !theme ? themeTrends(digests).trends.slice(0, 6) : []), [digests, company, theme])
+  const outlook = useMemo(() => (digests ? blogOutlook(digests) : null), [digests])
   const read = (page: BrowserPage) => {
     if (!canEmbed(page.url)) {
       track('blog_post_open', { company: page.companyId, from: 'tab' })
@@ -230,7 +250,11 @@ export function Blogs({ company, onCompany, onJobs }: {
               ) : shown.length === 0 ? (
                 <Notice title={L.none} action={L.noneAction} onAction={() => selectTheme(null, 'empty')} className="mt-16" />
               ) : (
-                <Gallery items={buildItems({ entries: shown, digest, trends, onJobs, onTheme: (item) => selectTheme(item, 'card'), read })} />
+                <>
+                  {/* 기업도 주제도 고르지 않았을 때만, 모든 블로그를 묶은 총정리를 글 앞에 둬요. */}
+                  {!company && !theme && outlook && <OutlookCard outlook={outlook} onTheme={(item) => selectTheme(item, 'outlook')} />}
+                  <Gallery items={buildItems({ entries: shown, digest, trends, onJobs, onTheme: (item) => selectTheme(item, 'card'), read })} />
+                </>
               )
             }
           </LoadGate>
@@ -362,6 +386,79 @@ function ThemeCard({ trend, order, onPick }: { trend: ThemeTrend; order: number;
         ))}
       </span>
     </button>
+  )
+}
+
+/**
+ * 모든 기업 블로그를 묶어 본 총정리 칸이에요. 요즘 많이 다룬 주제 셋과 그 고민, 따라가려면 필요한 역량, 지금 해 볼 준비가 있어요.
+ * 대표 이력서가 있으면 역량을 진단 시작과 같은 기준으로 칠하고, 아직 보이지 않는 역량 수를 알려줘요. 주제를 누르면 그 주제 글만 걸러 봐요.
+ */
+function OutlookCard({ outlook, onTheme }: { outlook: NonNullable<ReturnType<typeof blogOutlook>>; onTheme: (theme: BlogTheme) => void }) {
+  const L = useMessages(TEXT)
+  const resume = useResume()
+  const [first, second] = outlook.themes.map((item) => THEME_NAMES[item.theme])
+  const missing = resume ? outlook.skills.filter((item) => skillTone(item.skill, resume) !== 'met').length : 0
+  return (
+    <section className="mb-4 animate-rise rounded-2xl bg-gray-50 p-5 @2xl:p-6">
+      <h2 className="text-[19px] leading-snug font-semibold text-gray-900 @2xl:text-[21px]">
+        {L.outlookLead}
+        <span className="text-brand-hover">{first}</span>
+        {second && (
+          <>
+            {L.outlookAnd(first)}
+            <span className="text-brand-hover">{second}</span>
+          </>
+        )}
+        {L.outlookTail(second ?? first)}.
+      </h2>
+
+      <ul className="mt-5 grid gap-3 @3xl:grid-cols-3">
+        {outlook.themes.map((item, index) => (
+          <li key={item.theme}>
+            <button
+              type="button"
+              aria-label={L.pickTheme(THEME_NAMES[item.theme])}
+              onClick={() => onTheme(item.theme)}
+              className="group flex h-full w-full flex-col rounded-xl bg-white p-4 text-left transition-colors hover:bg-gray-100"
+              style={stagger(index)}
+            >
+              <span className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-gray-900 transition-colors group-hover:text-brand-hover">{THEME_NAMES[item.theme]}</span>
+                {item.rising && (
+                  <Tip text={L.risingTip}>
+                    <Badge tone="brand" strong>
+                      {L.rising}
+                    </Badge>
+                  </Tip>
+                )}
+              </span>
+              <span className="mt-2 block flex-1 text-[13px] leading-relaxed text-gray-600">{item.concern}</span>
+              <span className="mt-3 flex flex-wrap gap-1.5" aria-hidden>
+                {item.companies.map((id) => (
+                  <CompanyMark key={id} company={companyOf(id)} className="size-6 rounded-md! text-[10px]" />
+                ))}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-6 grid gap-6 @3xl:grid-cols-2">
+        <div>
+          <h3 className={label}>{L.outlookSkills}</h3>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {outlook.skills.map((item) => (
+              <SkillChip key={item.skill} name={item.skill} tone={skillTone(item.skill, resume)} tip={L.skillDemand(item.postings)} />
+            ))}
+          </div>
+          {resume && <p className="mt-3 text-[13px] leading-relaxed text-gray-600">{L.outlookMissing(missing)}</p>}
+        </div>
+        <div>
+          <h3 className={label}>{L.outlookPrepare}</h3>
+          <Bullets items={outlook.themes.map((item) => item.prepare)} brand className="mt-1.5" />
+        </div>
+      </div>
+    </section>
   )
 }
 

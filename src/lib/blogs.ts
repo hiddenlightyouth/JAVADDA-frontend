@@ -1,4 +1,4 @@
-import { COMPANIES, type Company } from './gap'
+import { canonical, COMPANIES, POSTINGS, type Company } from './gap'
 import { apiUrl, readWithLoad, type OnLoad } from './http'
 
 /**
@@ -430,6 +430,148 @@ export function themeTrends(digests: BlogDigest[]): { trends: ThemeTrend[]; acti
   }
   const trends = [...map.values()].sort((a, b) => b.companies.length - a.companies.length || b.posts - a.posts)
   return { trends, active }
+}
+
+/**
+ * 주제마다 기업들이 무엇을 고민하는지(concern), 따라가려면 갖춰야 할 역량(skills), 지금 해 볼 준비(prepare)예요.
+ * 총정리 칸(`blogOutlook`)이 많이 다룬 주제를 골라 이 표로 문장을 만들어요. 역량은 `canonical` 표기로 적어서 이력서와 공고에 맞춰 칠해요.
+ */
+const THEME_OUTLOOK: Record<BlogTheme, { concern: string; skills: string[]; prepare: string }> = {
+  'ai-agent': {
+    concern: '사내 업무를 AI 에이전트에게 맡기면서, 에이전트에게 어떤 문맥을 주고 그 결과를 어떻게 믿을지 정하고 있어요.',
+    skills: ['LLM', 'Python', 'SQL', '시스템 설계'],
+    prepare: 'LLM API로 작은 에이전트를 만들어 보고, 결과를 어떻게 검증했는지 기록해 두세요.',
+  },
+  'ai-dev': {
+    concern: 'AI 코딩 도구가 일상이 되면서, 개발자가 직접 판단할 것과 검토하는 방법을 다시 정하고 있어요.',
+    skills: ['테스트 코드', 'Git', '시스템 설계'],
+    prepare: 'AI가 짠 코드를 어떻게 검토하고 테스트로 확인했는지 말할 수 있게 해 두세요.',
+  },
+  'ai-platform': {
+    concern: '서비스 팀마다 반복하던 모델 연동, 권한, 사용량 관리를 하나의 플랫폼으로 묶고 있어요.',
+    skills: ['LLM', 'Kubernetes', 'MSA', 'Spring AI'],
+    prepare: '여러 모델을 한 API 뒤에 두고 사용량을 세는 작은 게이트웨이를 만들어 보세요.',
+  },
+  'ai-model': {
+    concern: '모델을 가져다 쓰는 데서 그치지 않고, 직접 학습하거나 서비스에 맞게 고치고 있어요.',
+    skills: ['Python', 'LLM'],
+    prepare: '공개 모델을 내 데이터로 고쳐 본 경험이 있다면 전후 숫자와 함께 정리해 두세요.',
+  },
+  'llm-cost': {
+    concern: 'LLM 호출이 늘면서 같은 품질을 더 싸고 빠르게 내는 방법을 찾고 있어요.',
+    skills: ['LLM', 'Redis', 'Python'],
+    prepare: 'LLM 기능을 만들 때 호출 비용과 응답 시간을 재고, 캐시로 줄여 본 경험을 남겨 두세요.',
+  },
+  'data-platform': {
+    concern: '오래 운영한 데이터 파이프라인을 새 구조로 옮기고, 사람과 AI가 같은 기준으로 데이터를 보게 하고 있어요.',
+    skills: ['Airflow', 'SQL', 'Spark', 'Kafka', 'Python'],
+    prepare: 'Airflow로 작은 파이프라인을 만들어 보고, 데이터의 출처를 어떻게 남겼는지 설명해 보세요.',
+  },
+  'db-ops': {
+    concern: '평균 지표로는 보이지 않는 느린 쿼리와 커밋 지연을 끝까지 따라가 고치고 있어요.',
+    skills: ['MySQL', 'PostgreSQL', 'SQL', '운영체제'],
+    prepare: '실행 계획을 보고 인덱스로 쿼리를 빠르게 만든 경험을 숫자로 정리해 두세요.',
+  },
+  infra: {
+    concern: '컨테이너와 클라우드 위에서 비용과 성능을 함께 맞추고 있어요.',
+    skills: ['Kubernetes', 'Docker', 'AWS', '운영체제'],
+    prepare: '내 프로젝트를 Docker로 묶어 배포하고, 느린 지점을 지표로 찾아본 경험을 남겨 두세요.',
+  },
+  observability: {
+    concern: '장애를 빨리 알아채고 원인을 찾도록 로그, 지표, 트레이스를 한데 모으고 있어요.',
+    skills: ['Prometheus', 'Grafana', 'OpenTelemetry'],
+    prepare: '내 서비스에 지표와 알림을 붙여 보고, 장애를 어떤 순서로 찾았는지 적어 두세요.',
+  },
+  frontend: {
+    concern: '빌드와 패키지 구조를 정리하고, 사용자가 화면을 기다리는 시간을 줄이고 있어요.',
+    skills: ['TypeScript', 'React', 'Next.js', 'Vite'],
+    prepare: '화면이 뜨는 시간을 재고 줄여 봤다면 몇 초에서 몇 초로 줄였는지 말해 보세요.',
+  },
+  architecture: {
+    concern: '서비스가 커져도 규칙이 무너지지 않게 경계를 나누고, 그 규칙을 코드로 지키고 있어요.',
+    skills: ['Spring Boot', 'MSA', 'Kafka', '시스템 설계'],
+    prepare: '모듈의 경계를 왜 그렇게 나눴고 규칙을 어떻게 지켰는지 설명할 수 있게 해 두세요.',
+  },
+  'test-auto': {
+    concern: 'AI가 쓴 코드까지 믿고 내보낼 수 있게 테스트와 검증을 자동으로 돌리고 있어요.',
+    skills: ['테스트 코드', 'GitHub Actions'],
+    prepare: '테스트를 CI에 붙인 프로젝트가 있다면 그 테스트가 무엇을 막았는지 사례로 남겨 두세요.',
+  },
+  recommend: {
+    concern: '묶음 단위로 돌던 추천을 개인 단위로 바꾸고, 모델 바깥의 결정까지 다듬고 있어요.',
+    skills: ['Python', 'SQL', 'Spark'],
+    prepare: '추천이나 랭킹을 만들어 봤다면 어떤 지표로 좋아졌는지 확인했는지 정리해 두세요.',
+  },
+  search: {
+    concern: '검색 결과의 품질과 속도를 함께 올리고, 뜻으로 찾는 검색을 더하고 있어요.',
+    skills: ['Elasticsearch', 'pgvector', 'LLM'],
+    prepare: '검색 기능을 만들어 봤다면 정확도를 어떻게 재고 높였는지 말해 보세요.',
+  },
+}
+
+/** 총정리 칸의 주제 하나예요. 요즘 흐름(`ThemeTrend`)에 고민과 준비를 붙이고, 최근 두 달에 더 많이 썼으면 rising이에요. */
+export interface OutlookTheme extends ThemeTrend {
+  concern: string
+  prepare: string
+  rising: boolean
+}
+
+/** 총정리 칸의 역량 하나예요. 그 역량이 필요한 주제와, 지금 열린 공고 중 그 역량을 적은 공고 수예요. */
+export interface OutlookSkill {
+  skill: string
+  themes: BlogTheme[]
+  postings: number
+}
+
+/** 총정리에 쓰는 주제 수와 역량 수예요. */
+const OUTLOOK_THEMES = 3
+const OUTLOOK_SKILLS = 8
+
+/**
+ * 모든 기업 블로그를 묶어 본 총정리예요. 최근 넉 달에 여러 기업이 쓴 주제를 골라 요즘 고민으로 보여주고,
+ * 그 주제들을 따라가려면 필요한 역량을 여러 주제에 걸칠수록, 공고가 많이 적을수록 앞에 둬요.
+ * 화면에서 계산해서 글이 늘면 같이 바뀌어요. 쓸 만한 글이 없으면 null이에요.
+ */
+export function blogOutlook(digests: BlogDigest[]): { themes: OutlookTheme[]; skills: OutlookSkill[] } | null {
+  const { trends } = themeTrends(digests)
+  const picked = trends.slice(0, OUTLOOK_THEMES)
+  if (!picked.length) return null
+  const half = RECENT_DAYS / 2
+  const themes = picked.map((trend): OutlookTheme => {
+    let recent = 0
+    let earlier = 0
+    for (const digest of digests) {
+      for (const item of digest.posts) {
+        if (!item.themes.includes(trend.theme)) continue
+        const age = daysBetween(item.date, COLLECTED_AT)
+        if (age <= half) recent += 1
+        else if (age <= RECENT_DAYS) earlier += 1
+      }
+    }
+    const { concern, prepare } = THEME_OUTLOOK[trend.theme]
+    return { ...trend, concern, prepare, rising: recent >= 2 && recent > earlier }
+  })
+
+  // 다른 주제 넷째부터도 역량에 조금 더해서, 세 주제가 같은 역량만 말해도 목록이 비지 않게 해요.
+  const weights = new Map<string, { themes: BlogTheme[]; weight: number }>()
+  trends.slice(0, OUTLOOK_THEMES + 2).forEach((trend, index) => {
+    for (const skill of THEME_OUTLOOK[trend.theme].skills) {
+      const entry = weights.get(skill) ?? { themes: [], weight: 0 }
+      if (index < OUTLOOK_THEMES) entry.themes.push(trend.theme)
+      entry.weight += trend.companies.length * (index < OUTLOOK_THEMES ? 1 : 0.5)
+      weights.set(skill, entry)
+    }
+  })
+  const demand = new Map<string, number>()
+  for (const posting of POSTINGS) {
+    for (const skill of new Set([...posting.required, ...posting.preferred].map(canonical))) demand.set(skill, (demand.get(skill) ?? 0) + 1)
+  }
+  const skills = [...weights]
+    .map(([skill, entry]) => ({ skill, themes: entry.themes, postings: demand.get(skill) ?? 0, weight: entry.weight }))
+    .sort((a, b) => b.weight - a.weight || b.postings - a.postings)
+    .slice(0, OUTLOOK_SKILLS)
+    .map(({ skill, themes, postings }) => ({ skill, themes, postings }))
+  return { themes, skills }
 }
 
 /** 기술 블로그 요약 전체예요(GET /blogs). 서버에 닿지 못하면 적어 둔 글을 보여줘요. 글은 최신 순서로 맞춰 둬요. onLoad를 주면 받는 정도(0에서 1)를 알려요. */
