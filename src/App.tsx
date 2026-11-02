@@ -124,6 +124,8 @@ export default function App() {
   const openCompany = useCallback((company: string) => open({ kind: 'explore', company }), [open])
   const openCompanyPage = useCallback((id: string) => open({ kind: 'company', id }), [open])
   const openResume = useCallback(() => open({ kind: 'resume' }), [open])
+  const openResumeAdd = useCallback(() => open({ kind: 'resume', add: true }), [open])
+  const openResumeList = useCallback(() => open({ kind: 'resume' }, true), [open])
   const openBlogs = useCallback((company: string | null = null) => open({ kind: 'blogs', company: company ?? undefined }), [open])
   const openAdmin = useCallback((tab: AdminTab = 'overview') => open({ kind: 'admin', tab }), [open])
 
@@ -217,6 +219,8 @@ export default function App() {
           onPractice={openPractice}
           onExplore={openExplore}
           onResume={openResume}
+          onResumeAdd={openResumeAdd}
+          onResumeList={openResumeList}
           onBlogs={openBlogs}
           onCompany={openCompany}
           onAdmin={openAdmin}

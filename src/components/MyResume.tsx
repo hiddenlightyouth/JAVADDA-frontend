@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
 import { useAuth } from '../lib/auth'
 import { axisOf, canonical, PROGRESS_START, removeResume, requestLogin, suggestSkills, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type ProgressState, type Resume, type ResumeSkill } from '../lib/gap'
@@ -9,7 +9,7 @@ import { canvas, pageFrame, PageHeader } from './AppPage'
 import { ConfirmDialog, panelBody, SidePanel } from './Dialog'
 import { AiProgress, Notice, SkillChip, Tip } from './GapParts'
 import { GitHubMark } from './Social'
-import { BackIcon, ChevronRightIcon, CloseButton, CloseIcon, LinkIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
+import { ChevronRightIcon, CloseIcon, LinkIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
 import { Badge, FormError, menuPanel, NumberedList, primaryButton, textField, textFieldSm, toolButton, toolDangerButton } from './ui'
 
 /**
@@ -45,6 +45,7 @@ const TEXT = messages({
     generateTitle: 'GitHub Repository로 이력서와 포트폴리오 생성하기',
     generateBody: '레포지토리의 코드와 기록을 읽어 이력서와 포트폴리오를 만들어 드려요.',
     soon: '준비 중',
+    start: '올리러 가기',
     otherWay: '다른 방법 고르기',
     addTitle: '서류 추가',
     emptyTitle: '아직 올린 이력서가 없어요',
@@ -88,6 +89,7 @@ const TEXT = messages({
     generateTitle: 'Create a resume and portfolio from a GitHub repository',
     generateBody: 'We read the code and history of your repository and write a resume and portfolio for you.',
     soon: 'Coming soon',
+    start: 'Get started',
     otherWay: 'Choose another way',
     addTitle: 'Add a document',
     emptyTitle: 'No resumes yet',
@@ -113,26 +115,27 @@ const LINK = /^https?:\/\/(?:www\.)?(?:github\.com|notion\.so|[\w-]+\.notion\.si
 function AddChoice({ onUpload }: { onUpload: () => void }) {
   const L = useMessages(TEXT)
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <button type="button" onClick={onUpload} className="group flex items-start gap-4 rounded-2xl bg-gray-50 p-5 text-left transition-colors hover:bg-gray-100">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-gray-500 transition-colors group-hover:text-brand">
-          <UploadIcon className="size-5" strokeWidth={1.2} />
+    <div className="grid gap-4 sm:grid-cols-2">
+      <button type="button" onClick={onUpload} className="group flex min-h-60 flex-col items-start rounded-2xl bg-gray-50 p-7 text-left transition-colors hover:bg-gray-100">
+        <span className="flex size-14 items-center justify-center rounded-full bg-white text-gray-500 transition-colors group-hover:text-brand">
+          <UploadIcon className="size-6" strokeWidth={1.2} />
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-gray-900 transition-colors group-hover:text-brand">{L.uploadTitle}</span>
-          <span className="mt-1 block text-[13px] leading-relaxed text-gray-500">{L.uploadBody}</span>
+        <span className="mt-6 text-[17px] font-semibold text-gray-900 transition-colors group-hover:text-brand">{L.uploadTitle}</span>
+        <span className="mt-2 text-[13.5px] leading-relaxed text-gray-500">{L.uploadBody}</span>
+        <span className="mt-auto flex items-center gap-1 pt-6 text-[13px] font-medium text-gray-500 transition-colors group-hover:text-brand">
+          {L.start}
+          <ChevronRightIcon className="size-3.5 shrink-0" />
         </span>
-        <ChevronRightIcon className="mt-3.5 size-4 shrink-0 text-gray-300 transition-colors group-hover:text-brand" />
       </button>
-      <div aria-disabled className="flex items-start gap-4 rounded-2xl bg-gray-50 p-5">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white text-gray-400">
-          <GitHubMark className="size-5" />
+      <div aria-disabled className="flex min-h-60 flex-col items-start rounded-2xl bg-gray-50 p-7">
+        <span className="flex size-14 items-center justify-center rounded-full bg-white text-gray-400">
+          <GitHubMark className="size-6" />
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold text-gray-400">{L.generateTitle}</span>
-          <span className="mt-1 block text-[13px] leading-relaxed text-gray-400">{L.generateBody}</span>
+        <span className="mt-6 text-[17px] font-semibold text-gray-400">{L.generateTitle}</span>
+        <span className="mt-2 text-[13.5px] leading-relaxed text-gray-400">{L.generateBody}</span>
+        <span className="mt-auto pt-6">
+          <Badge tone="white">{L.soon}</Badge>
         </span>
-        <Badge tone="white" className="mt-2.5">{L.soon}</Badge>
       </div>
     </div>
   )
@@ -385,29 +388,78 @@ function SkillEditor({ resume }: { resume: Resume }) {
   )
 }
 
-export function MyResume({ onExplore }: { onExplore: () => void }) {
+/** 서류 추가 화면을 목록에서 열었는지예요. 그랬으면 닫을 때 뒤로 가서, 뒤로 가기 기록에 목록이 두 번 쌓이지 않아요. */
+let addFromList = false
+
+export function MyResume({ add, onAdd, onList, onExplore }: { add: boolean; onAdd: () => void; onList: () => void; onExplore: () => void }) {
   const L = useMessages(TEXT)
   const shelf = useResumeShelf()
-  const [adding, setAdding] = useState(false)
-  /** 서류 추가를 열면 먼저 올릴지 만들지 고르고(choose), 올리기를 고르면 올리는 칸(upload)이 나와요. */
+  /** 서류 추가 화면은 먼저 올릴지 만들지 고르고(choose), 올리기를 고르면 올리는 칸(upload)이 나와요. */
   const [step, setStep] = useState<'choose' | 'upload'>('choose')
-  /** 서류를 읽는 동안이에요. 그동안은 올리는 칸을 닫을 수 없어요. */
+  /** 서류를 읽는 동안이에요. 그동안은 서류 추가 화면을 떠날 수 없어요. */
   const [uploading, setUploading] = useState(false)
   const signedIn = useAuth().tokens !== null
-  /** 서류는 계정에 저장돼서, 로그인하지 않았으면 올리는 칸 대신 로그인 화면으로 가요. */
-  const addDocument = () => {
-    if (!signedIn) return requestLogin()
-    setStep('choose')
-    setAdding(true)
-  }
   const [openId, setOpenId] = useState<string | null>(null)
   const open = shelf.list.find((resume) => resume.id === openId) ?? null
+
+  /** 서류는 계정에 저장돼서, 로그인하지 않았으면 서류 추가 화면 대신 로그인 화면으로 가요. */
+  const addDocument = () => {
+    if (!signedIn) return requestLogin()
+    addFromList = true
+    onAdd()
+  }
+  const backToList = () => {
+    if (addFromList) window.history.back()
+    else onList()
+    addFromList = false
+  }
+  // 주소로 서류 추가 화면에 바로 들어왔는데 로그인하지 않았으면 로그인 화면으로 가요.
+  useEffect(() => {
+    if (add && !signedIn) requestLogin()
+  }, [add, signedIn])
+  // 서류 추가 화면에 들어올 때마다 고르는 단계부터예요.
+  useEffect(() => {
+    if (add) setStep('choose')
+    else addFromList = false
+  }, [add])
 
   function makePrimary(resume: Resume) {
     if (resume.id === shelf.primaryId) return
     setPrimaryResume(resume.id)
     track('resume_primary_change', { count: shelf.list.length })
     showToast(pick(TEXT).primaryChanged(resume.name))
+  }
+
+  // 서류 추가는 따로 한 화면이에요(/resume/new). 올리기를 고르면 같은 화면에서 올리는 칸으로 넘어가고, 뒤로 가기로 고르는 단계에 돌아와요.
+  if (add) {
+    return (
+      <main className={pageFrame}>
+        <PageHeader
+          title={L.addTitle}
+          // 읽는 동안 떠나면 결과를 볼 곳이 없어서, 뒤로 가기를 숨겨 둬요.
+          onBack={uploading ? undefined : step === 'upload' ? () => setStep('choose') : backToList}
+          backLabel={step === 'upload' ? L.otherWay : L.title}
+        />
+        <div className={canvas}>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
+            <div className="max-w-3xl">
+              {step === 'choose' ? (
+                <AddChoice onUpload={() => setStep('upload')} />
+              ) : (
+                <ResumeUploader
+                  onWorking={setUploading}
+                  onDone={(resume) => {
+                    // 다 읽으면 목록으로 돌아가서 그 서류의 상세 칸을 열어요.
+                    setOpenId(resume.id)
+                    backToList()
+                  }}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+    )
   }
 
   return (
@@ -424,38 +476,8 @@ export function MyResume({ onExplore }: { onExplore: () => void }) {
       <div className={canvas}>
         {/* 공고 탐색처럼 제목 줄과 같은 폭으로 늘어놓고, 칸 수는 목록 폭을 보고 정해요. */}
         <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
-          {/* 서류 추가는 창 대신 목록 위에 펼쳐요. 창은 바깥을 누르면 닫혀서 읽는 진행 상황을 놓쳤어요. */}
-          {adding && (
-            <section aria-labelledby="resume-add-title" className="mb-8 max-w-3xl">
-              <div className="mb-4 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-1.5">
-                  {step === 'upload' && !uploading && (
-                    <button type="button" onClick={() => setStep('choose')} aria-label={L.otherWay} className="-ml-1.5 flex size-8 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900">
-                      <BackIcon />
-                    </button>
-                  )}
-                  <h2 id="resume-add-title" className="text-[17px] font-semibold text-gray-900">
-                    {L.addTitle}
-                  </h2>
-                </div>
-                {/* 읽는 동안 닫으면 결과를 볼 곳이 없어서, 닫기 버튼을 숨겨 둬요. */}
-                {!uploading && <CloseButton label={L.close} size="md" onClick={() => setAdding(false)} />}
-              </div>
-              {step === 'choose' ? (
-                <AddChoice onUpload={() => setStep('upload')} />
-              ) : (
-              <ResumeUploader
-                onWorking={setUploading}
-                onDone={(resume) => {
-                  setAdding(false)
-                  setOpenId(resume.id)
-                }}
-              />
-              )}
-            </section>
-          )}
           {shelf.list.length === 0 ? (
-            !adding && <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={addDocument} className="mt-16" />
+            <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={addDocument} className="mt-16" />
           ) : (
             <ul className="grid gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3">
               {shelf.list.map((resume) => (
