@@ -3,7 +3,6 @@ import { track } from '../lib/analytics'
 import { isApp, openInBrowser } from '../lib/app'
 import { addGithubProjects, connectGithub, createGithubResume, disconnectGithub, fetchGithubConnection, fetchGithubRepos, MAX_GITHUB_PROJECTS, MAX_GITHUB_REPOS, PROGRESS_START, type GithubConnection, type GithubRepo, type ProgressState, type Resume } from '../lib/gap'
 import { isGithubReturn, startGithubConnect, takeGithubReturn } from '../lib/githubConnect'
-import { formatWhen } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { SITE } from '../lib/meta'
@@ -34,21 +33,20 @@ const TEXT = messages({
     connected: '연결했어요. 이력서로 만들 레포를 골라 주세요.',
     canceled: 'GitHub 연결을 취소했어요.',
     invalid: '연결 요청을 확인하지 못했어요. 처음부터 다시 시도해 주세요.',
-    privateAccess: '비공개 레포 포함',
+    privateAccess: '인증 됨',
     disconnect: '연결 해제',
     disconnectTitle: 'GitHub 연결을 끊을까요?',
     disconnectBody: 'GitHub에 준 권한도 함께 거둬요. 이미 만든 이력서는 그대로 남아요.',
     disconnected: 'GitHub 연결을 끊었어요.',
-    search: '레포 찾기',
+    search: '검색',
     hideForks: '포크 숨기기',
-    private: '비공개',
+    private: 'Private',
     fork: '포크',
     archived: '보관됨',
-    pushed: (when: string) => `${when} 푸시`,
     empty: '볼 수 있는 레포가 없어요',
     emptyBody: 'GitHub에 레포를 올리거나, 조직의 레포라면 조직에서 이 앱의 접근을 허락해 주세요.',
     noMatch: '찾는 레포가 없어요',
-    pickHint: (count: number, max: number) => `레포를 ${max}개까지 골라요. ${count}개 골랐어요.`,
+    pickHint: (count: number) => `${count}개 선택 됨`,
     make: '이력서 만들기',
     made: '레포를 읽어 이력서와 포트폴리오를 만들었어요. 프로젝트 경험과 역량을 확인해 주세요.',
     addRepos: 'GitHub에서 불러오기',
@@ -69,21 +67,20 @@ const TEXT = messages({
     connected: 'Connected. Pick the repositories to turn into a resume.',
     canceled: 'GitHub connection was canceled.',
     invalid: "We couldn't verify the request. Please start over.",
-    privateAccess: 'Private repos included',
+    privateAccess: 'Verified',
     disconnect: 'Disconnect',
     disconnectTitle: 'Disconnect GitHub?',
     disconnectBody: 'We also revoke the access you gave on GitHub. Resumes you made stay.',
     disconnected: 'GitHub disconnected.',
-    search: 'Find a repository',
+    search: 'Search',
     hideForks: 'Hide forks',
     private: 'Private',
     fork: 'Fork',
     archived: 'Archived',
-    pushed: (when: string) => `Pushed ${when}`,
     empty: 'No repositories to show',
     emptyBody: 'Push a repository to GitHub, or ask your organization to allow this app.',
     noMatch: 'No matching repositories',
-    pickHint: (count: number, max: number) => `Pick up to ${max}. ${count} picked.`,
+    pickHint: (count: number) => `${count} selected`,
     make: 'Create resume',
     made: 'Done. Please check the projects, portfolio and skills we wrote.',
     addRepos: 'Import from GitHub',
@@ -286,7 +283,7 @@ function RepoPicker({ connection, addTo, onDone, onWorking, onDisconnected }: {
             @{connection.login}
             {connection.privateAccess && (
               <Badge tone="white" className="gap-1">
-                <LockIcon className="size-3" />
+                <CheckIcon className="size-3 text-brand" />
                 {L.privateAccess}
               </Badge>
             )}
@@ -339,7 +336,7 @@ function RepoPicker({ connection, addTo, onDone, onWorking, onDisconnected }: {
 
       {/* 고르는 동안 아래에 붙어 있어서, 목록이 길어도 만들기 버튼을 찾지 않아요. 스크롤 칸의 아래 여백(pb-16)만큼 붙는 자리가 올라가서, 그만큼 내려 화면 맨 아래에 붙여요. */}
       <div className="sticky bottom-[-4rem] mt-6 flex items-center gap-3 border-t border-gray-200 bg-white py-4">
-        <p className="min-w-0 flex-1 text-[13px] text-gray-500">{L.pickHint(picked.length, max)}</p>
+        <p className="min-w-0 flex-1 text-[13px] text-gray-500">{L.pickHint(picked.length)}</p>
         <button type="button" disabled={picked.length === 0} onClick={() => void make()} className={primaryButton}>
           {addTo ? L.addRepos : L.make}
         </button>
@@ -399,10 +396,7 @@ function RepoRow({ repo, mine, picked, locked, onToggle }: { repo: GithubRepo; m
             {repo.archived && <Badge tone="white">{L.archived}</Badge>}
           </span>
           {repo.description && <span className="mt-1 line-clamp-1 block text-[12.5px] text-gray-500">{repo.description}</span>}
-          <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-gray-400">
-            {repo.language && <span>{repo.language}</span>}
-            {repo.pushedAt && <span>{L.pushed(formatWhen(repo.pushedAt))}</span>}
-          </span>
+          {repo.language && <span className="mt-1.5 block text-[12px] text-gray-400">{repo.language}</span>}
         </span>
       </button>
     </li>
