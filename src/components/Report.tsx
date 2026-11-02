@@ -1,6 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
 import {
+  canonical,
   companyOf,
   fitOf,
   postingOf,
@@ -29,7 +30,7 @@ import { useLoadHold, useLoadProgress } from '../lib/load'
 import { showToast } from '../lib/toast'
 import { pageFrame, PageHeader } from './AppPage'
 import { panelBody, SidePanel } from './Dialog'
-import { AiProgress, CheckMark, CompanyMark, SkillMark, Delta, FitBadge, KindLabel, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreHero, Sparkline, Tip, percent } from './GapParts'
+import { AiProgress, CompanyMark, SkillMark, Delta, FitBadge, KindLabel, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreHero, Sparkline, Tip, percent } from './GapParts'
 import { DeleteReportDialog, removeReport } from './History'
 import { AlertIcon, CheckIcon, ClockIcon, LevelIcon, RefreshIcon, TrashIcon } from './Icons'
 import { ReviewTab } from './ReportReview'
@@ -96,9 +97,12 @@ const TEXT = messages({
     weakest: '가장 많이 놓쳤어요',
     requiredChecks: '필수 역량',
     preferredChecks: '우대 역량',
-    checkSummary: (met: number, total: number) => `${total}개 중 ${met}개 충분해요`,
     noChecks: '공고에 적힌 역량이 없어요.',
     statuses: { met: '충분해요', partial: '근거가 약해요', missing: '보이지 않아요' } as Record<RequirementCheck['status'], string>,
+    legend: { met: '충분', partial: '약함', missing: '없음' } as Record<RequirementCheck['status'], string>,
+    checkLead: (missing: number, partial: number) => (missing > 0 ? `${missing}개가 보이지 않아요` : partial > 0 ? `${partial}개는 근거가 약해요` : '모두 보여요'),
+    checkBarTip: '파란 칸은 충분해요, 옅은 칸은 근거가 약해요, 빈 칸은 보이지 않아요.',
+    openGap: (skill: string) => `${skill} 보완 방법 보기`,
     alternatives: '더 잘 맞는 다른 공고',
     noAlternatives: '지금 이력서로는 이 공고가 같은 직군에서 가장 잘 맞아요.',
     share: (value: string) => `같은 직군 공고의 ${value}가 요구`,
@@ -172,9 +176,12 @@ const TEXT = messages({
     weakest: 'Lost the most here',
     requiredChecks: 'Required skills',
     preferredChecks: 'Preferred skills',
-    checkSummary: (met: number, total: number) => `${met} of ${total} look solid`,
     noChecks: 'The posting lists no skills here.',
     statuses: { met: 'Solid', partial: 'Weak evidence', missing: 'Not found' },
+    legend: { met: 'Solid', partial: 'Weak', missing: 'Missing' },
+    checkLead: (missing: number, partial: number) => (missing > 0 ? `${missing} not found` : partial > 0 ? `${partial} with weak evidence` : 'All found'),
+    checkBarTip: 'Blue means solid, light blue means weak evidence, empty means not found.',
+    openGap: (skill: string) => `See how to close ${skill}`,
     alternatives: 'Postings that fit better',
     noAlternatives: 'With your current resume this is the best fit in its job family.',
     share: (value: string) => `Listed in ${value} of postings in this family`,
@@ -563,8 +570,108 @@ function SummaryTab({ report, onOpenGap, onPick }: { report: ReportData; onOpenG
  * 적합도 설명 탭이에요. 맨 위에 네 항목이 적합도에 보탠 몫을 비중만큼 나눈 막대 하나로 보여주고, 그 아래 항목마다 점수와 설명 카드를 놓아요.
  * 가장 많이 놓친 항목(비중 x 못 받은 점수가 가장 큰 것)에는 이름표를 붙여요. 그 아래에 필수와 우대 역량을 기술 로고와 함께 점검하고, 맨 아래에 더 잘 맞는 다른 공고가 있어요.
  */
-function FitTab({ report, onPick }: { report: ReportData; onPick: (postingId: string) => void }) {
+/** 할 일이 위에 오게 빠진 것, 근거가 약한 것, 충분한 것 순서로 놓아요. */
+const CHECK_ORDER: Record<RequirementCheck['status'], number> = { missing: 0, partial: 1, met: 2 }
+
+/**
+ * 적합도 설명 탭의 필수 역량, 우대 역량 칸이에요. 맨 위에 갖춘 수를 큰 숫자로 적고, 역량마다 한 칸씩 나눈 막대(충분은 메인 컬러, 약함은 옅게, 없음은 빈 칸)와 범례를 둬요.
+ * 아래에는 역량 카드를 두 칸씩 늘어놓아요. 리포트에 같은 역량의 갭이 있으면 카드를 누를 수 있고, 리포트 탭의 갭 카드처럼 오른쪽에 갭 상세가 열려요.
+ */
+function RequirementPanel({ requirement, checks, gaps, onOpenGap }: {
+  requirement: RequirementCheck['requirement']
+  checks: RequirementCheck[]
+  gaps: Map<string, SkillGap>
+  onOpenGap: (gap: SkillGap) => void
+}) {
   const L = useMessages(TEXT)
+  const gapOf = (check: RequirementCheck) => gaps.get(canonical(check.skill))
+  const sorted = [...checks].sort((a, b) => CHECK_ORDER[a.status] - CHECK_ORDER[b.status] || (gapOf(b)?.scoreGain ?? 0) - (gapOf(a)?.scoreGain ?? 0))
+  const count = (status: RequirementCheck['status']) => checks.filter((check) => check.status === status).length
+  const met = count('met')
+  return (
+    <Panel title={requirement === 'required' ? L.requiredChecks : L.preferredChecks} className="@container">
+      {checks.length === 0 ? (
+        <PanelEmpty>{L.noChecks}</PanelEmpty>
+      ) : (
+        <>
+          <p className="flex items-baseline gap-2.5">
+            <span className={`text-[26px] leading-none font-semibold tabular-nums ${met === checks.length ? 'text-brand' : 'text-gray-900'}`}>
+              {met}
+              <span className="ml-0.5 text-[13px] font-medium text-gray-400">/ {checks.length}</span>
+            </span>
+            <span className="text-[12.5px] text-gray-500">{L.checkLead(count('missing'), count('partial'))}</span>
+          </p>
+          {/* 막대는 충분한 것부터 채워서 왼쪽이 늘 차 있어요. 칸마다 역량 하나예요. */}
+          <Tip text={L.checkBarTip} className="mt-3 flex w-full gap-1">
+            {[...sorted].reverse().map((check) => (
+              <span
+                key={check.skill}
+                aria-hidden
+                className={`h-1.5 min-w-0 flex-1 origin-left animate-grow rounded-full ${check.status === 'met' ? 'bg-brand' : check.status === 'partial' ? 'bg-brand/35' : 'bg-gray-200/70'}`}
+              />
+            ))}
+          </Tip>
+          <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-gray-500">
+            {(['met', 'partial', 'missing'] as const).map((status) => (
+              <span key={status} className="whitespace-nowrap">
+                {L.legend[status]} <span className="font-medium text-gray-700 tabular-nums">{count(status)}</span>
+              </span>
+            ))}
+          </p>
+          <ul className="mt-4 grid gap-2 @md:grid-cols-2">
+            {sorted.map((check, order) => (
+              <CheckCard key={check.skill} check={check} gap={gapOf(check)} order={order} onOpen={onOpenGap} />
+            ))}
+          </ul>
+        </>
+      )}
+    </Panel>
+  )
+}
+
+/** 역량 하나의 카드예요. 상태는 카드에 따로 표시하지 않고 순서와 위의 막대로 알리고, 이름에 마우스를 올리면 뜻이 떠요. 갭이 있으면 눌러서 갭 상세를 열어요. */
+function CheckCard({ check, gap, order, onOpen }: { check: RequirementCheck; gap?: SkillGap; order: number; onOpen: (gap: SkillGap) => void }) {
+  const L = useMessages(TEXT)
+  const body = (
+    <>
+      <SkillMark skill={check.skill} className="size-7 p-1" />
+      <Tip text={L.statuses[check.status]} className="flex min-w-0 flex-1">
+        <span className={`min-w-0 truncate text-[13.5px] font-medium text-gray-900 ${gap ? 'transition-colors group-hover:text-brand' : ''}`}>{check.skill}</span>
+      </Tip>
+      {gap && gap.kind !== 'strength' && (
+        <Tip text={L.gainTip} className="inline-flex shrink-0">
+          <span className="text-[12.5px] font-medium text-brand tabular-nums">{L.gain(gap.scoreGain)}</span>
+        </Tip>
+      )}
+    </>
+  )
+  const box = 'flex w-full items-center gap-2.5 rounded-xl bg-white px-3 py-2.5'
+  return (
+    <li className="min-w-0 animate-rise" style={stagger(order)}>
+      {gap ? (
+        <button type="button" onClick={() => onOpen(gap)} aria-label={L.openGap(check.skill)} aria-haspopup="dialog" className={`group text-left transition-colors hover:bg-gray-100 ${box}`}>
+          {body}
+        </button>
+      ) : (
+        <div className={box}>{body}</div>
+      )}
+    </li>
+  )
+}
+
+function FitTab({ report, onPick, onOpenGap }: { report: ReportData; onPick: (postingId: string) => void; onOpenGap: (gap: SkillGap) => void }) {
+  const L = useMessages(TEXT)
+  // 역량 이름은 공고와 갭에 따로 적혀 와서 표기를 모아 맞춰요. 같은 역량이 별칭으로 두 번 오면 하나만 둬요.
+  const gaps = useMemo(() => new Map(report.gaps.map((gap) => [canonical(gap.skill), gap])), [report.gaps])
+  const checksOf = (requirement: RequirementCheck['requirement']) => {
+    const seen = new Set<string>()
+    return report.checks.filter((check) => {
+      const key = canonical(check.skill)
+      if (check.requirement !== requirement || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
   const items = report.breakdown.map((item) => {
     const max = Math.round(item.weight * 100)
     return { ...item, max, got: Math.round((item.score * max) / 100), lost: item.weight * (100 - item.score) }
@@ -616,36 +723,9 @@ function FitTab({ report, onPick }: { report: ReportData; onPick: (postingId: st
       </Panel>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {(['required', 'preferred'] as const).map((requirement) => {
-          const checks = report.checks.filter((check) => check.requirement === requirement)
-          const met = checks.filter((check) => check.status === 'met').length
-          return (
-            <Panel
-              key={requirement}
-              title={requirement === 'required' ? L.requiredChecks : L.preferredChecks}
-              action={checks.length > 0 && <span className="text-[12.5px] text-gray-500 tabular-nums">{L.checkSummary(met, checks.length)}</span>}
-            >
-              {checks.length === 0 ? (
-                <PanelEmpty>{L.noChecks}</PanelEmpty>
-              ) : (
-                <ul className="space-y-1.5">
-                  {checks.map((check, order) => (
-                    <li key={check.skill} className="flex animate-rise items-center gap-3 rounded-xl bg-white px-3 py-2.5" style={stagger(order)}>
-                      <SkillMark skill={check.skill} className="size-8 p-1" />
-                      <span className={`min-w-0 flex-1 truncate text-[13.5px] font-medium ${check.status === 'missing' ? 'text-gray-500' : 'text-gray-900'}`}>{check.skill}</span>
-                      <span
-                        className={`inline-flex shrink-0 items-center gap-1.5 text-[12.5px] ${check.status === 'met' ? 'text-brand' : check.status === 'partial' ? 'text-gray-600' : 'text-gray-400'}`}
-                      >
-                        <CheckMark status={check.status} />
-                        {L.statuses[check.status]}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Panel>
-          )
-        })}
+        {(['required', 'preferred'] as const).map((requirement) => (
+          <RequirementPanel key={requirement} requirement={requirement} checks={checksOf(requirement)} gaps={gaps} onOpenGap={onOpenGap} />
+        ))}
       </div>
 
       <Panel title={L.alternatives}>
@@ -710,6 +790,11 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
         )}
       </main>
     )
+  }
+
+  function openGap(item: SkillGap, from: 'summary' | 'fit') {
+    track('gap_open', { kind: item.kind, skill: item.skill, from })
+    setGap(item)
   }
 
   async function rerun() {
@@ -805,12 +890,9 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
           // 만드는 동안은 서버가 알려 주는 진행 정도를 막대로 보여줘요. 저장소가 1초마다 다시 물어요.
           <AiProgress progress={report.progress ?? 0} stage={report.stage ?? 'queued'} className={loadCenter} />
         ) : tab === 'summary' ? (
-          <SummaryTab report={report} onOpenGap={(item) => {
-            track('gap_open', { kind: item.kind, skill: item.skill })
-            setGap(item)
-          }} onPick={onPick} />
+          <SummaryTab report={report} onOpenGap={(item) => openGap(item, 'summary')} onPick={onPick} />
         ) : tab === 'fit' ? (
-          <FitTab report={report} onPick={onPick} />
+          <FitTab report={report} onPick={onPick} onOpenGap={(item) => openGap(item, 'fit')} />
         ) : tab === 'review' ? (
           <ReviewTab reportId={id} onQuestions={() => onTab('questions')} />
         ) : (
