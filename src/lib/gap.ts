@@ -105,6 +105,18 @@ export interface ResumeProject {
   role: string
   stack: string[]
   problems: ResumeProblem[]
+  /** 포트폴리오 항목(항목 순서대로). 만들기 전이면 비어 있어요. */
+  portfolio: PortfolioSection[]
+}
+
+/** 포트폴리오의 항목이에요. 프로젝트 소개, 개발 기간, 팀 구성, 기술 스택, 맡은 역할, 주요 기능, 문제 해결 경험, 성과와 배운 점이에요. */
+export type PortfolioKey = 'intro' | 'period' | 'team' | 'stack' | 'role' | 'features' | 'trouble' | 'result'
+
+/** 포트폴리오 항목 하나예요. content는 항목 제목 없는 마크다운 본문이에요. */
+export interface PortfolioSection {
+  key: PortfolioKey
+  title: string
+  content: string
 }
 
 export type GapKind = 'missing' | 'partial' | 'strength'
@@ -1784,7 +1796,8 @@ const toResume = (item: ServerResume): Resume => ({
   uploadedAt: item.uploadedAt,
   skills: item.skills ?? [],
   paragraphs: item.paragraphs ?? [],
-  projects: item.projects ?? [],
+  // 포트폴리오를 더하기 전에 만든 서류는 portfolio가 없어요.
+  projects: (item.projects ?? []).map((project) => ({ ...project, portfolio: project.portfolio ?? [] })),
 })
 
 /** 올려 둔 서류 목록을 다시 받아요(GET /resumes). 대표는 서버가 정해요. */
@@ -1934,6 +1947,42 @@ export async function reviseProject(resumeId: string, project: number, problem: 
   }
   const resume = toResume(result.data)
   if (resume.id === resumeId) replaceResume(resume)
+  return resume
+}
+
+/** 포트폴리오 항목을 AI로 고치는 요청이에요. */
+export type PortfolioRevision = 'shorter' | 'longer' | 'numbers' | 'formal' | 'list' | 'story' | 'rewrite'
+
+/**
+ * GitHub 프로젝트의 포트폴리오 항목을 AI로 써요(POST /resumes/{id}/projects/{project}/portfolio). sections를 비우면 여덟 항목을 모두 써요.
+ * 30초에서 1분쯤 걸려요. 다 되면 서류를 바꿔 끼우고, 실패하면 토스트로 알리고 null이에요.
+ */
+export async function writePortfolio(resumeId: string, project: number, sections: PortfolioKey[], onProgress?: OnProgress): Promise<Resume | null> {
+  if (!requireLogin()) return null
+  const result = await withProgress(onProgress, (headers) =>
+    call<ServerResume>(`/resumes/${Number(resumeId)}/projects/${project}/portfolio`, send('POST', { sections }), true, headers),
+  )
+  if (!result.ok || !result.data) {
+    fail(result)
+    return null
+  }
+  const resume = toResume(result.data)
+  replaceResume(resume)
+  return resume
+}
+
+/** 포트폴리오 항목 하나를 AI로 고쳐요(POST /resumes/{id}/projects/{project}/portfolio/{key}/revise). */
+export async function revisePortfolio(resumeId: string, project: number, key: PortfolioKey, revision: PortfolioRevision, onProgress?: OnProgress): Promise<Resume | null> {
+  if (!requireLogin()) return null
+  const result = await withProgress(onProgress, (headers) =>
+    call<ServerResume>(`/resumes/${Number(resumeId)}/projects/${project}/portfolio/${key}/revise`, send('POST', { revision }), true, headers),
+  )
+  if (!result.ok || !result.data) {
+    fail(result)
+    return null
+  }
+  const resume = toResume(result.data)
+  replaceResume(resume)
   return resume
 }
 

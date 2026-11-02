@@ -701,3 +701,66 @@ header[data-on-dark] .logo-mark {
       var(--default-transition-timing-function), var(--ease-spring);
   }
 }
+
+/* 포트폴리오 항목의 마크다운 본문(서류 상세 칸). 아티클보다 작고 촘촘해요. */
+.portfolio-md {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--color-gray-700);
+}
+
+.portfolio-md > * + * {
+  margin-top: 0.7em;
+}
+
+.portfolio-md h3 {
+  margin-top: 1.2em;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+
+.portfolio-md strong {
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+
+.portfolio-md ul,
+.portfolio-md ol {
+  padding-left: 1.3em;
+}
+
+.portfolio-md ul {
+  list-style: disc;
+}
+
+.portfolio-md ol {
+  list-style: decimal;
+}
+
+.portfolio-md li + li,
+.portfolio-md li > ul,
+.portfolio-md li > ol {
+  margin-top: 0.25em;
+}
+
+.portfolio-md li::marker {
+  color: var(--color-gray-400);
+}
+
+.portfolio-md blockquote {
+  border-left: 2px solid var(--color-gray-200);
+  padding-left: 0.8em;
+  color: var(--color-gray-500);
+}
+
+.portfolio-md a {
+  color: var(--color-brand);
+}
+
+.portfolio-md mark {
+  border-radius: 4px;
+  background: var(--color-brand-soft);
+  padding: 0 0.25em;
+  color: var(--color-brand-hover);
+}

@@ -143,7 +143,8 @@ src/
   lib/holidays.ts     우리나라 공휴일(양력 공휴일과, 해마다 적는 음력 명절, 대체공휴일, 선거일). 마감 달력이 써요
   components/JobCard.tsx     공고 탐색, 추천 공고, 새 진단 화면의 공고 줄이 같이 쓰는 카드(JobCard)와 줄(JobRow), 둘을 고른 보기 방식으로 늘어놓고 24개씩 더 그리는 목록(PostingList), 공고 수와 보기 방식 버튼 줄(PostingCountBar, LayoutToggle), 카드에서 여는 미니 브라우저(useJobBrowser), 마감 달력과 채용 지도의 공고 한 줄(PickRow)
   components/MyResume.tsx    내 이력서 (/resume). 서류 카드 목록(ResumeCard), 오른쪽에서 여는 서류 상세 칸(ResumeSheet), 서류 추가 화면(/resume/new, 방법 고르기 AddChoice), PDF 끌어다 놓기(ResumeUploader), 읽은 역량 고치기(SkillEditor), GitHub로 만든 서류의 프로젝트 칸은 ResumeProjects
-  components/ResumeProjects.tsx GitHub로 만든 서류의 프로젝트 경험(ProjectCard). 경험마다 AI로 고치기, 직접 고치기, 빼기, 프로젝트마다 경험 더하기와 소개 고치기
+  components/ResumeProjects.tsx GitHub로 만든 서류의 프로젝트 경험(ProjectCard). 경험마다 AI로 고치기, 직접 고치기, 빼기, 프로젝트마다 경험 더하기와 소개 고치기, 이력서와 포트폴리오 보기 바꾸기, 포트폴리오 항목(Portfolio, PortfolioCard)
+  lib/portfolioMarkdown.ts 포트폴리오 항목의 마크다운을 HTML로 바꾸기(portfolioHtml). HTML 태그는 글자로 바꾸고, 링크는 http와 https만, 그림은 그리지 않고, "[직접 입력: ...]"은 mark로 칠해요
   components/GithubResume.tsx GitHub 레포로 이력서와 포트폴리오 만들기. 연결 칸(ConnectCard), 레포 고르기(RepoPicker, RepoRow)
   components/PostingBrowser.tsx 공고 원문, 기업 소개 사이트, 기술 블로그 글을 새 탭 대신 앱 안에서 보는 미니 브라우저. 화면을 가리지 않고 오른쪽에 나란히 붙고(`SplitView`), 폭을 끌어서 바꿔요. 막아 둔 사이트는 공고 요약을 보여줘요
   components/Diagnose.tsx    진단 시작 (/diagnose/공고). 공고 확인과 이력서 확인 두 단계를 지나 리포트를 만들어요
@@ -333,6 +334,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
   - 만드는 동안에는 회색 칸 하나에 고른 레포 이름과 진행 칸(`AiProgress`)이 보이고 뒤로 가기를 숨겨요. 다 되면 목록으로 돌아가서 그 서류의 상세 칸이 열려요.
 - GitHub로 만든 서류의 상세 칸에는 "주요 경력" 대신 "프로젝트"가 있어요. 프로젝트마다 회색 칸(`ProjectCard`)에 이름과 비공개 이름표, 팀이나 개인 프로젝트와 기간, 오른쪽 위 "레포 열기"(새 탭), 한 줄 소개, 요약, 맡은 역할, 기술 스택 이름표, 문제 해결 경험(흰 칸에 제목과 문제, 원인, 개선, 효과, 판단 중 있는 것)이 있어요. 자료로 알 수 없는 수치는 AI가 "[직접 입력: ...]"으로 비워 두고, 화면은 그 자리를 연한 메인 컬러로 칠해요(`Marked`).
   - 프로젝트 칸과 경험 칸은 `ResumeProjects`예요. 경험마다 아래 줄에 "AI로 고치기" 메뉴(더 짧게, 더 구체적으로, 수치 넣기, 다시 쓰기, 다른 경험으로 바꾸기, `reviseProject`, POST /resumes/{id}/projects/{project}/revise), "직접 고치기"(제목과 문제, 원인, 개선, 효과, 판단 입력칸), 빨간 "빼기"가 있어요. AI가 고치는 동안은 그 경험 자리에 진행 칸(`AiProgress`, 단계 revising)이 보이고 같은 프로젝트의 다른 버튼은 흐려져요. 프로젝트 맨 아래 "경험 더하기"는 AI가 다른 경험과 겹치지 않는 경험을 하나 더 써요. 프로젝트 오른쪽 위 "직접 고치기"는 이름, 한 줄 소개, 요약, 맡은 역할, 기술 스택(쉼표로 나눠요)을 고쳐요. 직접 고친 것과 빼기는 `saveProjects`(PUT /resumes/{id}/projects)로 화면에 바로 보이고 서버가 다듬은 값으로 맞춰요. AI를 쓸 수 없으면 C5031로 알려요.
+  - 프로젝트 칸의 위쪽에 "이력서 | 포트폴리오" 고르는 칸(`Segmented`)이 있어요. 이력서는 위의 소개, 역할, 기술 스택, 경험이에요. 포트폴리오는 예전 Lofy의 포트폴리오 만들기를 옮긴 것으로, 노션에 그대로 붙여 넣는 여덟 항목(프로젝트 소개, 개발 기간, 팀 구성, 기술 스택, 맡은 역할, 주요 기능, 문제 해결 경험, 성과와 배운 점)의 마크다운 글이에요. 아직 없으면 설명과 "포트폴리오 쓰기" 버튼(`writePortfolio`, 30초에서 1분, 진행 칸의 단계 writingPortfolio)만 있어요. 쓰고 나면 오른쪽 위에 "빠진 항목 쓰기 3"(빠진 항목만 새로 써요)과 "마크다운 복사"(# 프로젝트 이름과 ## 항목 제목을 붙여 클립보드로)가 있고, 항목마다 흰 칸에 제목과 본문(`.portfolio-md`, `index.css`), 아래 줄에 "AI로 고치기"(더 짧게, 더 자세하게, 수치 넣기, 더 단정하게, 목록으로, 문장으로, 다시 쓰기, `revisePortfolio`), "직접 고치기"(마크다운 입력칸), "빼기"가 있어요. 고른 보기는 기억하지 않고 처음은 늘 이력서예요.
 - 올린 서류는 제목 줄 바로 아래에 회색 카드(`ResumeCard`)로 놓여요. 서류 수는 적지 않아요. 공고 탐색처럼 제목 줄과 같은 폭을 쓰고, 칸 수는 목록 폭(`@container`)을 보고 하나에서 셋까지 정해요. 안내 문구나 저장 안내는 두지 않아요. 카드마다 출처(PDF, GitHub, 노션), 오른쪽 위 별, 서류 이름, 올린 때, 역량 이름표 넷이 있어요. 별이 채워진(메인 컬러) 카드가 대표 이력서예요. 카드, 상세 칸, 진단 시작의 서류 목록 어디에도 "대표 이력서" 글자는 붙이지 않아요. 빈 별을 누르면 그 서류가 대표가 되고 토스트로 알려요.
 - 카드를 누르면 그 카드가 한 단계 짙어지고, 오른쪽에서 서류 상세 칸(`ResumeSheet`)이 미끄러져 나와요. 갭 상세 칸과 같은 모양이에요. 역량을 고치다 바깥을 눌러 닫히지 않게, 바깥을 눌러도 닫히지 않고 Esc나 X로만 닫아요(`SidePanel`의 `closeOnOutside`). 위에 서류 이름, 그 아래에 출처 태그(회색 바탕의 PDF, GitHub, 노션)와 "오늘 오후 1:52에 업로드 됨"이 있고, "내 역량" 이름표(`SkillEditor`)와 "주요 경력"(읽은 문단), 맨 아래 줄에 빨간 "삭제"와, 대표면 "이 이력서로 공고 보기", 아니면 "대표 이력서로 정하기"가 있어요. 이름표를 누르면 숙련도가 한 단계 올라가고(5에서 1로 돌아가요), X로 빼고, 아래 입력칸으로 더해요. 바꾸면 그 서류에 바로 저장돼요.
 - 역량 더하기 칸에 글자를 치면 아래에 맞는 기술 스택이 펼쳐져요(`suggestSkills`, `src/lib/gap.ts`). 축이 정해진 스킬과 공고에 적힌 스킬에서 찾고, 이름이나 별칭(스프링, k8s)이 친 글자로 시작하는 것을 앞에 둬요. 이미 가진 스킬은 빼고 여덟 개까지, 줄마다 오른쪽에 레이더 축(언어, 프레임워크 등)을 옅게 적어요. 위아래 방향키로 옮기고 Enter나 클릭으로 더해요. 고른 게 없으면 친 글자 그대로 더하고, Esc는 목록만 접어요(상세 칸은 그대로예요).
@@ -487,7 +489,9 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `recommend_sort_change`, `recommend_threshold_change` | 추천 공고에서 정렬과 적합도 기준을 바꿨을 때 | `sort`, `threshold` |
 | `resume_upload` | 이력서를 올렸거나 GitHub 레포로 만들었을 때 | `source`(pdf, github, notion), `skills`, `repos`(GitHub로 만들 때 고른 레포 수) |
 | `resume_project_revise` | GitHub 서류의 경험을 AI로 고치거나 더했을 때 | `revision`(shorter, concrete, numbers, rewrite, another, add), `success` |
-| `resume_project_edit` | GitHub 서류의 프로젝트나 경험을 직접 고치거나 뺐을 때 | `part`(project, problem, remove) |
+| `resume_project_edit` | GitHub 서류의 프로젝트, 경험, 포트폴리오 항목을 직접 고치거나 뺐을 때 | `part`(project, problem, remove, portfolio, portfolio-remove) |
+| `resume_project_view` | 프로젝트 칸에서 이력서와 포트폴리오를 바꿨을 때 | `view`(resume, portfolio) |
+| `resume_portfolio_write`, `resume_portfolio_revise`, `resume_portfolio_copy` | 포트폴리오를 쓰거나(빠진 항목 포함), 항목을 AI로 고치거나, 마크다운을 복사했을 때 | `sections`, `section`, `revision`, `success` |
 | `github_connect_click`, `github_connect`, `github_disconnect` | 서류 추가의 GitHub 단계에서 연결하기를 눌렀을 때, 돌아와 연결을 마쳤을 때, 연결을 끊었을 때 | `from`(web, app), `success` |
 | `resume_skills_edit` | 읽은 역량을 고쳤을 때 | `count` |
 | `resume_delete` | 이력서를 지웠을 때 | |
@@ -551,7 +555,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 기업 북마크와 북마크한 기업의 새 공고 알림(앱 푸시)
 - GitHub 연결용 OAuth App을 만들어 서버에 `GITHUB_CONNECT_CLIENT_ID`, `GITHUB_CONNECT_CLIENT_SECRET`을 넣어요. 넣기 전에는 GitHub 단계가 준비 중 안내만 보여요. 실제 GitHub로 연결과 이력서 만들기는 아직 확인하지 않았어요(화면은 응답을 흉내 내서 확인했어요).
 - macOS 앱 안에서 GitHub 연결 마치기(소셜 계정 연결처럼 일회용 값을 브라우저로 넘기는 흐름). 지금은 브라우저에서 연결해요.
-- 예전 Lofy의 포트폴리오 항목 글(프로젝트 개요, 주요 기능, 결과와 배운 점 등)은 아직 옮기지 않았어요. 경험 고치기의 AI 성공 흐름은 실제 GitHub 연결로 아직 확인하지 않았어요.
+- GitHub에서 레포 재료를 모으는 부분은 실제 OAuth 토큰으로 아직 확인하지 않았어요. 경험 고치기와 포트폴리오는 서버에 재료를 넣어 두고 실제 AI로 확인했어요.
 - 테스트 코드
 - 영어 화면의 목 자료 문구
 - 아티클과 `public/about` 스크린샷을 이 서비스에 맞게 바꾸기
