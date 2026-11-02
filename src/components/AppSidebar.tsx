@@ -203,7 +203,7 @@ function ReportRow({ report, urgency, active, menuOpen, pinned, drag, dragging, 
   )
 }
 
-/** 이력서 폴더의 머리 줄이에요. 서류 아이콘과 이름, 대표 이력서면 메인 컬러 별, 리포트 수가 있고, 누르면 접고 펴요. */
+/** 이력서 폴더의 머리 줄이에요. 서류 아이콘, 대표 이력서면 메인 컬러 별, 이름이 있고, 누르면 접고 펴요. */
 function ResumeFolder({ group, open, onToggle }: { group: ResumeGroup; open: boolean; onToggle: () => void }) {
   const list = useMessages(REPORT_LIST_TEXT)
   const name = group.resume?.name ?? list.deletedResume
@@ -217,9 +217,8 @@ function ResumeFolder({ group, open, onToggle }: { group: ResumeGroup; open: boo
     >
       <ChevronDownIcon className={`size-3 shrink-0 text-gray-400 transition-transform ${open ? '' : '-rotate-90'}`} />
       <DocumentIcon className="size-3.5 shrink-0 text-gray-400" />
-      <span className="min-w-0 flex-1 truncate">{name}</span>
       {group.primary && <StarIcon filled className="size-3 shrink-0 text-brand" />}
-      <span className="shrink-0 text-[11.5px] text-gray-400 tabular-nums">{group.items.length}</span>
+      <span className="min-w-0 flex-1 truncate">{name}</span>
     </button>
   )
 }
