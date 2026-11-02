@@ -131,6 +131,7 @@ src/
   components/Recommend.tsx   추천 공고 (/recommend). 정렬, 적합도 메뉴 한 줄과 공고 탐색과 같은 카드
   components/Company.tsx     기업 상세 (/company/기업아이디). 소개와 훑어보는 정보, 채용 중인 공고, 자주 나오는 면접 질문, 위치(`CompanyLocation`), 기술 스택, 기술 블로그 요약(`blogs.ts`). 기업 사이트는 미니 브라우저로 열어요
   components/Carousel.tsx    한 줄에 들어가는 만큼 칸을 보여주고 잠깐마다 한 칸씩 밀며 도는 줄(Carousel). 새 진단 화면의 기업으로 둘러보기가 써요
+  components/PostingFilters.tsx 공고 탐색과 마감 달력이 같이 쓰는 맨 위 거르는 줄(PostingFilterBar, 검색창과 직군, 경력, 기업 규모 드롭다운), 받아 온 공고 거르기(matchesFilters)
   components/DeadlineCalendar.tsx 마감 달력 (/calendar). 공고의 마감일을 달력에 놓고, 고른 날짜의 마감 공고와 그날 열려 있던 상시 채용 공고를 아래에 보여줘요
   components/JobMap.tsx      채용 지도 (/map). 지도 하나로 꽉 채우고, 권역 말풍선, 기업 로고 핀, 내 위치, 지도 위에 뜨는 공고 칸
   components/NaverJobMap.tsx 채용 지도를 네이버 지도로 그려요. 키가 있을 때 SVG 지도 대신 써요
@@ -289,7 +290,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 마감 달력 (`DeadlineCalendar`, `/calendar`, 단축키 D)
 
-- 공고의 마감일을 한 달 달력(일요일부터, 늘 6주)에 놓아서 어느 기업의 어떤 공고가 언제 마감인지 한눈에 봐요. 맨 위에 공고 탐색과 같은 기업 분류 버튼 줄, 그 아래 한 줄에 이전 달과 다음 달, 오늘 버튼, 오른쪽에 전체 공고와 진단한 공고를 고르는 버튼이 있어요. 처음 열면 오늘부터 가장 가까운 마감이 있는 달과 날짜를 골라 둬요.
+- 공고의 마감일을 한 달 달력(일요일부터, 늘 6주)에 놓아서 어느 기업의 어떤 공고가 언제 마감인지 한눈에 봐요. 맨 위에 공고 탐색과 같은 거르는 줄(`PostingFilterBar`: 추천 검색어가 도는 검색창, 직군, 경력, 기업 규모 드롭다운)과 기업 버튼 줄, 기업 분류 줄이 있어요. 공고 탐색의 정렬과 보기 방식은 달력에 맞지 않아서 두지 않아요. 고른 직군, 경력, 기업 규모, 기업 분류는 공고 탐색과 따로 `javadda:calendar-filters`에 기억해요. 그 아래 한 줄에 이전 달과 다음 달, 오늘 버튼, 오른쪽에 "상시 채용 숨기기" 체크 칸(`javadda:calendar-hide-rolling`, 켜면 상시 채용 수와 목록이 사라져요)과 전체 공고와 진단한 공고를 고르는 버튼이 있어요. 처음 열면 오늘부터 가장 가까운 마감이 있는 달과 날짜를 골라 둬요.
 - 요일 머리와 날짜 숫자는 일요일과 공휴일이 빨간색, 토요일이 메인 컬러예요. 공휴일(`holidays.ts`)은 넓은 화면에서 날짜 옆에 이름을 작게 적어요(한국어 화면만). 음력 명절과 대체공휴일은 해마다 적어 두어서, 해가 바뀌면 다음 해를 더해요. 지난 날은 흐리게 둬요.
 - 날짜 칸에는 그날 마감하는 공고를 화면 폭과 상관없이 파란 점과 수로만 적어요(지난 날은 회색 점). 칸 높이가 늘 같고, 어떤 공고인지는 날짜를 골라 옆 목록에서 봐요.
 - 상시 채용(마감 없음)은 올라온 날부터 계속 열려 있는 것으로 쳐서, 고른 날짜 칸 오른쪽 위에 그날 열려 있던 수를 작게 적어요("37개의 상시 채용", 좁으면 "상시 37"). 누르면 그 날짜를 고르고 아래의 상시 채용 목록으로 내려가요.
@@ -463,6 +464,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `home_suggestion_use` | 새 진단 화면의 빈 검색창에서 Enter로 추천 검색어를 썼을 때 | `query` |
 | `calendar_open` | 사이드바에서 마감 달력을 눌렀을 때 | `from`(sidebar) |
 | `calendar_month_change` | 마감 달력에서 달을 넘겼을 때 | `step` |
+| `calendar_family_select`, `calendar_career_select`, `calendar_size_select`, `calendar_hide_rolling`, `calendar_suggestion_use` | 마감 달력에서 직군, 경력, 기업 규모, 상시 채용 숨기기를 바꾸거나 빈 검색창에서 추천 검색어를 썼을 때 | `family`, `career`, `size`, `hidden`, `query` |
 | `map_open` | 사이드바에서 채용 지도를 눌렀을 때 | `from`(sidebar) |
 | `map_region_select` | 채용 지도에서 권역을 골랐을 때 | `region`(capital, gangwon, chungcheong, jeolla, gyeongsang, jeju, anywhere) |
 | `map_place_select` | 채용 지도에서 핀을 눌렀을 때 | `place`(묶인 핀이면 쉼표로 이은 자리 아이디), `companies`(묶인 기업 수) |

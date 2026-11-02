@@ -1,19 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { track } from '../lib/analytics'
-import { companyOf, type CompanyCategory, majorCompanies, fitOf, useReports, useResume, type JobPosting } from '../lib/gap'
+import { companyOf, COMPANY_CATEGORIES, COMPANY_SIZES, type CompanyCategory, type CompanySize, majorCompanies, fitOf, useReports, useResume, type CareerLevel, type JobPosting } from '../lib/gap'
 import { holidayOf } from '../lib/holidays'
 import { getLang, messages, useMessages } from '../lib/i18n'
+import { readFlag, readJson, writeFlag, writeJson } from '../lib/storage'
 import { PageHeader, ScrollPage } from './AppPage'
 import { CategoryFilter, CompanyFilter, DiagnosedTag, FitTag, usePickConfirm } from './GapParts'
 import { ChevronRightIcon } from './Icons'
 import { PickRow } from './JobCard'
+import { CAREERS, FAMILIES, matchesFilters, pickOption, PostingFilterBar, serverFamily, type FamilyFilter } from './PostingFilters'
 import { LoadGate, usePostings } from './ScreenParts'
-import { Segmented, toolButton, useShowMore } from './ui'
+import { Checkbox, Segmented, toolButton, useShowMore } from './ui'
 
 /**
  * 마감 달력이에요. 공고의 마감일을 달력에 놓아서, 어느 기업의 어떤 공고가 언제 마감인지 한눈에 봐요.
  * 날짜 칸에는 그날 마감하는 공고를 기업 로고와 제목으로 모두 적고, 날짜를 누르면 아래에 그날의 공고를 모두 보여줘요.
- * 기업으로 거르고, 진단한 공고만 볼 수도 있어요. 상시 채용(마감 없음)은 올라온 날부터 계속 열려 있어서,
+ * 공고 탐색과 같은 검색창과 직군, 경력, 기업 규모, 기업 분류, 상시 채용 숨기기로 거르고, 진단한 공고만 볼 수도 있어요. 상시 채용(마감 없음)은 올라온 날부터 계속 열려 있어서,
  * 고른 날짜 칸에만 그날 열려 있던 상시 채용 수를 날짜 옆에 작게 적어요. 날짜 칸의 마감 공고는 기업마다 한 줄로 묶어 모두 보여줘요. 날짜를 고르면 그날 마감하는 공고와 그날 열려 있던 상시 채용 공고를 함께 보여줘요.
  * 공고를 누르면 해당 공고로 이동할지 한 번 더 묻고, 진단으로 가요(이미 진단했으면 그 리포트로 가요).
  */
@@ -38,6 +40,7 @@ const TEXT = messages({
     day: (month: number, date: number) => `${month + 1}월 ${date}일 마감`,
     dayEmpty: '정보를 찾을 수 없음',
     pick: (title: string) => `${title} 진단하기`,
+    hideRolling: '상시 채용 숨기기',
   },
   en: {
     title: 'Deadlines',
@@ -58,11 +61,34 @@ const TEXT = messages({
     day: (month: number, date: number) => `Closing ${new Date(2000, month, date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}`,
     dayEmpty: 'No information found',
     pick: (title: string) => `Diagnose ${title}`,
+    hideRolling: 'Hide rolling postings',
   },
 })
 
 type Scope = 'all' | 'diagnosed'
 const SCOPES: Scope[] = ['all', 'diagnosed']
+/** 고른 직군, 경력, 기업 규모, 기업 분류를 이 기기에 기억해요. 공고 탐색과 따로예요. */
+const FILTERS_KEY = 'javadda:calendar-filters'
+/** 상시 채용 숨기기를 켰는지 이 기기에 기억해요. */
+const HIDE_ROLLING_KEY = 'javadda:calendar-hide-rolling'
+
+interface SavedFilters {
+  family: FamilyFilter
+  career: CareerLevel | null
+  size: CompanySize | null
+  category: CompanyCategory | null
+}
+
+/** 저장해 둔 값 중 지금 메뉴에 있는 것만 써요. */
+function readFilters(): SavedFilters {
+  const saved = readJson<Partial<Record<keyof SavedFilters, unknown>>>(FILTERS_KEY, {})
+  return {
+    family: pickOption<FamilyFilter>(saved.family, ['dev', ...FAMILIES]),
+    career: pickOption(saved.career, CAREERS),
+    size: pickOption(saved.size, COMPANY_SIZES),
+    category: pickOption(saved.category, COMPANY_CATEGORIES),
+  }
+}
 
 /** 이 기기의 날짜로 2026-10-31 같은 열쇠를 만들어요. 마감 시각이 어느 날짜 칸에 들어갈지 정할 때 써요. */
 const dayKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
@@ -83,11 +109,19 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
   const now = new Date()
   const todayKey = dayKey(now)
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() })
+  const [query, setQuery] = useState('')
+  const [saved] = useState(readFilters)
+  const [family, setFamily] = useState<FamilyFilter>(saved.family)
+  const [career, setCareer] = useState<CareerLevel | null>(saved.career)
+  const [size, setSize] = useState<CompanySize | null>(saved.size)
   const [company, setCompany] = useState<string | null>(null)
-  const [category, setCategory] = useState<CompanyCategory | null>(null)
+  const [category, setCategory] = useState<CompanyCategory | null>(saved.category)
+  useEffect(() => writeJson(FILTERS_KEY, { family, career, size, category } satisfies SavedFilters), [family, career, size, category])
+  const [hideRolling, setHideRolling] = useState(() => readFlag(HIDE_ROLLING_KEY))
   const [scope, setScope] = useState<Scope>('all')
   const [selected, setSelected] = useState<string>(todayKey)
-  const { loaded, postings, waiting, percent, retry } = usePostings()
+  // 검색어와 직군, 경력은 공고 탐색처럼 서버가 걸러 줘요. 검색어는 잠깐 멈췄을 때 보내요.
+  const { loaded, postings, waiting, percent, retry } = usePostings({ query, family: serverFamily(family), career })
   const majors = useMemo(majorCompanies, [])
 
   // 진단한 공고예요. 진단함 태그(`DiagnosedTag`)처럼 만들지 못한 리포트는 빼요.
@@ -101,6 +135,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
     const always: { posting: JobPosting; from: string }[] = []
     if (!postings) return { byDay, always }
     for (const posting of postings) {
+      if (!matchesFilters(posting, { family, size, hideRolling })) continue
       if (company && posting.companyId !== company) continue
       if (category && companyOf(posting.companyId).category !== category) continue
       if (scope === 'diagnosed' && !diagnosed.has(posting.id)) continue
@@ -115,7 +150,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
     }
     for (const list of byDay.values()) list.sort((a, b) => (a.deadline ?? '').localeCompare(b.deadline ?? ''))
     return { byDay, always }
-  }, [postings, company, category, scope, diagnosed])
+  }, [postings, family, size, hideRolling, company, category, scope, diagnosed])
 
   // 처음 열면 오늘부터 가장 가까운 마감이 있는 달과 날짜를 골라 둬요. 이번 달에 남은 마감이 없으면 빈 달력만 보여서 이상해 보였어요.
   useEffect(() => {
@@ -164,16 +199,30 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
 
   return (
     <ScrollPage header={<PageHeader title={L.title} />} className="@container">
-      <CompanyFilter
-        oneLine
-        companies={majors}
-        value={company}
-        label={L.majors}
-        onChange={(next) => {
-          setCompany(next)
-          setCategory(null)
-        }}
+      <PostingFilterBar
+        from="calendar"
+        query={query}
+        onQuery={setQuery}
+        family={family}
+        onFamily={setFamily}
+        career={career}
+        onCareer={setCareer}
+        size={size}
+        onSize={setSize}
+        postings={postings}
       />
+      <div className="mt-4">
+        <CompanyFilter
+          oneLine
+          companies={majors}
+          value={company}
+          label={L.majors}
+          onChange={(next) => {
+            setCompany(next)
+            setCategory(null)
+          }}
+        />
+      </div>
       <div className="mt-2">
         <CategoryFilter
           postings={postings ?? []}
@@ -198,7 +247,17 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
         <button type="button" onClick={goToday} className={toolButton}>
           {L.today}
         </button>
-        <span className="ml-auto">
+        <span className="ml-auto flex items-center gap-4">
+          <Checkbox
+            checked={hideRolling}
+            onChange={(next) => {
+              track('calendar_hide_rolling', { hidden: next })
+              setHideRolling(next)
+              writeFlag(HIDE_ROLLING_KEY, next)
+            }}
+          >
+            {L.hideRolling}
+          </Checkbox>
           <Segmented size="md" label={L.scope} value={scope} options={SCOPES.map((value) => [value, L.scopes[value]] as const)} onChange={setScope} />
         </span>
       </div>
