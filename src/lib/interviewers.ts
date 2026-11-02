@@ -62,7 +62,7 @@ export const INTERVIEWERS: InterviewerProfile[] = [
         'Almost there. Thanks for waiting.',
       ],
     },
-    voice: 'chris',
+    voice: 'doyun',
     card: '#d4e1f3',
     portrait: {
       url: '/images/interviewer-balanced.png',
@@ -140,7 +140,7 @@ export const INTERVIEWERS: InterviewerProfile[] = [
         'Almost done. Ready?',
       ],
     },
-    voice: 'minjoon',
+    voice: 'taemin',
     card: '#9fc9f5',
     portrait: {
       url: '/images/interviewer-strict.jpg',
