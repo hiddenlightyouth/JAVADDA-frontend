@@ -8,6 +8,7 @@ import { useLoadHold, useLoadProgress } from '../lib/load'
 import { canDictate, canSpeak, chime, joinSpeech, prefetchVoice, setPracticeVolume, unlockChime, useDictation, usePracticeVoice, usePracticeVolume, useSpeak } from '../lib/speech'
 import { showToast } from '../lib/toast'
 import { AiProgress, CompanyMark, Notice, ScoreRing } from './GapParts'
+import { isApp } from '../lib/app'
 import { ChevronRightIcon, CloseIcon, SpeakerIcon } from './Icons'
 import { Interviewer } from './Interviewer'
 import { InterviewerPicker } from './InterviewerPicker'
@@ -514,7 +515,8 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
       <div aria-hidden className={`interview-glow interview-glow-a ${live ? 'opacity-100' : 'opacity-50'}`} />
       <div aria-hidden className={`interview-glow interview-glow-b ${live ? 'opacity-100' : 'opacity-50'}`} />
 
-      <header className="relative flex shrink-0 items-center gap-4 px-5 pt-5 md:px-8">
+      {/* 앱에서는 창 버튼과 겹치지 않게 그 아래에서 시작하고, 위쪽 빈 자리로 창을 옮겨요. */}
+      <header data-app-drag={isApp || undefined} className={`relative flex shrink-0 items-center gap-4 px-5 md:px-8 ${isApp ? 'pt-11' : 'pt-5'}`}>
         <button type="button" onClick={requestExit} aria-label={L.exit} className="flex size-10 items-center justify-center rounded-full bg-[#fff]/10 text-white transition-colors hover:bg-[#fff]/20">
           <CloseIcon className="size-4" strokeWidth={1.8} />
         </button>
