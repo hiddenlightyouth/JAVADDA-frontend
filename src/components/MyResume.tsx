@@ -9,11 +9,11 @@ import { canvas, pageFrame, PageHeader } from './AppPage'
 import { ConfirmDialog, panelBody, SidePanel } from './Dialog'
 import { AiProgress, Notice, SkillChip, Tip } from './GapParts'
 import { GitHubMark } from './Social'
-import { ChevronRightIcon, CloseIcon, LinkIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
-import { Badge, FormError, menuPanel, NumberedList, primaryButton, textField, textFieldSm, toolButton, toolDangerButton } from './ui'
+import { ChevronRightIcon, CloseIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
+import { Badge, menuPanel, NumberedList, primaryButton, textFieldSm, toolButton, toolDangerButton } from './ui'
 
 /**
- * 내 이력서 화면이에요. PDF나 GitHub, 노션 링크를 올리면 역량을 읽어 이름표로 보여주고, 잘못 읽은 것은 빼거나 더해요.
+ * 내 이력서 화면이에요. 이력서나 포트폴리오 PDF를 올리면 역량을 읽어 이름표로 보여주고, 잘못 읽은 것은 빼거나 더해요.
  * 올리는 칸(ResumeUploader)과 역량 고치는 칸(SkillEditor)은 진단 시작 화면도 같이 써요.
  */
 
@@ -22,15 +22,8 @@ const TEXT = messages({
     title: '내 이력서',
     fileTitle: 'PDF를 끌어다 놓으세요',
     fileBody: '이력서나 포트폴리오 PDF, 10MB까지 올릴 수 있어요.',
-    or: '또는',
     fileDrop: '여기에 놓으면 바로 읽어요',
     choose: 'PDF 고르기',
-    linkTitle: 'GitHub나 노션 링크',
-    linkBody: '레포나 포트폴리오 페이지 주소를 붙여 넣으면 읽어요.',
-    linkPlaceholder: 'https://github.com/...',
-    linkLabel: 'GitHub나 노션 링크',
-    linkSubmit: '링크로 올리기',
-    invalidLink: '올바른 링크가 맞는지 확인해 주세요',
     onlyPdf: 'PDF 파일만 올릴 수 있어요.',
     uploaded: '서류를 읽었어요. 뽑은 역량을 확인해 주세요.',
     sources: { pdf: 'PDF', github: 'GitHub', notion: '노션' } as Record<Resume['source'], string>,
@@ -41,7 +34,7 @@ const TEXT = messages({
     paragraphs: '주요 경력',
     addDoc: '서류 추가',
     uploadTitle: '이력서 또는 포트폴리오 업로드',
-    uploadBody: '가지고 있는 PDF나 GitHub, 노션 링크를 올리면 역량을 읽어요.',
+    uploadBody: '가지고 있는 이력서나 포트폴리오 PDF를 올리면 역량을 읽어요.',
     generateTitle: 'GitHub Repository로 이력서와 포트폴리오 생성하기',
     generateBody: '레포지토리의 코드와 기록을 읽어 이력서와 포트폴리오를 만들어 드려요.',
     soon: '준비 중',
@@ -66,15 +59,8 @@ const TEXT = messages({
     title: 'My resume',
     fileTitle: 'Drop a PDF here',
     fileBody: 'A resume or portfolio PDF, up to 10MB.',
-    or: 'or',
     fileDrop: 'Drop it here and we will read it',
     choose: 'Choose a PDF',
-    linkTitle: 'GitHub or Notion link',
-    linkBody: 'Paste the address of a repository or portfolio page.',
-    linkPlaceholder: 'https://github.com/...',
-    linkLabel: 'GitHub or Notion link',
-    linkSubmit: 'Use link',
-    invalidLink: 'Please check that the link is correct',
     onlyPdf: 'Only PDF files are supported.',
     uploaded: 'Done. Please check the skills we found.',
     sources: { pdf: 'PDF', github: 'GitHub', notion: 'Notion' },
@@ -85,7 +71,7 @@ const TEXT = messages({
     paragraphs: 'Key experience',
     addDoc: 'Add document',
     uploadTitle: 'Upload a resume or portfolio',
-    uploadBody: 'Upload a PDF, or a GitHub or Notion link, and we will read your skills.',
+    uploadBody: 'Upload your resume or portfolio PDF and we will read your skills.',
     generateTitle: 'Create a resume and portfolio from a GitHub repository',
     generateBody: 'We read the code and history of your repository and write a resume and portfolio for you.',
     soon: 'Coming soon',
@@ -108,9 +94,7 @@ const TEXT = messages({
   },
 })
 
-const LINK = /^https?:\/\/(?:www\.)?(?:github\.com|notion\.so|[\w-]+\.notion\.site)\/\S+/i
-
-/** 서류를 올리는 칸이에요. PDF 끌어다 놓기와 링크 두 가지를 받아요. 올리면 onDone으로 알려줘요. */
+/** 서류를 올리는 칸이에요. PDF를 끌어다 놓거나 눌러서 골라요. 올리면 onDone으로 알려줘요. */
 /** 서류 추가를 열면 먼저 고르는 두 방법이에요. 올리기와, 아직 준비 중인 GitHub 레포지토리로 만들기예요. */
 function AddChoice({ onUpload }: { onUpload: () => void }) {
   const L = useMessages(TEXT)
@@ -150,12 +134,10 @@ export function ResumeUploader({ onDone, onWorking }: {
   /** 올리는 동안의 진행 상황과 올리는 것의 이름이에요. 올리지 않을 때는 null이에요. */
   const [working, setWorking] = useState<(ProgressState & { name: string }) | null>(null)
   const [over, setOver] = useState(false)
-  const [link, setLink] = useState('')
-  const [invalid, setInvalid] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  async function upload(input: { file?: File; link?: string }) {
-    const name = input.file?.name ?? input.link ?? ''
+  async function upload(input: { file: File }) {
+    const name = input.file.name
     setWorking({ ...PROGRESS_START, name })
     onWorking?.(true)
     const resume = await uploadResume(input, (progress) => setWorking({ ...progress, name }))
@@ -183,17 +165,7 @@ export function ResumeUploader({ onDone, onWorking }: {
     takeFile(event.dataTransfer.files[0])
   }
 
-  function submitLink(event: FormEvent) {
-    event.preventDefault()
-    const value = link.trim()
-    if (!LINK.test(value)) {
-      setInvalid(true)
-      return
-    }
-    void upload({ link: value })
-  }
-
-  // 읽는 동안은 서버가 알려 주는 진행 정도를 막대로 보여줘요. 위에 올린 파일 이름이나 링크를 작게 적어요.
+  // 읽는 동안은 서버가 알려 주는 진행 정도를 막대로 보여줘요. 위에 올린 파일 이름을 작게 적어요.
   if (working) {
     return (
       <div className="rounded-2xl bg-gray-50 p-6">
@@ -202,7 +174,7 @@ export function ResumeUploader({ onDone, onWorking }: {
     )
   }
 
-  // 위에 PDF를 끌어다 놓는 큰 칸, 아래에 링크 한 줄을 둬요. 파일은 이 칸 어디에 끌어 와도 받아요.
+  // PDF를 끌어다 놓는 큰 칸이에요. 칸 어디를 눌러도 파일을 골라요.
   return (
     <div
       onDragOver={(event) => {
@@ -218,7 +190,7 @@ export function ResumeUploader({ onDone, onWorking }: {
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
-        className={`group flex w-full flex-col items-center rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
+        className={`group flex w-full flex-col items-center rounded-2xl border-2 border-dashed px-6 py-16 text-center transition-colors ${
           over ? 'border-brand bg-brand-soft' : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
         }`}
       >
@@ -229,38 +201,6 @@ export function ResumeUploader({ onDone, onWorking }: {
         <span className="mt-1 text-[13px] leading-relaxed text-gray-500">{L.fileBody}</span>
         <span className={`${primaryButton} pointer-events-none mt-5`}>{L.choose}</span>
       </button>
-
-      <div className="my-5 flex items-center gap-3 text-[12px] text-gray-400" aria-hidden>
-        <span className="h-px flex-1 bg-gray-200" />
-        {L.or}
-        <span className="h-px flex-1 bg-gray-200" />
-      </div>
-
-      <form onSubmit={submitLink} noValidate>
-        <p className="text-[14px] font-semibold text-gray-900">{L.linkTitle}</p>
-        <p className="mt-1 text-[13px] text-gray-500">{L.linkBody}</p>
-        <div className="mt-3 flex gap-2">
-          <label className="relative min-w-0 flex-1">
-            <LinkIcon className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type="url"
-              value={link}
-              onChange={(event) => {
-                setLink(event.target.value)
-                setInvalid(false)
-              }}
-              placeholder={L.linkPlaceholder}
-              aria-label={L.linkLabel}
-              aria-invalid={invalid}
-              className={`${textField} pl-10! ${invalid ? 'border-red-400! focus:border-red-400!' : ''}`}
-            />
-          </label>
-          <button type="submit" disabled={!link.trim()} className={`${toolButton} h-10! shrink-0 px-4 disabled:text-gray-400`}>
-            {L.linkSubmit}
-          </button>
-        </div>
-        {invalid && <FormError className="mt-1.5">{L.invalidLink}</FormError>}
-      </form>
     </div>
   )
 }
