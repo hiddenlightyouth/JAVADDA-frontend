@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
-import { careerName, companyOf, COMPANY_CATEGORIES, COMPANY_SIZES, companySizeOf, sizeName, type CompanySize, type CompanyCategory, majorCompanies, familyName, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort } from '../lib/gap'
+import { companyOf, COMPANY_CATEGORIES, COMPANY_SIZES, type CompanySize, type CompanyCategory, majorCompanies, sortPostings, useResume, type CareerLevel, type JobPosting, type PostingSort } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { readFlag, readJson, writeFlag, writeJson } from '../lib/storage'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
 import { CategoryFilter, CompanyFilter, Notice } from './GapParts'
-import { SearchIcon } from './Icons'
 import { PostingCountBar, PostingList, readLayout, useJobBrowser, type Layout } from './JobCard'
 import { SplitView } from './PostingBrowser'
-import { LoadGate, SuggestionHint, usePostings, useSuggestion } from './ScreenParts'
+import { CAREERS, FAMILIES, matchesFilters, pickOption, PostingFilterBar, serverFamily, type FamilyFilter } from './PostingFilters'
+import { LoadGate, usePostings } from './ScreenParts'
 import { Checkbox, primaryButton, quietButton } from './ui'
 
 /**
@@ -17,8 +17,6 @@ import { Checkbox, primaryButton, quietButton } from './ui'
  * 이력서를 올려 두었으면 카드마다 적합도가 보여요.
  */
 
-const FAMILIES: JobFamily[] = ['backend', 'frontend', 'mobile', 'data', 'devops', 'other']
-const CAREERS: CareerLevel[] = ['entry', 'junior', 'any']
 const SORTS: PostingSort[] = ['fit', 'recent', 'deadline']
 /** 상시 채용 숨기기를 켰는지 이 기기에 기억해요. */
 const HIDE_ROLLING_KEY = 'javadda:jobs-hide-rolling'
@@ -26,9 +24,6 @@ const HIDE_ROLLING_KEY = 'javadda:jobs-hide-rolling'
 const FILTERS_KEY = 'javadda:jobs-filters'
 /** 개발 직군만 볼지 묻는 칸을 닫았는지 이 기기에 기억해요. */
 const DEV_ASKED_KEY = 'javadda:jobs-dev-asked'
-
-/** 직군 메뉴의 값이에요. null은 모든 공고, dev는 개발이 아닌 직무(기타)를 뺀 개발 직군 전체예요. */
-type FamilyFilter = JobFamily | 'dev' | null
 
 interface SavedFilters {
   family: FamilyFilter
@@ -41,29 +36,23 @@ interface SavedFilters {
 /** 저장해 둔 값 중 지금 메뉴에 있는 것만 써요. 메뉴가 바뀌어 없어진 값은 처음 값으로 둬요. */
 function readFilters(): SavedFilters {
   const saved = readJson<Partial<Record<keyof SavedFilters, unknown>>>(FILTERS_KEY, {})
-  const pick = <T,>(value: unknown, options: readonly T[]): T | null => (options.includes(value as T) ? (value as T) : null)
   return {
-    family: pick<FamilyFilter>(saved.family, ['dev', ...FAMILIES]),
-    career: pick(saved.career, CAREERS),
-    size: pick(saved.size, COMPANY_SIZES),
-    sort: pick(saved.sort, SORTS),
-    category: pick(saved.category, COMPANY_CATEGORIES),
+    family: pickOption<FamilyFilter>(saved.family, ['dev', ...FAMILIES]),
+    career: pickOption(saved.career, CAREERS),
+    size: pickOption(saved.size, COMPANY_SIZES),
+    sort: pickOption(saved.sort, SORTS),
+    category: pickOption(saved.category, COMPANY_CATEGORIES),
   }
 }
 
 const TEXT = messages({
   ko: {
     title: '공고 탐색',
-    label: '공고 찾기',
     all: '전체',
-    family: '직군',
-    devAll: '개발 직군 전체',
     askTitle: '개발자이신가요?',
     askBody: '개발 직군만 따로 모아볼 수 있어요. 필터를 설정할까요?',
     askYes: '개발 직군만 보기',
     askClose: '닫기',
-    career: '경력',
-    size: '기업 규모',
     sort: '정렬',
     sorts: { fit: '적합도순', recent: '최신순', deadline: '마감 임박순' } as Record<PostingSort, string>,
     none: '맞는 공고가 없어요.',
@@ -75,16 +64,11 @@ const TEXT = messages({
   },
   en: {
     title: 'Explore jobs',
-    label: 'Search postings',
     all: 'All',
-    family: 'Role',
-    devAll: 'All dev roles',
     askTitle: 'Are you a developer?',
     askBody: 'You can see only developer roles. Set the filter?',
     askYes: 'Show dev roles only',
     askClose: 'Close',
-    career: 'Level',
-    size: 'Company size',
     sort: 'Sort',
     sorts: { fit: 'Best fit', recent: 'Newest', deadline: 'Closing soon' },
     none: 'No postings match.',
@@ -122,19 +106,8 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   const [layout, setLayout] = useState<Layout>(readLayout)
   const [hideRolling, setHideRolling] = useState(() => readFlag(HIDE_ROLLING_KEY))
   // 검색어는 잠깐 멈췄을 때 보내요.
-  const { loaded, postings, waiting, percent, retry } = usePostings({ query, family: family === 'dev' ? null : family, career })
-  // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요.
-  const suggestion = useSuggestion(!query)
+  const { loaded, postings, waiting, percent, retry } = usePostings({ query, family: serverFamily(family), career })
   const majors = useMemo(majorCompanies, [])
-  // 규모 메뉴는 분류를 늘 모두 두고, 받아 온 공고 중 그 규모인 공고 수를 옆에 적어요.
-  const sizeCounts = useMemo(() => {
-    const counts = new Map<CompanySize, number>()
-    for (const posting of postings ?? []) {
-      const value = companySizeOf(companyOf(posting.companyId))
-      if (value) counts.set(value, (counts.get(value) ?? 0) + 1)
-    }
-    return counts
-  }, [postings])
 
   function analyze(posting: JobPosting) {
     track('posting_select', { posting: posting.id, from: 'explore' })
@@ -148,10 +121,9 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
       sortPostings(
         postings.filter(
           (posting) =>
-            (family !== 'dev' || posting.family !== 'other') &&
-            (!company || posting.companyId === company) && (!category || companyOf(posting.companyId).category === category) &&
-            (!size || companySizeOf(companyOf(posting.companyId)) === size) &&
-            (!hideRolling || posting.deadline),
+            matchesFilters(posting, { family, size, hideRolling }) &&
+            (!company || posting.companyId === company) &&
+            (!category || companyOf(posting.companyId).category === category),
         ),
         sort,
         resume,
@@ -162,83 +134,22 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   return (
     <SplitView side={browser.side}>
       <ScrollPage header={<PageHeader title={L.title} />} className="@container">
-        {/* 검색창 옆에 직군, 경력, 정렬을 드롭다운으로 나란히 둬요. 좁으면 검색창이 한 줄을 다 쓰고 메뉴는 아래로 내려가요. */}
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="relative flex h-11 min-w-0 flex-1 basis-full items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-4 transition-colors focus-within:border-brand @2xl:basis-0">
-            <SearchIcon />
-            <input
-              type="search"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                // 비어 있을 때 Enter를 누르면 지금 보이는 추천 검색어로 찾아요.
-                if (event.key === 'Enter' && !query && !event.nativeEvent.isComposing) {
-                  track('jobs_suggestion_use', { query: suggestion.text })
-                  setQuery(suggestion.text)
-                }
-              }}
-              aria-label={L.label}
-              data-search-input
-              className="min-w-0 flex-1 bg-transparent text-base text-gray-900 outline-none sm:text-[14px] [&::-webkit-search-cancel-button]:hidden"
-            />
-            {!query && <SuggestionHint {...suggestion} className="right-4 left-[42px]" />}
-          </label>
-          <Dropdown
-            size="lg"
-            active={family !== null}
-            label={L.family}
-            value={family === 'dev' ? L.devAll : family ? familyName(family) : L.all}
-            groups={[
-              {
-                items: ([null, 'dev', ...FAMILIES] as FamilyFilter[]).map((value) => ({
-                  label: value === 'dev' ? L.devAll : value ? familyName(value) : L.all,
-                  checked: family === value,
-                  onSelect: () => {
-                    track('jobs_family_select', { family: value ?? 'all' })
-                    setFamily(value)
-                    if (value) closeAsk()
-                  },
-                })),
-              },
-            ]}
-          />
-          <Dropdown
-            size="lg"
-            active={career !== null}
-            label={L.career}
-            value={career ? careerName(career) : L.all}
-            groups={[
-              {
-                items: [null, ...CAREERS].map((value) => ({
-                  label: value ? careerName(value) : L.all,
-                  checked: career === value,
-                  onSelect: () => {
-                    track('jobs_career_select', { career: value ?? 'all' })
-                    setCareer(value)
-                  },
-                })),
-              },
-            ]}
-          />
-          <Dropdown
-            size="lg"
-            active={size !== null}
-            label={L.size}
-            value={size ? sizeName(size) : L.all}
-            groups={[
-              {
-                items: [null, ...COMPANY_SIZES].map((value) => ({
-                  label: value ? sizeName(value) : L.all,
-                  hint: value ? String(sizeCounts.get(value) ?? 0) : undefined,
-                  checked: size === value,
-                  onSelect: () => {
-                    track('jobs_size_select', { size: value ?? 'all' })
-                    setSize(value)
-                  },
-                })),
-              },
-            ]}
-          />
+        {/* 검색창 옆에 직군, 경력, 기업 규모, 정렬을 드롭다운으로 나란히 둬요. */}
+        <PostingFilterBar
+          from="jobs"
+          query={query}
+          onQuery={setQuery}
+          family={family}
+          onFamily={(value) => {
+            setFamily(value)
+            if (value) closeAsk()
+          }}
+          career={career}
+          onCareer={setCareer}
+          size={size}
+          onSize={setSize}
+          postings={postings}
+        >
           <Dropdown
             size="lg"
             label={L.sort}
@@ -257,7 +168,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
               },
             ]}
           />
-        </div>
+        </PostingFilterBar>
 
         {/* 네카라쿠배당토는 로고로 바로 고르고, 나머지는 사업 분류로 골라요. 둘을 같이 고르면 비기 쉬워서 하나를 고르면 다른 하나는 풀려요. */}
         <div className="mt-4">
