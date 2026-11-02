@@ -1080,6 +1080,7 @@ const ERRORS = messages<Record<string, string>>({
     C4005: 'GitHub 계정을 연결하지 못했어요. 처음부터 다시 시도해 주세요.',
     C4047: 'GitHub 연결이 끊겼어요. 다시 연결해 주세요.',
     C4048: '레포를 찾지 못했어요. 지웠거나 볼 수 없는 레포일 수 있어요.',
+    C5031: 'AI가 글을 쓰지 못했어요. 잠시 뒤에 다시 시도하거나 설정에서 다른 모델을 골라 주세요.',
     C002: '보낸 내용을 확인하지 못했어요. 다시 시도해 주세요.',
     C403: '이 계정으로는 볼 수 없어요.',
     login: '로그인이 필요해요. 다시 로그인해 주세요.',
@@ -1102,6 +1103,7 @@ const ERRORS = messages<Record<string, string>>({
     C4005: "We couldn't connect your GitHub account. Please start over.",
     C4047: 'Your GitHub connection ended. Please connect again.',
     C4048: "We couldn't find this repository. It may be deleted or hidden from you.",
+    C5031: "The AI couldn't write this. Try again in a moment, or pick another model in Settings.",
     C002: "We couldn't read what was sent. Please try again.",
     C403: "This account can't view this.",
     login: 'Please sign in again.',
@@ -1906,6 +1908,49 @@ export async function createGithubResume(repos: string[], onProgress?: OnProgres
   const created = toResume(result.data)
   await loadShelf()
   return shelfStore.get().list.find((resume) => resume.id === created.id) ?? created
+}
+
+/** 문제 해결 경험을 AI로 고치는 요청이에요. add는 경험을 하나 새로 더해요. */
+export type ProjectRevision = 'shorter' | 'concrete' | 'numbers' | 'rewrite' | 'another' | 'add'
+
+function replaceResume(resume: Resume) {
+  const shelf = shelfStore.get()
+  shelfStore.set({ ...shelf, list: shelf.list.map((item) => (item.id === resume.id ? resume : item)) })
+}
+
+/**
+ * GitHub로 만든 서류의 문제 해결 경험 하나를 AI로 고치거나(problem의 순서), 새로 하나 더해요(add, problem은 null).
+ * POST /resumes/{id}/projects/{project}/revise예요. 서버가 레포 재료를 다시 읽어 AI가 써서 10초에서 30초쯤 걸려요.
+ * 다 되면 서류를 바꿔 끼워요. 연결이 끊겼거나(C4047) 실패하면 토스트로 알리고 null이에요.
+ */
+export async function reviseProject(resumeId: string, project: number, problem: number | null, revision: ProjectRevision, onProgress?: OnProgress): Promise<Resume | null> {
+  if (!requireLogin()) return null
+  const result = await withProgress(onProgress, (headers) =>
+    call<ServerResume>(`/resumes/${Number(resumeId)}/projects/${project}/revise`, send('POST', { problem, revision }), true, headers),
+  )
+  if (!result.ok || !result.data) {
+    fail(result)
+    return null
+  }
+  const resume = toResume(result.data)
+  if (resume.id === resumeId) replaceResume(resume)
+  return resume
+}
+
+/** 직접 고친 프로젝트 경험을 저장해요(PUT /resumes/{id}/projects). 화면에는 바로 보이고, 서버가 다듬어 돌려준 서류로 맞춰요. */
+export function saveProjects(resumeId: string, projects: ResumeProject[]) {
+  if (!requireLogin()) return
+  const current = shelfStore.get().list.find((resume) => resume.id === resumeId)
+  if (current) replaceResume({ ...current, projects })
+  const started = generation
+  void call<ServerResume>(`/resumes/${Number(resumeId)}/projects`, send('PUT', { projects })).then((result) => {
+    if (started !== generation) return
+    if (result.ok && result.data) replaceResume(toResume(result.data))
+    else if (!result.ok) {
+      fail(result)
+      void loadShelf()
+    }
+  })
 }
 
 /** 추출한 역량을 사용자가 고친 뒤에 저장해요. id가 없으면 대표 서류를 고쳐요. 화면에는 바로 보이고, 서버가 돌려준 서류로 맞춰요. */

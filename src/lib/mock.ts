@@ -410,7 +410,20 @@ async function handle(path: string, query: URLSearchParams, method: string, body
     const resume = state.resumes.find((item) => item.id === Number(id))
     if (!resume) return fail(404, 'C4043')
     if (sub === 'skills') resume.skills = (json.skills as ResumeSkill[]) ?? resume.skills
-    else if (sub === 'primary') state.primaryId = resume.id
+    else if (sub === 'projects' && method === 'PUT') {
+      const edited = (json.projects as ResumeProject[] | undefined) ?? []
+      resume.projects = (resume.projects ?? []).map((project) => ({ ...project, ...edited.find((item) => item.repo === project.repo), repo: project.repo }))
+    } else if (sub === 'projects' && last === 'revise') {
+      // 서버는 레포 재료로 AI가 고쳐 써요. 목 모드는 제목에 표시만 붙여요.
+      await wait(1200)
+      const project = resume.projects?.[Number(extra)]
+      if (!project) return fail(400, 'C002')
+      const problem = typeof json.problem === 'number' ? project.problems[json.problem] : undefined
+      const written = problem
+        ? { ...problem, title: `${problem.title.replace(/ \(.*\)$/, '')} (${String(json.revision)})` }
+        : { title: '배포 시간이 길어지는 문제', problem: '빌드마다 의존성을 다시 받아 배포가 늦어짐', cause: '', solution: '빌드 캐시를 두고 바뀐 단계만 다시 빌드', effect: '[직접 입력: 배포 시간 전후]', decision: '' }
+      project.problems = problem ? project.problems.map((item) => (item === problem ? written : item)) : [...project.problems, written]
+    } else if (sub === 'primary') state.primaryId = resume.id
     else if (method === 'DELETE') {
       state.resumes = state.resumes.filter((item) => item !== resume)
       if (state.primaryId === resume.id) state.primaryId = state.resumes[0]?.id ?? null

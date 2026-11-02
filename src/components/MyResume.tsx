@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
 import { useAuth } from '../lib/auth'
-import { axisOf, canonical, PROGRESS_START, removeResume, requestLogin, suggestSkills, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type ProgressState, type Resume, type ResumeProject, type ResumeSkill } from '../lib/gap'
+import { axisOf, canonical, PROGRESS_START, removeResume, requestLogin, suggestSkills, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type ProgressState, type Resume, type ResumeSkill } from '../lib/gap'
 import { isGithubReturn } from '../lib/githubConnect'
 import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
@@ -11,8 +11,8 @@ import { ConfirmDialog, panelBody, SidePanel } from './Dialog'
 import { AiProgress, Notice, SkillChip, Tip } from './GapParts'
 import { GithubResume } from './GithubResume'
 import { GitHubMark } from './Social'
-import { ChevronRightIcon, CloseIcon, ExternalLinkIcon, LockIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
-import { panelAction } from './ScreenParts'
+import { ChevronRightIcon, CloseIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
+import { ResumeProjects } from './ResumeProjects'
 import { Badge, menuPanel, NumberedList, primaryButton, textFieldSm, toolButton, toolDangerButton } from './ui'
 
 /**
@@ -42,11 +42,6 @@ const TEXT = messages({
     generateTitle: 'GitHub Repository로 이력서와 포트폴리오 생성하기',
     generateBody: 'GitHub 계정을 연결하면 비공개 레포까지 읽어서, 내 커밋과 PR로 이력서와 포트폴리오를 만들어 드려요.',
     projects: '프로젝트',
-    openRepo: '레포 열기',
-    privateRepo: '비공개',
-    kinds: { team: '팀 프로젝트', personal: '개인 프로젝트' } as Record<ResumeProject['kind'], string>,
-    role: '맡은 역할',
-    parts: { problem: '문제', cause: '원인', solution: '개선', effect: '효과', decision: '판단' },
     start: '시작하기',
     otherWay: '다른 방법 고르기',
     addTitle: '서류 추가',
@@ -84,11 +79,6 @@ const TEXT = messages({
     generateTitle: 'Create a resume and portfolio from a GitHub repository',
     generateBody: 'Connect your GitHub account and we read your repositories, private ones included, to write a resume and portfolio from your commits and pull requests.',
     projects: 'Projects',
-    openRepo: 'Open repository',
-    privateRepo: 'Private',
-    kinds: { team: 'Team project', personal: 'Personal project' },
-    role: 'Role',
-    parts: { problem: 'Problem', cause: 'Cause', solution: 'Fix', effect: 'Result', decision: 'Trade-off' },
     start: 'Get started',
     otherWay: 'Choose another way',
     addTitle: 'Add a document',
@@ -511,11 +501,9 @@ function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resum
           {resume.projects.length > 0 ? (
             <section className="mt-8">
               <h3 className="text-[13.5px] font-semibold text-gray-900">{L.projects}</h3>
-              <ul className="mt-3 flex flex-col gap-3">
-                {resume.projects.map((project) => (
-                  <ProjectCard key={project.repo} project={project} />
-                ))}
-              </ul>
+              <div className="mt-3">
+                <ResumeProjects resume={resume} />
+              </div>
             </section>
           ) : (
             <section className="mt-8">
@@ -557,73 +545,6 @@ function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resum
         />
       )}
     </>
-  )
-}
-
-/** GitHub 레포 하나로 쓴 프로젝트 경험이에요. 이력서의 개조식 그대로, 문제 해결 경험은 문제와 개선과 효과로 나눠 보여줘요. */
-function ProjectCard({ project }: { project: ResumeProject }) {
-  const L = useMessages(TEXT)
-  const parts = ['problem', 'cause', 'solution', 'effect', 'decision'] as const
-  return (
-    <li className="rounded-2xl bg-gray-50 p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="flex items-center gap-1.5">
-            <span className="truncate text-[15px] font-semibold text-gray-900">{project.name}</span>
-            {project.privateRepo && (
-              <Badge tone="white" className="gap-1">
-                <LockIcon className="size-3" />
-                {L.privateRepo}
-              </Badge>
-            )}
-          </p>
-          <p className="mt-1 flex flex-wrap gap-x-3 text-[12px] text-gray-400">
-            <span>{L.kinds[project.kind] ?? project.kind}</span>
-            {project.period && <span>{project.period}</span>}
-          </p>
-        </div>
-        <a href={project.url} target="_blank" rel="noreferrer" className={`${panelAction} shrink-0`}>
-          {L.openRepo}
-          <ExternalLinkIcon className="size-3.5" />
-        </a>
-      </div>
-      {project.headline && <p className="mt-3 text-[13.5px] font-medium text-gray-800">{project.headline}</p>}
-      {project.summary && <p className="mt-1 text-[13px] leading-relaxed text-gray-600">{project.summary}</p>}
-      {project.role && (
-        <p className="mt-3 text-[13px] leading-relaxed text-gray-600">
-          <span className="mr-2 font-medium text-gray-900">{L.role}</span>
-          {project.role}
-        </p>
-      )}
-      {project.stack.length > 0 && (
-        <ul className="mt-3 flex flex-wrap gap-1">
-          {project.stack.map((name) => (
-            <li key={name}>
-              <Badge tone="white">{name}</Badge>
-            </li>
-          ))}
-        </ul>
-      )}
-      {project.problems.length > 0 && (
-        <ol className="mt-4 flex flex-col gap-3">
-          {project.problems.map((problem) => (
-            <li key={problem.title} className="rounded-xl bg-white p-4">
-              <p className="text-[13.5px] font-semibold text-gray-900">{problem.title}</p>
-              <dl className="mt-2 flex flex-col gap-1.5 text-[12.5px] leading-relaxed">
-                {parts
-                  .filter((part) => problem[part])
-                  .map((part) => (
-                    <div key={part} className="flex gap-3">
-                      <dt className="w-10 shrink-0 text-gray-400">{L.parts[part]}</dt>
-                      <dd className="min-w-0 flex-1 whitespace-pre-line text-gray-700">{problem[part]}</dd>
-                    </div>
-                  ))}
-              </dl>
-            </li>
-          ))}
-        </ol>
-      )}
-    </li>
   )
 }
 
