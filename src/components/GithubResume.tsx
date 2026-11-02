@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
 import { isApp, openInBrowser } from '../lib/app'
-import { connectGithub, createGithubResume, disconnectGithub, fetchGithubConnection, fetchGithubRepos, MAX_GITHUB_REPOS, PROGRESS_START, type GithubConnection, type GithubRepo, type ProgressState, type Resume } from '../lib/gap'
+import { addGithubProjects, connectGithub, createGithubResume, disconnectGithub, fetchGithubConnection, fetchGithubRepos, MAX_GITHUB_PROJECTS, MAX_GITHUB_REPOS, PROGRESS_START, type GithubConnection, type GithubRepo, type ProgressState, type Resume } from '../lib/gap'
 import { isGithubReturn, startGithubConnect, takeGithubReturn } from '../lib/githubConnect'
 import { formatWhen } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
@@ -48,10 +48,14 @@ const TEXT = messages({
     empty: '볼 수 있는 레포가 없어요',
     emptyBody: 'GitHub에 레포를 올리거나, 조직의 레포라면 조직에서 이 앱의 접근을 허락해 주세요.',
     noMatch: '찾는 레포가 없어요',
-    pickHint: (count: number) => `레포를 ${MAX_GITHUB_REPOS}개까지 골라요. ${count}개 골랐어요.`,
-    full: `${MAX_GITHUB_REPOS}개까지 고를 수 있어요`,
+    pickHint: (count: number, max: number) => `레포를 ${max}개까지 골라요. ${count}개 골랐어요.`,
     make: '이력서 만들기',
-    made: '레포를 읽어 이력서를 만들었어요. 프로젝트 경험과 역량을 확인해 주세요.',
+    made: '레포를 읽어 이력서와 포트폴리오를 만들었어요. 프로젝트 경험과 역량을 확인해 주세요.',
+    addRepos: '레포 더하기',
+    added: '레포를 더했어요. 새 프로젝트와 포트폴리오를 확인해 주세요.',
+    allAdded: '더할 수 있는 레포가 없어요',
+    allAddedBody: '볼 수 있는 레포가 모두 이 이력서에 들어 있어요.',
+    full: '더 고를 수 없어요',
   },
   en: {
     connectTitle: 'Connect your GitHub account',
@@ -79,17 +83,22 @@ const TEXT = messages({
     empty: 'No repositories to show',
     emptyBody: 'Push a repository to GitHub, or ask your organization to allow this app.',
     noMatch: 'No matching repositories',
-    pickHint: (count: number) => `Pick up to ${MAX_GITHUB_REPOS}. ${count} picked.`,
-    full: `You can pick up to ${MAX_GITHUB_REPOS}`,
+    pickHint: (count: number, max: number) => `Pick up to ${max}. ${count} picked.`,
     make: 'Create resume',
-    made: 'Done. Please check the projects and skills we wrote.',
+    made: 'Done. Please check the projects, portfolio and skills we wrote.',
+    addRepos: 'Add repositories',
+    added: 'Added. Please check the new projects and portfolio.',
+    allAdded: 'No repositories left to add',
+    allAddedBody: 'Every repository you can see is already in this resume.',
+    full: 'You cannot pick more',
   },
 })
 
 /** 연결한 계정이에요. undefined는 묻는 중, null은 서버에 닿지 못한 것이에요. */
 type ConnectionState = GithubConnection | null | undefined
 
-export function GithubResume({ onDone, onWorking }: { onDone: (resume: Resume) => void; onWorking: (working: boolean) => void }) {
+/** addTo를 넘기면 새 이력서를 만들지 않고 그 GitHub 이력서에 레포를 더해요. 이미 들어 있는 레포는 목록에서 빼요. */
+export function GithubResume({ addTo, onDone, onWorking }: { addTo?: Resume; onDone: (resume: Resume) => void; onWorking: (working: boolean) => void }) {
   const L = useMessages(TEXT)
   const config = useServerConfig()
   const [connection, setConnection] = useState<ConnectionState>(undefined)
@@ -132,7 +141,7 @@ export function GithubResume({ onDone, onWorking }: { onDone: (resume: Resume) =
     if (!clientId) return <Notice title={L.notReady} className="mt-10" />
     return <ConnectCard clientId={clientId} onRecheck={() => setAttempt((value) => value + 1)} />
   }
-  return <RepoPicker connection={connection} onDone={onDone} onWorking={onWorking} onDisconnected={disconnected} />
+  return <RepoPicker connection={connection} addTo={addTo} onDone={onDone} onWorking={onWorking} onDisconnected={disconnected} />
 }
 
 /** 앱에서 연결하라고 브라우저로 여는 주소예요. 웹의 서류 추가 화면이 GitHub 단계로 바로 열려요. */
@@ -188,8 +197,9 @@ function ConnectCard({ clientId, onRecheck }: { clientId: string; onRecheck: () 
 }
 
 /** 연결한 계정의 레포를 골라 이력서를 만드는 칸이에요. 고르는 동안 아래에 만들기 버튼이 붙어 있어요. */
-function RepoPicker({ connection, onDone, onWorking, onDisconnected }: {
+function RepoPicker({ connection, addTo, onDone, onWorking, onDisconnected }: {
   connection: GithubConnection
+  addTo?: Resume
   onDone: (resume: Resume) => void
   onWorking: (working: boolean) => void
   onDisconnected: () => void
@@ -219,30 +229,35 @@ function RepoPicker({ connection, onDone, onWorking, onDisconnected }: {
     }
   }, [attempt, load.one, onDisconnected])
 
+  const added = useMemo(() => new Set((addTo?.projects ?? []).map((project) => project.repo.toLowerCase())), [addTo])
+  const available = useMemo(() => (repos ?? []).filter((repo) => !added.has(repo.fullName.toLowerCase())), [repos, added])
+  /** 한 번에 3개까지이고, 더할 때는 서류 하나에 6개를 넘지 않게 남은 자리만큼이에요. */
+  const max = addTo ? Math.max(0, Math.min(MAX_GITHUB_REPOS, MAX_GITHUB_PROJECTS - added.size)) : MAX_GITHUB_REPOS
   const shown = useMemo(() => {
     const words = query.trim().toLowerCase()
-    return (repos ?? []).filter((repo) => {
+    return available.filter((repo) => {
       if (hideForks && repo.fork) return false
       if (!words) return true
       return `${repo.fullName} ${repo.description ?? ''} ${repo.language ?? ''}`.toLowerCase().includes(words)
     })
-  }, [repos, query, hideForks])
+  }, [available, query, hideForks])
   const { count, more } = useShowMore(shown.length, `${query}|${hideForks}`)
-  const full = picked.length >= MAX_GITHUB_REPOS
+  const full = picked.length >= max
 
-  const toggle = (name: string) => setPicked((list) => (list.includes(name) ? list.filter((item) => item !== name) : list.length >= MAX_GITHUB_REPOS ? list : [...list, name]))
+  const toggle = (name: string) => setPicked((list) => (list.includes(name) ? list.filter((item) => item !== name) : list.length >= max ? list : [...list, name]))
 
   async function make() {
     if (picked.length === 0) return
     setWorking(PROGRESS_START)
     onWorking(true)
-    const resume = await createGithubResume(picked, setWorking)
+    const resume = addTo ? await addGithubProjects(addTo.id, picked, setWorking) : await createGithubResume(picked, setWorking)
     setWorking(null)
     onWorking(false)
     if (resume === 'disconnected') return onDisconnected()
     if (!resume) return
-    track('resume_upload', { source: 'github', skills: resume.skills.length, repos: picked.length })
-    showToast(pick(TEXT).made)
+    if (addTo) track('resume_github_add', { repos: picked.length })
+    else track('resume_upload', { source: 'github', skills: resume.skills.length, repos: picked.length })
+    showToast(addTo ? pick(TEXT).added : pick(TEXT).made)
     onDone(resume)
   }
 
@@ -306,6 +321,8 @@ function RepoPicker({ connection, onDone, onWorking, onDisconnected }: {
           <Failed onRetry={() => setAttempt((value) => value + 1)} className="mt-10" />
         ) : (repos ?? []).length === 0 ? (
           <Notice title={L.empty} body={L.emptyBody} className="mt-10" />
+        ) : available.length === 0 ? (
+          <Notice title={L.allAdded} body={L.allAddedBody} className="mt-10" />
         ) : shown.length === 0 ? (
           <Notice title={L.noMatch} className="mt-10" />
         ) : (
@@ -322,9 +339,9 @@ function RepoPicker({ connection, onDone, onWorking, onDisconnected }: {
 
       {/* 고르는 동안 아래에 붙어 있어서, 목록이 길어도 만들기 버튼을 찾지 않아요. */}
       <div className="sticky bottom-0 mt-6 flex items-center gap-3 border-t border-gray-200 bg-white py-4">
-        <p className="min-w-0 flex-1 text-[13px] text-gray-500">{L.pickHint(picked.length)}</p>
+        <p className="min-w-0 flex-1 text-[13px] text-gray-500">{L.pickHint(picked.length, max)}</p>
         <button type="button" disabled={picked.length === 0} onClick={() => void make()} className={primaryButton}>
-          {L.make}
+          {addTo ? L.addRepos : L.make}
         </button>
       </div>
 

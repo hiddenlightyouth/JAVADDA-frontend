@@ -1865,6 +1865,8 @@ export interface GithubRepo {
 
 /** 이력서 만들기에 한 번에 고를 수 있는 레포 수예요. 레포마다 AI를 한 번씩 불러요. */
 export const MAX_GITHUB_REPOS = 3
+/** GitHub로 만든 서류 하나에 둘 수 있는 프로젝트 수예요(서버의 MAX_GITHUB_PROJECTS). 만든 뒤에 레포를 더해서 여기까지 늘려요. */
+export const MAX_GITHUB_PROJECTS = 6
 
 /** 연결한 GitHub 계정을 물어요(GET /github/connection). 서버에 닿지 못하면 null이에요. */
 export async function fetchGithubConnection(): Promise<GithubConnection | null> {
@@ -1921,6 +1923,26 @@ export async function createGithubResume(repos: string[], onProgress?: OnProgres
   const created = toResume(result.data)
   await loadShelf()
   return shelfStore.get().list.find((resume) => resume.id === created.id) ?? created
+}
+
+/**
+ * GitHub로 만든 서류에 레포(3개까지)를 더해요(POST /resumes/{id}/projects). 만들 때처럼 레포마다 프로젝트 경험과 포트폴리오를 써서 뒤에 붙여요.
+ * 다 되면 서류를 바꿔 끼워요. 연결이 끊겼으면 'disconnected'이고, 그 밖의 실패는 토스트로 알리고 null이에요.
+ */
+export async function addGithubProjects(resumeId: string, repos: string[], onProgress?: OnProgress): Promise<Resume | 'disconnected' | null> {
+  if (!requireLogin()) return null
+  const result = await withProgress(onProgress, (headers) => call<ServerResume>(`/resumes/${Number(resumeId)}/projects`, send('POST', { repos }), true, headers))
+  if (result.code === 'C4047') {
+    fail(result)
+    return 'disconnected'
+  }
+  if (!result.ok || !result.data) {
+    fail(result)
+    return null
+  }
+  const resume = toResume(result.data)
+  replaceResume(resume)
+  return resume
 }
 
 /** 문제 해결 경험을 AI로 고치는 요청이에요. add는 경험을 하나 새로 더해요. */

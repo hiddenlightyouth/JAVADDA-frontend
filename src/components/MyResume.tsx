@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
 import { useAuth } from '../lib/auth'
-import { axisOf, canonical, PROGRESS_START, removeResume, requestLogin, suggestSkills, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type ProgressState, type Resume, type ResumeSkill } from '../lib/gap'
+import { axisOf, canonical, MAX_GITHUB_PROJECTS, PROGRESS_START, removeResume, requestLogin, suggestSkills, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type ProgressState, type Resume, type ResumeSkill } from '../lib/gap'
 import { isGithubReturn } from '../lib/githubConnect'
 import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
@@ -36,6 +36,8 @@ const TEXT = messages({
     addPlaceholder: '역량 더하기',
     add: '더하기',
     paragraphs: '주요 경력',
+    addRepos: '레포 더하기',
+    cancel: '취소',
     addDoc: '서류 추가',
     uploadTitle: '이력서 또는 포트폴리오 업로드',
     uploadBody: '가지고 있는 이력서나 포트폴리오 PDF를 올리면 역량을 읽어요.',
@@ -74,6 +76,8 @@ const TEXT = messages({
     addPlaceholder: 'Add a skill',
     add: 'Add',
     paragraphs: 'Key experience',
+    addRepos: 'Add repositories',
+    cancel: 'Cancel',
     addDoc: 'Add document',
     uploadTitle: 'Upload a resume or portfolio',
     uploadBody: 'Upload your resume or portfolio PDF and we will read your skills.',
@@ -358,6 +362,8 @@ export function MyResume({ add, docId, onAdd, onList, onDoc, onExplore }: {
   /** 서류를 읽는 동안이에요. 그동안은 서류 추가 화면을 떠날 수 없어요. */
   const [uploading, setUploading] = useState(false)
   const signedIn = useAuth().tokens !== null
+  /** 별을 누른 대표 이력서가 맨 앞이고, 나머지는 올린 순서 그대로예요. */
+  const ordered = useMemo(() => [...shelf.list].sort((a, b) => Number(b.id === shelf.primaryId) - Number(a.id === shelf.primaryId)), [shelf])
 
   /** 서류는 계정에 저장돼서, 로그인하지 않았으면 서류 추가 화면 대신 로그인 화면으로 가요. */
   const addDocument = () => {
@@ -477,7 +483,7 @@ export function MyResume({ add, docId, onAdd, onList, onDoc, onExplore }: {
             <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={addDocument} className="mt-16" />
           ) : (
             <ul className="grid gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3">
-              {shelf.list.map((resume) => (
+              {ordered.map((resume) => (
                 <ResumeCard
                   key={resume.id}
                   resume={resume}
@@ -505,16 +511,21 @@ function ResumeDetail({ resume, primary, onPrimary, onExplore, onBack, onRemoved
 }) {
   const L = useMessages(TEXT)
   const [removing, setRemoving] = useState(false)
+  /** GitHub 이력서에 레포를 더하는 중이에요. 프로젝트 칸 자리에 레포 고르는 칸이 와요. */
+  const [adding, setAdding] = useState(false)
+  /** 더한 레포를 AI가 쓰는 동안이에요. 그동안은 화면을 떠날 수 없어요. */
+  const [writing, setWriting] = useState(false)
+  const canAdd = resume.source === 'github' && resume.projects.length > 0 && resume.projects.length < MAX_GITHUB_PROJECTS
 
   return (
     <main className={pageFrame}>
       <PageHeader
         title={resume.name}
-        onBack={onBack}
+        onBack={writing ? undefined : onBack}
         backLabel={L.title}
         actions={
           <>
-            <button type="button" onClick={() => setRemoving(true)} className={toolDangerButton}>
+            <button type="button" disabled={writing} onClick={() => setRemoving(true)} className={toolDangerButton}>
               <TrashIcon className="size-4" />
               {L.remove}
             </button>
@@ -536,12 +547,6 @@ function ResumeDetail({ resume, primary, onPrimary, onExplore, onBack, onRemoved
           <p className="flex items-center gap-2 text-[13px] text-gray-500">
             <Badge tone="gray" strong>{L.sources[resume.source]}</Badge>
             {L.uploadedAt(formatDateTime(resume.uploadedAt))}
-            {primary && (
-              <span className="flex items-center gap-1 text-brand">
-                <StarIcon filled className="size-3.5" />
-                {L.primaryTip}
-              </span>
-            )}
           </p>
           {/* 넓으면 역량을 왼쪽에 멈춰 두고, 읽은 문단이나 프로젝트를 오른쪽에 넓게 둬요. */}
           <div className="mt-8 grid items-start gap-x-10 gap-y-10 @5xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
@@ -554,9 +559,33 @@ function ResumeDetail({ resume, primary, onPrimary, onExplore, onBack, onRemoved
             {/* GitHub로 만든 서류는 문단이 프로젝트 경험을 풀어 쓴 것이라, 문단 대신 프로젝트 칸으로 보여줘요. */}
             {resume.projects.length > 0 ? (
               <section className="min-w-0">
-                <h2 className="text-[15px] font-semibold text-gray-900">{L.projects}</h2>
+                <div className="flex min-h-9 items-center justify-between gap-3">
+                  <h2 className="text-[15px] font-semibold text-gray-900">{adding ? L.addRepos : L.projects}</h2>
+                  {adding ? (
+                    !writing && (
+                      <button type="button" onClick={() => setAdding(false)} className={toolButton}>
+                        {L.cancel}
+                      </button>
+                    )
+                  ) : (
+                    canAdd && (
+                      <button type="button" onClick={() => setAdding(true)} className={toolButton}>
+                        <PlusIcon className="size-3.5" />
+                        {L.addRepos}
+                      </button>
+                    )
+                  )}
+                </div>
                 <div className="mt-3">
-                  <ResumeProjects resume={resume} />
+                  {adding ? (
+                    <GithubResume
+                      addTo={resume}
+                      onWorking={setWriting}
+                      onDone={() => setAdding(false)}
+                    />
+                  ) : (
+                    <ResumeProjects resume={resume} />
+                  )}
                 </div>
               </section>
             ) : (

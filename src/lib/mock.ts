@@ -305,6 +305,17 @@ const GITHUB_REPOS = [
 }))
 
 /** 고른 레포로 쓴 그럴듯한 프로젝트 경험이에요. 서버는 레포의 커밋과 PR로 AI가 써요. */
+const PORTFOLIO_TITLES: Record<PortfolioKey, string> = { intro: '프로젝트 소개', period: '개발 기간', team: '팀 구성', stack: '기술 스택', role: '맡은 역할', features: '주요 기능', trouble: '문제 해결 경험', result: '성과와 배운 점' }
+
+/** 서버는 레포 재료로 AI가 포트폴리오 항목을 써요. 목 모드는 항목마다 짧은 보기 글이에요. */
+function mockPortfolio(keys: PortfolioKey[] = Object.keys(PORTFOLIO_TITLES) as PortfolioKey[]) {
+  return keys.map((key) => ({
+    key,
+    title: PORTFOLIO_TITLES[key],
+    content: key === 'role' ? '**백엔드**\n\n> 의견 수집 도메인을 담당했습니다.\n\n1. 초기 프로젝트 구조 설계\n2. 의견 병렬 수집\n   1. 호출별 타임아웃' : `${PORTFOLIO_TITLES[key]}의 보기 글이에요. [직접 입력: 사용자 수]`,
+  }))
+}
+
 function mockProject(fullName: string): ResumeProject {
   const repo = GITHUB_REPOS.find((item) => item.fullName === fullName)
   const frontend = repo?.language === 'TypeScript'
@@ -314,7 +325,8 @@ function mockProject(fullName: string): ResumeProject {
     summary: frontend ? '동아리 부원이 강의와 과제를 한곳에서 보는 온라인 캠퍼스 구현' : '출시 전 아이디어에 AI 페르소나의 의견을 모아 주는 플랫폼 구현',
     role: frontend ? '강의 목록과 과제 제출 화면, 디자인 시스템 구축 주도' : '프로젝트 초기 설계와 의견 수집 도메인, CI/CD 구축 주도',
     stack: frontend ? ['TypeScript', 'React', 'Vite', 'Tailwind'] : ['Java', 'Spring Boot', 'MySQL', 'Redis', 'Docker'],
-    portfolio: [],
+    // 서버처럼 만들 때 포트폴리오를 함께 써요.
+    portfolio: mockPortfolio(),
     problems: [
       frontend
         ? { title: '강의 목록의 느린 첫 화면', problem: '강의가 늘면서 목록을 한 번에 그려 첫 화면이 늦게 뜸', cause: '', solution: '목록을 24개씩 나눠 그리고 화면 끝에 닿으면 더 그리도록 바꿈', effect: '[직접 입력: 개선 전후 첫 화면 시간]', decision: '' }
@@ -414,16 +426,26 @@ async function handle(path: string, query: URLSearchParams, method: string, body
     else if (sub === 'projects' && method === 'PUT') {
       const edited = (json.projects as ResumeProject[] | undefined) ?? []
       resume.projects = (resume.projects ?? []).map((project) => ({ ...project, ...edited.find((item) => item.repo === project.repo), repo: project.repo }))
+    } else if (sub === 'projects' && method === 'POST' && !extra) {
+      // 서버처럼 이미 있는 레포는 빼고, 서류 하나에 6개까지예요.
+      await wait(1500)
+      const known = new Set((resume.projects ?? []).map((project) => project.repo.toLowerCase()))
+      const repos = (Array.isArray(json.repos) ? json.repos.map(String) : []).filter((repo) => !known.has(repo.toLowerCase()))
+      if (resume.source !== 'github' || repos.length === 0 || (resume.projects ?? []).length + repos.length > 6) return fail(400, 'C002')
+      const added = repos.map(mockProject)
+      resume.projects = [...(resume.projects ?? []), ...added]
+      const names = new Set(resume.skills.map((skill) => skill.name))
+      resume.skills = [...resume.skills, ...extractSkills(added.map((project) => project.stack.join(' ')).join(' '), false).filter((skill) => !names.has(skill.name))]
+      resume.paragraphs = resume.projects.flatMap((project) => [`${project.name}: ${project.headline}`, `맡은 역할: ${project.role}`])
+      resume.name = `${resume.projects[0].name} 외 ${resume.projects.length - 1}개 프로젝트`
     } else if (sub === 'projects' && last === 'portfolio' && parts.length === 5) {
       // 서버는 레포 재료로 AI가 여덟 항목을 써요. 목 모드는 항목마다 짧은 보기 글이에요.
       await wait(1500)
       const project = resume.projects?.[Number(extra)]
       if (!project) return fail(400, 'C002')
-      const titles: Record<PortfolioKey, string> = { intro: '프로젝트 소개', period: '개발 기간', team: '팀 구성', stack: '기술 스택', role: '맡은 역할', features: '주요 기능', trouble: '문제 해결 경험', result: '성과와 배운 점' }
-      const asked = Array.isArray(json.sections) && json.sections.length > 0 ? (json.sections as PortfolioKey[]) : (Object.keys(titles) as PortfolioKey[])
-      const written = asked.map((key) => ({ key, title: titles[key], content: key === 'role' ? '**백엔드**\n\n> 의견 수집 도메인을 담당했습니다.\n\n1. 초기 프로젝트 구조 설계\n2. 의견 병렬 수집\n   1. 호출별 타임아웃' : `${titles[key]}의 보기 글이에요. [직접 입력: 사용자 수]` }))
+      const asked = Array.isArray(json.sections) && json.sections.length > 0 ? (json.sections as PortfolioKey[]) : (Object.keys(PORTFOLIO_TITLES) as PortfolioKey[])
       const kept = (project.portfolio ?? []).filter((item) => !asked.includes(item.key))
-      project.portfolio = (Object.keys(titles) as PortfolioKey[]).flatMap((key) => [...kept, ...written].filter((item) => item.key === key))
+      project.portfolio = (Object.keys(PORTFOLIO_TITLES) as PortfolioKey[]).flatMap((key) => [...kept, ...mockPortfolio(asked)].filter((item) => item.key === key))
     } else if (sub === 'projects' && last === 'portfolio' && parts[6] === 'revise') {
       await wait(1000)
       const project = resume.projects?.[Number(extra)]
