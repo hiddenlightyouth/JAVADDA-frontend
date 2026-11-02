@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
-import { blogCompaniesOf, blogOutlook, COLLECTED_AT, fetchBlogDigests, isStale, THEME_NAMES, themeTrends, topSkills, type BlogDigest, type BlogPost, type BlogTheme, type ThemeTrend } from '../lib/blogs'
+import { blogCompaniesOf, blogOutlook, COLLECTED_AT, fetchBlogDigests, fetchBlogOutlook, type BlogOutlook, isStale, THEME_NAMES, themeTrends, topSkills, type BlogDigest, type BlogPost, type BlogTheme, type ThemeTrend } from '../lib/blogs'
 import { canEmbed, companyOf, POSTINGS, useResume } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
@@ -99,6 +99,8 @@ const TEXT = messages({
 
 /** 한 번 받은 요약은 화면을 오가도 다시 받지 않아요. */
 let cache: BlogDigest[] | null = null
+/** 서버가 써 둔 총정리예요. 없으면 null, 아직 받지 않았으면 undefined예요. */
+let outlookCache: BlogOutlook | null | undefined
 
 /** 10월 27일처럼 적어요. 글을 모은 해와 다르면 해도 적어요. */
 function dayLabel(iso: string) {
@@ -135,6 +137,7 @@ export function Blogs({ company, onCompany, onJobs }: {
   const [reading, setReading] = useState<BrowserPage | null>(null)
   // 앱 안에 띄울 수 없어서 새 탭으로 열려고 기다리는 글이에요.
   const [leaving, setLeaving] = useState<BrowserPage | null>(null)
+  const [served, setServed] = useState<BlogOutlook | null | undefined>(outlookCache)
   const load = useLoadProgress()
   const waiting = useLoadHold(loaded === undefined)
 
@@ -155,6 +158,19 @@ export function Blogs({ company, onCompany, onJobs }: {
       stale = true
     }
   }, [attempt, load.one])
+
+  // 총정리는 글 목록을 막지 않고 따로 받아요. 오기 전과 서버에 없을 때는 화면이 글에서 계산한 총정리를 보여줘요.
+  useEffect(() => {
+    if (outlookCache !== undefined) return
+    let stale = false
+    fetchBlogOutlook().then((value) => {
+      outlookCache = value
+      if (!stale) setServed(value)
+    })
+    return () => {
+      stale = true
+    }
+  }, [])
 
   const digests = Array.isArray(loaded) ? loaded : null
   const blogCompanies = useMemo(() => blogCompaniesOf(digests ?? []), [digests])
@@ -187,7 +203,7 @@ export function Blogs({ company, onCompany, onJobs }: {
   }
   // 고른 것이 바뀔 때만 갤러리 칸을 다시 만들어요. 미니 브라우저를 열고 닫을 때는 그대로 써요.
   const trends = useMemo(() => (digests && !company && !theme ? themeTrends(digests).trends.slice(0, 6) : []), [digests, company, theme])
-  const outlook = useMemo(() => (digests ? blogOutlook(digests) : null), [digests])
+  const outlook = useMemo(() => served ?? (digests ? blogOutlook(digests) : null), [served, digests])
   const read = (page: BrowserPage) => {
     if (!canEmbed(page.url)) {
       track('blog_post_open', { company: page.companyId, from: 'tab' })
@@ -393,24 +409,30 @@ function ThemeCard({ trend, order, onPick }: { trend: ThemeTrend; order: number;
  * 모든 기업 블로그를 묶어 본 총정리 칸이에요. 요즘 많이 다룬 주제 셋과 그 고민, 따라가려면 필요한 역량, 지금 해 볼 준비가 있어요.
  * 대표 이력서가 있으면 역량을 진단 시작과 같은 기준으로 칠하고, 아직 보이지 않는 역량 수를 알려줘요. 주제를 누르면 그 주제 글만 걸러 봐요.
  */
-function OutlookCard({ outlook, onTheme }: { outlook: NonNullable<ReturnType<typeof blogOutlook>>; onTheme: (theme: BlogTheme) => void }) {
+function OutlookCard({ outlook, onTheme }: { outlook: BlogOutlook; onTheme: (theme: BlogTheme) => void }) {
   const L = useMessages(TEXT)
   const resume = useResume()
   const [first, second] = outlook.themes.map((item) => THEME_NAMES[item.theme])
   const missing = resume ? outlook.skills.filter((item) => skillTone(item.skill, resume) !== 'met').length : 0
   return (
     <section className="mb-4 animate-rise rounded-2xl bg-gray-50 p-5 @2xl:p-6">
+      {/* 서버의 총정리는 AI가 쓴 머리 문장과 흐름 문단이 있고, 화면이 계산한 총정리는 주제 이름으로 머리 문장을 만들어요. */}
       <h2 className="text-[19px] leading-snug font-semibold text-gray-900 @2xl:text-[21px]">
-        {L.outlookLead}
-        <span className="text-brand-hover">{first}</span>
-        {second && (
+        {outlook.headline ?? (
           <>
-            {L.outlookAnd(first)}
-            <span className="text-brand-hover">{second}</span>
+            {L.outlookLead}
+            <span className="text-brand-hover">{first}</span>
+            {second && (
+              <>
+                {L.outlookAnd(first)}
+                <span className="text-brand-hover">{second}</span>
+              </>
+            )}
+            {L.outlookTail(second ?? first)}.
           </>
         )}
-        {L.outlookTail(second ?? first)}.
       </h2>
+      {outlook.summary && <p className="mt-2.5 max-w-[72ch] text-[13.5px] leading-relaxed text-gray-600">{outlook.summary}</p>}
 
       <ul className="mt-5 grid gap-3 @3xl:grid-cols-3">
         {outlook.themes.map((item, index) => (
@@ -448,7 +470,7 @@ function OutlookCard({ outlook, onTheme }: { outlook: NonNullable<ReturnType<typ
           <h3 className={label}>{L.outlookSkills}</h3>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {outlook.skills.map((item) => (
-              <SkillChip key={item.skill} name={item.skill} tone={skillTone(item.skill, resume)} tip={L.skillDemand(item.postings)} />
+              <SkillChip key={item.skill} name={item.skill} tone={skillTone(item.skill, resume)} tip={[item.reason, L.skillDemand(item.postings)].filter(Boolean).join(' ')} />
             ))}
           </div>
           {resume && <p className="mt-3 text-[13px] leading-relaxed text-gray-600">{L.outlookMissing(missing)}</p>}

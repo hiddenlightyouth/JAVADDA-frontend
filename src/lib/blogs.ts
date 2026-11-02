@@ -509,18 +509,31 @@ const THEME_OUTLOOK: Record<BlogTheme, { concern: string; skills: string[]; prep
   },
 }
 
-/** 총정리 칸의 주제 하나예요. 요즘 흐름(`ThemeTrend`)에 고민과 준비를 붙이고, 최근 두 달에 더 많이 썼으면 rising이에요. */
-export interface OutlookTheme extends ThemeTrend {
+/** 총정리 칸의 주제 하나예요. 기업들이 무엇을 고민하는지(concern)와 지금 해 볼 준비(prepare), 그 주제를 쓴 기업이 있고, 최근 두 달에 더 많이 썼으면 rising이에요. */
+export interface OutlookTheme {
+  theme: BlogTheme
   concern: string
   prepare: string
+  companies: string[]
   rising: boolean
 }
 
-/** 총정리 칸의 역량 하나예요. 그 역량이 필요한 주제와, 지금 열린 공고 중 그 역량을 적은 공고 수예요. */
+/** 총정리 칸의 역량 하나예요. 왜 필요한지(reason, 서버가 쓴 것만)와 지금 열린 공고 중 그 역량을 적은 공고 수예요. */
 export interface OutlookSkill {
   skill: string
-  themes: BlogTheme[]
+  reason?: string
   postings: number
+}
+
+/**
+ * 모든 기업 블로그를 묶어 본 총정리예요(GET /blogs/outlook). 서버가 블로그를 모을 때 AI가 전체 글을 읽고 써 둬요.
+ * 서버의 총정리에는 머리 문장(headline)과 흐름과 예측 한 문단(summary)이 있고, 화면이 계산한 것(`blogOutlook`)에는 없어요.
+ */
+export interface BlogOutlook {
+  headline?: string
+  summary?: string
+  themes: OutlookTheme[]
+  skills: OutlookSkill[]
 }
 
 /** 총정리에 쓰는 주제 수와 역량 수예요. */
@@ -528,11 +541,11 @@ const OUTLOOK_THEMES = 3
 const OUTLOOK_SKILLS = 8
 
 /**
- * 모든 기업 블로그를 묶어 본 총정리예요. 최근 넉 달에 여러 기업이 쓴 주제를 골라 요즘 고민으로 보여주고,
- * 그 주제들을 따라가려면 필요한 역량을 여러 주제에 걸칠수록, 공고가 많이 적을수록 앞에 둬요.
- * 화면에서 계산해서 글이 늘면 같이 바뀌어요. 쓸 만한 글이 없으면 null이에요.
+ * 서버의 총정리가 없을 때(아직 쓰지 않았거나 서버에 닿지 못할 때) 화면이 글에서 계산하는 총정리예요.
+ * 최근 넉 달에 여러 기업이 쓴 주제를 골라 `THEME_OUTLOOK`의 문장으로 요즘 고민을 보여주고,
+ * 그 주제들을 따라가려면 필요한 역량을 여러 주제에 걸칠수록, 공고가 많이 적을수록 앞에 둬요. 쓸 만한 글이 없으면 null이에요.
  */
-export function blogOutlook(digests: BlogDigest[]): { themes: OutlookTheme[]; skills: OutlookSkill[] } | null {
+export function blogOutlook(digests: BlogDigest[]): BlogOutlook | null {
   const { trends } = themeTrends(digests)
   const picked = trends.slice(0, OUTLOOK_THEMES)
   if (!picked.length) return null
@@ -549,17 +562,14 @@ export function blogOutlook(digests: BlogDigest[]): { themes: OutlookTheme[]; sk
       }
     }
     const { concern, prepare } = THEME_OUTLOOK[trend.theme]
-    return { ...trend, concern, prepare, rising: recent >= 2 && recent > earlier }
+    return { theme: trend.theme, companies: trend.companies, concern, prepare, rising: recent >= 2 && recent > earlier }
   })
 
   // 다른 주제 넷째부터도 역량에 조금 더해서, 세 주제가 같은 역량만 말해도 목록이 비지 않게 해요.
-  const weights = new Map<string, { themes: BlogTheme[]; weight: number }>()
+  const weights = new Map<string, number>()
   trends.slice(0, OUTLOOK_THEMES + 2).forEach((trend, index) => {
     for (const skill of THEME_OUTLOOK[trend.theme].skills) {
-      const entry = weights.get(skill) ?? { themes: [], weight: 0 }
-      if (index < OUTLOOK_THEMES) entry.themes.push(trend.theme)
-      entry.weight += trend.companies.length * (index < OUTLOOK_THEMES ? 1 : 0.5)
-      weights.set(skill, entry)
+      weights.set(skill, (weights.get(skill) ?? 0) + trend.companies.length * (index < OUTLOOK_THEMES ? 1 : 0.5))
     }
   })
   const demand = new Map<string, number>()
@@ -567,11 +577,25 @@ export function blogOutlook(digests: BlogDigest[]): { themes: OutlookTheme[]; sk
     for (const skill of new Set([...posting.required, ...posting.preferred].map(canonical))) demand.set(skill, (demand.get(skill) ?? 0) + 1)
   }
   const skills = [...weights]
-    .map(([skill, entry]) => ({ skill, themes: entry.themes, postings: demand.get(skill) ?? 0, weight: entry.weight }))
+    .map(([skill, weight]) => ({ skill, postings: demand.get(skill) ?? 0, weight }))
     .sort((a, b) => b.weight - a.weight || b.postings - a.postings)
     .slice(0, OUTLOOK_SKILLS)
-    .map(({ skill, themes, postings }) => ({ skill, themes, postings }))
+    .map(({ skill, postings }) => ({ skill, postings }))
   return { themes, skills }
+}
+
+/** 서버가 써 둔 총정리예요(GET /blogs/outlook). 아직 없거나 서버에 닿지 못하면 null이고, 그때 화면은 `blogOutlook`으로 계산해요. */
+export async function fetchBlogOutlook(): Promise<BlogOutlook | null> {
+  try {
+    const result = await readWithLoad<BlogOutlook | null>(await fetch(apiUrl('/blogs/outlook')))
+    const data = result.ok ? result.data : null
+    if (!data || !Array.isArray(data.themes)) return null
+    const themes = data.themes.filter((item) => item.theme in THEME_NAMES)
+    if (!themes.length) return null
+    return { headline: data.headline || undefined, summary: data.summary || undefined, themes, skills: Array.isArray(data.skills) ? data.skills : [] }
+  } catch {
+    return null
+  }
 }
 
 /** 기술 블로그 요약 전체예요(GET /blogs). 서버에 닿지 못하면 적어 둔 글을 보여줘요. 글은 최신 순서로 맞춰 둬요. onLoad를 주면 받는 정도(0에서 1)를 알려요. */
