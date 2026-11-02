@@ -19,12 +19,13 @@ import { Badge, FormError, menuPanel, NumberedList, primaryButton, textField, te
 const TEXT = messages({
   ko: {
     title: '내 이력서',
-    fileTitle: 'PDF 파일',
-    fileBody: '이력서나 포트폴리오 PDF를 여기로 끌어다 놓거나 눌러서 골라요.',
+    fileTitle: 'PDF를 끌어다 놓으세요',
+    fileBody: '이력서나 포트폴리오 PDF, 10MB까지 올릴 수 있어요.',
+    or: '또는',
     fileDrop: '여기에 놓으면 바로 읽어요',
     choose: 'PDF 고르기',
     linkTitle: 'GitHub나 노션 링크',
-    linkBody: '레포나 포트폴리오 페이지의 주소를 붙여 넣어요.',
+    linkBody: '레포나 포트폴리오 페이지 주소를 붙여 넣으면 읽어요.',
     linkPlaceholder: 'https://github.com/...',
     linkLabel: 'GitHub나 노션 링크',
     linkSubmit: '링크로 올리기',
@@ -55,8 +56,9 @@ const TEXT = messages({
   },
   en: {
     title: 'My resume',
-    fileTitle: 'PDF file',
-    fileBody: 'Drop your resume or portfolio PDF here, or click to choose one.',
+    fileTitle: 'Drop a PDF here',
+    fileBody: 'A resume or portfolio PDF, up to 10MB.',
+    or: 'or',
     fileDrop: 'Drop it here and we will read it',
     choose: 'Choose a PDF',
     linkTitle: 'GitHub or Notion link',
@@ -155,7 +157,7 @@ export function ResumeUploader({ onDone, onWorking }: {
     )
   }
 
-  // 올리는 방법 두 가지를 나란히 놓아요. PDF 칸은 전체가 눌리는 버튼이고, 파일을 이 칸 어디에 끌어 와도 받아요.
+  // 위에 PDF를 끌어다 놓는 큰 칸, 아래에 링크 한 줄을 둬요. 파일은 이 칸 어디에 끌어 와도 받아요.
   return (
     <div
       onDragOver={(event) => {
@@ -167,32 +169,34 @@ export function ResumeUploader({ onDone, onWorking }: {
       }}
       onDrop={drop}
     >
-      <div className="grid gap-3 sm:grid-cols-2">
-        <input ref={fileRef} type="file" accept="application/pdf,.pdf" hidden onChange={(event) => takeFile(event.target.files?.[0])} />
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className={`group flex flex-col items-start rounded-2xl border-2 border-dashed text-left transition-colors min-h-48 p-[22px] ${
-            over ? 'border-brand bg-brand-soft' : 'border-transparent bg-gray-50 hover:bg-gray-100'
-          }`}
-        >
-          <span className={`flex size-12 items-center justify-center rounded-full bg-white transition-colors ${over ? 'text-brand' : 'text-gray-500 group-hover:text-brand'}`}>
-            <UploadIcon className="size-6" strokeWidth={1} />
-          </span>
-          <span className="mt-4 text-[15px] font-semibold text-gray-900">{over ? L.fileDrop : L.fileTitle}</span>
-          <span className="mt-1.5 text-[13px] leading-relaxed text-gray-500">{L.fileBody}</span>
-          <span className="mt-auto w-full pt-5">
-            <span className={`${primaryButton} pointer-events-none flex h-10! w-full items-center justify-center`}>{L.choose}</span>
-          </span>
-        </button>
+      <input ref={fileRef} type="file" accept="application/pdf,.pdf" hidden onChange={(event) => takeFile(event.target.files?.[0])} />
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        className={`group flex w-full flex-col items-center rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors ${
+          over ? 'border-brand bg-brand-soft' : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
+        }`}
+      >
+        <span className={`flex size-12 items-center justify-center rounded-full bg-white transition-colors ${over ? 'text-brand' : 'text-gray-500 group-hover:text-brand'}`}>
+          <UploadIcon className="size-6" strokeWidth={1} />
+        </span>
+        <span className="mt-4 text-[15px] font-semibold text-gray-900">{over ? L.fileDrop : L.fileTitle}</span>
+        <span className="mt-1 text-[13px] leading-relaxed text-gray-500">{L.fileBody}</span>
+        <span className={`${primaryButton} pointer-events-none mt-5`}>{L.choose}</span>
+      </button>
 
-        <form onSubmit={submitLink} noValidate className="flex min-h-48 flex-col rounded-2xl bg-gray-50 p-6">
-          <span className="flex size-12 items-center justify-center rounded-full bg-white text-gray-500">
-            <LinkIcon className="size-6" strokeWidth={1} />
-          </span>
-          <span className="mt-4 text-[15px] font-semibold text-gray-900">{L.linkTitle}</span>
-          <span className="mt-1.5 text-[13px] leading-relaxed text-gray-500">{L.linkBody}</span>
-          <div className="mt-auto pt-5">
+      <div className="my-5 flex items-center gap-3 text-[12px] text-gray-400" aria-hidden>
+        <span className="h-px flex-1 bg-gray-200" />
+        {L.or}
+        <span className="h-px flex-1 bg-gray-200" />
+      </div>
+
+      <form onSubmit={submitLink} noValidate>
+        <p className="text-[14px] font-semibold text-gray-900">{L.linkTitle}</p>
+        <p className="mt-1 text-[13px] text-gray-500">{L.linkBody}</p>
+        <div className="mt-3 flex gap-2">
+          <label className="relative min-w-0 flex-1">
+            <LinkIcon className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-gray-400" />
             <input
               type="url"
               value={link}
@@ -203,15 +207,15 @@ export function ResumeUploader({ onDone, onWorking }: {
               placeholder={L.linkPlaceholder}
               aria-label={L.linkLabel}
               aria-invalid={invalid}
-              className={`${textField} ${invalid ? 'border-red-400! focus:border-red-400!' : ''}`}
+              className={`${textField} pl-10! ${invalid ? 'border-red-400! focus:border-red-400!' : ''}`}
             />
-            {invalid && <FormError className="mt-1.5">{L.invalidLink}</FormError>}
-            <button type="submit" disabled={!link.trim()} className={`${toolButton} mt-2 h-10! w-full justify-center rounded-full! disabled:text-gray-400`}>
-              {L.linkSubmit}
-            </button>
-          </div>
-        </form>
-      </div>
+          </label>
+          <button type="submit" disabled={!link.trim()} className={`${toolButton} h-10! shrink-0 px-4 disabled:text-gray-400`}>
+            {L.linkSubmit}
+          </button>
+        </div>
+        {invalid && <FormError className="mt-1.5">{L.invalidLink}</FormError>}
+      </form>
     </div>
   )
 }
