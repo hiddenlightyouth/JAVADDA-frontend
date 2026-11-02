@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
-import { careerName, companyOf, COMPANY_SIZES, companySizeOf, sizeName, type CompanySize, type CompanyCategory, majorCompanies, familyName, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort } from '../lib/gap'
+import { careerName, companyOf, COMPANY_CATEGORIES, COMPANY_SIZES, companySizeOf, sizeName, type CompanySize, type CompanyCategory, majorCompanies, familyName, sortPostings, useResume, type CareerLevel, type JobFamily, type JobPosting, type PostingSort } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
-import { readFlag, writeFlag } from '../lib/storage'
+import { readFlag, readJson, writeFlag, writeJson } from '../lib/storage'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
 import { CategoryFilter, CompanyFilter, Notice } from './GapParts'
@@ -22,12 +22,34 @@ const CAREERS: CareerLevel[] = ['entry', 'junior', 'any']
 const SORTS: PostingSort[] = ['fit', 'recent', 'deadline']
 /** 상시 채용 숨기기를 켰는지 이 기기에 기억해요. */
 const HIDE_ROLLING_KEY = 'javadda:jobs-hide-rolling'
-/** 개발 직군만 보기를 골라 뒀는지, 개발 직군만 볼지 묻는 칸을 닫았는지 이 기기에 기억해요. */
-const DEV_ONLY_KEY = 'javadda:jobs-dev-only'
+/** 고른 직군, 경력, 기업 규모, 정렬, 기업 분류를 이 기기에 기억해서 다음에 열 때도 그대로예요. */
+const FILTERS_KEY = 'javadda:jobs-filters'
+/** 개발 직군만 볼지 묻는 칸을 닫았는지 이 기기에 기억해요. */
 const DEV_ASKED_KEY = 'javadda:jobs-dev-asked'
 
 /** 직군 메뉴의 값이에요. null은 모든 공고, dev는 개발이 아닌 직무(기타)를 뺀 개발 직군 전체예요. */
 type FamilyFilter = JobFamily | 'dev' | null
+
+interface SavedFilters {
+  family: FamilyFilter
+  career: CareerLevel | null
+  size: CompanySize | null
+  sort: PostingSort | null
+  category: CompanyCategory | null
+}
+
+/** 저장해 둔 값 중 지금 메뉴에 있는 것만 써요. 메뉴가 바뀌어 없어진 값은 처음 값으로 둬요. */
+function readFilters(): SavedFilters {
+  const saved = readJson<Partial<Record<keyof SavedFilters, unknown>>>(FILTERS_KEY, {})
+  const pick = <T,>(value: unknown, options: readonly T[]): T | null => (options.includes(value as T) ? (value as T) : null)
+  return {
+    family: pick<FamilyFilter>(saved.family, ['dev', ...FAMILIES]),
+    career: pick(saved.career, CAREERS),
+    size: pick(saved.size, COMPANY_SIZES),
+    sort: pick(saved.sort, SORTS),
+    category: pick(saved.category, COMPANY_CATEGORIES),
+  }
+}
 
 const TEXT = messages({
   ko: {
@@ -79,22 +101,23 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   const L = useMessages(TEXT)
   const resume = useResume()
   const [query, setQuery] = useState('')
-  const [family, setFamilyState] = useState<FamilyFilter>(() => (readFlag(DEV_ONLY_KEY) ? 'dev' : null))
+  const [saved] = useState(readFilters)
+  const [family, setFamily] = useState<FamilyFilter>(saved.family)
   const [asked, setAsked] = useState(() => readFlag(DEV_ASKED_KEY))
-  // 개발 직군 전체를 고르면 다음에 열 때도 그대로예요. 다른 것을 고르면 풀어요.
-  const setFamily = (next: FamilyFilter) => {
-    setFamilyState(next)
-    writeFlag(DEV_ONLY_KEY, next === 'dev')
-  }
   const closeAsk = () => {
     setAsked(true)
     writeFlag(DEV_ASKED_KEY, true)
   }
-  const [career, setCareer] = useState<CareerLevel | null>(null)
-  const [sort, setSort] = useState<PostingSort>(resume ? 'fit' : 'recent')
+  const [career, setCareer] = useState<CareerLevel | null>(saved.career)
+  // 적합도순은 이력서가 있을 때만 메뉴에 있어요.
+  // 정렬은 직접 고른 것만 기억해요. 고르지 않았으면 이력서를 올린 뒤에 적합도순으로 열려요.
+  const [chosenSort, setChosenSort] = useState(saved.sort)
+  const [sort, setSort] = useState<PostingSort>(chosenSort && (chosenSort !== 'fit' || resume) ? chosenSort : resume ? 'fit' : 'recent')
   const [company, setCompany] = useState<string | null>(initialCompany)
-  const [category, setCategory] = useState<CompanyCategory | null>(null)
-  const [size, setSize] = useState<CompanySize | null>(null)
+  // 기업을 골라 둔 채로 들어오면 분류는 풀어요. 기업과 분류는 같이 고르지 않아요.
+  const [category, setCategory] = useState<CompanyCategory | null>(initialCompany ? null : saved.category)
+  const [size, setSize] = useState<CompanySize | null>(saved.size)
+  useEffect(() => writeJson(FILTERS_KEY, { family, career, size, sort: chosenSort, category } satisfies SavedFilters), [family, career, size, chosenSort, category])
   const browser = useJobBrowser()
   const [layout, setLayout] = useState<Layout>(readLayout)
   const [hideRolling, setHideRolling] = useState(() => readFlag(HIDE_ROLLING_KEY))
@@ -228,6 +251,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
                   onSelect: () => {
                     track('jobs_sort_change', { sort: value })
                     setSort(value)
+                    setChosenSort(value)
                   },
                 })),
               },
