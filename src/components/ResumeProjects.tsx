@@ -6,7 +6,7 @@ import { messages, pick, useMessages } from '../lib/i18n'
 import { showToast } from '../lib/toast'
 import { Dropdown } from './Dropdown'
 import { AiProgress } from './GapParts'
-import { ExternalLinkIcon, PencilIcon, PlusIcon, TrashIcon } from './Icons'
+import { ExternalLinkIcon, PencilIcon, SparkleIcon, TrashIcon } from './Icons'
 import { panelAction } from './ScreenParts'
 import { Badge, ghostDangerButton, Segmented, toolButton } from './ui'
 
@@ -29,7 +29,7 @@ const TEXT = messages({
     fixAi: 'AI로 수정',
     revisions: { shorter: '더 짧게', concrete: '더 구체적으로', numbers: '수치 넣기', rewrite: '다시 쓰기', another: '다른 경험으로 바꾸기' } as Record<Exclude<ProjectRevision, 'add'>, string>,
     revised: '고쳐 썼어요.',
-    add: '경험 더하기',
+    add: '경험 추가하기',
     added: '경험을 하나 더했어요.',
     remove: '제거',
     removed: '제거했어요.',
@@ -57,7 +57,7 @@ const TEXT = messages({
     fixAi: 'Rewrite with AI',
     revisions: { shorter: 'Shorter', concrete: 'More concrete', numbers: 'Add numbers', rewrite: 'Rewrite', another: 'Swap for another' },
     revised: 'Rewritten.',
-    add: 'Add experience',
+    add: 'Add an experience',
     added: 'Added one more experience.',
     remove: 'Delete',
     removed: 'Deleted.',
@@ -371,7 +371,7 @@ function ProjectCard({ resume, index, project, autoWrite, queued, onAutoStart, o
           </div>
         ) : (
           <button type="button" onClick={() => void revise(null, 'add')} disabled={!!busy} className={`${toolButton} mt-3`}>
-            <PlusIcon className="size-3.5" />
+            <SparkleIcon className="size-3.5" />
             {L.add}
           </button>
         ))}

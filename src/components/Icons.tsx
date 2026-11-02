@@ -320,6 +320,16 @@ export function LockIcon({ className = 'size-3.5 shrink-0', strokeWidth = 1.4, l
   )
 }
 
+/** AI가 글을 써 준다는 뜻의 반짝이예요. */
+export function SparkleIcon({ className = 'size-3.5 shrink-0', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M7 2.5l1.1 3.4L11.5 7 8.1 8.1 7 11.5 5.9 8.1 2.5 7l3.4-1.1L7 2.5z" />
+      <path d="M12 10.5l.5 1.5 1.5.5-1.5.5-.5 1.5-.5-1.5-1.5-.5 1.5-.5.5-1.5z" />
+    </Icon>
+  )
+}
+
 /** 마우스를 올리면 그 자리에서 고칠 수 있다고 알리는 연필이에요. */
 export function PencilIcon({ className = 'size-3.5 shrink-0', strokeWidth = 1.4, label }: IconProps) {
   return (
