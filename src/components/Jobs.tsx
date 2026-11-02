@@ -10,7 +10,7 @@ import { SearchIcon } from './Icons'
 import { PostingCountBar, PostingList, readLayout, useJobBrowser, type Layout } from './JobCard'
 import { SplitView } from './PostingBrowser'
 import { LoadGate, SuggestionHint, usePostings, useSuggestion } from './ScreenParts'
-import { Checkbox } from './ui'
+import { Checkbox, primaryButton, quietButton } from './ui'
 
 /**
  * 공고 탐색 화면이에요. 공고를 화면 가득 펼쳐 놓고 직군과 경력으로 걸러 보다가, 눌러서 원문을 보거나 분석하기로 진단을 시작해요.
@@ -22,6 +22,12 @@ const CAREERS: CareerLevel[] = ['entry', 'junior', 'any']
 const SORTS: PostingSort[] = ['fit', 'recent', 'deadline']
 /** 상시 채용 숨기기를 켰는지 이 기기에 기억해요. */
 const HIDE_ROLLING_KEY = 'javadda:jobs-hide-rolling'
+/** 개발 직군만 보기를 골라 뒀는지, 개발 직군만 볼지 묻는 칸을 닫았는지 이 기기에 기억해요. */
+const DEV_ONLY_KEY = 'javadda:jobs-dev-only'
+const DEV_ASKED_KEY = 'javadda:jobs-dev-asked'
+
+/** 직군 메뉴의 값이에요. null은 모든 공고, dev는 개발이 아닌 직무(기타)를 뺀 개발 직군 전체예요. */
+type FamilyFilter = JobFamily | 'dev' | null
 
 const TEXT = messages({
   ko: {
@@ -30,6 +36,10 @@ const TEXT = messages({
     all: '전체',
     family: '직군',
     devAll: '개발 직군 전체',
+    askTitle: '개발자이신가요?',
+    askBody: '개발 직군만 따로 모아볼 수 있어요. 필터를 설정할까요?',
+    askYes: '개발 직군만 보기',
+    askClose: '닫기',
     career: '경력',
     size: '기업 규모',
     sort: '정렬',
@@ -47,6 +57,10 @@ const TEXT = messages({
     all: 'All',
     family: 'Role',
     devAll: 'All dev roles',
+    askTitle: 'Are you a developer?',
+    askBody: 'You can see only developer roles. Set the filter?',
+    askYes: 'Show dev roles only',
+    askClose: 'Close',
     career: 'Level',
     size: 'Company size',
     sort: 'Sort',
@@ -65,7 +79,17 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   const L = useMessages(TEXT)
   const resume = useResume()
   const [query, setQuery] = useState('')
-  const [family, setFamily] = useState<JobFamily | null>(null)
+  const [family, setFamilyState] = useState<FamilyFilter>(() => (readFlag(DEV_ONLY_KEY) ? 'dev' : null))
+  const [asked, setAsked] = useState(() => readFlag(DEV_ASKED_KEY))
+  // 개발 직군 전체를 고르면 다음에 열 때도 그대로예요. 다른 것을 고르면 풀어요.
+  const setFamily = (next: FamilyFilter) => {
+    setFamilyState(next)
+    writeFlag(DEV_ONLY_KEY, next === 'dev')
+  }
+  const closeAsk = () => {
+    setAsked(true)
+    writeFlag(DEV_ASKED_KEY, true)
+  }
   const [career, setCareer] = useState<CareerLevel | null>(null)
   const [sort, setSort] = useState<PostingSort>(resume ? 'fit' : 'recent')
   const [company, setCompany] = useState<string | null>(initialCompany)
@@ -75,7 +99,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   const [layout, setLayout] = useState<Layout>(readLayout)
   const [hideRolling, setHideRolling] = useState(() => readFlag(HIDE_ROLLING_KEY))
   // 검색어는 잠깐 멈췄을 때 보내요.
-  const { loaded, postings, waiting, percent, retry } = usePostings({ query, family, career })
+  const { loaded, postings, waiting, percent, retry } = usePostings({ query, family: family === 'dev' ? null : family, career })
   // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요.
   const suggestion = useSuggestion(!query)
   const majors = useMemo(majorCompanies, [])
@@ -94,14 +118,14 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
     onPick(posting.id)
   }
 
-  // 직군을 고르지 않았으면 추천 공고처럼 개발 직군만 보여줘요(기타는 메뉴에서 골라요). 기업과 상시 채용 숨기기는 받아 온 공고에서 바로 걸러요. 기업마다 공고가 몇 개뿐이라 서버에 다시 묻지 않아요. 거른 뒤에 정렬해서 정렬할 공고를 줄여요.
+  // 직군을 고르지 않았으면 모든 공고를, 개발 직군 전체면 기타를 뺀 공고를 보여줘요. 기업과 상시 채용 숨기기는 받아 온 공고에서 바로 걸러요. 기업마다 공고가 몇 개뿐이라 서버에 다시 묻지 않아요. 거른 뒤에 정렬해서 정렬할 공고를 줄여요.
   const list = useMemo(
     () =>
       postings &&
       sortPostings(
         postings.filter(
           (posting) =>
-            (family || posting.family !== 'other') &&
+            (family !== 'dev' || posting.family !== 'other') &&
             (!company || posting.companyId === company) && (!category || companyOf(posting.companyId).category === category) &&
             (!size || companySizeOf(companyOf(posting.companyId)) === size) &&
             (!hideRolling || posting.deadline),
@@ -109,7 +133,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
         sort,
         resume,
       ),
-    [postings, company, category, size, hideRolling, sort, resume],
+    [postings, family, company, category, size, hideRolling, sort, resume],
   )
 
   return (
@@ -140,15 +164,16 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
             size="lg"
             active={family !== null}
             label={L.family}
-            value={family ? familyName(family) : L.devAll}
+            value={family === 'dev' ? L.devAll : family ? familyName(family) : L.all}
             groups={[
               {
-                items: [null, ...FAMILIES].map((value) => ({
-                  label: value ? familyName(value) : L.devAll,
+                items: ([null, 'dev', ...FAMILIES] as FamilyFilter[]).map((value) => ({
+                  label: value === 'dev' ? L.devAll : value ? familyName(value) : L.all,
                   checked: family === value,
                   onSelect: () => {
-                    track('jobs_family_select', { family: value ?? 'dev' })
+                    track('jobs_family_select', { family: value ?? 'all' })
                     setFamily(value)
+                    if (value) closeAsk()
                   },
                 })),
               },
@@ -281,6 +306,36 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
           </LoadGate>
         </div>
       </ScrollPage>
+      {/* 모든 공고를 보고 있으면 오른쪽 아래에서 개발 직군만 볼지 한 번 물어요. 고르거나 닫으면 다시 묻지 않아요. 원문 칸이 열려 있으면 가리지 않게 두지 않아요. */}
+      {!asked && family === null && !browser.side && (
+        <div role="dialog" aria-labelledby="jobs-dev-ask" className="fixed right-6 bottom-6 z-30 w-[min(320px,calc(100vw-32px))] animate-rise rounded-2xl border border-gray-200 bg-white p-5">
+          <p id="jobs-dev-ask" className="text-[15px] font-semibold text-gray-900">{L.askTitle}</p>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">{L.askBody}</p>
+          <div className="mt-4 flex justify-end gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                track('jobs_dev_ask', { accepted: false })
+                closeAsk()
+              }}
+              className={quietButton}
+            >
+              {L.askClose}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                track('jobs_dev_ask', { accepted: true })
+                setFamily('dev')
+                closeAsk()
+              }}
+              className={primaryButton}
+            >
+              {L.askYes}
+            </button>
+          </div>
+        </div>
+      )}
     </SplitView>
   )
 }
