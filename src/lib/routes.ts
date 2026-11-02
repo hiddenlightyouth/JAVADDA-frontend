@@ -35,7 +35,7 @@ const CALENDAR_PATH = /^\/calendar\/?$/
 
 const MAP_PATH = /^\/map\/?$/
 
-const RESUME_PATH = /^\/resume(\/new)?\/?$/
+const RESUME_PATH = /^\/resume(?:\/([^/]+))?\/?$/
 
 const BLOGS_PATH = /^\/blogs(?:\/([^/]+))?\/?$/
 
@@ -70,8 +70,8 @@ export type Page =
   | { kind: 'recommend' }
   | { kind: 'calendar' }
   | { kind: 'map' }
-  /** add면 서류 추가 화면(/resume/new)이에요. */
-  | { kind: 'resume'; add?: boolean }
+  /** add면 서류 추가 화면(/resume/new), id면 서류 하나의 상세 화면(/resume/아이디)이에요. */
+  | { kind: 'resume'; add?: boolean; id?: string }
   | { kind: 'blogs'; company?: string }
   | { kind: 'company'; id: string }
   | { kind: 'diagnose'; postingId: string }
@@ -106,7 +106,7 @@ export function pageFromPath(): Page | null {
   if (CALENDAR_PATH.test(path)) return { kind: 'calendar' }
   if (MAP_PATH.test(path)) return { kind: 'map' }
   const resume = RESUME_PATH.exec(path)
-  if (resume) return resume[1] ? { kind: 'resume', add: true } : { kind: 'resume' }
+  if (resume) return resume[1] === 'new' ? { kind: 'resume', add: true } : resume[1] ? { kind: 'resume', id: decodeURIComponent(resume[1]) } : { kind: 'resume' }
   // 기술 블로그는 /blogs/기업아이디로 그 기업의 분석을 바로 열어요.
   const blogs = BLOGS_PATH.exec(path)
   if (blogs) return { kind: 'blogs', company: blogs[1] ? decodeURIComponent(blogs[1]) : undefined }
@@ -147,7 +147,7 @@ export function pathOf(page: Page | null): string {
     case 'map':
       return '/map'
     case 'resume':
-      return page.add ? '/resume/new' : '/resume'
+      return page.add ? '/resume/new' : page.id ? `/resume/${encodeURIComponent(page.id)}` : '/resume'
     case 'blogs':
       return page.company ? `/blogs/${encodeURIComponent(page.company)}` : '/blogs'
     case 'company':

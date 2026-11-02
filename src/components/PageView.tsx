@@ -45,6 +45,8 @@ interface Props {
   onResumeAdd: () => void
   /** 서류 추가 화면에서 목록으로 돌아가요. 뒤로 가기 기록을 남기지 않아요. */
   onResumeList: () => void
+  /** 서류 하나의 상세 화면을 열어요. replace면 뒤로 가기 기록을 남기지 않아요. */
+  onResumeDoc: (id: string, replace?: boolean) => void
   /** 기술 블로그를 열어요. 기업을 넘기면 그 기업의 분석으로 가요. */
   onBlogs: (company: string | null) => void
   /** 그 기업 공고만 골라 둔 공고 탐색으로 가요. */
@@ -63,7 +65,7 @@ interface Props {
 }
 
 /** 메인 화면(새 진단)을 뺀, 주소로 여는 화면을 그려요. 화면 코드는 열 때만 받아요. */
-export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExplore, onResume, onResumeAdd, onResumeList, onBlogs, onCompany, onAdmin, onArticle, onAccount, onSignedIn, onOpenReport, loginNotice, loginReturnTo, adminApi, feedback }: Props) {
+export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExplore, onResume, onResumeAdd, onResumeList, onResumeDoc, onBlogs, onCompany, onAdmin, onArticle, onAccount, onSignedIn, onOpenReport, loginNotice, loginReturnTo, adminApi, feedback }: Props) {
   return (
     <Suspense fallback={<main className="flex-1" />}>
       {page.kind === 'app-login' ? (
@@ -77,7 +79,7 @@ export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExp
       ) : page.kind === 'map' ? (
         <JobMap onPick={onDiagnose} />
       ) : page.kind === 'resume' ? (
-        <MyResume add={page.add ?? false} onAdd={onResumeAdd} onList={onResumeList} onExplore={onExplore} />
+        <MyResume add={page.add ?? false} docId={page.id ?? null} onAdd={onResumeAdd} onList={onResumeList} onDoc={onResumeDoc} onExplore={onExplore} />
       ) : page.kind === 'blogs' ? (
         <Blogs company={page.company ?? null} onCompany={onBlogs} onJobs={onCompany} />
       ) : page.kind === 'company' ? (

@@ -11,7 +11,7 @@ import { panelAction } from './ScreenParts'
 import { Badge, ghostButton, ghostDangerButton, label, primaryButton, quietButton, Segmented, textArea, textFieldSm, toolButton } from './ui'
 
 /**
- * GitHub 레포로 만든 서류의 프로젝트 경험(포트폴리오)이에요. 서류 상세 칸이 보여줘요.
+ * GitHub 레포로 만든 서류의 프로젝트 경험(포트폴리오)이에요. 서류 상세 화면이 보여줘요.
  * 문제 해결 경험마다 AI로 고치고(더 짧게, 더 구체적으로, 수치 넣기, 다시 쓰기, 다른 경험으로 바꾸기), 직접 고치고, 빼요.
  * 프로젝트마다 AI로 경험을 하나 더하고, 소개와 역할과 기술 스택을 직접 고쳐요. 예전 Lofy의 이력서 고치기를 옮겼어요.
  * 프로젝트마다 이력서와 포트폴리오를 오가며 봐요. 포트폴리오는 여덟 항목의 마크다운 글이고, 항목마다 AI로 고치고 직접 고치고 빼요. 예전 Lofy의 포트폴리오 만들기를 옮겼어요.

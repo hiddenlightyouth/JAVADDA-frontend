@@ -64,9 +64,9 @@ export function Modal({ onClose, labelledBy, alert = false, closeOnBackdrop = tr
 export const panelBody = 'min-h-0 flex-1 overflow-y-auto px-6 pb-6'
 
 /**
- * 오른쪽에서 미끄러져 들어오는 칸이에요. 갭 상세, 서류 상세, 관리자의 회원과 호출 상세가 같이 써요.
+ * 오른쪽에서 미끄러져 들어오는 칸이에요. 갭 상세, 예상 질문의 지난 기록, 관리자의 회원과 호출 상세가 같이 써요.
  * 바깥을 누르거나 Esc를 누르면 닫혀요. 안에서 확인 창을 띄우는 동안에는 dismissable을 꺼서 칸이 먼저 닫히지 않게 해요.
- * 안에서 고치는 일이 많은 칸(서류 상세)은 closeOnOutside를 꺼서 바깥을 눌러도 닫히지 않고, 닫기 버튼과 Esc로만 닫혀요.
+ * 안에서 고치는 일이 많은 칸은 closeOnOutside를 꺼서 바깥을 눌러도 닫히지 않고, 닫기 버튼과 Esc로만 닫혀요.
  * `Modal`처럼 화면 맨 바깥(body)에 그려요. header가 있으면 그 오른쪽에, 없으면 맨 위 줄에 닫기 버튼만 둬요.
  */
 export function SidePanel({ onClose, closeLabel, labelledBy, label, header, dismissable = true, closeOnOutside = true, className = 'max-w-[440px]', children }: {

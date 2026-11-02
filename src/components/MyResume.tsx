@@ -7,7 +7,7 @@ import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { showToast } from '../lib/toast'
 import { canvas, pageFrame, PageHeader } from './AppPage'
-import { ConfirmDialog, panelBody, SidePanel } from './Dialog'
+import { ConfirmDialog } from './Dialog'
 import { AiProgress, Notice, SkillChip, Tip } from './GapParts'
 import { GithubResume } from './GithubResume'
 import { GitHubMark } from './Social'
@@ -47,7 +47,8 @@ const TEXT = messages({
     addTitle: '서류 추가',
     emptyTitle: '아직 올린 이력서가 없어요',
     emptyBody: '이력서나 포트폴리오를 올려 두면 공고마다 얼마나 맞는지 보여줘요. 여러 개 올리고 하나를 대표로 정할 수 있어요.',
-    close: '닫기',
+    missingTitle: '서류를 찾을 수 없어요',
+    missingBody: '지웠거나 다른 계정의 서류예요.',
     primary: '대표 이력서',
     makePrimary: '대표 이력서로 정하기',
     primaryTip: '적합도와 추천, 진단에 이 서류를 써요',
@@ -84,7 +85,8 @@ const TEXT = messages({
     addTitle: 'Add a document',
     emptyTitle: 'No resumes yet',
     emptyBody: 'Upload a resume or portfolio to see how well you fit each posting. You can keep several and pick one as your main resume.',
-    close: 'Close',
+    missingTitle: 'Document not found',
+    missingBody: 'It was deleted or belongs to another account.',
     primary: 'Main resume',
     makePrimary: 'Make main resume',
     primaryTip: 'Fit, recommendations and diagnoses use this document',
@@ -327,7 +329,7 @@ function SkillEditor({ resume }: { resume: Resume }) {
             </ul>
           )}
         </div>
-        <button type="submit" disabled={!draft.trim()} className={toolButton}>
+        <button type="submit" disabled={!draft.trim()} className={`${toolButton} shrink-0`}>
           <PlusIcon className="size-3.5" />
           {L.add}
         </button>
@@ -338,8 +340,17 @@ function SkillEditor({ resume }: { resume: Resume }) {
 
 /** 서류 추가 화면을 목록에서 열었는지예요. 그랬으면 닫을 때 뒤로 가서, 뒤로 가기 기록에 목록이 두 번 쌓이지 않아요. */
 let addFromList = false
+/** 서류 상세 화면 바로 앞이 목록인지예요. 서류 추가와 같은 까닭으로, 그랬으면 뒤로 가기로 목록에 돌아가요. */
+let docFromList = false
 
-export function MyResume({ add, onAdd, onList, onExplore }: { add: boolean; onAdd: () => void; onList: () => void; onExplore: () => void }) {
+export function MyResume({ add, docId, onAdd, onList, onDoc, onExplore }: {
+  add: boolean
+  docId: string | null
+  onAdd: () => void
+  onList: () => void
+  onDoc: (id: string, replace?: boolean) => void
+  onExplore: () => void
+}) {
   const L = useMessages(TEXT)
   const shelf = useResumeShelf()
   /** 서류 추가 화면은 먼저 올릴지 만들지 고르고(choose), 올리기를 고르면 올리는 칸(upload), GitHub를 고르면 레포 고르는 칸(github)이 나와요. */
@@ -347,8 +358,6 @@ export function MyResume({ add, onAdd, onList, onExplore }: { add: boolean; onAd
   /** 서류를 읽는 동안이에요. 그동안은 서류 추가 화면을 떠날 수 없어요. */
   const [uploading, setUploading] = useState(false)
   const signedIn = useAuth().tokens !== null
-  const [openId, setOpenId] = useState<string | null>(null)
-  const open = shelf.list.find((resume) => resume.id === openId) ?? null
 
   /** 서류는 계정에 저장돼서, 로그인하지 않았으면 서류 추가 화면 대신 로그인 화면으로 가요. */
   const addDocument = () => {
@@ -360,6 +369,21 @@ export function MyResume({ add, onAdd, onList, onExplore }: { add: boolean; onAd
     if (addFromList) window.history.back()
     else onList()
     addFromList = false
+  }
+  /** 다 만든 서류의 상세 화면으로 가요. 서류 추가 화면을 대신해서, 뒤로 가기는 그 앞의 목록으로 가요. */
+  const openMade = (resume: Resume) => {
+    docFromList = addFromList
+    addFromList = false
+    onDoc(resume.id, true)
+  }
+  const openDoc = (resume: Resume) => {
+    docFromList = true
+    onDoc(resume.id)
+  }
+  const closeDoc = () => {
+    if (docFromList) window.history.back()
+    else onList()
+    docFromList = false
   }
   // 주소로 서류 추가 화면에 바로 들어왔는데 로그인하지 않았으면 로그인 화면으로 가요.
   useEffect(() => {
@@ -394,27 +418,44 @@ export function MyResume({ add, onAdd, onList, onExplore }: { add: boolean; onAd
               {step === 'choose' ? (
                 <AddChoice onUpload={() => setStep('upload')} onGithub={() => setStep('github')} />
               ) : step === 'github' ? (
-                <GithubResume
-                  onWorking={setUploading}
-                  onDone={(resume) => {
-                    setOpenId(resume.id)
-                    backToList()
-                  }}
-                />
+                <GithubResume onWorking={setUploading} onDone={openMade} />
               ) : (
-                <ResumeUploader
-                  onWorking={setUploading}
-                  onDone={(resume) => {
-                    // 다 읽으면 목록으로 돌아가서 그 서류의 상세 칸을 열어요.
-                    setOpenId(resume.id)
-                    backToList()
-                  }}
-                />
+                // 다 읽으면 그 서류의 상세 화면으로 가요.
+                <ResumeUploader onWorking={setUploading} onDone={openMade} />
               )}
             </div>
           </div>
         </div>
       </main>
+    )
+  }
+
+  if (docId) {
+    const resume = shelf.list.find((item) => item.id === docId)
+    if (!resume) {
+      return (
+        <main className={pageFrame}>
+          <PageHeader title={L.title} onBack={closeDoc} />
+          <div className={canvas}>
+            <Notice title={L.missingTitle} body={L.missingBody} action={L.title} onAction={closeDoc} className="mt-16" />
+          </div>
+        </main>
+      )
+    }
+    return (
+      <ResumeDetail
+        key={resume.id}
+        resume={resume}
+        primary={resume.id === shelf.primaryId}
+        onPrimary={() => makePrimary(resume)}
+        onExplore={onExplore}
+        onBack={closeDoc}
+        onRemoved={() => {
+          // 지운 서류의 주소로 돌아오지 않게 목록으로 바꿔요.
+          docFromList = false
+          onList()
+        }}
+      />
     )
   }
 
@@ -441,8 +482,7 @@ export function MyResume({ add, onAdd, onList, onExplore }: { add: boolean; onAd
                   key={resume.id}
                   resume={resume}
                   primary={resume.id === shelf.primaryId}
-                  selected={resume.id === openId}
-                  onSelect={() => setOpenId(resume.id)}
+                  onSelect={() => openDoc(resume)}
                   onPrimary={() => makePrimary(resume)}
                 />
               ))}
@@ -450,85 +490,84 @@ export function MyResume({ add, onAdd, onList, onExplore }: { add: boolean; onAd
           )}
         </div>
       </div>
-      {open && (
-        <ResumeSheet
-          resume={open}
-          primary={open.id === shelf.primaryId}
-          onPrimary={() => makePrimary(open)}
-          onExplore={onExplore}
-          onClose={() => setOpenId(null)}
-        />
-      )}
     </main>
   )
 }
 
-/** 서류 하나를 오른쪽에서 열어 보는 칸이에요. 역량을 고치고 읽은 문단을 보고, 대표로 정하거나 지워요. 갭 상세 칸과 같은 모양이에요. */
-function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resume: Resume; primary: boolean; onPrimary: () => void; onExplore: () => void; onClose: () => void }) {
+/** 서류 하나의 상세 화면이에요(/resume/아이디). 역량을 고치고 읽은 문단이나 프로젝트를 보고, 대표로 정하거나 지워요. */
+function ResumeDetail({ resume, primary, onPrimary, onExplore, onBack, onRemoved }: {
+  resume: Resume
+  primary: boolean
+  onPrimary: () => void
+  onExplore: () => void
+  onBack: () => void
+  onRemoved: () => void
+}) {
   const L = useMessages(TEXT)
   const [removing, setRemoving] = useState(false)
 
   return (
-    <>
-      {/* 지울지 묻는 창이 떠 있는 동안에는 그 창이 먼저라 칸을 닫지 않아요. */}
-      <SidePanel
-        onClose={onClose}
-        closeLabel={L.close}
-        labelledBy="resume-sheet-title"
-        dismissable={!removing}
-        closeOnOutside={false}
-        className="max-w-[480px]"
-        header={
+    <main className={pageFrame}>
+      <PageHeader
+        title={resume.name}
+        onBack={onBack}
+        backLabel={L.title}
+        actions={
           <>
-            <h2 id="resume-sheet-title" className="truncate text-[20px] font-semibold text-gray-900">
-              {resume.name}
-            </h2>
-            <p className="mt-1.5 flex items-center gap-2 text-[12.5px] text-gray-500">
-              <Badge tone="gray" strong>{L.sources[resume.source]}</Badge>
-              {L.uploadedAt(formatDateTime(resume.uploadedAt))}
-            </p>
+            <button type="button" onClick={() => setRemoving(true)} className={toolDangerButton}>
+              <TrashIcon className="size-4" />
+              {L.remove}
+            </button>
+            {primary ? (
+              <button type="button" onClick={onExplore} className={primaryButton}>
+                {L.browse}
+              </button>
+            ) : (
+              <button type="button" onClick={onPrimary} className={primaryButton}>
+                <StarIcon className="size-3.5" />
+                {L.makePrimary}
+              </button>
+            )}
           </>
         }
-      >
-        <div className={panelBody}>
-          <section>
-            <h3 className="text-[13.5px] font-semibold text-gray-900">{L.skills}</h3>
-            <div className="mt-3">
-              <SkillEditor resume={resume} />
-            </div>
-          </section>
-          {/* GitHub로 만든 서류는 문단이 프로젝트 경험을 풀어 쓴 것이라, 문단 대신 프로젝트 칸으로 보여줘요. */}
-          {resume.projects.length > 0 ? (
-            <section className="mt-8">
-              <h3 className="text-[13.5px] font-semibold text-gray-900">{L.projects}</h3>
+      />
+      <div className={canvas}>
+        <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-2 pb-16 md:px-10">
+          <p className="flex items-center gap-2 text-[13px] text-gray-500">
+            <Badge tone="gray" strong>{L.sources[resume.source]}</Badge>
+            {L.uploadedAt(formatDateTime(resume.uploadedAt))}
+            {primary && (
+              <span className="flex items-center gap-1 text-brand">
+                <StarIcon filled className="size-3.5" />
+                {L.primaryTip}
+              </span>
+            )}
+          </p>
+          {/* 넓으면 역량을 왼쪽에 멈춰 두고, 읽은 문단이나 프로젝트를 오른쪽에 넓게 둬요. */}
+          <div className="mt-8 grid items-start gap-x-10 gap-y-10 @5xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+            <section className="rounded-2xl bg-gray-50 p-5 @5xl:sticky @5xl:top-0">
+              <h2 className="text-[15px] font-semibold text-gray-900">{L.skills}</h2>
               <div className="mt-3">
-                <ResumeProjects resume={resume} />
+                <SkillEditor resume={resume} />
               </div>
             </section>
-          ) : (
-            <section className="mt-8">
-              <h3 className="text-[13.5px] font-semibold text-gray-900">{L.paragraphs}</h3>
-              <NumberedList items={resume.paragraphs} className="mt-3" />
-            </section>
-          )}
+            {/* GitHub로 만든 서류는 문단이 프로젝트 경험을 풀어 쓴 것이라, 문단 대신 프로젝트 칸으로 보여줘요. */}
+            {resume.projects.length > 0 ? (
+              <section className="min-w-0">
+                <h2 className="text-[15px] font-semibold text-gray-900">{L.projects}</h2>
+                <div className="mt-3">
+                  <ResumeProjects resume={resume} />
+                </div>
+              </section>
+            ) : (
+              <section className="min-w-0 max-w-3xl">
+                <h2 className="text-[15px] font-semibold text-gray-900">{L.paragraphs}</h2>
+                <NumberedList items={resume.paragraphs} className="mt-3" />
+              </section>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-2 border-t border-gray-200 px-6 py-4">
-          <button type="button" onClick={() => setRemoving(true)} className={toolDangerButton}>
-            <TrashIcon className="size-4" />
-            {L.remove}
-          </button>
-          <span className="flex-1" />
-          {primary ? (
-            <button type="button" onClick={onExplore} className={primaryButton}>
-              {L.browse}
-            </button>
-          ) : (
-            <button type="button" onClick={onPrimary} className={primaryButton}>
-              {L.makePrimary}
-            </button>
-          )}
-        </div>
-      </SidePanel>
+      </div>
       {removing && (
         <ConfirmDialog
           title={L.removeTitle}
@@ -540,23 +579,22 @@ function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resum
             removeResume(resume.id)
             track('resume_delete')
             showToast(pick(TEXT).removed)
-            onClose()
+            onRemoved()
           }}
         />
       )}
-    </>
+    </main>
   )
 }
 
-/** 올려 둔 서류 하나의 카드예요. 누르면 아래에 그 서류의 역량과 문단을 보여주고, 별을 누르면 대표 이력서로 정해요. */
-function ResumeCard({ resume, primary, selected, onSelect, onPrimary }: { resume: Resume; primary: boolean; selected: boolean; onSelect: () => void; onPrimary: () => void }) {
+/** 올려 둔 서류 하나의 카드예요. 누르면 그 서류의 상세 화면으로 가고, 별을 누르면 대표 이력서로 정해요. */
+function ResumeCard({ resume, primary, onSelect, onPrimary }: { resume: Resume; primary: boolean; onSelect: () => void; onPrimary: () => void }) {
   const L = useMessages(TEXT)
   return (
     // 안쪽 별 버튼과 겹치지 않게, 카드(li)가 직접 클릭을 받아요. 공고 탐색의 카드와 같아요.
     <li
       onClick={onSelect}
-      aria-current={selected ? 'true' : undefined}
-      className={`group flex cursor-pointer flex-col rounded-2xl p-5 transition-colors ${selected ? 'bg-gray-200/60' : 'bg-gray-50 hover:bg-gray-100'}`}
+      className="group flex cursor-pointer flex-col rounded-2xl bg-gray-50 p-5 transition-colors hover:bg-gray-100"
     >
       <div className="flex items-start justify-between gap-3">
         <span className="flex h-9 min-w-9 items-center justify-center rounded-lg bg-white px-2 text-[11px] font-semibold text-gray-600">{L.sources[resume.source]}</span>
