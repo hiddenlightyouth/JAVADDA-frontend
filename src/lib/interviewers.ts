@@ -20,6 +20,8 @@ export interface InterviewerProfile {
   intro: Text
   /** 시작 화면에서 이 면접관을 고르면 그 목소리로 읽는 인사 한 줄이에요. 뒤에 음량 안내(`VOLUME_TIP`)가 이어져요. */
   greeting: Text
+  /** AI가 이 면접관의 질문을 만드는 동안 시간을 때우는 잡담이에요. 맨 앞은 늘 먼저 하는 말이고, 그 뒤는 돌아가며 해요. */
+  smallTalk: { ko: string[]; en: string[] }
   /** 성격을 한눈에 보여주는 이름표 세 개예요. */
   traits: { ko: string[]; en: string[] }
   /** 이 면접관이 읽는 목소리(`shared/voices.ts`의 key)예요. 면접관마다 다른 목소리로 고정이에요. */
@@ -43,6 +45,23 @@ export const INTERVIEWERS: InterviewerProfile[] = [
       ko: '안녕하세요. 실무 팀장 서도윤이에요. 기술과 경험을 고르게, 차분하게 여쭤볼게요.',
       en: "Hi, I'm Doyun Seo, a team lead. I'll calmly ask about both your skills and your experience.",
     },
+    smallTalk: {
+      ko: [
+        '잠시만요, 서류를 보면서 질문을 정리하고 있어요.',
+        '오늘 컨디션은 어떠세요? 긴장 푸시고 편하게 하시면 돼요.',
+        '저도 첫 면접 때는 손에 땀이 엄청 났었어요. 다들 그래요.',
+        '커피 한 잔 하고 오셨어요? 저는 벌써 세 잔째예요.',
+        '창밖 날씨가 좋네요. 끝나고 산책이라도 하세요.',
+        '거의 다 됐어요. 조금만 기다려 주세요.',
+      ],
+      en: [
+        'One moment, I am putting questions together from your documents.',
+        'How are you feeling today? Relax, you will do fine.',
+        'My hands were sweating at my first interview too. Everyone goes through it.',
+        'Did you grab a coffee? I am already on my third.',
+        'Almost there. Thanks for waiting.',
+      ],
+    },
     voice: 'chris',
     card: '#d4e1f3',
     portrait: {
@@ -64,6 +83,24 @@ export const INTERVIEWERS: InterviewerProfile[] = [
       ko: '안녕하세요. 선배 개발자 한지호예요. 편하게 이야기하듯 프로젝트 경험부터 들어 볼게요.',
       en: "Hi, I'm Jiho Han, a senior developer. Let's chat casually, starting with your projects.",
     },
+    smallTalk: {
+      ko: [
+        '잠깐만요, 물어볼 거 몇 개 고르고 있어요.',
+        '오늘 점심은 뭐 드셨어요? 저는 김치찌개 먹었어요.',
+        '면접이라고 너무 부담 갖지 마세요. 그냥 수다 떤다고 생각하시면 돼요.',
+        '아, 이 프로젝트 재밌어 보이네요. 이건 꼭 물어봐야겠어요.',
+        '저희 회사 앞에 고양이가 한 마리 사는데, 이름이 버그예요. 잡히질 않아서요.',
+        '조금만요, 거의 다 골랐어요.',
+      ],
+      en: [
+        'Hang on, I am picking a few things to ask.',
+        'What did you have for lunch? I had kimchi stew.',
+        'No pressure, just think of this as a chat.',
+        'Oh, this project looks fun. I have to ask about it.',
+        'There is a cat near our office named Bug. Nobody can catch it.',
+        'Almost done picking.',
+      ],
+    },
     voice: 'taehyung',
     card: '#9dc7f8',
     portrait: {
@@ -84,6 +121,24 @@ export const INTERVIEWERS: InterviewerProfile[] = [
     greeting: {
       ko: '안녕하세요. 기술 리드 강태민이에요. 원리와 근거까지 깊게 물어볼 테니 단단히 준비해 주세요.',
       en: "Hi, I'm Taemin Kang, a tech lead. I'll dig into principles and evidence, so come prepared.",
+    },
+    smallTalk: {
+      ko: [
+        '질문을 만들고 있어요. 쉬운 질문은 없을 거예요.',
+        '서류에 적힌 숫자, 하나하나 다 볼 거예요.',
+        '제가 깐깐하다는 말 자주 들어요. 칭찬으로 듣고 있어요.',
+        '기다리는 동안 시간 복잡도 하나 떠올려 보세요.',
+        '모른다고 말하는 것도 실력이에요. 아는 척은 금방 티 나요.',
+        '거의 끝났어요. 마음의 준비 되셨죠?',
+      ],
+      en: [
+        'I am writing your questions. None of them will be easy.',
+        'I will check every number on your documents.',
+        'People call me strict. I take it as a compliment.',
+        'While you wait, think about a time complexity or two.',
+        'Saying you do not know is a skill too. Bluffing shows quickly.',
+        'Almost done. Ready?',
+      ],
     },
     voice: 'minjoon',
     card: '#9fc9f5',

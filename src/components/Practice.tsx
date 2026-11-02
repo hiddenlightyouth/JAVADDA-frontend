@@ -34,6 +34,7 @@ const TEXT = messages({
     introBody: '함께할 면접관을 골라 주세요. 면접관의 성격에 따라 묻는 질문과 채점이 달라져요.',
     start: '면접 시작하기',
     startNote: (name: string) => `${name} 면접관과 면접을 시작해요`,
+    writing: '질문을 만들고 있어요',
     volumeHint: '면접관을 고르면 인사를 들려드려요. 소리가 크면 오른쪽 위에서 음량을 조절해 주세요.',
     gradedBy: (name: string) => `${name} 면접관의 평가예요`,
     preparing: '면접관이 질문을 준비하고 있어요',
@@ -87,6 +88,7 @@ const TEXT = messages({
     introBody: "Pick your interviewer. Their personality changes the questions they ask and how they grade.",
     start: 'Start interview',
     startNote: (name: string) => `Your interview with ${name}`,
+    writing: 'Writing your questions',
     volumeHint: 'Pick an interviewer to hear a quick hello. If it is too loud, adjust the volume at the top right.',
     gradedBy: (name: string) => `Graded by ${name}`,
     preparing: 'The interviewer is getting ready',
@@ -130,6 +132,11 @@ const MIN_CHARS = 10
 const SILENCE_MS = 3200
 /** 다음 질문으로 넘어가기 전에 잠깐 쉬어요. 면접관이 고개를 끄덕이는 정도예요. */
 const MOVE_MS = 1100
+/** 질문을 기다리며 잡담할 때 한 말과 다음 말 사이에 쉬는 시간(ms)이에요. */
+const CHAT_PAUSE_MS = 1400
+/** 소리를 낼 수 없을 때 말풍선을 바꾸는 간격(ms)이에요. */
+const CHAT_SILENT_MS = 3600
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 /** 시작 화면에서 면접관 카드에 이만큼(ms) 머물면 그 면접관의 질문을 미리 만들어요. */
 const PREFETCH_DELAY_MS = 900
 /** 띵 소리가 마이크에 들어가지 않게, 소리가 끝난 뒤에 듣기 시작해요. */
@@ -278,6 +285,28 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     }
   }
 
+  /** 질문을 기다리는 동안 면접관이 하고 있는 잡담이에요. 구름 말풍선에 보여요. */
+  const [chatLine, setChatLine] = useState('')
+
+  /**
+   * AI가 질문을 만드는 동안 면접관이 자기 목소리로 잡담을 해요. 첫 말은 늘 같고, 그 뒤는 섞어서 돌아가며 해요.
+   * 첫 질문을 읽거나(ask) 나가면 차례(run)가 바뀌어서 멈춰요. 소리를 낼 수 없으면 말풍선만 바꿔요.
+   */
+  async function chatter(who: InterviewerProfile) {
+    const mine = ++run.current
+    const [first, ...rest] = who.smallTalk[lang]
+    const lines = [first, ...rest.sort(() => Math.random() - 0.5)]
+    for (let at = 0; mine === run.current; at += 1) {
+      // 한 바퀴를 다 돌면 첫 말은 빼고 다시 돌아요.
+      const line = at < lines.length ? lines[at] : lines[1 + ((at - 1) % (lines.length - 1))]
+      setChatLine(line)
+      if (canSpeak()) await voice.speak(line, who.voice)
+      else await wait(CHAT_SILENT_MS)
+      if (mine !== run.current) return
+      await wait(CHAT_PAUSE_MS)
+    }
+  }
+
   /** 시작 화면에서 면접관이 인사하는 중인지예요. 인사하는 동안 오른쪽 위 음량 조절에 테두리를 둘러요. */
   const [greeting, setGreeting] = useState(false)
 
@@ -295,6 +324,12 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     for (const item of INTERVIEWERS) prefetchVoice(greetingOf(item, lang), item.voice)
   }, [phase, lang])
 
+  // 고른 면접관의 잡담도 미리 받아 둬서, 질문을 기다릴 때 바로 말을 걸어요.
+  useEffect(() => {
+    if (phase !== 'intro' || !canSpeak()) return
+    for (const line of interviewer.smallTalk[lang]) prefetchVoice(line, interviewer.voice)
+  }, [phase, lang, interviewer])
+
   function begin() {
     // 띵 소리와 음성은 사용자가 누른 순간에 준비해야 브라우저가 막지 않아요.
     unlockChime()
@@ -306,6 +341,8 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
       setProgresses((prev) => ({ ...prev, [setKey]: PROGRESS_START }))
     }
     setStarting(true)
+    // 누른 순간에 말을 시작해야 브라우저가 소리를 막지 않아요.
+    void chatter(interviewer)
   }
 
   function start() {
@@ -321,8 +358,11 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   useEffect(() => {
     if (!starting || questions === undefined) return
     setStarting(false)
-    if (questions) startRef.current()
-  }, [starting, questions])
+    if (questions) return startRef.current()
+    // 받지 못했으면 잡담을 멈춰요.
+    run.current += 1
+    voice.stop()
+  }, [starting, questions, voice.stop])
 
   /** 질문 하나의 답을 결과에 남기고, 답했으면 뒤에서 채점을 받아요. 한 글자라도 답했으면 채점하고, 아무 말도 없으면 답변하지 않음이에요. */
   function record(at: number, question: InterviewQuestion, text: string) {
@@ -436,7 +476,27 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     body = <LoadProgress percent={reportLoad.percent} className={loadCenter} />
   } else if (questions === null && single) {
     body = <Notice title={L.missing} body={L.missingBody} action={L.back} onAction={exit} className="mt-[18vh]" />
-  } else if (starting || (phase !== 'intro' && phase !== 'finished' && !current)) {
+  } else if (starting) {
+    // AI가 고른 면접관의 질문을 만드는 동안이에요. 면접관이 구름 말풍선으로 잡담하며 시간을 때우고, 아래에 만든 정도를 적어요.
+    body = (
+      <div className="flex min-h-full flex-col items-center justify-center pb-16 text-center">
+        <p key={chatLine} aria-live="polite" className="interviewer-cloud mb-10 animate-fade">
+          {chatLine}
+        </p>
+        <Interviewer key={interviewer.key} pose={voice.pose} portrait={interviewer.portrait} label={`${pick(interviewer.role)} ${pick(interviewer.name)}`} />
+        <p className="-mt-2 text-[17px] font-bold text-white">{pick(interviewer.name)}</p>
+        <p className="mt-0.5 text-[12.5px] text-[#fff]/50">{pick(interviewer.role)}</p>
+        <div className="mt-7 w-56" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={loadProgress.progress} aria-label={L.writing}>
+          <div className="h-1 overflow-hidden rounded-full bg-[#fff]/15">
+            <div className="h-full rounded-full bg-[#fff]/80 transition-[width] duration-500" style={{ width: `${loadProgress.progress}%` }} />
+          </div>
+          <p className="mt-2 text-[12.5px] text-[#fff]/50 tabular-nums">
+            {L.writing} {loadProgress.progress}%
+          </p>
+        </div>
+      </div>
+    )
+  } else if (phase !== 'intro' && phase !== 'finished' && !current) {
     // 시작을 누른 뒤 AI가 이 면접관의 질문을 만드는 동안이에요. 이미 만들어 둔 질문이면 금방 지나가요.
     // 시작 화면처럼 위의 나가기 줄 높이만큼 아래를 비워서, 화면 전체의 가운데에 오게 해요.
     body = (
