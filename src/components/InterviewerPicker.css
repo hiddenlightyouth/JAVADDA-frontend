@@ -1,0 +1,63 @@
+/* 면접관 고르기 카드예요. 가운데 카드가 크게 서고, 양옆 카드는 안쪽으로 비스듬히 돌아 뒤로 물러나요. */
+.picker-stage {
+  position: relative;
+  height: clamp(250px, 44vh, 400px);
+  perspective: 1400px;
+}
+.picker-card {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  height: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 28px;
+  text-align: left;
+  transform-origin: 50% 50%;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.55s ease, filter 0.55s ease;
+  cursor: pointer;
+}
+.picker-card[data-offset='0'] {
+  z-index: 2;
+  transform: translateX(-50%);
+  cursor: default;
+}
+.picker-card[data-offset='-1'] {
+  z-index: 1;
+  transform: translateX(-108%) scale(0.8) rotateY(18deg);
+  filter: brightness(0.55) saturate(0.8);
+}
+.picker-card[data-offset='1'] {
+  z-index: 1;
+  transform: translateX(8%) scale(0.8) rotateY(-18deg);
+  filter: brightness(0.55) saturate(0.8);
+}
+.picker-card:not([data-offset='0']):hover {
+  filter: brightness(0.75) saturate(0.9);
+}
+/* 사진은 아래로 갈수록 카드 바탕에 스며들어서, 이름 자리가 사진과 겹쳐도 읽혀요. */
+.picker-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 15%;
+  -webkit-mask-image: linear-gradient(to bottom, #000 58%, transparent 88%);
+  mask-image: linear-gradient(to bottom, #000 58%, transparent 88%);
+  pointer-events: none;
+  user-select: none;
+}
+.picker-caption {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+@media (prefers-reduced-motion: reduce) {
+  .picker-card {
+    transition: none;
+  }
+}

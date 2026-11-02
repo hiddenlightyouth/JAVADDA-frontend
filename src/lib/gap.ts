@@ -2350,10 +2350,13 @@ export async function fetchAnswers(reportId: string): Promise<PracticeRecord[]> 
   return result.ok && Array.isArray(result.data) ? result.data : []
 }
 
-/** 답변을 보내고 피드백을 받아요(POST /reports/{id}/questions/{질문}/answers). onProgress를 주면 채점 진행 상황을 알려줘요. 실패하면 토스트로 알리고 null이에요. */
-export async function submitAnswer(reportId: string, question: InterviewQuestion, answer: string, onProgress?: OnProgress): Promise<PracticeFeedback | null> {
+/**
+ * 답변을 보내고 피드백을 받아요(POST /reports/{id}/questions/{질문}/answers). onProgress를 주면 채점 진행 상황을 알려줘요. 실패하면 토스트로 알리고 null이에요.
+ * interviewer는 면접 연습에서 고른 면접관(balanced, friendly, strict)이에요. 서버가 그 성격에 맞춰 채점 기준과 말투, 꼬리 질문을 바꿔요.
+ */
+export async function submitAnswer(reportId: string, question: InterviewQuestion, answer: string, onProgress?: OnProgress, interviewer?: string): Promise<PracticeFeedback | null> {
   const result = await withProgress(onProgress, (headers) =>
-    call<PracticeFeedback>(`/reports/${Number(currentId(reportId))}/questions/${encodeURIComponent(question.id)}/answers`, send('POST', { answer }), true, headers),
+    call<PracticeFeedback>(`/reports/${Number(currentId(reportId))}/questions/${encodeURIComponent(question.id)}/answers`, send('POST', interviewer ? { answer, interviewer } : { answer }), true, headers),
   )
   if (!result.ok || !result.data) {
     fail(result)

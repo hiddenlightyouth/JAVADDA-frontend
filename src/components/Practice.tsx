@@ -1,14 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { track } from '../lib/analytics'
 import { companyOf, fetchQuestions, PROGRESS_START, submitAnswer, useReport, useReportPosting, type InterviewQuestion, type PracticeFeedback, type ProgressState } from '../lib/gap'
-import { messages, useLang, useMessages } from '../lib/i18n'
+import { messages, pick, useLang, useMessages } from '../lib/i18n'
+import { questionsFor, setInterviewer, useInterviewer } from '../lib/interviewers'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { canDictate, canSpeak, chime, joinSpeech, prefetchVoice, unlockChime, useDictation, usePracticeVoice, useSpeak } from '../lib/speech'
 import { showToast } from '../lib/toast'
 import { AiProgress, CompanyMark, Notice, ScoreRing } from './GapParts'
-import { CloseIcon, MicIcon } from './Icons'
+import { ChevronRightIcon, CloseIcon } from './Icons'
 import { Interviewer } from './Interviewer'
+import { InterviewerPicker } from './InterviewerPicker'
 import { FeedbackSections } from './ReportParts'
 import { label, loadCenter, LoadProgress } from './ui'
 
@@ -25,9 +27,11 @@ const TEXT = messages({
     leave: '여기까지 평가받기',
     progress: (current: number, total: number) => `${current} / ${total}`,
     introTitle: '가상 면접 시작',
-    introBody: '면접 준비가 되었다면 편안한 환경에서 본인을 테스트 해보세요.',
-    voiceTip: '면접관의 목소리는 설정에서 변경할 수 있습니다.',
-    start: '시작',
+    introBody: '함께할 면접관을 골라 주세요. 면접관의 성격에 따라 묻는 질문과 채점이 달라져요.',
+    voiceTip: '이 면접관의 목소리는 설정에서 변경할 수 있습니다.',
+    start: '면접 시작하기',
+    startNote: (name: string) => `${name} 면접관과 면접을 시작해요`,
+    gradedBy: (name: string) => `${name} 면접관의 평가예요`,
     preparing: '면접관이 질문을 준비하고 있어요',
     speaking: '질문 중',
     answerNow: '바로 답하기',
@@ -73,9 +77,11 @@ const TEXT = messages({
     leave: 'Get feedback so far',
     progress: (current: number, total: number) => `${current} / ${total}`,
     introTitle: 'Start a mock interview',
-    introBody: 'When you feel ready, find a comfortable spot and put yourself to the test.',
-    voiceTip: "You can change the interviewer's voice in Settings.",
-    start: 'Start',
+    introBody: "Pick your interviewer. Their personality changes the questions they ask and how they grade.",
+    voiceTip: "You can change this interviewer's voice in Settings.",
+    start: 'Start interview',
+    startNote: (name: string) => `Your interview with ${name}`,
+    gradedBy: (name: string) => `Graded by ${name}`,
     preparing: 'The interviewer is getting ready',
     speaking: 'Asking',
     answerNow: 'Answer now',
@@ -146,7 +152,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   const report = useReport(id, reportLoad.one)
   // 리포트 상세는 자료를 받는 것이라 받은 바이트로, 질문은 AI가 만드는 것이라 서버의 단계로 퍼센트를 보여줘요.
   const waitingReport = useLoadHold(report === undefined)
-  const [questions, setQuestions] = useState<InterviewQuestion[] | null | undefined>(undefined)
+  const [fetched, setFetched] = useState<InterviewQuestion[] | null | undefined>(undefined)
   const [loadProgress, setLoadProgress] = useState<ProgressState>(PROGRESS_START)
   const [phase, setPhase] = useState<Phase>('intro')
   const [index, setIndex] = useState(0)
@@ -159,7 +165,11 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   /** 질문을 다 읽은 뒤에 볼 최신 값이에요. 읽는 동안 글로 답하기로 바꿀 수 있어요. */
   const typingRef = useRef(typing)
   typingRef.current = typing
-  const speaker = usePracticeVoice()
+  /** 고른 면접관이에요. 시작 화면에서만 바꿔서, 면접 중에는 그대로예요. */
+  const interviewer = useInterviewer()
+  const chosenVoice = usePracticeVoice()
+  // 실무 팀장은 설정에서 고른 목소리로, 다른 면접관은 저마다의 목소리로 읽어요.
+  const speaker = interviewer.voice ?? chosenVoice
   const voice = useSpeak()
   /** 지금 진행 중인 질문 차례예요. 건너뛰거나 나가면 하나 올려서, 늦게 끝난 읽기와 타이머가 다음 단계를 건드리지 않게 해요. */
   const run = useRef(0)
@@ -191,7 +201,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
       if (stale) return
       // 질문 하나를 골라 들어오면 그 질문 하나만 연습하고 바로 피드백을 보여줘요.
       const picked = startId ? list.filter((item) => item.id === startId) : list
-      setQuestions(picked.length > 0 ? picked : null)
+      setFetched(picked.length > 0 ? picked : null)
     })
     return () => {
       stale = true
@@ -213,6 +223,8 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
 
   /** 질문 하나만 연습하는지예요. 시작 화면과 결과 화면의 글이 달라요. */
   const single = !!startId
+  // 면접관마다 먼저 묻는 질문 유형이 달라요. 질문 하나만 연습할 때는 그 질문 그대로예요.
+  const questions = useMemo(() => (fetched && !single ? questionsFor(interviewer, fetched) : fetched), [fetched, single, interviewer])
   const posting = useReportPosting(report?.postingId)
   const company = report ? companyOf(report.companyId) : null
   const current = questions?.[index]
@@ -249,7 +261,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     if (!questions) return
     // 띵 소리와 음성은 사용자가 누른 순간에 준비해야 브라우저가 막지 않아요.
     unlockChime()
-    track('practice_start', { count: questions.length, voice: !typing })
+    track('practice_start', { count: questions.length, voice: !typing, interviewer: interviewer.key })
     setAnswers([])
     void ask(0)
   }
@@ -261,7 +273,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     setAnswers((prev) => [...prev.slice(0, at), entry])
     if (gradable) {
       track('practice_submit', { voice: spoken.current })
-      void submitAnswer(id, question, text).then((result) => {
+      void submitAnswer(id, question, text, undefined, interviewer.key).then((result) => {
         setAnswers((prev) => prev.map((item, order) => (order === at ? { ...item, feedback: result ?? 'failed' } : item)))
       })
     } else track('practice_skip')
@@ -374,29 +386,39 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     )
   } else if (phase === 'intro') {
     body = (
-      // 위의 나가기 줄 높이만큼 아래를 비워서, 화면 전체의 가운데에 오게 해요.
-      <div className="mx-auto flex min-h-full max-w-xl animate-rise flex-col items-center justify-center pb-16 text-center">
-        <span className="flex size-16 items-center justify-center rounded-full bg-[#fff]/10">
-          <MicIcon className="size-7 text-white" />
-        </span>
-        <h1 className="mt-6 text-[30px] leading-tight font-bold tracking-tight text-white md:text-[38px]">{L.introTitle}</h1>
-        <p className="mt-4 text-[15px] leading-relaxed break-keep text-[#fff]/60">{L.introBody}</p>
-        {canSpeak() && (
-          <p className="mt-5 text-[13px] text-[#fff]/45">{L.voiceTip}</p>
-        )}
-        <button type="button" onClick={begin} className="mt-9 h-12 rounded-full bg-[#fff] px-8 text-[15px] font-semibold text-[#000] transition-opacity hover:opacity-90">
-          {L.start}
-        </button>
+      // 위의 나가기 줄 높이만큼 아래를 비워서, 화면 전체의 가운데에 오게 해요. 옆 카드가 화면 밖으로 넘치지 않게 가로로 잘라요.
+      <div className="mx-auto flex min-h-full max-w-5xl animate-rise flex-col items-center justify-center overflow-x-clip pt-4 pb-10 text-center">
+        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-white md:text-[34px]">{L.introTitle}</h1>
+        <p className="mt-3 text-[14.5px] leading-relaxed break-keep text-[#fff]/60">{L.introBody}</p>
+        <div className="mt-8 w-full">
+          <InterviewerPicker
+            value={interviewer}
+            onChange={(next) => {
+              if (next.key === interviewer.key) return
+              setInterviewer(next.key)
+              track('practice_interviewer_select', { interviewer: next.key })
+            }}
+          />
+        </div>
+        {canSpeak() && interviewer.voice === null && <p className="mt-3 text-[12.5px] text-[#fff]/40">{L.voiceTip}</p>}
+        {/* 시작 줄이에요. 누구와 면접하는지 한 번 더 적고 바로 시작해요. */}
+        <div className="mt-6 flex w-full max-w-xl items-center justify-between gap-4 rounded-[22px] bg-[#fff] py-3 pr-3 pl-6">
+          <p className="min-w-0 truncate text-left text-[15px] font-semibold text-[#000]/85">{L.startNote(pick(interviewer.name))}</p>
+          <button type="button" onClick={begin} className="flex h-12 shrink-0 items-center gap-2 rounded-2xl bg-[#1c1c1e] px-6 text-[15px] font-semibold text-white transition-opacity hover:opacity-85">
+            {L.start}
+            <ChevronRightIcon className="size-4 text-white" strokeWidth={2} />
+          </button>
+        </div>
       </div>
     )
   } else if (phase === 'finished') {
-    body = <Summary answers={answers} single={single} onAgain={begin} onBack={exit} />
+    body = <Summary answers={answers} single={single} interviewer={pick(interviewer.name)} onAgain={begin} onBack={exit} />
   } else {
     body = (
       <div className="mx-auto flex h-full w-full max-w-4xl flex-col">
         {/* 면접관은 질문이 바뀌어도 같은 자리에 그대로 있어요. 위에서부터 놓아서 질문 길이나 답변 칸 때문에 얼굴이 움직이지 않아요. */}
         <div className="flex flex-1 flex-col pt-[5vh] pb-6">
-          <Interviewer pose={voice.pose} label={lang === 'ko' ? '가상 면접관' : 'Virtual interviewer'} />
+          <Interviewer key={interviewer.key} pose={voice.pose} portrait={interviewer.portrait} label={`${pick(interviewer.role)} ${pick(interviewer.name)}`} />
           <p className="flex items-center gap-2 text-[13px] font-medium text-[#fff]/45">
             <span>{phase === 'asking' ? (voice.preparing ? L.preparing : L.speaking) : phase === 'moving' ? (index + 1 >= total ? L.last : L.moving) : L.listening}</span>
           </p>
@@ -578,7 +600,7 @@ function Karaoke({ text, progress, dim }: { text: string; progress: number; dim:
 }
 
 /** 면접이 끝나고 보여주는 결과예요. 평균 점수와 질문마다 내 답, 점수, 피드백이 있어요. 채점이 덜 끝난 질문은 끝나는 대로 채워져요. */
-function Summary({ answers, single, onAgain, onBack }: { answers: Answer[]; single: boolean; onAgain: () => void; onBack: () => void }) {
+function Summary({ answers, single, interviewer, onAgain, onBack }: { answers: Answer[]; single: boolean; interviewer: string; onAgain: () => void; onBack: () => void }) {
   const L = useMessages(TEXT)
   const scores = answers.flatMap((item) => (typeof item.feedback === 'object' ? [item.feedback.score] : []))
   const grading = answers.some((item) => item.feedback === 'grading')
@@ -591,6 +613,7 @@ function Summary({ answers, single, onAgain, onBack }: { answers: Answer[]; sing
         {scores.length > 0 && <ScoreRing score={average} />}
         {scores.length > 0 && <p className="mt-2 text-[12.5px] text-[#fff]/50">{single ? L.score : L.average}</p>}
         <h1 className="mt-5 text-[28px] font-bold tracking-tight text-white">{single ? L.singleDone : L.doneTitle}</h1>
+        <p className="mt-1.5 text-[13px] font-medium text-[#fff]/45">{L.gradedBy(interviewer)}</p>
         <p className="mt-2 max-w-md text-[14px] leading-relaxed text-[#fff]/55">{single ? L.singleDoneBody : L.doneBody(answered)}</p>
         <div className="mt-6 flex gap-2">
           <button type="button" onClick={onAgain} className={darkButton}>

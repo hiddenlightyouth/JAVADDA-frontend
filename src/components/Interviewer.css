@@ -7,10 +7,10 @@
   border: 1px solid #ffffff26;
   box-shadow: 0 12px 45px #0003;
 }
-/* 사진을 먼저 깔아 둬요. 캔버스가 준비되기 전이나 그릴 수 없는 환경에서도 같은 자리에 같은 얼굴이 보여요. 자리는 mouthRenderer의 PORTRAIT_WINDOW와 같아요. */
+/* 사진을 먼저 깔아 둬요. 캔버스가 준비되기 전이나 그릴 수 없는 환경에서도 같은 자리에 같은 얼굴이 보여요. 사진과 자리는 면접관마다 portraitBackground가 정해요. */
 .interviewer-portrait {
   aspect-ratio: 1;
-  background: url('/images/interviewer-balanced.png') 47.7% 10.2% / 145.8% no-repeat;
+  background-repeat: no-repeat;
   transform-origin: 50% 90%;
   animation: interviewer-breathe 5s ease-in-out infinite;
 }
