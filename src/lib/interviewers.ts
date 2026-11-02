@@ -101,7 +101,7 @@ export const INTERVIEWERS: InterviewerProfile[] = [
         'Almost done picking.',
       ],
     },
-    voice: 'taehyung',
+    voice: 'jiho',
     card: '#9dc7f8',
     portrait: {
       url: '/images/interviewer-friendly.jpg',
