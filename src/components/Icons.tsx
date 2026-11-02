@@ -310,6 +310,16 @@ export function ShieldIcon({ className = 'size-4 shrink-0', strokeWidth = 1.4, l
   )
 }
 
+/** 비공개 레포를 나타내는 자물쇠예요. */
+export function LockIcon({ className = 'size-3.5 shrink-0', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <rect x="3.5" y="7" width="9" height="6.5" rx="1.25" />
+      <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" />
+    </Icon>
+  )
+}
+
 /** 사이드바를 접고 펴는 버튼의 그림이에요. */
 export function SidebarIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
   return (

@@ -101,6 +101,7 @@ src/
   lib/api.ts          서버가 지원하는 기능 조회(/config, loadConfig로 한 번만, refreshConfig로 다시, online은 서버에 닿았는지), 고른 AI 모델 저장(useAiModel, setAiModel)과 요청 헤더(aiModelHeaders)
   lib/auth.ts         로그인 상태 저장소(useAuth, isSignedIn, 로그인과 로그아웃만 알리는 onSignedInChange), 로그인한 요청(authFetch), 토큰 재발급, 회원가입과 로그인, 내 정보, 로그인한 기기, 로그인 기록, 관리자인지 판별(isAdmin)
   lib/social.ts       소셜 로그인(GitHub, 카카오) 흐름
+  lib/githubConnect.ts 이력서 만들기의 GitHub 계정 연결 흐름(로그인과 따로인 OAuth App, repo 권한). 권한 화면으로 보내기(startGithubConnect), 돌아온 코드 꺼내기(isGithubReturn, takeGithubReturn)
   components/Social.tsx      소셜 로그인 버튼과, 소셜 서비스에서 돌아온 화면 (/auth/github/callback, /auth/kakao/callback)
   lib/usage.ts        이번 주 사용량과 요금제 받기(useUsage, refreshUsage), 플랜 변경 창 열고 닫기(openPlans, closePlans, usePlansOpen)
   lib/feedback.ts     평가와 버그 신고 보내기, 버그 신고 창 열기
@@ -141,7 +142,8 @@ src/
   lib/naverMap.ts     네이버 지도(NAVER Maps JavaScript API v3)를 키가 있을 때만 받기(loadNaverMaps), 인증 실패 알림, 네이버 지도 검색 주소. 채용 지도와 기업 상세가 써요
   lib/holidays.ts     우리나라 공휴일(양력 공휴일과, 해마다 적는 음력 명절, 대체공휴일, 선거일). 마감 달력이 써요
   components/JobCard.tsx     공고 탐색, 추천 공고, 새 진단 화면의 공고 줄이 같이 쓰는 카드(JobCard)와 줄(JobRow), 둘을 고른 보기 방식으로 늘어놓고 24개씩 더 그리는 목록(PostingList), 공고 수와 보기 방식 버튼 줄(PostingCountBar, LayoutToggle), 카드에서 여는 미니 브라우저(useJobBrowser), 마감 달력과 채용 지도의 공고 한 줄(PickRow)
-  components/MyResume.tsx    내 이력서 (/resume). 서류 카드 목록(ResumeCard), 오른쪽에서 여는 서류 상세 칸(ResumeSheet), 서류 추가 화면(/resume/new, 방법 고르기 AddChoice), PDF 끌어다 놓기(ResumeUploader), 읽은 역량 고치기(SkillEditor)
+  components/MyResume.tsx    내 이력서 (/resume). 서류 카드 목록(ResumeCard), 오른쪽에서 여는 서류 상세 칸(ResumeSheet), 서류 추가 화면(/resume/new, 방법 고르기 AddChoice), PDF 끌어다 놓기(ResumeUploader), 읽은 역량 고치기(SkillEditor), GitHub로 만든 서류의 프로젝트 칸(ProjectCard)
+  components/GithubResume.tsx GitHub 레포로 이력서와 포트폴리오 만들기. 연결 칸(ConnectCard), 레포 고르기(RepoPicker, RepoRow)
   components/PostingBrowser.tsx 공고 원문, 기업 소개 사이트, 기술 블로그 글을 새 탭 대신 앱 안에서 보는 미니 브라우저. 화면을 가리지 않고 오른쪽에 나란히 붙고(`SplitView`), 폭을 끌어서 바꿔요. 막아 둔 사이트는 공고 요약을 보여줘요
   components/Diagnose.tsx    진단 시작 (/diagnose/공고). 공고 확인과 이력서 확인 두 단계를 지나 리포트를 만들어요
   components/Report.tsx      리포트 대시보드 (/r/아이디). 리포트, 적합도 설명, 서류 검증, 예상 질문 네 탭과 오른쪽에서 여는 갭 상세 칸
@@ -189,7 +191,7 @@ src/
 | `VITE_GA_MEASUREMENT_ID` (선택) | 빌드할 때. GA 측정 ID. |
 | `VITE_NAVER_MAP_KEY_ID` (선택) | 빌드할 때. 네이버 클라우드 플랫폼 Maps의 Client ID. 공개되는 값이라 `.env.development`와 `.env.production`에 적혀 있어요. 채용 지도와 기업 상세의 위치 칸이 네이버 지도를 띄워요. 없거나 인증에 실패하면 SVG 지도예요. 콘솔에 등록한 사이트 주소에서만 동작하고, Client Secret은 화면에 쓰지 않아서 어디에도 넣지 않아요. |
 
-- 목 모드: 백엔드 없이 프론트만 볼 때 `.env.development.local`(커밋하지 않아요)에 `VITE_MOCK=true`를 적고 개발 서버를 다시 켜요. `src/lib/mock.ts`가 브라우저 안에서 `/api/v1` 요청을 가로채 서버 대신 답해요(로그인, 공고, 이력서, 리포트, 서류 검증, 예상 질문, 답변. 계산은 서버 연결 전의 프론트 코드예요). 자료는 localStorage의 `javadda:mock:v1`에 두고, 콘솔에서 `mockReset()`으로 지워요. 개발 서버에서만 켜지고 배포 빌드에는 들어가지 않아요.
+- 목 모드: 백엔드 없이 프론트만 볼 때 `.env.development.local`(커밋하지 않아요)에 `VITE_MOCK=true`를 적고 개발 서버를 다시 켜요. `src/lib/mock.ts`가 브라우저 안에서 `/api/v1` 요청을 가로채 서버 대신 답해요(로그인, 공고, 이력서, GitHub 연결과 레포로 만들기, 리포트, 서류 검증, 예상 질문, 답변. 계산은 서버 연결 전의 프론트 코드예요). 자료는 localStorage의 `javadda:mock:v1`에 두고, 콘솔에서 `mockReset()`으로 지워요. 개발 서버에서만 켜지고 배포 빌드에는 들어가지 않아요.
 
 ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사, 커밋하지 않아요)에 넣고, 배포에는 Cloudflare 대시보드의 `javadda-frontend` Worker 설정(변수 및 시크릿)이나 `npx wrangler secret put ELEVENLABS_API_KEY`로 넣어요.
 
@@ -202,7 +204,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 - 기업(`COMPANIES`)과 공고(`POSTINGS`)는 앱 화면을 처음 그리기 전에 `loadCatalog`가 GET /companies, GET /postings로 받아 배열 속을 바꿔요. 받는 동안은 화면 가운데에 받은 정도(`LoadProgress`, 두 요청의 바이트)를 보여주고, 8초 안에 받지 못하거나 서버에 닿지 못하면 `gap.ts`에 적어 둔 기업 17곳과 공고 22개(`FALLBACK_COMPANIES`, `FALLBACK_POSTINGS`)로 그려요. `postingOf`와 `companyOf`는 받아 둔 목록에서 바로 찾아요. 서버는 마감된 공고를 지우지 않고 닫기만 해서(`closedAt`), 열린 목록에 없는 공고를 가리키는 리포트(사이드바, 내 리포트, 리포트, 면접 연습)는 `useReportPosting`으로 GET /postings/{id}를 한 번 받아 공고 이름을 보여줘요. 받은 닫힌 공고는 열린 목록에 넣지 않아서 추천이나 다른 공고에는 나오지 않고, 마감 표시는 그대로 마감이에요. 공고에는 필수(`required`)와 우대(`preferred`) 역량, 직군(`family`), 경력(`career`), 마감(`deadline`)이 있어요. 마감이 없으면(서버는 null) 상시 채용이에요.
 - 스킬 이름은 `canonical`로 하나의 표기로 모아요(Spring Boot, 스프링부트, springboot는 모두 Spring Boot). 별칭 표(`ALIASES`)에 더해요. 스킬마다 레이더의 축(`axisOf`: 언어, 프레임워크, 데이터베이스, 인프라, 협업, CS 기초)이 있어요. 역량 더하기의 추천(`suggestSkills`)도 이 표와 받아 둔 공고에서 찾아요.
-- 이력서는 PDF 파일(POST /resumes, `file` 칸)로 올려요. GitHub, 노션 링크로 올리는 API(POST /resumes/link, `uploadResume`의 link)는 남아 있지만 화면에서는 쓰지 않아요. 서버가 AI로 읽어서 1분 가까이 걸릴 수 있고, 그동안 진행 막대(`AiProgress`)로 몇 퍼센트까지 왔는지 보여줘요(아래의 AI 진행 상황). 서류는 여러 개 올려 두고 그중 하나를 대표 이력서로 정해요(PUT /resumes/{id}/primary). 대표는 서버가 정해서, 새로 올린 서류는 대표가 없을 때만 대표가 되고 대표를 지우면 남은 것 중 가장 최근 것이 대표예요. 올리거나 대표를 바꾸거나 지우면 목록(GET /resumes)을 다시 받아요. 역량은 내 이력서 화면에서 고쳐요(PUT /resumes/{id}/skills, 화면에는 바로 보이고 서버의 답으로 맞춰요). 적합도와 추천과 진단은 대표 이력서로 해요.
+- 이력서는 PDF 파일(POST /resumes, `file` 칸)로 올려요. GitHub, 노션 링크로 올리는 API(POST /resumes/link, `uploadResume`의 link)는 남아 있지만 화면에서는 쓰지 않아요. GitHub 레포로 만드는 서류는 아래의 GitHub 이력서예요. 서버가 AI로 읽어서 1분 가까이 걸릴 수 있고, 그동안 진행 막대(`AiProgress`)로 몇 퍼센트까지 왔는지 보여줘요(아래의 AI 진행 상황). 서류는 여러 개 올려 두고 그중 하나를 대표 이력서로 정해요(PUT /resumes/{id}/primary). 대표는 서버가 정해서, 새로 올린 서류는 대표가 없을 때만 대표가 되고 대표를 지우면 남은 것 중 가장 최근 것이 대표예요. 올리거나 대표를 바꾸거나 지우면 목록(GET /resumes)을 다시 받아요. 역량은 내 이력서 화면에서 고쳐요(PUT /resumes/{id}/skills, 화면에는 바로 보이고 서버의 답으로 맞춰요). 적합도와 추천과 진단은 대표 이력서로 해요.
 - 서버의 이력서와 리포트 아이디는 숫자라서, 받을 때 글자로 바꿔 두고(`String`) 보낼 때 다시 숫자로 바꿔요(`Number`). 기업과 공고 아이디는 원래 글자예요.
 - 적합도(`fitOf`)는 필수 역량 60%, 우대 역량 25%, 역량 폭 15%예요. 우대 역량을 적지 않은 공고는 우대 점수를 필수 점수와 같게 두고(만점으로 두지 않아요), 공고에 적힌 역량이 넷보다 적으면 근거가 약해서 조금 깎아요(하나뿐이면 85%까지). 역량마다 숙련도 3을 채우면 1점이에요. 이력서가 없으면 null이고 화면에 보이지 않아요. 서류는 고칠 때마다 새 객체라, 서류마다 숙련도 표와 공고별 적합도를 한 번만 계산해 기억해요(`levelOf`, WeakMap). 서버가 공고에 붙여 주는 `fitScore`는 쓰지 않고 화면에서 다시 계산해요.
 - 리포트(`startDiagnosis`)는 POST /reports {postingId}가 202로 바로 돌려줘요. 만드는 중(pending)이거나, 같은 공고를 이미 진단한 리포트예요. 만드는 중인 리포트가 저장소에 있으면 다 될 때까지(done이나 failed) 1초마다 GET /reports/{id}로 물어요. 리포트에는 만드는 정도(`progress`, 0에서 100)와 단계(`stage`)가 있어서(없으면 0과 queued, 다 됐으면 100), 리포트 화면의 진행 막대와 사이드바의 "진단 중 42%"가 이 값으로 움직여요. 숫자는 뒤로 가지 않게 지금까지 본 것 중 큰 값을 둬요. 화면을 옮겨도 계속 물어서 사이드바가 끝까지 바뀌어요. 목록(GET /reports)은 요약만 있어서, 리포트 화면을 열면 상세를 한 번 받아요(`useReport`, 받는 동안은 undefined예요. AI를 기다리는 게 아니라 자료를 받는 것이라, 두 번째 인자로 받은 바이트를 알려서 리포트와 면접 연습 화면이 `LoadProgress`로 퍼센트를 보여줘요). 만들지 못한(failed) 리포트는 안내와 다시 진단 버튼을 보여줘요.
@@ -218,7 +220,8 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 자료를 받는 칸(`LoadProgress`, `ui`)은 화면 전체를 기다릴 때 AI를 기다리는 칸과 같은 `ProgressRing`(문장은 "불러오고 있어요")을 내용이 올 자리 가운데(`loadCenter`)에 두고, 메뉴나 표나 내 정보의 목록처럼 좁은 자리에는 가는 막대와 퍼센트만 있는 한 줄(`compact`)로 둬요. 0.15초 안에 끝나는 받기에서는 보이지 않고, 보였으면 100%를 0.2초 보여준 뒤에 내용으로 바꿔요(`useLoadHold`). 관리자와 내 정보의 "더 보기"(`MoreButton`)는 받는 동안 버튼 글자에 "불러오고 있어요 42%"처럼 적어요. 받는 동안과 실패했을 때의 자리는 공고 화면에서 `ScreenParts`의 `LoadGate`, 관리자 화면에서 `AdminParts`의 `PagedTable`과 `PanelContent`가 한 모양으로 맞춰요.
 - 보완 계획(GET /plans, PUT과 DELETE /plans/{스킬}, 답은 새 목록)과 면접 노트(GET /notes, PUT /notes/{스킬})도 계정에 저장해요. 화면에는 바로 보이고 서버의 답으로 맞춰요.
 - AI를 쓰는 요청(이력서 올리기, 진단, 다시 진단, 서류 검증, 예상 질문, 답변 피드백)에는 설정 창에서 고른 모델을 `X-AI-Model` 헤더로 붙여요. 고른 모델이 `/config`의 `ai.models`에 없으면 붙이지 않고, 그때는 서버의 기본 모델(`ai.defaultModel`)을 써요.
-- 실패하면 토스트로 알려요. 서버의 오류 코드를 쉬운 말로 바꿔요(C4001 PDF만, C4002 GitHub나 노션 링크만, C4221 서류를 읽지 못함, C413 10MB까지, C502 외부 서비스 실패, C4003 역량이 비어 있음, C4043 이력서 없음, C4092 리포트를 아직 만드는 중, C4042 공고 없음, C4044 리포트 없음, C4045 질문 없음, C4004 고를 수 없는 AI 모델, C002 잘못된 요청, C403 볼 수 없는 계정).
+- GitHub 이력서: 계정에 GitHub 계정을 연결하고(GET, POST, DELETE /github/connection, `fetchGithubConnection`, `connectGithub`, `disconnectGithub`), 연결한 계정이 볼 수 있는 레포(GET /github/repos, 비공개 포함, `fetchGithubRepos`)를 3개까지(`MAX_GITHUB_REPOS`) 골라 POST /resumes/github {repos}(`createGithubResume`)로 만들어요. 서버가 레포마다 내 커밋과 PR, README, 의존성 파일을 읽어 AI로 프로젝트 경험(이름, 한 줄 소개, 팀이나 개인, 기간, 요약, 역할, 기술 스택, 문제 해결 경험)과 역량을 써요. 예전 Lofy(WhoIsLoafing)의 이력서 만들기를 옮긴 거예요. 만든 서류의 source는 github이고 `projects`에 프로젝트가 있어요. 서류 검증과 예상 질문은 서버가 프로젝트를 풀어 둔 문단을 읽어요. 레포마다 AI를 불러서 1분이 넘게 걸릴 수 있고, 진행 막대(`withProgress`)를 보여줘요. 연결이 끊겼으면(C4047, 사용자가 GitHub에서 권한을 거뒀으면 서버가 연결을 지워요) 연결 칸으로 돌아가요. 연결은 `/config`의 `githubConnectClientId`가 있을 때만 켜져요(로그인용 `githubClientId`와 따로예요).
+- 실패하면 토스트로 알려요. 서버의 오류 코드를 쉬운 말로 바꿔요(C4001 PDF만, C4002 GitHub나 노션 링크만, C4221 서류를 읽지 못함, C413 10MB까지, C502 외부 서비스 실패, C4003 역량이 비어 있음, C4043 이력서 없음, C4092 리포트를 아직 만드는 중, C4042 공고 없음, C4044 리포트 없음, C4045 질문 없음, C4004 고를 수 없는 AI 모델, C4005 GitHub 연결 실패, C4047 GitHub 연결 끊김, C4048 레포 없음, C002 잘못된 요청, C403 볼 수 없는 계정).
 - 이번 주 사용량(GET /usage)은 `/config`의 `usage`가 켜져 있을 때만 물어요.
 - 예전에 이 기기에 두던 `javadda:gap:resumes:v1`, `javadda:gap:resume:v1`, `javadda:gap:reports:v1`, `javadda:gap:plans:v1`, `javadda:gap:notes:v1`은 더 이상 읽지도 쓰지도 않아요.
 
@@ -323,7 +326,11 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 내 이력서 (`MyResume`, `/resume`)
 
 - 서류 목록 화면이에요. 제목 줄 오른쪽에 메인 컬러의 "서류 추가" 버튼이 늘 있어요. 서류가 없으면 가운데에 "아직 올린 이력서가 없어요" 안내(`Notice`)와 서류 추가 버튼만 보여줘요.
-- 서류 추가를 누르면 따로 한 화면인 서류 추가(`/resume/new`)로 가요. 제목 줄은 "서류 추가"와 뒤로 가기예요. 먼저 방법 두 가지를 큰 회색 칸 두 개로 나란히 보여줘요(`AddChoice`). "이력서 또는 포트폴리오 업로드"(올리기 아이콘, 설명, 맨 아래 "시작하기")를 누르면 같은 화면에서 올리는 칸으로 넘어가고, 뒤로 가기는 고르는 단계로 돌아와요. "GitHub Repository로 이력서와 포트폴리오 생성하기"(GitHub 로고)는 준비 중이라 흐리게 두고 맨 아래에 "준비 중" 이름표를 붙여요. 고르는 단계의 뒤로 가기는 목록으로 가요(목록에서 왔으면 뒤로 가기, 주소로 바로 왔으면 목록으로 바꿔요). 로그인하지 않았으면 로그인 화면으로 가요. 서류를 읽는 동안에는 뒤로 가기를 숨겨요. 올리는 칸(`ResumeUploader`)은 PDF를 끌어다 놓는 큰 칸 하나예요. 링크로 올리는 줄은 GitHub로 만들기와 겹쳐서 두지 않아요. 옅은 회색 점선을 두른 회색 칸이고, 가운데에 올리기 아이콘, "PDF를 끌어다 놓으세요", 10MB까지라는 설명, "PDF 고르기" 버튼이 있어요. 칸 전체가 눌리는 버튼이라 어디를 눌러도 파일을 고르고, 파일을 끌어 오면 메인 컬러 점선과 연한 배경으로 바뀌며 "여기에 놓으면 바로 읽어요"로 글자가 바뀌어요. 읽는 동안에는 이 칸 대신 회색 칸 하나에 올린 파일 이름과 진행 칸(`AiProgress`)이 보여요. 다 읽으면 목록으로 돌아가서 그 서류의 상세 칸이 열려요. 진단 시작 화면도 같은 칸을 써요.
+- 서류 추가를 누르면 따로 한 화면인 서류 추가(`/resume/new`)로 가요. 제목 줄은 "서류 추가"와 뒤로 가기예요. 먼저 방법 두 가지를 큰 회색 칸 두 개로 나란히 보여줘요(`AddChoice`). "이력서 또는 포트폴리오 업로드"(올리기 아이콘, 설명, 맨 아래 "시작하기")를 누르면 같은 화면에서 올리는 칸으로 넘어가고, 뒤로 가기는 고르는 단계로 돌아와요. "GitHub Repository로 이력서와 포트폴리오 생성하기"(GitHub 로고, 맨 아래 "시작하기")를 누르면 같은 화면에서 GitHub 단계(`GithubResume`)로 넘어가요. GitHub 권한 화면에서 돌아오면(`?code=&state=`) 서류 추가 화면이 바로 GitHub 단계로 열려요. 고르는 단계의 뒤로 가기는 목록으로 가요(목록에서 왔으면 뒤로 가기, 주소로 바로 왔으면 목록으로 바꿔요). 로그인하지 않았으면 로그인 화면으로 가요. 서류를 읽는 동안에는 뒤로 가기를 숨겨요. 올리는 칸(`ResumeUploader`)은 PDF를 끌어다 놓는 큰 칸 하나예요. 링크로 올리는 줄은 GitHub로 만들기와 겹쳐서 두지 않아요. 옅은 회색 점선을 두른 회색 칸이고, 가운데에 올리기 아이콘, "PDF를 끌어다 놓으세요", 10MB까지라는 설명, "PDF 고르기" 버튼이 있어요. 칸 전체가 눌리는 버튼이라 어디를 눌러도 파일을 고르고, 파일을 끌어 오면 메인 컬러 점선과 연한 배경으로 바뀌며 "여기에 놓으면 바로 읽어요"로 글자가 바뀌어요. 읽는 동안에는 이 칸 대신 회색 칸 하나에 올린 파일 이름과 진행 칸(`AiProgress`)이 보여요. 다 읽으면 목록으로 돌아가서 그 서류의 상세 칸이 열려요. 진단 시작 화면도 같은 칸을 써요.
+- GitHub 단계(`GithubResume`): 서버가 GitHub 연결을 켜 두지 않았으면 준비 중이라는 안내만 있어요. 연결하지 않았으면 회색 칸에 GitHub 로고, "GitHub 계정을 연결해 주세요", 비공개 레포까지 읽고 코드는 저장하지 않는다는 설명, "GitHub 연결하기" 버튼이 있어요. 누르면 GitHub 권한 화면(`scope=repo read:user`)으로 가고, 돌아오면 이 탭에 적어 둔 state를 확인한 뒤 코드를 서버로 보내 연결해요(`githubConnect.ts`). 돌아올 주소는 서류 추가 화면이라, OAuth App의 콜백 주소는 사이트 주소로 둬요. macOS 앱은 바깥 주소를 기본 브라우저로 넘겨서 앱 안에서는 연결을 마칠 수 없어요. 앱에서는 "브라우저에서 연결하기"(웹의 `/app/resume/new?github=1`)와 "다시 확인"을 보여주고, 브라우저에서 같은 계정으로 연결하면 앱도 연결된 것으로 봐요.
+  - 연결했으면 맨 위 회색 칸에 GitHub 사진(없으면 로고), 이름과 @아이디, "비공개 레포 포함"(자물쇠, repo 권한일 때), 오른쪽에 "연결 해제"(확인 창, GitHub에 준 권한도 거둬요)가 있어요. 그 아래에 레포 찾기 칸과 "포크 숨기기"(처음은 켜져 있어요), 레포 줄이 와요. 줄마다 체크 칸, 레포 이름(내 것이면 이름만, 아니면 소유자/레포), 비공개, 포크, 보관됨 이름표, 설명 한 줄, 언어와 마지막 푸시가 있어요. 누르면 고르고(연한 메인 컬러) 다시 누르면 풀려요. 3개를 고르면 나머지 줄은 흐려지고 눌리지 않아요. 레포는 24개씩 그려요(`useShowMore`). 맨 아래에 붙어 있는 줄에 "레포를 3개까지 골라요. 2개 골랐어요."와 "이력서 만들기" 버튼이 있어요.
+  - 만드는 동안에는 회색 칸 하나에 고른 레포 이름과 진행 칸(`AiProgress`)이 보이고 뒤로 가기를 숨겨요. 다 되면 목록으로 돌아가서 그 서류의 상세 칸이 열려요.
+- GitHub로 만든 서류의 상세 칸에는 "주요 경력" 대신 "프로젝트"가 있어요. 프로젝트마다 회색 칸(`ProjectCard`)에 이름과 비공개 이름표, 팀이나 개인 프로젝트와 기간, 오른쪽 위 "레포 열기"(새 탭), 한 줄 소개, 요약, 맡은 역할, 기술 스택 이름표, 문제 해결 경험(흰 칸에 제목과 문제, 원인, 개선, 효과, 판단 중 있는 것)이 있어요. 자료로 알 수 없는 수치는 AI가 "[직접 입력: ...]"으로 비워 둬요.
 - 올린 서류는 제목 줄 바로 아래에 회색 카드(`ResumeCard`)로 놓여요. 서류 수는 적지 않아요. 공고 탐색처럼 제목 줄과 같은 폭을 쓰고, 칸 수는 목록 폭(`@container`)을 보고 하나에서 셋까지 정해요. 안내 문구나 저장 안내는 두지 않아요. 카드마다 출처(PDF, GitHub, 노션), 오른쪽 위 별, 서류 이름, 올린 때, 역량 이름표 넷이 있어요. 별이 채워진(메인 컬러) 카드가 대표 이력서예요. 카드, 상세 칸, 진단 시작의 서류 목록 어디에도 "대표 이력서" 글자는 붙이지 않아요. 빈 별을 누르면 그 서류가 대표가 되고 토스트로 알려요.
 - 카드를 누르면 그 카드가 한 단계 짙어지고, 오른쪽에서 서류 상세 칸(`ResumeSheet`)이 미끄러져 나와요. 갭 상세 칸과 같은 모양이에요. 역량을 고치다 바깥을 눌러 닫히지 않게, 바깥을 눌러도 닫히지 않고 Esc나 X로만 닫아요(`SidePanel`의 `closeOnOutside`). 위에 서류 이름, 그 아래에 출처 태그(회색 바탕의 PDF, GitHub, 노션)와 "오늘 오후 1:52에 업로드 됨"이 있고, "내 역량" 이름표(`SkillEditor`)와 "주요 경력"(읽은 문단), 맨 아래 줄에 빨간 "삭제"와, 대표면 "이 이력서로 공고 보기", 아니면 "대표 이력서로 정하기"가 있어요. 이름표를 누르면 숙련도가 한 단계 올라가고(5에서 1로 돌아가요), X로 빼고, 아래 입력칸으로 더해요. 바꾸면 그 서류에 바로 저장돼요.
 - 역량 더하기 칸에 글자를 치면 아래에 맞는 기술 스택이 펼쳐져요(`suggestSkills`, `src/lib/gap.ts`). 축이 정해진 스킬과 공고에 적힌 스킬에서 찾고, 이름이나 별칭(스프링, k8s)이 친 글자로 시작하는 것을 앞에 둬요. 이미 가진 스킬은 빼고 여덟 개까지, 줄마다 오른쪽에 레이더 축(언어, 프레임워크 등)을 옅게 적어요. 위아래 방향키로 옮기고 Enter나 클릭으로 더해요. 고른 게 없으면 친 글자 그대로 더하고, Esc는 목록만 접어요(상세 칸은 그대로예요).
@@ -476,7 +483,8 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `jobs_suggestion_use` | 공고 탐색의 빈 검색창에서 Enter로 추천 검색어를 썼을 때 | `query` |
 | `recommend_family_change` | 추천 공고에서 직군을 골랐을 때 | `family`(dev, backend, …) |
 | `recommend_sort_change`, `recommend_threshold_change` | 추천 공고에서 정렬과 적합도 기준을 바꿨을 때 | `sort`, `threshold` |
-| `resume_upload` | 이력서를 올렸을 때 | `source`(pdf, github, notion), `skills` |
+| `resume_upload` | 이력서를 올렸거나 GitHub 레포로 만들었을 때 | `source`(pdf, github, notion), `skills`, `repos`(GitHub로 만들 때 고른 레포 수) |
+| `github_connect_click`, `github_connect`, `github_disconnect` | 서류 추가의 GitHub 단계에서 연결하기를 눌렀을 때, 돌아와 연결을 마쳤을 때, 연결을 끊었을 때 | `from`(web, app), `success` |
 | `resume_skills_edit` | 읽은 역량을 고쳤을 때 | `count` |
 | `resume_delete` | 이력서를 지웠을 때 | |
 | `resume_primary_change` | 대표 이력서를 바꿨을 때 | `count`(올린 서류 수) |
@@ -537,6 +545,9 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 아티클 글을 새 서비스에 맞게 다시 써요. 지금은 레포 분석 시절의 글이에요.
 - 목 자료의 한국어 조사("을(를)", "이(가)")를 서버가 글을 만들 때 자연스럽게 고쳐요.
 - 기업 북마크와 북마크한 기업의 새 공고 알림(앱 푸시)
+- GitHub 연결용 OAuth App을 만들어 서버에 `GITHUB_CONNECT_CLIENT_ID`, `GITHUB_CONNECT_CLIENT_SECRET`을 넣어요. 넣기 전에는 GitHub 단계가 준비 중 안내만 보여요. 실제 GitHub로 연결과 이력서 만들기는 아직 확인하지 않았어요(화면은 응답을 흉내 내서 확인했어요).
+- macOS 앱 안에서 GitHub 연결 마치기(소셜 계정 연결처럼 일회용 값을 브라우저로 넘기는 흐름). 지금은 브라우저에서 연결해요.
+- GitHub 이력서의 프로젝트 경험을 항목마다 고치기(더 짧게, 수치 넣기, 다른 경험으로 바꾸기)와 포트폴리오 글 만들기는 예전 Lofy에만 있어요.
 - 테스트 코드
 - 영어 화면의 목 자료 문구
 - 아티클과 `public/about` 스크린샷을 이 서비스에 맞게 바꾸기

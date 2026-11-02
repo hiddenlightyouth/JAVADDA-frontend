@@ -1,20 +1,24 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
 import { useAuth } from '../lib/auth'
-import { axisOf, canonical, PROGRESS_START, removeResume, requestLogin, suggestSkills, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type ProgressState, type Resume, type ResumeSkill } from '../lib/gap'
+import { axisOf, canonical, PROGRESS_START, removeResume, requestLogin, suggestSkills, saveResumeSkills, setPrimaryResume, uploadResume, useResumeShelf, type ProgressState, type Resume, type ResumeProject, type ResumeSkill } from '../lib/gap'
+import { isGithubReturn } from '../lib/githubConnect'
 import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { showToast } from '../lib/toast'
 import { canvas, pageFrame, PageHeader } from './AppPage'
 import { ConfirmDialog, panelBody, SidePanel } from './Dialog'
 import { AiProgress, Notice, SkillChip, Tip } from './GapParts'
+import { GithubResume } from './GithubResume'
 import { GitHubMark } from './Social'
-import { ChevronRightIcon, CloseIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
+import { ChevronRightIcon, CloseIcon, ExternalLinkIcon, LockIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
+import { panelAction } from './ScreenParts'
 import { Badge, menuPanel, NumberedList, primaryButton, textFieldSm, toolButton, toolDangerButton } from './ui'
 
 /**
  * 내 이력서 화면이에요. 이력서나 포트폴리오 PDF를 올리면 역량을 읽어 이름표로 보여주고, 잘못 읽은 것은 빼거나 더해요.
  * 올리는 칸(ResumeUploader)과 역량 고치는 칸(SkillEditor)은 진단 시작 화면도 같이 써요.
+ * GitHub 레포로 만드는 칸은 `GithubResume`이에요. 만든 서류에는 레포마다 프로젝트 경험(포트폴리오)이 붙어요.
  */
 
 const TEXT = messages({
@@ -36,8 +40,13 @@ const TEXT = messages({
     uploadTitle: '이력서 또는 포트폴리오 업로드',
     uploadBody: '가지고 있는 이력서나 포트폴리오 PDF를 올리면 역량을 읽어요.',
     generateTitle: 'GitHub Repository로 이력서와 포트폴리오 생성하기',
-    generateBody: '레포지토리의 코드와 기록을 읽어 이력서와 포트폴리오를 만들어 드려요.',
-    soon: '준비 중',
+    generateBody: 'GitHub 계정을 연결하면 비공개 레포까지 읽어서, 내 커밋과 PR로 이력서와 포트폴리오를 만들어 드려요.',
+    projects: '프로젝트',
+    openRepo: '레포 열기',
+    privateRepo: '비공개',
+    kinds: { team: '팀 프로젝트', personal: '개인 프로젝트' } as Record<ResumeProject['kind'], string>,
+    role: '맡은 역할',
+    parts: { problem: '문제', cause: '원인', solution: '개선', effect: '효과', decision: '판단' },
     start: '시작하기',
     otherWay: '다른 방법 고르기',
     addTitle: '서류 추가',
@@ -73,8 +82,13 @@ const TEXT = messages({
     uploadTitle: 'Upload a resume or portfolio',
     uploadBody: 'Upload your resume or portfolio PDF and we will read your skills.',
     generateTitle: 'Create a resume and portfolio from a GitHub repository',
-    generateBody: 'We read the code and history of your repository and write a resume and portfolio for you.',
-    soon: 'Coming soon',
+    generateBody: 'Connect your GitHub account and we read your repositories, private ones included, to write a resume and portfolio from your commits and pull requests.',
+    projects: 'Projects',
+    openRepo: 'Open repository',
+    privateRepo: 'Private',
+    kinds: { team: 'Team project', personal: 'Personal project' },
+    role: 'Role',
+    parts: { problem: 'Problem', cause: 'Cause', solution: 'Fix', effect: 'Result', decision: 'Trade-off' },
     start: 'Get started',
     otherWay: 'Choose another way',
     addTitle: 'Add a document',
@@ -94,9 +108,8 @@ const TEXT = messages({
   },
 })
 
-/** 서류를 올리는 칸이에요. PDF를 끌어다 놓거나 눌러서 골라요. 올리면 onDone으로 알려줘요. */
-/** 서류 추가를 열면 먼저 고르는 두 방법이에요. 올리기와, 아직 준비 중인 GitHub 레포지토리로 만들기예요. */
-function AddChoice({ onUpload }: { onUpload: () => void }) {
+/** 서류 추가를 열면 먼저 고르는 두 방법이에요. PDF 올리기와 GitHub 레포지토리로 만들기예요. */
+function AddChoice({ onUpload, onGithub }: { onUpload: () => void; onGithub: () => void }) {
   const L = useMessages(TEXT)
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -111,20 +124,25 @@ function AddChoice({ onUpload }: { onUpload: () => void }) {
           <ChevronRightIcon className="size-3.5 shrink-0" />
         </span>
       </button>
-      <div aria-disabled className="flex min-h-60 flex-col items-start rounded-2xl bg-gray-50 p-7">
-        <span className="flex size-14 items-center justify-center rounded-full bg-white text-gray-400">
+      <button type="button" onClick={onGithub} className="group flex min-h-60 flex-col items-start rounded-2xl bg-gray-50 p-7 text-left transition-colors hover:bg-gray-100">
+        <span className="flex size-14 items-center justify-center rounded-full bg-white text-gray-500 transition-colors group-hover:text-gray-900">
           <GitHubMark className="size-6" />
         </span>
-        <span className="mt-6 text-[17px] font-semibold text-gray-400">{L.generateTitle}</span>
-        <span className="mt-2 text-[13.5px] leading-relaxed text-gray-400">{L.generateBody}</span>
-        <span className="mt-auto pt-6">
-          <Badge tone="white">{L.soon}</Badge>
+        <span className="mt-6 text-[17px] font-semibold text-gray-900 transition-colors group-hover:text-brand">{L.generateTitle}</span>
+        <span className="mt-2 text-[13.5px] leading-relaxed text-gray-500">{L.generateBody}</span>
+        <span className="mt-auto flex items-center gap-1 pt-6 text-[13px] font-medium text-gray-500 transition-colors group-hover:text-brand">
+          {L.start}
+          <ChevronRightIcon className="size-3.5 shrink-0" />
         </span>
-      </div>
+      </button>
     </div>
   )
 }
 
+/** GitHub 권한 화면에서 돌아왔거나(?code), 앱이 연결하라고 브라우저로 열었으면(?github=1) 서류 추가 화면이 GitHub 단계로 바로 열려요. */
+const opensGithub = () => isGithubReturn() || new URLSearchParams(window.location.search).has('github')
+
+/** 서류를 올리는 칸이에요. PDF를 끌어다 놓거나 눌러서 골라요. 올리면 onDone으로 알려줘요. */
 export function ResumeUploader({ onDone, onWorking }: {
   onDone?: (resume: Resume) => void
   /** 읽기 시작하고 끝날 때 알려요. 창이 그동안 닫히지 않게 할 때 써요. */
@@ -334,8 +352,8 @@ let addFromList = false
 export function MyResume({ add, onAdd, onList, onExplore }: { add: boolean; onAdd: () => void; onList: () => void; onExplore: () => void }) {
   const L = useMessages(TEXT)
   const shelf = useResumeShelf()
-  /** 서류 추가 화면은 먼저 올릴지 만들지 고르고(choose), 올리기를 고르면 올리는 칸(upload)이 나와요. */
-  const [step, setStep] = useState<'choose' | 'upload'>('choose')
+  /** 서류 추가 화면은 먼저 올릴지 만들지 고르고(choose), 올리기를 고르면 올리는 칸(upload), GitHub를 고르면 레포 고르는 칸(github)이 나와요. */
+  const [step, setStep] = useState<'choose' | 'upload' | 'github'>(() => (add && opensGithub() ? 'github' : 'choose'))
   /** 서류를 읽는 동안이에요. 그동안은 서류 추가 화면을 떠날 수 없어요. */
   const [uploading, setUploading] = useState(false)
   const signedIn = useAuth().tokens !== null
@@ -357,9 +375,9 @@ export function MyResume({ add, onAdd, onList, onExplore }: { add: boolean; onAd
   useEffect(() => {
     if (add && !signedIn) requestLogin()
   }, [add, signedIn])
-  // 서류 추가 화면에 들어올 때마다 고르는 단계부터예요.
+  // 서류 추가 화면에 들어올 때마다 고르는 단계부터예요. GitHub에서 돌아왔으면 GitHub 단계예요.
   useEffect(() => {
-    if (add) setStep('choose')
+    if (add) setStep(opensGithub() ? 'github' : 'choose')
     else addFromList = false
   }, [add])
 
@@ -377,14 +395,22 @@ export function MyResume({ add, onAdd, onList, onExplore }: { add: boolean; onAd
         <PageHeader
           title={L.addTitle}
           // 읽는 동안 떠나면 결과를 볼 곳이 없어서, 뒤로 가기를 숨겨 둬요.
-          onBack={uploading ? undefined : step === 'upload' ? () => setStep('choose') : backToList}
-          backLabel={step === 'upload' ? L.otherWay : L.title}
+          onBack={uploading ? undefined : step !== 'choose' ? () => setStep('choose') : backToList}
+          backLabel={step !== 'choose' ? L.otherWay : L.title}
         />
         <div className={canvas}>
           <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
             <div className="max-w-3xl">
               {step === 'choose' ? (
-                <AddChoice onUpload={() => setStep('upload')} />
+                <AddChoice onUpload={() => setStep('upload')} onGithub={() => setStep('github')} />
+              ) : step === 'github' ? (
+                <GithubResume
+                  onWorking={setUploading}
+                  onDone={(resume) => {
+                    setOpenId(resume.id)
+                    backToList()
+                  }}
+                />
               ) : (
                 <ResumeUploader
                   onWorking={setUploading}
@@ -481,10 +507,22 @@ function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resum
               <SkillEditor resume={resume} />
             </div>
           </section>
-          <section className="mt-8">
-            <h3 className="text-[13.5px] font-semibold text-gray-900">{L.paragraphs}</h3>
-            <NumberedList items={resume.paragraphs} className="mt-3" />
-          </section>
+          {/* GitHub로 만든 서류는 문단이 프로젝트 경험을 풀어 쓴 것이라, 문단 대신 프로젝트 칸으로 보여줘요. */}
+          {resume.projects.length > 0 ? (
+            <section className="mt-8">
+              <h3 className="text-[13.5px] font-semibold text-gray-900">{L.projects}</h3>
+              <ul className="mt-3 flex flex-col gap-3">
+                {resume.projects.map((project) => (
+                  <ProjectCard key={project.repo} project={project} />
+                ))}
+              </ul>
+            </section>
+          ) : (
+            <section className="mt-8">
+              <h3 className="text-[13.5px] font-semibold text-gray-900">{L.paragraphs}</h3>
+              <NumberedList items={resume.paragraphs} className="mt-3" />
+            </section>
+          )}
         </div>
         <div className="flex items-center gap-2 border-t border-gray-200 px-6 py-4">
           <button type="button" onClick={() => setRemoving(true)} className={toolDangerButton}>
@@ -519,6 +557,73 @@ function ResumeSheet({ resume, primary, onPrimary, onExplore, onClose }: { resum
         />
       )}
     </>
+  )
+}
+
+/** GitHub 레포 하나로 쓴 프로젝트 경험이에요. 이력서의 개조식 그대로, 문제 해결 경험은 문제와 개선과 효과로 나눠 보여줘요. */
+function ProjectCard({ project }: { project: ResumeProject }) {
+  const L = useMessages(TEXT)
+  const parts = ['problem', 'cause', 'solution', 'effect', 'decision'] as const
+  return (
+    <li className="rounded-2xl bg-gray-50 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5">
+            <span className="truncate text-[15px] font-semibold text-gray-900">{project.name}</span>
+            {project.privateRepo && (
+              <Badge tone="white" className="gap-1">
+                <LockIcon className="size-3" />
+                {L.privateRepo}
+              </Badge>
+            )}
+          </p>
+          <p className="mt-1 flex flex-wrap gap-x-3 text-[12px] text-gray-400">
+            <span>{L.kinds[project.kind] ?? project.kind}</span>
+            {project.period && <span>{project.period}</span>}
+          </p>
+        </div>
+        <a href={project.url} target="_blank" rel="noreferrer" className={`${panelAction} shrink-0`}>
+          {L.openRepo}
+          <ExternalLinkIcon className="size-3.5" />
+        </a>
+      </div>
+      {project.headline && <p className="mt-3 text-[13.5px] font-medium text-gray-800">{project.headline}</p>}
+      {project.summary && <p className="mt-1 text-[13px] leading-relaxed text-gray-600">{project.summary}</p>}
+      {project.role && (
+        <p className="mt-3 text-[13px] leading-relaxed text-gray-600">
+          <span className="mr-2 font-medium text-gray-900">{L.role}</span>
+          {project.role}
+        </p>
+      )}
+      {project.stack.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-1">
+          {project.stack.map((name) => (
+            <li key={name}>
+              <Badge tone="white">{name}</Badge>
+            </li>
+          ))}
+        </ul>
+      )}
+      {project.problems.length > 0 && (
+        <ol className="mt-4 flex flex-col gap-3">
+          {project.problems.map((problem) => (
+            <li key={problem.title} className="rounded-xl bg-white p-4">
+              <p className="text-[13.5px] font-semibold text-gray-900">{problem.title}</p>
+              <dl className="mt-2 flex flex-col gap-1.5 text-[12.5px] leading-relaxed">
+                {parts
+                  .filter((part) => problem[part])
+                  .map((part) => (
+                    <div key={part} className="flex gap-3">
+                      <dt className="w-10 shrink-0 text-gray-400">{L.parts[part]}</dt>
+                      <dd className="min-w-0 flex-1 whitespace-pre-line text-gray-700">{problem[part]}</dd>
+                    </div>
+                  ))}
+              </dl>
+            </li>
+          ))}
+        </ol>
+      )}
+    </li>
   )
 }
 

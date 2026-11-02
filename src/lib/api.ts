@@ -27,6 +27,8 @@ export interface ServerConfig {
   feedback: boolean
   /** GitHub 로그인에 쓰는 공개 값. 서버가 GitHub 로그인을 켜 두지 않았으면 null이에요. */
   githubClientId: string | null
+  /** GitHub 계정 연결(레포로 이력서 만들기)에 쓰는 OAuth App의 공개 값. 로그인용과 따로이고, 서버가 켜 두지 않았으면 null이에요. */
+  githubConnectClientId: string | null
   /** 카카오 로그인에 쓰는 공개 값. 서버가 카카오 로그인을 켜 두지 않았으면 null이에요. */
   kakaoClientId: string | null
   /** 앱에서 시작한 계정 연결을 브라우저에서 마무리하는 API가 서버에 있는지. 없으면 앱의 내 정보에서 연결 버튼을 숨겨요. */
@@ -47,6 +49,7 @@ const NONE: ServerConfig = {
   admin: false,
   feedback: false,
   githubClientId: null,
+  githubConnectClientId: null,
   kakaoClientId: null,
   socialAppLink: false,
   socialUnlink: false,
@@ -73,6 +76,7 @@ async function fetchConfig(onLoad?: OnLoad): Promise<ServerConfig> {
       admin: result.data?.admin === true,
       feedback: result.data?.feedback === true,
       githubClientId: result.data?.githubClientId || null,
+      githubConnectClientId: result.data?.githubConnectClientId || null,
       kakaoClientId: result.data?.kakaoClientId || null,
       socialAppLink: result.data?.socialAppLink === true,
       socialUnlink: result.data?.socialUnlink === true,

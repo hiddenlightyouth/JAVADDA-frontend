@@ -1,4 +1,4 @@
-import { axisOf, COMPANIES, companyOf, docName, fitOf, LEVEL_MAX, POSTINGS, type DocType, type DocumentReview, type InterviewQuestion, type JobPosting, type ParagraphTag, type PracticeFeedback, type PracticeRecord, type Report, type Resume, type ResumeSkill, type SkillGap } from './gap'
+import { axisOf, COMPANIES, companyOf, docName, fitOf, LEVEL_MAX, POSTINGS, type DocType, type DocumentReview, type InterviewQuestion, type JobPosting, type ParagraphTag, type PracticeFeedback, type PracticeRecord, type Report, type Resume, type ResumeProject, type ResumeSkill, type SkillGap } from './gap'
 import { readJson, writeJson } from './storage'
 
 // 목 모드예요. 백엔드 없이 프론트만 볼 때, 브라우저 안에서 /api/v1 요청을 가로채 서버 대신 답해요.
@@ -20,6 +20,8 @@ interface State {
   answers: Record<string, PracticeRecord[]>
   plans: string[]
   notes: { skill: string; text: string; savedAt: string }[]
+  /** GitHub를 연결해 둔 것으로 볼지. 목 모드는 GitHub에 가지 않고 처음부터 연결한 것으로 봐요. */
+  github?: boolean
 }
 
 /** 빈 자료예요. 배열과 객체를 그 자리에서 고쳐 쓰기 때문에, 부를 때마다 새로 만들어요. */
@@ -32,7 +34,7 @@ const nextId = () => state.seq++
 let companies = [...COMPANIES]
 let postings = [...POSTINGS]
 const postingOf = (id: string) => postings.find((posting) => posting.id === id) ?? null
-const toResume = (item: MockResume): Resume => ({ ...item, id: String(item.id) })
+const toResume = (item: MockResume): Resume => ({ ...item, id: String(item.id), projects: item.projects ?? [] })
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
@@ -289,7 +291,36 @@ const fail = (status: number, code: string) => reply(null, status, code)
 
 const TOKENS = { accessToken: 'mock-access', refreshToken: 'mock-refresh' }
 const ME = { id: 1, email: 'mock@javadda.dev', name: '목 사용자', role: 'USER', registeredAt: '2026-10-01T09:00:00', passwordSet: true }
-const CONFIG = { admin: false, feedback: false, githubClientId: null, kakaoClientId: null, socialAppLink: false, socialUnlink: false, withdraw: false, usage: false, ai: { defaultModel: '', models: [] } }
+const CONFIG = { admin: false, feedback: false, githubClientId: null, githubConnectClientId: 'mock-github', kakaoClientId: null, socialAppLink: false, socialUnlink: false, withdraw: false, usage: false, ai: { defaultModel: '', models: [] } }
+
+const GITHUB_ME = { connected: true, login: 'javadda-dev', name: '목 사용자', avatarUrl: null, privateAccess: true, connectedAt: '2026-10-20T10:00:00' }
+const GITHUB_REPOS = [
+  { name: 'dropthepitch-server', description: 'AI 페르소나에게 아이디어 의견을 듣는 플랫폼의 서버', language: 'Java', privateRepo: true, days: 3 },
+  { name: 'campus-web', description: '교내 동아리의 온라인 캠퍼스 화면', language: 'TypeScript', privateRepo: false, days: 12 },
+  { name: 'algorithm-study', description: '코딩 테스트 풀이 모음', language: 'Python', privateRepo: false, days: 40 },
+  { name: 'dotfiles', description: null, language: 'Shell', privateRepo: false, days: 90, fork: true },
+].map((repo) => ({
+  fullName: `javadda-dev/${repo.name}`, name: repo.name, owner: 'javadda-dev', description: repo.description, language: repo.language, privateRepo: repo.privateRepo,
+  fork: repo.fork ?? false, archived: false, stars: 0, pushedAt: new Date(Date.now() - repo.days * 86_400_000).toISOString(), url: `https://github.com/javadda-dev/${repo.name}`,
+}))
+
+/** 고른 레포로 쓴 그럴듯한 프로젝트 경험이에요. 서버는 레포의 커밋과 PR로 AI가 써요. */
+function mockProject(fullName: string): ResumeProject {
+  const repo = GITHUB_REPOS.find((item) => item.fullName === fullName)
+  const frontend = repo?.language === 'TypeScript'
+  return {
+    repo: fullName, url: `https://github.com/${fullName}`, privateRepo: repo?.privateRepo ?? false, name: repo?.name ?? fullName.split('/')[1],
+    headline: repo?.description ?? '개인 프로젝트', kind: frontend ? 'team' : 'personal', period: '2026.03 ~ 진행 중',
+    summary: frontend ? '동아리 부원이 강의와 과제를 한곳에서 보는 온라인 캠퍼스 구현' : '출시 전 아이디어에 AI 페르소나의 의견을 모아 주는 플랫폼 구현',
+    role: frontend ? '강의 목록과 과제 제출 화면, 디자인 시스템 구축 주도' : '프로젝트 초기 설계와 의견 수집 도메인, CI/CD 구축 주도',
+    stack: frontend ? ['TypeScript', 'React', 'Vite', 'Tailwind'] : ['Java', 'Spring Boot', 'MySQL', 'Redis', 'Docker'],
+    problems: [
+      frontend
+        ? { title: '강의 목록의 느린 첫 화면', problem: '강의가 늘면서 목록을 한 번에 그려 첫 화면이 늦게 뜸', cause: '', solution: '목록을 24개씩 나눠 그리고 화면 끝에 닿으면 더 그리도록 바꿈', effect: '[직접 입력: 개선 전후 첫 화면 시간]', decision: '' }
+        : { title: 'AI 의견 수집 지연과 연쇄 실패', problem: '의견을 하나씩 호출하면 응답이 늦고 한 건의 실패가 전체 실패로 이어짐', cause: '', solution: 'CompletableFuture와 전용 스레드 풀로 병렬 호출\n호출별 타임아웃과 개별 저장으로 부분 실패 격리', effect: '일부 호출이 실패해도 나머지 의견은 저장됨', decision: '' },
+    ],
+  }
+}
 
 function startReport(postingId: string, resume: MockResume): MockReport {
   // 서버처럼 같은 공고를 같은 서류로 만든 예전 리포트는 새 리포트가 대신해요.
@@ -334,13 +365,43 @@ async function handle(path: string, query: URLSearchParams, method: string, body
     return reply(note)
   }
 
+  if (head === 'github') {
+    if (id === 'connection' && method === 'DELETE') {
+      state.github = false
+      save()
+      return reply(null)
+    }
+    if (id === 'connection' && method === 'POST') {
+      state.github = true
+      save()
+      return reply(GITHUB_ME)
+    }
+    if (state.github === false) return id === 'connection' ? reply({ connected: false }) : fail(404, 'C4047')
+    return id === 'repos' ? reply(GITHUB_REPOS) : reply(GITHUB_ME)
+  }
+
   if (head === 'resumes') {
     if (!id && method === 'GET') return reply({ primaryId: state.primaryId, list: state.resumes })
+    if (id === 'github') {
+      await wait(1500)
+      const repos = Array.isArray(json.repos) ? json.repos.map(String) : []
+      const projects = repos.map(mockProject)
+      const frontend = projects.some((project) => project.stack.includes('React'))
+      const resume: MockResume = {
+        id: nextId(), name: projects.length === 1 ? projects[0].name : `${projects[0]?.name} 외 ${projects.length - 1}개 프로젝트`, source: 'github',
+        link: 'https://github.com/javadda-dev', uploadedAt: new Date().toISOString(), skills: extractSkills(projects.map((project) => project.stack.join(' ')).join(' '), frontend),
+        paragraphs: projects.flatMap((project) => [`${project.name}: ${project.headline}`, `맡은 역할: ${project.role}`]), projects,
+      }
+      state.resumes.unshift(resume)
+      state.primaryId ??= resume.id
+      save()
+      return reply(resume)
+    }
     if (!id || id === 'link') {
       await wait(1000)
       const name = body instanceof FormData ? ((body.get('file') as File | null)?.name ?? '이력서.pdf') : String(json.link ?? '링크').replace(/^https?:\/\//, '')
       const frontend = /front|fe|react|web|프론트/i.test(name)
-      const resume: MockResume = { id: nextId(), name, source: body instanceof FormData ? 'pdf' : /notion/i.test(name) ? 'notion' : 'github', uploadedAt: new Date().toISOString(), skills: extractSkills(name, frontend), paragraphs: paragraphsFor(frontend) }
+      const resume: MockResume = { id: nextId(), name, source: body instanceof FormData ? 'pdf' : /notion/i.test(name) ? 'notion' : 'github', uploadedAt: new Date().toISOString(), skills: extractSkills(name, frontend), paragraphs: paragraphsFor(frontend), projects: [] }
       state.resumes.unshift(resume)
       state.primaryId ??= resume.id
       save()

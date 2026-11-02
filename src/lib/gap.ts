@@ -76,6 +76,35 @@ export interface Resume {
   skills: ResumeSkill[]
   /** 서류 검증에 쓰는 문단. PDF를 읽어 나눈 글이에요. */
   paragraphs: string[]
+  /** GitHub 레포로 만든 서류의 프로젝트 경험이에요(포트폴리오). 올린 서류는 비어 있어요. */
+  projects: ResumeProject[]
+}
+
+/** 프로젝트에서 겪은 문제 해결 경험 하나예요. 원인과 판단은 없으면 빈 글자예요. */
+export interface ResumeProblem {
+  title: string
+  problem: string
+  cause: string
+  solution: string
+  effect: string
+  decision: string
+}
+
+/** GitHub 레포 하나로 쓴 이력서의 프로젝트 경험이에요. kind와 period는 서버가 레포 기록으로 정해요. */
+export interface ResumeProject {
+  /** 소유자/레포 */
+  repo: string
+  url: string
+  privateRepo: boolean
+  name: string
+  headline: string
+  kind: 'team' | 'personal'
+  /** 2026.02 ~ 2026.04, 최근에 푸시했으면 끝이 진행 중이에요 */
+  period: string
+  summary: string
+  role: string
+  stack: string[]
+  problems: ResumeProblem[]
 }
 
 export type GapKind = 'missing' | 'partial' | 'strength'
@@ -1048,6 +1077,9 @@ const ERRORS = messages<Record<string, string>>({
     C4044: '리포트를 찾지 못했어요. 지운 리포트일 수 있어요.',
     C4045: '면접 질문을 찾지 못했어요. 예상 질문을 다시 불러와 주세요.',
     C4004: '고른 AI 모델을 지금 쓸 수 없어요. 설정에서 다른 모델을 골라 주세요.',
+    C4005: 'GitHub 계정을 연결하지 못했어요. 처음부터 다시 시도해 주세요.',
+    C4047: 'GitHub 연결이 끊겼어요. 다시 연결해 주세요.',
+    C4048: '레포를 찾지 못했어요. 지웠거나 볼 수 없는 레포일 수 있어요.',
     C002: '보낸 내용을 확인하지 못했어요. 다시 시도해 주세요.',
     C403: '이 계정으로는 볼 수 없어요.',
     login: '로그인이 필요해요. 다시 로그인해 주세요.',
@@ -1067,6 +1099,9 @@ const ERRORS = messages<Record<string, string>>({
     C4044: "We couldn't find this report. It may have been deleted.",
     C4045: "We couldn't find this question. Please reload the expected questions.",
     C4004: "The AI model you picked isn't available. Choose another one in Settings.",
+    C4005: "We couldn't connect your GitHub account. Please start over.",
+    C4047: 'Your GitHub connection ended. Please connect again.',
+    C4048: "We couldn't find this repository. It may be deleted or hidden from you.",
     C002: "We couldn't read what was sent. Please try again.",
     C403: "This account can't view this.",
     login: 'Please sign in again.',
@@ -1737,7 +1772,7 @@ export function fitOf(posting: JobPosting, resume: Resume | null): number | null
 
 // ---------- 이력서 ----------
 
-type ServerResume = Omit<Resume, 'id' | 'link'> & { id: number; link?: string | null; primary?: boolean }
+type ServerResume = Omit<Resume, 'id' | 'link' | 'projects'> & { id: number; link?: string | null; primary?: boolean; projects?: ResumeProject[] | null }
 
 const toResume = (item: ServerResume): Resume => ({
   id: String(item.id),
@@ -1747,6 +1782,7 @@ const toResume = (item: ServerResume): Resume => ({
   uploadedAt: item.uploadedAt,
   skills: item.skills ?? [],
   paragraphs: item.paragraphs ?? [],
+  projects: item.projects ?? [],
 })
 
 /** 올려 둔 서류 목록을 다시 받아요(GET /resumes). 대표는 서버가 정해요. */
@@ -1781,6 +1817,95 @@ export async function uploadResume(input: { file?: File; link?: string }, onProg
   const uploaded = toResume(result.data)
   await loadShelf()
   return shelfStore.get().list.find((resume) => resume.id === uploaded.id) ?? uploaded
+}
+
+// ---------- GitHub 연결 ----------
+
+/** 계정에 연결한 GitHub 계정이에요. 연결하지 않았으면 connected만 false예요. */
+export interface GithubConnection {
+  connected: boolean
+  login?: string
+  name?: string | null
+  avatarUrl?: string | null
+  /** repo 권한으로 연결해서 비공개 레포도 읽을 수 있는지 */
+  privateAccess?: boolean
+  connectedAt?: string
+}
+
+/** 연결한 계정으로 볼 수 있는 레포 하나예요(내 것, 협업자로 들어간 것, 조직의 것). */
+export interface GithubRepo {
+  /** 소유자/레포 */
+  fullName: string
+  name: string
+  owner: string
+  description: string | null
+  language: string | null
+  privateRepo: boolean
+  fork: boolean
+  archived: boolean
+  stars: number
+  pushedAt: string | null
+  url: string
+}
+
+/** 이력서 만들기에 한 번에 고를 수 있는 레포 수예요. 레포마다 AI를 한 번씩 불러요. */
+export const MAX_GITHUB_REPOS = 3
+
+/** 연결한 GitHub 계정을 물어요(GET /github/connection). 서버에 닿지 못하면 null이에요. */
+export async function fetchGithubConnection(): Promise<GithubConnection | null> {
+  const result = await call<GithubConnection>('/github/connection')
+  return result.ok && result.data ? result.data : null
+}
+
+/** GitHub에서 받아 온 인가 코드로 계정을 연결해요(POST /github/connection). 실패하면 토스트로 알리고 null이에요. */
+export async function connectGithub(code: string, redirectUri: string): Promise<GithubConnection | null> {
+  const result = await call<GithubConnection>('/github/connection', send('POST', { code, redirectUri }))
+  if (!result.ok || !result.data) {
+    fail(result)
+    return null
+  }
+  return result.data
+}
+
+/** GitHub 연결을 끊어요(DELETE /github/connection). 서버가 GitHub에 준 권한도 거둬요. */
+export async function disconnectGithub(): Promise<boolean> {
+  const result = await call<unknown>('/github/connection', { method: 'DELETE' })
+  if (!result.ok) fail(result)
+  return result.ok
+}
+
+/**
+ * 연결한 계정으로 볼 수 있는 레포를 받아요(GET /github/repos, 비공개 포함). 최근에 푸시한 것부터예요.
+ * 연결이 끊겼으면(C4047) 'disconnected'라서 화면이 연결 칸으로 돌아가요. 그 밖의 실패는 null이에요.
+ */
+export async function fetchGithubRepos(onLoad?: OnLoad): Promise<GithubRepo[] | 'disconnected' | null> {
+  const result = await call<GithubRepo[]>('/github/repos', {}, false, {}, onLoad)
+  if (result.code === 'C4047') return 'disconnected'
+  if (!result.ok || !Array.isArray(result.data)) {
+    fail(result)
+    return null
+  }
+  return result.data
+}
+
+/**
+ * 고른 레포(3개까지)로 이력서와 포트폴리오를 만들어요(POST /resumes/github). 레포마다 AI가 프로젝트 경험과 역량을 써서 1분이 넘게 걸릴 수 있어요.
+ * 다 되면 목록을 다시 받아요. 연결이 끊겼으면 'disconnected'이고, 그 밖의 실패는 토스트로 알리고 null이에요.
+ */
+export async function createGithubResume(repos: string[], onProgress?: OnProgress): Promise<Resume | 'disconnected' | null> {
+  if (!requireLogin()) return null
+  const result = await withProgress(onProgress, (headers) => call<ServerResume>('/resumes/github', send('POST', { repos }), true, headers))
+  if (result.code === 'C4047') {
+    fail(result)
+    return 'disconnected'
+  }
+  if (!result.ok || !result.data) {
+    fail(result)
+    return null
+  }
+  const created = toResume(result.data)
+  await loadShelf()
+  return shelfStore.get().list.find((resume) => resume.id === created.id) ?? created
 }
 
 /** 추출한 역량을 사용자가 고친 뒤에 저장해요. id가 없으면 대표 서류를 고쳐요. 화면에는 바로 보이고, 서버가 돌려준 서류로 맞춰요. */
