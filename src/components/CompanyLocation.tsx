@@ -140,5 +140,5 @@ function NaverMiniMap({ markers, exact, onFail }: { markers: MapMarker[]; exact:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, exact])
 
-  return <div ref={ref} className="size-full" />
+  return <div ref={ref} className="naver-map size-full" />
 }

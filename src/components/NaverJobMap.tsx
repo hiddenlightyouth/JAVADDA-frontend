@@ -214,5 +214,5 @@ export function NaverJobMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, tick, pins, counts, activePin, pinZoom, me, L])
 
-  return <div ref={ref} className={className} />
+  return <div ref={ref} className={`naver-map ${className}`} />
 }

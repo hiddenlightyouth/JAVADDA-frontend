@@ -691,6 +691,19 @@ header[data-on-dark] .logo-mark {
   color: #fbbf24;
 }
 
+/*
+ * 네이버 지도는 기본으로 어두운 지도가 없어서(Style Editor에서 만든 스타일만 있어요), 다크 모드에서는 지도 그림(타일)만 뒤집어 어둡게 해요.
+ * 색상(hue)은 되돌려서 물은 파랗고 공원은 초록 그대로예요. 핀과 파란 점은 타일이 아니라서 그대로예요.
+ */
+.dark .naver-map img[src*='map.naver.net'],
+.dark .naver-map img[src*='map.pstatic.net'] {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.92);
+}
+
+.dark .naver-map {
+  background-color: #1c1c1e !important;
+}
+
 /* 색만 바뀌던 버튼도 누름 반응(scale)이 부드럽게 이어지게 해요. 색은 전처럼, 크기는 통 튀는 빠르기로 바뀌어요. */
 @layer utilities {
   button.transition-colors {
