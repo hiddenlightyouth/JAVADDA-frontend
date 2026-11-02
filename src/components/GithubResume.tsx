@@ -51,8 +51,8 @@ const TEXT = messages({
     pickHint: (count: number, max: number) => `레포를 ${max}개까지 골라요. ${count}개 골랐어요.`,
     make: '이력서 만들기',
     made: '레포를 읽어 이력서와 포트폴리오를 만들었어요. 프로젝트 경험과 역량을 확인해 주세요.',
-    addRepos: '레포 더하기',
-    added: '레포를 더했어요. 새 프로젝트와 포트폴리오를 확인해 주세요.',
+    addRepos: 'GitHub에서 불러오기',
+    added: 'GitHub에서 불러왔어요. 새 프로젝트와 포트폴리오를 확인해 주세요.',
     allAdded: '더할 수 있는 레포가 없어요',
     allAddedBody: '볼 수 있는 레포가 모두 이 이력서에 들어 있어요.',
     full: '더 고를 수 없어요',
@@ -86,8 +86,8 @@ const TEXT = messages({
     pickHint: (count: number, max: number) => `Pick up to ${max}. ${count} picked.`,
     make: 'Create resume',
     made: 'Done. Please check the projects, portfolio and skills we wrote.',
-    addRepos: 'Add repositories',
-    added: 'Added. Please check the new projects and portfolio.',
+    addRepos: 'Import from GitHub',
+    added: 'Imported. Please check the new projects and portfolio.',
     allAdded: 'No repositories left to add',
     allAddedBody: 'Every repository you can see is already in this resume.',
     full: 'You cannot pick more',
@@ -337,8 +337,8 @@ function RepoPicker({ connection, addTo, onDone, onWorking, onDisconnected }: {
         )}
       </div>
 
-      {/* 고르는 동안 아래에 붙어 있어서, 목록이 길어도 만들기 버튼을 찾지 않아요. */}
-      <div className="sticky bottom-0 mt-6 flex items-center gap-3 border-t border-gray-200 bg-white py-4">
+      {/* 고르는 동안 아래에 붙어 있어서, 목록이 길어도 만들기 버튼을 찾지 않아요. 스크롤 칸의 아래 여백(pb-16)만큼 붙는 자리가 올라가서, 그만큼 내려 화면 맨 아래에 붙여요. */}
+      <div className="sticky bottom-[-4rem] mt-6 flex items-center gap-3 border-t border-gray-200 bg-white py-4">
         <p className="min-w-0 flex-1 text-[13px] text-gray-500">{L.pickHint(picked.length, max)}</p>
         <button type="button" disabled={picked.length === 0} onClick={() => void make()} className={primaryButton}>
           {addTo ? L.addRepos : L.make}

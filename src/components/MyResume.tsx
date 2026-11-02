@@ -36,7 +36,7 @@ const TEXT = messages({
     addPlaceholder: '역량 더하기',
     add: '더하기',
     paragraphs: '주요 경력',
-    addRepos: '레포 더하기',
+    addRepos: 'GitHub에서 불러오기',
     cancel: '취소',
     addDoc: '서류 추가',
     uploadTitle: '이력서 또는 포트폴리오 업로드',
@@ -76,7 +76,7 @@ const TEXT = messages({
     addPlaceholder: 'Add a skill',
     add: 'Add',
     paragraphs: 'Key experience',
-    addRepos: 'Add repositories',
+    addRepos: 'Import from GitHub',
     cancel: 'Cancel',
     addDoc: 'Add document',
     uploadTitle: 'Upload a resume or portfolio',
@@ -570,7 +570,7 @@ function ResumeDetail({ resume, primary, onPrimary, onExplore, onBack, onRemoved
                   ) : (
                     canAdd && (
                       <button type="button" onClick={() => setAdding(true)} className={toolButton}>
-                        <PlusIcon className="size-3.5" />
+                        <GitHubMark className="size-3.5" />
                         {L.addRepos}
                       </button>
                     )

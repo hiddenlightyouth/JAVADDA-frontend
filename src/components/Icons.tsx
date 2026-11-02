@@ -320,6 +320,16 @@ export function LockIcon({ className = 'size-3.5 shrink-0', strokeWidth = 1.4, l
   )
 }
 
+/** 마우스를 올리면 그 자리에서 고칠 수 있다고 알리는 연필이에요. */
+export function PencilIcon({ className = 'size-3.5 shrink-0', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M10.5 3.5l2 2L6 12H4v-2l6.5-6.5z" />
+      <path d="M9 5l2 2" />
+    </Icon>
+  )
+}
+
 /** 사이드바를 접고 펴는 버튼의 그림이에요. */
 export function SidebarIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
   return (
