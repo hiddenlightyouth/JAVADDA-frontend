@@ -23,7 +23,6 @@ const TEXT = messages({
     kinds: { team: '팀 프로젝트', personal: '개인 프로젝트' } as Record<ResumeProject['kind'], string>,
     role: '맡은 역할',
     parts: { problem: '문제', cause: '원인', solution: '개선', effect: '효과', decision: '판단' },
-    editTip: '눌러서 고쳐요',
     saved: '고친 내용을 저장했어요.',
     fix: '고치기',
     fixSelf: '직접 고치기',
@@ -52,7 +51,6 @@ const TEXT = messages({
     kinds: { team: 'Team project', personal: 'Personal project' },
     role: 'Role',
     parts: { problem: 'Problem', cause: 'Cause', solution: 'Fix', effect: 'Result', decision: 'Trade-off' },
-    editTip: 'Click to edit',
     saved: 'Saved your changes.',
     fix: 'Edit',
     fixSelf: 'Edit yourself',
@@ -118,7 +116,6 @@ function Editable({ value, onSave, placeholder, multiline = false, mono = false,
   className?: string
   children?: ReactNode
 }) {
-  const L = useMessages(TEXT)
   const [own, setOwn] = useState(false)
   const open = editing ?? own
   const setOpen = onEditing ?? setOwn
@@ -171,7 +168,6 @@ function Editable({ value, onSave, placeholder, multiline = false, mono = false,
     <div
       role="button"
       tabIndex={0}
-      title={L.editTip}
       onClick={(event: MouseEvent<HTMLDivElement>) => {
         // 포트폴리오 글 안의 링크는 그대로 열어요.
         if ((event.target as HTMLElement).closest('a')) return
