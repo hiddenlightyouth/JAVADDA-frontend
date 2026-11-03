@@ -23,20 +23,20 @@ export const pageFrame = `flex min-h-0 flex-1 flex-col ${framePad}`
 export const canvas = '-mx-6 flex min-h-0 flex-1 flex-col bg-white md:-mx-10'
 
 /**
- * pageFrame 안에서 제목 줄 아래만 스크롤하는 칸이에요. 스크롤 막대가 창 가장자리에 붙게 좌우 여백 밖까지 넓히고, 내용은 제목 줄 아래 32px(pt-8)에서 시작해요.
+ * pageFrame 안에서 제목 줄 아래만 스크롤하는 칸이에요. 스크롤 막대가 창 가장자리에 붙게 좌우 여백 밖까지 넓히고, 내용은 제목 줄 아래 16px(pt-4)에서 시작해요.
  * 진단 시작과 내 리포트가 써요. 제목 줄을 pageFrame 밖에 두는 화면은 `ScrollPage`를 써요.
  */
-export const scrollBody = '-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:-mx-10 md:px-10'
+export const scrollBody = '-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-16 md:-mx-10 md:px-10'
 
 /**
  * 제목 줄은 맨 위에 두고 그 아래만 스크롤하는 앱 화면이에요. 공고 탐색, 추천 공고, 마감 달력, 기술 블로그, 기업 상세가 같이 써요.
- * 스크롤 칸이 화면 폭을 다 써서, 스크롤 막대가 창 가장자리에 붙어요. 내용은 제목 줄 아래 32px(pt-8)에서 시작해요.
+ * 스크롤 칸이 화면 폭을 다 써서, 스크롤 막대가 창 가장자리에 붙어요. 내용은 제목 줄 아래 16px(pt-4)에서 시작해요.
  */
 export function ScrollPage({ header, children, className = '' }: { header: ReactNode; children: ReactNode; className?: string }) {
   return (
     <main className="flex min-h-0 flex-1 flex-col">
       <div className={`shrink-0 ${framePad}`}>{header}</div>
-      <div className={`min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10 ${className}`}>{children}</div>
+      <div className={`min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-16 md:px-10 ${className}`}>{children}</div>
     </main>
   )
 }

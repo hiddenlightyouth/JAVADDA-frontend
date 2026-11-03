@@ -491,7 +491,7 @@ export function MyResume({ add, docId, onAdd, onList, onDoc, onExplore }: {
           backLabel={step !== 'choose' ? L.otherWay : L.title}
         />
         <div className={canvas}>
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-16 md:px-10">
             <div className="max-w-3xl">
               {step === 'choose' ? (
                 <AddChoice
@@ -556,7 +556,7 @@ export function MyResume({ add, docId, onAdd, onList, onDoc, onExplore }: {
       />
       <div className={canvas}>
         {/* 공고 탐색처럼 제목 줄과 같은 폭으로 늘어놓고, 칸 수는 목록 폭을 보고 정해요. */}
-        <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-8 pb-16 md:px-10">
+        <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-16 md:px-10">
           {shelf.list.length === 0 ? (
             <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={addDocument} className="mt-16" />
           ) : (
