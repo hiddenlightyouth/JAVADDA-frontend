@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type HTMLAttributes, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react'
 import { useDismiss } from '../hooks/useDismiss'
 import { isWebApp, MAC_DOWNLOAD, MAC_DOWNLOAD_OPEN } from '../lib/app'
 import { followLink } from '../lib/links'
@@ -12,7 +12,7 @@ import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { readJson, writeJson } from '../lib/storage'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
-import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, FlaskIcon, SnowflakeIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
+import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, FlaskIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { fitColor, Tip } from './GapParts'
 import { Avatar } from './Avatar'
@@ -227,6 +227,34 @@ function ResumeFolder({ group, open, onToggle }: { group: ResumeGroup; open: boo
   )
 }
 
+/** 잡아따 Labs 줄 안에 내리는 눈송이예요. 자리와 크기, 빠르기를 조금씩 달리해서 한꺼번에 떨어지지 않아요. */
+const SNOWFLAKES = [
+  { x: '6%', s: 3, t: 3.4, d: 0 },
+  { x: '16%', s: 2, t: 4.2, d: 1.3 },
+  { x: '27%', s: 3, t: 3.8, d: 2.4 },
+  { x: '38%', s: 2, t: 4.6, d: 0.6 },
+  { x: '49%', s: 4, t: 3.6, d: 1.9 },
+  { x: '58%', s: 2, t: 4.4, d: 3.1 },
+  { x: '67%', s: 3, t: 3.9, d: 0.9 },
+  { x: '76%', s: 2, t: 4.8, d: 2.2 },
+  { x: '85%', s: 3, t: 3.5, d: 1.6 },
+  { x: '93%', s: 2, t: 4.1, d: 2.8 },
+]
+
+function Snowfall() {
+  return (
+    <span aria-hidden className="pointer-events-none absolute inset-0">
+      {SNOWFLAKES.map((flake) => (
+        <span
+          key={flake.x}
+          className="labs-snow"
+          style={{ '--x': flake.x, '--s': `${flake.s}px`, '--t': `${flake.t}s`, '--d': `${flake.d}s` } as CSSProperties}
+        />
+      ))}
+    </span>
+  )
+}
+
 /** 사이드바 위쪽의 화면 링크예요. 오른쪽 끝에 단축키(shortcut)나 다른 표시(trailing)를 붙여요. */
 function NavLink({ href, active, onClick, icon, label, shortcut, trailing, locked }: {
   href: string
@@ -407,7 +435,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           icon={<DocumentIcon />}
           trailing={resume && <CheckIcon className="size-3.5 shrink-0 text-brand" label={text.resumeReady} />}
         />
-        {/* 실험 기능은 다른 메뉴와 달리 계절 색 바탕에 빛이 사악 지나가서, 재미로 들르는 곳이라는 게 보여요. 지금은 크리스마스예요. */}
+        {/* 실험 기능은 다른 메뉴와 달리 계절 색 바탕에 빛이 사악 지나가고 눈이 내려서, 재미로 들르는 곳이라는 게 보여요. 지금은 크리스마스예요. */}
         <a
           href="/labs"
           aria-current={page === 'labs' ? 'page' : undefined}
@@ -415,11 +443,11 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
             track('labs_open', { from: 'sidebar' })
             onLabs()
           })}
-          className={`${link} labs-season mt-1.5 gap-2 font-semibold text-white transition-[filter] hover:brightness-110 ${page === 'labs' ? 'ring-2 ring-[#c62828]/30 ring-offset-1 ring-offset-gray-50' : ''}`}
+          className={`${link} labs-season mt-1.5 gap-2 overflow-hidden font-semibold text-white transition-[filter] hover:brightness-110 ${page === 'labs' ? 'ring-2 ring-[#c62828]/30 ring-offset-1 ring-offset-gray-50' : ''}`}
         >
-          <FlaskIcon className="size-4 shrink-0" />
-          <span className="flex-1">{text.labs}</span>
-          <SnowflakeIcon className="size-3.5 shrink-0 text-white/80" />
+          <Snowfall />
+          <FlaskIcon className="relative size-4 shrink-0" />
+          <span className="relative flex-1">{text.labs}</span>
         </a>
       </div>
 

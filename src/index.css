@@ -789,6 +789,40 @@ header[data-on-dark] .logo-mark {
   animation: labs-season 3.2s ease-in-out infinite;
 }
 
+/* 잡아따 Labs 줄 안에 눈이 내려요. 송이마다 자리와 크기, 빠르기, 늦게 시작하는 시간을 인라인 값(--x, --s, --d, --t)으로 받아요. */
+.labs-snow {
+  position: absolute;
+  top: -4px;
+  left: var(--x);
+  width: var(--s);
+  height: var(--s);
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.9);
+  pointer-events: none;
+  animation: labs-snow var(--t) linear var(--d) infinite;
+  opacity: 0;
+}
+
+@keyframes labs-snow {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(3px, 20px);
+  }
+  85% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-2px, 42px);
+    opacity: 0;
+  }
+}
+
 @keyframes labs-season {
   from {
     background-position: 130% 0, 0 0;
@@ -802,5 +836,8 @@ header[data-on-dark] .logo-mark {
   .labs-season {
     animation: none;
     background-position: 130% 0, 0 0;
+  }
+  .labs-snow {
+    display: none;
   }
 }

@@ -340,16 +340,6 @@ export function FlaskIcon({ className = 'size-4', strokeWidth = 1.4, label }: Ic
   )
 }
 
-/** 사이드바의 잡아따 Labs 줄에 다는 눈송이예요. 크리스마스 동안만 써요. */
-export function SnowflakeIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
-  return (
-    <Icon className={className} strokeWidth={strokeWidth} label={label}>
-      <path d="M8 1.5v13M2.4 4.75l11.2 6.5M2.4 11.25l11.2-6.5" />
-      <path d="M6.5 2.6 8 4l1.5-1.4M6.5 13.4 8 12l1.5 1.4" />
-    </Icon>
-  )
-}
-
 /** 마우스를 올리면 그 자리에서 고칠 수 있다고 알리는 연필이에요. */
 export function PencilIcon({ className = 'size-3.5 shrink-0', strokeWidth = 1.4, label }: IconProps) {
   return (
