@@ -5,6 +5,7 @@
  */
 
 import { DEFAULT_VOICE, voiceOf } from '../shared/voices'
+import { piecesOf, type Piece } from './reading'
 
 export const TTS_PATH = '/tts'
 /**
@@ -21,79 +22,6 @@ const DEFAULT_MODEL_ID = 'eleven_multilingual_v2'
 const OUTPUT_FORMAT = 'mp3_44100_128'
 /** 면접관답게 흔들림 없이 말해요. 한국어는 빠르게 읽히면 음절이 뭉개져서 보통 빠르기로 두고, stability를 조금 높여 억양과 숨 쉬는 자리가 튀지 않게 해요. style은 0이어야 또렷해요. */
 const VOICE_SETTINGS = { stability: 0.65, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: 1.0 }
-
-/**
- * 한국어 문장 속 영어 기술 용어를 한국어 발음으로 바꿔 읽혀요. 그대로 두면 영어 억양으로 튀거나 글자를 이상하게 끊어 읽어요.
- * 사전에 있는 낱말은 그 발음으로, 사전에 없고 대문자로만 적힌 약어(HTTP, TLS)는 알파벳을 하나씩 읽어요. 나머지는 그대로 둬요.
- */
-const LETTERS: Record<string, string> = {
-  A: '에이', B: '비', C: '씨', D: '디', E: '이', F: '에프', G: '지', H: '에이치', I: '아이', J: '제이', K: '케이', L: '엘', M: '엠',
-  N: '엔', O: '오', P: '피', Q: '큐', R: '알', S: '에스', T: '티', U: '유', V: '브이', W: '더블유', X: '엑스', Y: '와이', Z: '지',
-}
-const WORDS: Record<string, string> = {
-  java: '자바', javascript: '자바스크립트', typescript: '타입스크립트', js: '제이에스', ts: '티에스', python: '파이썬', kotlin: '코틀린', swift: '스위프트',
-  go: '고', golang: '고랭', rust: '러스트', scala: '스칼라', ruby: '루비', php: '피에이치피', dart: '다트',
-  spring: '스프링', boot: '부트', cloud: '클라우드', batch: '배치', security: '시큐리티', webflux: '웹플럭스', jpa: '제이피에이', hibernate: '하이버네이트',
-  querydsl: '쿼리디에스엘', mybatis: '마이바티스', junit: '제이유닛', gradle: '그레이들', maven: '메이븐',
-  react: '리액트', vue: '뷰', next: '넥스트', nuxt: '넉스트', node: '노드', nest: '네스트', express: '익스프레스', angular: '앵귤러', svelte: '스벨트',
-  redux: '리덕스', recoil: '리코일', zustand: '주스탠드', webpack: '웹팩', vite: '비트', tailwind: '테일윈드', storybook: '스토리북',
-  android: '안드로이드', ios: '아이오에스', flutter: '플러터', compose: '컴포즈', swiftui: '스위프트유아이',
-  django: '장고', flask: '플라스크', fastapi: '패스트에이피아이',
-  mysql: '마이에스큐엘', postgresql: '포스트그레스큐엘', postgres: '포스트그레스', mongodb: '몽고디비', redis: '레디스', oracle: '오라클',
-  elasticsearch: '엘라스틱서치', kafka: '카프카', rabbitmq: '래빗엠큐', spark: '스파크', hadoop: '하둡', airflow: '에어플로우',
-  docker: '도커', kubernetes: '쿠버네티스', jenkins: '젠킨스', terraform: '테라폼', ansible: '앤서블', nginx: '엔진엑스', linux: '리눅스',
-  prometheus: '프로메테우스', grafana: '그라파나', github: '깃허브', gitlab: '깃랩', git: '깃', actions: '액션스', lambda: '람다',
-  graphql: '그래프큐엘', rest: '레스트', restful: '레스트풀', grpc: '지알피씨', websocket: '웹소켓', oauth: '오어스',
-  handshake: '핸드셰이크', deadlock: '데드락', index: '인덱스', cache: '캐시', query: '쿼리', thread: '스레드', transaction: '트랜잭션',
-  frontend: '프론트엔드', backend: '백엔드', devops: '데브옵스', server: '서버', client: '클라이언트', test: '테스트', code: '코드', data: '데이터',
-}
-
-function pronounce(word: string): string {
-  const known = WORDS[word.toLowerCase()]
-  if (known) return known
-  if (/^[A-Z]+$/.test(word) && word.length <= 6) return [...word].map((letter) => LETTERS[letter]).join('')
-  return word
-}
-
-/** 화면에 보이는 글 조각과 소리 내어 읽을 조각이에요. 둘이 같으면 바꾸지 않은 조각이에요. */
-interface Piece { shown: string; spoken: string }
-
-function piecesOf(text: string): Piece[] {
-  const pieces: Piece[] = []
-  let last = 0
-  // Node.js처럼 점으로 이은 이름은 한 덩어리로 읽고, C#, N+1의 기호도 말로 바꿔요.
-  for (const match of text.matchAll(/[A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z][A-Za-z0-9]*)*#?|\+/g)) {
-    const index = match.index ?? 0
-    if (index > last) pieces.push({ shown: text.slice(last, index), spoken: text.slice(last, index) })
-    const shown = match[0]
-    const spoken = shown === '+' ? '플러스' : shown.replace(/#$/, '').split('.').map(pronounce).join('') + (shown.endsWith('#') ? '샵' : '')
-    pieces.push({ shown, spoken })
-    last = index + shown.length
-  }
-  if (last < text.length) pieces.push({ shown: text.slice(last), spoken: text.slice(last) })
-  return text.length >= PAUSE_MIN_CHARS ? pieces.flatMap(withPauses) : pieces
-}
-
-/** 이보다 짧은 문장은 쉼표 없이도 한 호흡에 자연스럽게 읽어요. */
-const PAUSE_MIN_CHARS = 30
-/**
- * 쉼표 없이 긴 문장을 주면 모델이 엉뚱한 자리에서 숨을 쉬어요. 절이 이어지는 어미(~는데, ~면서, ~하고) 뒤에 읽기용 쉼표를 넣어 사람이 쉬는 자리에서 쉬게 해요.
- * 화면 글자에는 없는 쉼표라 보이는 글자 수가 0인 조각으로 넣고, 글자 시각을 되돌릴 때 건너뛰어요.
- */
-const PAUSE_AFTER = /(?:는데|은데|면서|지만|했고|하고|되고|있고|다면|려면|어서|아서|해서|었는데|했는데)(?= )/g
-
-function withPauses(piece: Piece): Piece[] {
-  if (piece.shown !== piece.spoken) return [piece]
-  const out: Piece[] = []
-  let last = 0
-  for (const match of piece.shown.matchAll(PAUSE_AFTER)) {
-    const end = (match.index ?? 0) + match[0].length
-    out.push({ shown: piece.shown.slice(last, end), spoken: piece.shown.slice(last, end) }, { shown: '', spoken: ',' })
-    last = end
-  }
-  out.push({ shown: piece.shown.slice(last), spoken: piece.shown.slice(last) })
-  return out
-}
 
 export interface TtsEnv {
   ELEVENLABS_API_KEY?: string
@@ -145,8 +73,8 @@ function timingOf(alignment: Timestamped['alignment'], pieces: Piece[]): string 
 const reply = (status: number, code: string) => new Response(JSON.stringify({ code }), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
 
 async function cacheKey(voice: string, model: string, text: string) {
-  // 글자 시각을 함께 담기 시작하면서(v2), 영어 용어를 한국어 발음으로 읽고 설정을 바꾸면서(v3), 숨 쉬는 자리를 넣으면서(v4) 예전 음성과 섞이지 않게 열쇠를 바꿨어요.
-  const bytes = new TextEncoder().encode(`v4\n${voice}\n${model}\n${text}`)
+  // 글자 시각을 함께 담기 시작하면서(v2), 영어 용어를 한국어 발음으로 읽고 설정을 바꾸면서(v3), 숨 쉬는 자리를 넣으면서(v4), 숫자와 붙여 쓴 이름을 읽기 시작하면서(v5) 예전 음성과 섞이지 않게 열쇠를 바꿨어요.
+  const bytes = new TextEncoder().encode(`v5\n${voice}\n${model}\n${text}`)
   const hash = await crypto.subtle.digest('SHA-256', bytes)
   const name = [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
   return new Request(`https://tts.cache/${name}`)
