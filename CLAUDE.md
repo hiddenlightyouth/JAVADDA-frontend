@@ -89,6 +89,8 @@ src/
   App.tsx             화면을 묶는 곳. 화면 옮기기, 로그인하러 갔다 돌아오기(requireLogin), 단축키, 헤더와 본문과 사이드바 배치
   prerender.tsx       소개 화면과 아티클 화면을 빌드할 때 미리 HTML로 그리는 코드 (브라우저에서는 쓰지 않아요)
   index.css           Tailwind 테마 토큰, 자간, 애니메이션
+  lib/contests.ts     잡아따 Labs의 공모전. 서버에서 받기(fetchContests, GET /contests), 분야 순서(CONTEST_CATEGORIES), 마감까지 남은 날(contestDaysLeft)
+  components/labs/Contests.tsx 잡아따 Labs의 공모전 화면. 검색, 정렬, 분야 버튼 줄, 공모전 카드(ContestCard)
   lib/blogs.ts        기업 기술 블로그 요약. 서버에서 받기(fetchBlogDigests, GET /blogs), 요약이 있는 기업(blogCompaniesOf), 자주 나온 기술(topSkills), 여러 기업에 걸친 흐름(themeTrends), 서버가 AI로 써 둔 총정리 받기(fetchBlogOutlook, GET /blogs/outlook)와 그것이 없을 때 글에서 계산하는 총정리(blogOutlook, 주제마다 고민과 필요한 역량과 준비를 적은 THEME_OUTLOOK), 서버에 닿지 못할 때 보여줄 기업 열한 곳의 글(DIGESTS)
   lib/gap.ts          진단의 자료와 API. 타입(기업, 공고, 이력서, 리포트, 갭, 서류 검증, 면접 질문, 연습 피드백), 기업과 공고 받기(loadCatalog, COMPANIES, POSTINGS, 서버에 닿지 못할 때의 목록), 서버 API(fetchPostings, uploadResume, saveResumeSkills, setPrimaryResume, removeResume, startDiagnosis, rerunReport, deleteReport, fetchReview, fetchQuestions, submitAnswer, togglePlan, saveNote), AI 진행 상황 묻기(withProgress, ProgressState, PROGRESS_START), 계정 자료 받기와 비우기(startAccountSync), 저장소(useResume는 대표 이력서, useResumeShelf는 올린 서류 전부, useReports, useReport, usePlans, useNotes, 공고를 진단한 최근 리포트 useDiagnosed), 로그인 화면 열기(setLoginHandler, requestLogin), 적합도 계산(fitOf, levelOf), 스킬 이름 정규화(canonical)
   lib/speech.ts       면접 연습의 음성 기능. 말을 글자로 바꾸기(useDictation), 사람 목소리로 읽고 안 되면 브라우저 음성으로 읽기(useSpeak, 읽는 동안의 입 모양 pose), 지원 여부(canDictate, canSpeak)
@@ -324,6 +326,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 - 진단과 상관없이 재미로 넣는 실험 기능을 모아 두는 곳이에요. 사이드바의 내 이력서 아래에 플라스크 아이콘과 "잡아따 Labs"(영어는 Javadda Labs)가 흰 글자로 있고, 이 줄만 계절 색 바탕이에요. 지금은 크리스마스라 빨강에서 초록으로 넘어가는 바탕이고(`labs-season`), 줄 안에 작은 흰 눈송이 열한 개가 자리와 빠르기, 흔들리는 폭을 달리해 좌우로 날리며 내려요(`AppSidebar`의 `Snowfall`, `labs-snow`). 오른쪽 아래에는 흰 트리 세 그루(`Icons`의 `ChristmasTreeIcon`, 가운데 큰 트리만 금색 별)가 서 있어요. 계절이 바뀌면 바탕색, 눈, 트리를 바꿔요. 움직임 줄이기 설정이면 눈을 숨겨요. 화면 제목은 "실험실"(영어는 Lab)이고, 화면 안의 색은 다른 화면과 같아요. 브랜딩의 서비스명 규칙과 달리 화면에 "잡아따"를 그대로 써요.
 - 화면에는 설명 문구 없이 실험 카드(회색 칸에 이름과 한두 문장)가 있어요. 실험이 없으면 회색 플라스크 칸과 "실험실에 오신 것을 환영합니다!", "어떤 기능이 준비될까요?"를 보여줘요. 카드를 누르면 `/labs/아이디`로 그 실험을 열고, 제목 줄의 뒤로 가기는 실험실로 가요. 없는 실험이면 안내와 실험실로 돌아가는 버튼이에요.
+- 공모전 (`labs/Contests`, `/labs/contests`): 서버가 매일 새벽 모으기 때 링커리어, 캠퍼스픽, 위비티, 씽굿의 공모전 목록을 읽어 같은 공모전은 한 줄로 합쳐 두고(GET /contests, `src/lib/contests.ts`의 `fetchContests`), 화면은 마감하지 않은 것을 받아요. 맨 위에 한 줄 소개, 검색창(공모전 이름과 주최)과 정렬(마감 임박순, 최신순), 그 아래 분야 버튼 줄(`CONTEST_CATEGORIES`: IT와 소프트웨어가 맨 앞, 기획과 아이디어, 창업과 취업, 과학과 공학, 디자인, 광고와 마케팅, 영상과 사진, 네이밍과 슬로건, 문학과 글, 논문과 학술, 예체능, 기타. 옆에 수를 옅게 적고, 있는 분야만 보여요. 공고 탐색의 분야 버튼과 같은 `filterChip`)이 있어요. 고른 분야는 `javadda:contests-category`에 기억해요. 카드(회색 칸)에는 포스터(있으면, 못 불러오면 빼요), 마감까지 남은 날(`DeadlineTag`), 분야 둘, 제목, 주최, 상금, 올라온 사이트 이름표가 있어요. 카드를 누르면 처음 모은 사이트의 공고를 새 탭으로 열고, 사이트 이름표는 그 사이트로 열어요. 24개씩 그려요(`useShowMore`). 분야는 서버가 사이트의 분야 이름을 열두 가지로 모아 정해요(서버의 `ContestCategory`).
 - 실험을 더할 때는 컴포넌트를 따로 만들고(`components/labs/` 아래) `Labs.tsx`의 `EXPERIMENTS`에 아이디, 이름, 설명, lazy로 감싼 화면을 한 줄 더해요. 실험 코드는 열 때만 받아요. 로그인 없이 볼 수 있어요.
 
 기업 상세 (`Company`, `/company/기업아이디`)
@@ -483,6 +486,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `explore_open`, `recommend_open`, `resume_open`, `blogs_open` | 사이드바에서 공고 탐색, 추천 공고, 내 이력서, 기술 블로그를 눌렀을 때 | `from`(sidebar) |
 | `labs_open` | 사이드바에서 잡아따 Labs를 눌렀을 때 | `from`(sidebar) |
 | `labs_experiment_open` | Labs에서 실험 카드를 눌렀을 때 | `experiment` |
+| `labs_contest_category`, `labs_contest_open` | 공모전에서 분야를 고르거나 공모전을 열었을 때 | `category`(풀면 all), `site` |
 | `blog_company_select` | 기술 블로그에서 기업을 고르거나 전체로 돌아갔을 때 | `company`, `from`(chips) |
 | `blog_theme_select` | 기술 블로그에서 주제를 고르거나 풀었을 때 | `theme`, `from`(menu, card, outlook, empty) |
 | `blog_post_open` | 기술 블로그에서 글이나 블로그를 열었을 때. 기업 상세의 블로그 글도 이 이벤트예요 | `company`, `from`(browser, tab, company) |
@@ -552,7 +556,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 소개 화면을 메인 주소로, 웹의 /app에서 앱과 같은 화면으로 진단하기 (위의 웹 앱 절 참고)
 - 새 진단 화면 (손글씨 Javadda, 타이틀, 기업과 공고 검색, 공고 줄)
 - 기업 기술 블로그 요약과 요즘 고민 분석 (위의 진단 흐름 절 참고)
-- 잡아따 Labs 자리 (실험 기능은 아직 없어요, 위의 진단 흐름 절 참고)
+- 잡아따 Labs와 첫 실험인 공모전 모아 보기 (위의 진단 흐름 절 참고)
 - 채용 지도와 기업 상세의 위치 (위의 진단 흐름 절 참고)
 - 공고 탐색, 추천 공고, 기업 상세, 내 이력서, 진단 시작, 리포트(네 탭과 갭 상세), 면접 연습, 내 리포트 (위의 진단 흐름 절 참고)
 - 소개 화면과 아티클, 한국어와 영어 화면 (위의 각 절 참고)

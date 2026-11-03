@@ -1,4 +1,4 @@
-import { Suspense, type ComponentType, type LazyExoticComponent } from 'react'
+import { Suspense, lazy, type ComponentType, type LazyExoticComponent } from 'react'
 import { track } from '../lib/analytics'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { followLink } from '../lib/links'
@@ -23,7 +23,17 @@ interface Experiment {
 }
 
 /** 지금 올라와 있는 실험이에요. 위에 있을수록 먼저 보여요. */
-const EXPERIMENTS: Experiment[] = []
+const EXPERIMENTS: Experiment[] = [
+  {
+    id: 'contests',
+    title: { ko: '공모전', en: 'Contests' },
+    summary: {
+      ko: '링커리어, 캠퍼스픽, 위비티, 씽굿의 공모전을 한곳에 모아 분야별로 봐요.',
+      en: 'Contests from four Korean contest sites, sorted by category.',
+    },
+    screen: lazy(() => import('./labs/Contests').then((module) => ({ default: module.Contests }))),
+  },
+]
 
 // 실험을 더할 때는 이렇게 적어요.
 // {

@@ -27,7 +27,7 @@ export const CONTEST_CATEGORIES: readonly ContestCategory[] = ['it', 'idea', 'st
 
 export async function fetchContests(onLoad?: OnLoad): Promise<Contest[]> {
   const result = await readWithLoad<Contest[]>(await fetch(apiUrl('/contests')), onLoad)
-  if (!result.ok || !Array.isArray(result.data)) throw new Error(result.ok ? 'bad response' : result.error.message)
+  if (!result.ok || !Array.isArray(result.data)) throw new Error(result.code ?? 'bad response')
   return result.data.map((contest) => ({ ...contest, categories: contest.categories ?? [], links: contest.links ?? [] }))
 }
 
