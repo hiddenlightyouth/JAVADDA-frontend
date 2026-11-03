@@ -92,17 +92,20 @@ const TEXT = messages({
     hours: (hours: number) => `${hours}시간`,
     breakdown: '점수 구성',
     items: { required: '필수 역량', preferred: '우대 역량', experience: '프로젝트 경험', recency: '기술 최신성' } as Record<ScoreItem['key'], string>,
-    weight: (value: number) => `비중 ${value}%`,
-    breakdownLead: '네 항목의 점수에 비중을 곱해서 더한 값이 적합도예요.',
+    breakdownLead: (score: number) => `100점을 네 가지로 나눠 채점하고 더해서 ${score}점이 나왔어요. 칸이 넓을수록 점수가 큰 항목이고, 파랗게 찬 만큼 받은 점수예요.`,
     points: (value: number) => `${value}점`,
-    earned: (got: number, max: number) => `${got} / ${max}`,
-    weakest: '가장 많이 놓쳤어요',
+    earned: (got: number, max: number) => `${got} / ${max}점`,
+    lost: (value: number) => `${value}점 더 받을 수 있어요`,
+    full: '다 받았어요',
+    weakest: '여기서 가장 많이 놓쳤어요',
     requiredChecks: '필수 역량',
     preferredChecks: '우대 역량',
     noChecks: '공고에 적힌 역량이 없어요.',
-    statuses: { met: '충분해요', partial: '근거가 약해요', missing: '보이지 않아요' } as Record<RequirementCheck['status'], string>,
-    legend: { met: '충분', partial: '약함', missing: '없음' } as Record<RequirementCheck['status'], string>,
-    checkLead: (missing: number, partial: number) => (missing > 0 ? `${missing}개가 보이지 않아요` : partial > 0 ? `${partial}개는 근거가 약해요` : '모두 보여요'),
+    statuses: { met: '이력서에 충분히 보여요', partial: '이력서에 근거가 약해요', missing: '이력서에서 보이지 않아요' } as Record<RequirementCheck['status'], string>,
+    legend: { met: '갖춤', partial: '근거 약함', missing: '없음' } as Record<RequirementCheck['status'], string>,
+    checkLead: (met: number, total: number, missing: number) =>
+      met === total ? '공고에 적힌 역량을 모두 갖췄어요' : `공고에 적힌 ${total}개 중 ${met}개를 갖췄어요${missing > 0 ? `. ${missing}개는 이력서에서 보이지 않아요` : ''}`,
+    checkHint: '점수가 붙은 역량을 누르면 채우는 방법이 나와요.',
     checkBarTip: '파란 칸은 충분해요, 옅은 칸은 근거가 약해요, 빈 칸은 보이지 않아요.',
     openGap: (skill: string) => `${skill} 보완 방법 보기`,
     alternatives: '더 잘 맞는 다른 공고',
@@ -172,17 +175,20 @@ const TEXT = messages({
     hours: (hours: number) => `${hours}h`,
     breakdown: 'Score breakdown',
     items: { required: 'Required skills', preferred: 'Preferred skills', experience: 'Project evidence', recency: 'Recency' },
-    weight: (value: number) => `${value}% weight`,
-    breakdownLead: 'Your fit is the four scores multiplied by their weights and added up.',
+    breakdownLead: (score: number) => `We split 100 points across four parts, scored each, and added them up to get ${score}. Wider blocks are worth more, and the blue fill is what you earned.`,
     points: (value: number) => `${value} pts`,
-    earned: (got: number, max: number) => `${got} / ${max}`,
-    weakest: 'Lost the most here',
+    earned: (got: number, max: number) => `${got} / ${max} pts`,
+    lost: (value: number) => `${value} more points available`,
+    full: 'Full marks',
+    weakest: 'You lost the most here',
     requiredChecks: 'Required skills',
     preferredChecks: 'Preferred skills',
     noChecks: 'The posting lists no skills here.',
-    statuses: { met: 'Solid', partial: 'Weak evidence', missing: 'Not found' },
-    legend: { met: 'Solid', partial: 'Weak', missing: 'Missing' },
-    checkLead: (missing: number, partial: number) => (missing > 0 ? `${missing} not found` : partial > 0 ? `${partial} with weak evidence` : 'All found'),
+    statuses: { met: 'Clearly in your resume', partial: 'Weak evidence in your resume', missing: 'Not found in your resume' },
+    legend: { met: 'Have', partial: 'Weak', missing: 'Missing' },
+    checkLead: (met: number, total: number, missing: number) =>
+      met === total ? 'You have every skill the posting lists' : `You have ${met} of the ${total} listed${missing > 0 ? `. ${missing} not found in your resume` : ''}`,
+    checkHint: 'Tap a skill with points to see how to close it.',
     checkBarTip: 'Blue means solid, light blue means weak evidence, empty means not found.',
     openGap: (skill: string) => `See how to close ${skill}`,
     alternatives: 'Postings that fit better',
@@ -602,7 +608,7 @@ function RequirementPanel({ requirement, checks, gaps, onOpenGap }: {
               {met}
               <span className="ml-0.5 text-[13px] font-medium text-gray-400">/ {checks.length}</span>
             </span>
-            <span className="text-[12.5px] text-gray-500">{L.checkLead(count('missing'), count('partial'))}</span>
+            <span className="text-[12.5px] text-gray-500">{L.checkLead(met, checks.length, count('missing'))}</span>
           </p>
           {/* 막대는 충분한 것부터 채워서 왼쪽이 늘 차 있어요. 칸마다 역량 하나예요. */}
           <Tip text={L.checkBarTip} className="mt-3 flex w-full gap-1">
@@ -626,6 +632,9 @@ function RequirementPanel({ requirement, checks, gaps, onOpenGap }: {
               <CheckCard key={check.skill} check={check} gap={gapOf(check)} order={order} onOpen={onOpenGap} />
             ))}
           </ul>
+          {sorted.some((check) => { const gap = gapOf(check); return gap && gap.kind !== 'strength' }) && (
+            <p className="mt-3 text-[12px] text-gray-400">{L.checkHint}</p>
+          )}
         </>
       )}
     </Panel>
@@ -638,9 +647,10 @@ function CheckCard({ check, gap, order, onOpen }: { check: RequirementCheck; gap
   const body = (
     <>
       <SkillMark skill={check.skill} className="size-7 p-1" />
-      <Tip text={L.statuses[check.status]} className="flex min-w-0 flex-1">
+      <span className="flex min-w-0 flex-1 flex-col">
         <span className={`min-w-0 truncate text-[13.5px] font-medium text-gray-900 ${gap ? 'transition-colors group-hover:text-brand' : ''}`}>{check.skill}</span>
-      </Tip>
+        <span className="min-w-0 truncate text-[11.5px] text-gray-400">{L.statuses[check.status]}</span>
+      </span>
       {gap && gap.kind !== 'strength' && (
         <Tip text={L.gainTip} className="inline-flex shrink-0">
           <span className="text-[12.5px] font-medium text-brand tabular-nums">{L.gain(gap.scoreGain)}</span>
@@ -683,7 +693,7 @@ function FitTab({ report, onPick, onOpenGap }: { report: ReportData; onPick: (po
   return (
     <div className="space-y-4">
       <Panel title={L.breakdown} action={<span className="text-[12.5px] text-gray-500 tabular-nums">{L.points(report.fitScore)}</span>}>
-        <p className="text-[13.5px] leading-relaxed text-gray-600">{L.breakdownLead}</p>
+        <p className="text-[13.5px] leading-relaxed text-gray-600">{L.breakdownLead(report.fitScore)}</p>
         {/* 막대 하나를 비중만큼 나누고, 칸마다 받은 점수만큼 채워요. */}
         <div className="mt-4 flex gap-1" aria-hidden>
           {items.map((item) => (
@@ -703,17 +713,15 @@ function FitTab({ report, onPick, onOpenGap }: { report: ReportData; onPick: (po
         <ul className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           {items.map((item, order) => (
             <li key={item.key} className="flex animate-rise flex-col rounded-xl bg-white p-4" style={stagger(order)}>
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-[13px] font-medium text-gray-900">{L.items[item.key]}</span>
-                <span className="shrink-0 text-[11.5px] text-gray-400 tabular-nums">{L.weight(item.max)}</span>
-              </div>
+              <span className="truncate text-[13px] font-medium text-gray-900">{L.items[item.key]}</span>
               <p className="mt-2 text-[24px] leading-none font-semibold text-gray-900 tabular-nums">
-                {item.score}
-                <span className="ml-0.5 text-[13px] font-medium text-gray-400">/ 100</span>
+                {item.got}
+                <span className="ml-0.5 text-[13px] font-medium text-gray-400">/ {L.points(item.max)}</span>
               </p>
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-200/70" aria-hidden>
                 <div className="h-full origin-left animate-grow rounded-full bg-brand" style={{ width: `${Math.max(1.5, item.score)}%` }} />
               </div>
+              <p className="mt-2 text-[12px] text-gray-400 tabular-nums">{item.got < item.max ? L.lost(item.max - item.got) : L.full}</p>
               <p className="mt-3 flex-1 text-[12.5px] leading-relaxed text-gray-500">{item.note}</p>
               {weakest?.key === item.key && (
                 <Badge tone="brand" strong className="mt-3 self-start">
