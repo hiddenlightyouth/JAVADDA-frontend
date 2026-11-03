@@ -37,7 +37,6 @@ const TEXT = messages({
     noneTitle: '아직 모은 공모전이 없어요',
     noneBody: '매일 새벽에 새로 모아요. 내일 다시 들러 주세요.',
     reset: '조건 초기화',
-    intro: '링커리어, 캠퍼스픽, 위비티, 씽굿에 올라온 공모전을 한곳에 모았어요.',
   },
   en: {
     search: 'Search by contest or organizer',
@@ -57,7 +56,6 @@ const TEXT = messages({
     noneTitle: 'No contests yet',
     noneBody: 'We collect new ones every morning. Check back tomorrow.',
     reset: 'Reset filters',
-    intro: 'Contests from Linkareer, Campuspick, Wevity and Thinkgood in one place.',
   },
 })
 
@@ -118,7 +116,6 @@ export function Contests() {
 
   return (
     <div className="@container flex flex-col gap-4">
-      <p className="text-[13.5px] text-gray-500">{L.intro}</p>
       <div className="flex flex-wrap items-center gap-2.5">
         <label className={`flex h-11 min-w-0 flex-1 basis-64 items-center gap-2 rounded-xl px-3.5 ${fieldBase}`}>
           <SearchIcon />
