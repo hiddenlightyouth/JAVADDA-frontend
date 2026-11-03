@@ -12,7 +12,7 @@ import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { readJson, writeJson } from '../lib/storage'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
-import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, FlaskIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
+import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, FlaskIcon, ChristmasTreeIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { fitColor, Tip } from './GapParts'
 import { Avatar } from './Avatar'
@@ -229,16 +229,17 @@ function ResumeFolder({ group, open, onToggle }: { group: ResumeGroup; open: boo
 
 /** 잡아따 Labs 줄 안에 내리는 눈송이예요. 자리와 크기, 빠르기를 조금씩 달리해서 한꺼번에 떨어지지 않아요. */
 const SNOWFLAKES = [
-  { x: '6%', s: 3, t: 3.4, d: 0 },
-  { x: '16%', s: 2, t: 4.2, d: 1.3 },
-  { x: '27%', s: 3, t: 3.8, d: 2.4 },
-  { x: '38%', s: 2, t: 4.6, d: 0.6 },
-  { x: '49%', s: 4, t: 3.6, d: 1.9 },
-  { x: '58%', s: 2, t: 4.4, d: 3.1 },
-  { x: '67%', s: 3, t: 3.9, d: 0.9 },
-  { x: '76%', s: 2, t: 4.8, d: 2.2 },
-  { x: '85%', s: 3, t: 3.5, d: 1.6 },
-  { x: '93%', s: 2, t: 4.1, d: 2.8 },
+  { x: '6%', s: 3, w: 5, t: 3.6, d: 0 },
+  { x: '15%', s: 2, w: -6, t: 4.4, d: 1.3 },
+  { x: '24%', s: 3, w: 4, t: 4.0, d: 2.4 },
+  { x: '33%', s: 2, w: -5, t: 4.8, d: 0.6 },
+  { x: '42%', s: 4, w: 6, t: 3.8, d: 1.9 },
+  { x: '51%', s: 2, w: -4, t: 4.6, d: 3.1 },
+  { x: '60%', s: 3, w: 5, t: 4.1, d: 0.9 },
+  { x: '69%', s: 2, w: -6, t: 5.0, d: 2.2 },
+  { x: '78%', s: 3, w: 4, t: 3.7, d: 1.6 },
+  { x: '87%', s: 2, w: -5, t: 4.3, d: 2.8 },
+  { x: '95%', s: 3, w: 5, t: 4.7, d: 0.3 },
 ]
 
 function Snowfall() {
@@ -248,7 +249,7 @@ function Snowfall() {
         <span
           key={flake.x}
           className="labs-snow"
-          style={{ '--x': flake.x, '--s': `${flake.s}px`, '--t': `${flake.t}s`, '--d': `${flake.d}s` } as CSSProperties}
+          style={{ '--x': flake.x, '--s': `${flake.s}px`, '--w': `${flake.w}px`, '--t': `${flake.t}s`, '--d': `${flake.d}s` } as CSSProperties}
         />
       ))}
     </span>
@@ -435,7 +436,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           icon={<DocumentIcon />}
           trailing={resume && <CheckIcon className="size-3.5 shrink-0 text-brand" label={text.resumeReady} />}
         />
-        {/* 실험 기능은 다른 메뉴와 달리 계절 색 바탕에 눈이 내려서, 재미로 들르는 곳이라는 게 보여요. 지금은 크리스마스예요. */}
+        {/* 실험 기능은 다른 메뉴와 달리 계절 색 바탕에 눈이 내리고 트리가 서 있어서, 재미로 들르는 곳이라는 게 보여요. 지금은 크리스마스예요. */}
         <a
           href="/labs"
           aria-current={page === 'labs' ? 'page' : undefined}
@@ -448,6 +449,12 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           <Snowfall />
           <FlaskIcon className="relative size-4 shrink-0" />
           <span className="relative flex-1">{text.labs}</span>
+          {/* 오른쪽 아래에 작은 트리 세 그루를 잔잔하게 세워 둬요. */}
+          <span aria-hidden className="relative -mr-1 flex items-end gap-0.5 self-end pb-0.5 opacity-80">
+            <ChristmasTreeIcon className="h-3.5 w-auto" />
+            <ChristmasTreeIcon className="h-5 w-auto" star />
+            <ChristmasTreeIcon className="h-3 w-auto" />
+          </span>
         </a>
       </div>
 

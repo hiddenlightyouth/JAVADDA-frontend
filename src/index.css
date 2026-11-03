@@ -784,7 +784,7 @@ header[data-on-dark] .logo-mark {
   background-image: linear-gradient(100deg, #d32f2f 0%, #c62828 44%, #2e7d32 56%, #1b5e20 100%);
 }
 
-/* 잡아따 Labs 줄 안에 눈이 내려요. 송이마다 자리와 크기, 빠르기, 늦게 시작하는 시간을 인라인 값(--x, --s, --d, --t)으로 받아요. */
+/* 잡아따 Labs 줄 안에 눈이 내려요. 송이마다 자리와 크기, 빠르기, 늦게 시작하는 시간을 인라인 값(--x, --s, --w, --d, --t)으로 받아요. */
 .labs-snow {
   position: absolute;
   top: -4px;
@@ -794,26 +794,33 @@ header[data-on-dark] .logo-mark {
   border-radius: 9999px;
   background: rgb(255 255 255 / 0.9);
   pointer-events: none;
-  animation: labs-snow var(--t) linear var(--d) infinite;
+  animation: labs-snow var(--t) ease-in-out var(--d) infinite;
   opacity: 0;
 }
 
+/* 바람에 날리듯 좌우로 흔들리며 내려와요. 흔들리는 폭은 송이마다 --w로 달라요. */
 @keyframes labs-snow {
   0% {
     transform: translate(0, 0);
     opacity: 0;
   }
-  15% {
+  12% {
     opacity: 0.9;
   }
-  50% {
-    transform: translate(3px, 20px);
+  25% {
+    transform: translate(var(--w), 10px);
   }
-  85% {
+  50% {
+    transform: translate(calc(var(--w) * -0.6), 21px);
+  }
+  75% {
+    transform: translate(calc(var(--w) * 0.8), 31px);
+  }
+  88% {
     opacity: 0.9;
   }
   100% {
-    transform: translate(-2px, 42px);
+    transform: translate(calc(var(--w) * -0.3), 42px);
     opacity: 0;
   }
 }

@@ -487,14 +487,14 @@ export function PostingMeta({ posting, size = 'sm', careerClass = 'flex', locati
  * 같은 줄의 검색창, 드롭다운(size="lg")과 높이가 같아요. 기업을 고르는 일이 화면의 첫 동작이라 다른 도구 버튼(36px)보다 한 단계 크게 둬서 누르기 쉽게 해요.
  * 글자만 있는 버튼은 px-5, 로고를 앞에 붙인 버튼은 `filterLogoChip`을 덧붙여요.
  */
-const filterChip = (on: boolean) =>
+export const filterChip = (on: boolean) =>
   `flex h-11 shrink-0 items-center rounded-full border text-[14.5px] font-medium transition-colors ${
     on ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
   }`
 /** 로고(`CompanyMark`, size-8)를 앞에 붙인 거르는 버튼의 여백이에요. */
 const filterLogoChip = 'gap-2.5 py-1 pr-4.5 pl-1.5'
 /** 거르는 버튼 줄의 바깥이에요. 넓은 목록에서는 여러 줄로, 좁으면 옆으로 넘겨요. */
-const filterRow = '-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap'
+export const filterRow = '-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap'
 
 /**
  * 기업의 사업 분류를 고르는 버튼 줄이에요. 기업이 많아져서 공고 탐색과 마감 달력은 기업 대신 이것으로 골라요. 공고가 있는 분류만 보여줘요.

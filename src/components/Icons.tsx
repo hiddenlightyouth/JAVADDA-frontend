@@ -340,6 +340,17 @@ export function FlaskIcon({ className = 'size-4', strokeWidth = 1.4, label }: Ic
   )
 }
 
+/** 사이드바의 잡아따 Labs 줄에 세워 두는 작은 크리스마스 트리예요. 흰 잎에 star면 꼭대기에 금색 별을 달아요. */
+export function ChristmasTreeIcon({ className = 'h-4 w-auto', star = false }: { className?: string; star?: boolean }) {
+  return (
+    <svg viewBox="0 0 12 16" className={className} aria-hidden>
+      <path d="M6 2 9 6.2H7.6L10.4 10H8.6L11.5 14H.5L3.4 10H1.6L4.4 6.2H3z" fill="rgb(255 255 255 / 0.92)" />
+      <rect x="5.1" y="14" width="1.8" height="2" fill="rgb(255 255 255 / 0.7)" />
+      {star && <path d="M6 0 6.5 1.2 7.7 1.3 6.8 2.1 7.1 3.3 6 2.7 4.9 3.3 5.2 2.1 4.3 1.3 5.5 1.2z" fill="#ffd54f" />}
+    </svg>
+  )
+}
+
 /** 마우스를 올리면 그 자리에서 고칠 수 있다고 알리는 연필이에요. */
 export function PencilIcon({ className = 'size-3.5 shrink-0', strokeWidth = 1.4, label }: IconProps) {
   return (
