@@ -3,7 +3,7 @@ import { track } from '../lib/analytics'
 import { fetchAnswers, fetchQuestions, PROGRESS_START, regenerateQuestions, type InterviewQuestion, type PracticeRecord, type ProgressState, type QuestionCategory } from '../lib/gap'
 import { formatDate, formatDateTime, parseServerTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
-import { AiProgress, Failed, Notice, Tip } from './GapParts'
+import { AiProgress, Failed, Notice, ScoreRing, Tip } from './GapParts'
 import { ConfirmDialog, panelBody, SidePanel } from './Dialog'
 import { CheckIcon, ChevronDownIcon, ClockIcon, RefreshIcon } from './Icons'
 import { Callout, FeedbackSections, ModelAnswer } from './ReportParts'
@@ -37,7 +37,7 @@ const TEXT = messages({
     regenerate: '새 질문 받기',
     pastRecords: '지난 기록',
     pastTitle: '지난 질문과 답변',
-    pastSummary: (count: number, average: number) => `답변 ${count}개, 평균 ${average}점`,
+    pastSummary: (count: number) => `답변 ${count}개`,
     pastFilter: '보기',
     pastAll: '전체',
     pastOld: '예전 질문만',
@@ -46,8 +46,7 @@ const TEXT = messages({
     pastEmpty: '아직 연습한 답변이 없어요',
     pastEmptyBody: '질문을 연습하면 내 답과 피드백이 여기에 쌓여요.',
     pastOldEmpty: '예전 질문의 답변이 없어요',
-    showFeedback: '피드백 보기',
-    hideFeedback: '피드백 접기',
+    averageScore: '평균 점수',
     close: '닫기',
     regenerateTitle: '새 질문을 받을까요?',
     regenerateBody: '지금 질문과 겹치지 않는 질문을 새로 만들어요. 지금 질문은 사라지고, 지난 답변 기록은 남아요.',
@@ -84,7 +83,7 @@ const TEXT = messages({
     regenerate: 'New questions',
     pastRecords: 'History',
     pastTitle: 'Past questions and answers',
-    pastSummary: (count: number, average: number) => `${count} answers, avg ${average} pts`,
+    pastSummary: (count: number) => `${count} ${count === 1 ? 'answer' : 'answers'}`,
     pastFilter: 'Show',
     pastAll: 'All',
     pastOld: 'Earlier questions',
@@ -93,8 +92,7 @@ const TEXT = messages({
     pastEmpty: 'No practice yet',
     pastEmptyBody: 'Your answers and feedback will collect here as you practice.',
     pastOldEmpty: 'No answers to earlier questions',
-    showFeedback: 'Show feedback',
-    hideFeedback: 'Hide feedback',
+    averageScore: 'Average score',
     close: 'Close',
     regenerateTitle: 'Get new questions?',
     regenerateBody: "We'll write questions that don't repeat these. Current questions go away, your past answers stay.",
@@ -242,42 +240,53 @@ function Row({ question, index, order, records, onPractice }: { question: Interv
   )
 }
 
-/** 지난 기록 칸의 답변 하나예요. 점수, 시각, 질문, 내 답(세 줄까지)이 있고 피드백은 눌러야 펼쳐져요. */
-function PastItem({ record, old }: { record: PracticeRecord; old: boolean }) {
+/**
+ * 지난 기록 칸의 답변 하나예요. 면접 연습의 결과 화면처럼 번호, 질문, 점수, 내 답변, 모범 답변, 피드백, 꼬리 질문을 접지 않고 한 칸에 보여줘요.
+ */
+function PastItem({ record, order, old }: { record: PracticeRecord; order: number; old: boolean }) {
   const L = useMessages(TEXT)
-  const [open, setOpen] = useState(false)
   const { feedback } = record
   return (
-    <li className="rounded-xl bg-gray-50 p-4">
-      <div className="flex items-center gap-2">
-        <Badge tone="brand" strong className="tabular-nums">
-          {L.score(feedback.score)}
-        </Badge>
-        {old && (
-          <Badge tone="gray" strong>
-            {L.oldQuestion}
-          </Badge>
-        )}
-        <span className="ml-auto text-[12px] text-gray-400 tabular-nums">{formatDateTime(record.createdAt)}</span>
+    <li className="rounded-2xl bg-gray-50 p-5">
+      <div className="flex items-start gap-4">
+        <span className="mt-0.5 shrink-0 text-[13px] font-semibold text-gray-400 tabular-nums">Q{order}</span>
+        <div className="min-w-0 flex-1">
+          <h4 className={`text-[15px] leading-snug font-semibold ${record.question ? 'text-gray-900' : 'text-gray-400'}`}>{record.question || L.noQuestionText}</h4>
+          <p className="mt-1.5 flex items-center gap-2 text-[12px] text-gray-400 tabular-nums">
+            {formatDateTime(record.createdAt)}
+            {old && (
+              <Badge tone="gray" strong>
+                {L.oldQuestion}
+              </Badge>
+            )}
+          </p>
+        </div>
+        <span className="shrink-0 text-[20px] font-bold text-brand tabular-nums">{feedback.score}</span>
       </div>
-      <p className={`mt-2.5 text-[14px] leading-relaxed font-semibold ${record.question ? 'text-gray-900' : 'text-gray-400'}`}>{record.question || L.noQuestionText}</p>
-      <p className={`mt-1.5 text-[13.5px] leading-relaxed whitespace-pre-wrap text-gray-600 ${open ? '' : 'line-clamp-3'}`}>{record.answer}</p>
-      <button type="button" aria-expanded={open} onClick={() => setOpen((value) => !value)} className={`${ghostButton} -ml-2 mt-1`}>
-        {open ? L.hideFeedback : L.showFeedback}
-      </button>
-      {open && (
-        <div className="mt-2 space-y-3 rounded-xl bg-white p-4">
-          <FeedbackSections feedback={feedback} />
-          {feedback.modelAnswer && <ModelAnswer text={feedback.modelAnswer} />}
+      {record.answer && (
+        <div className="mt-4">
+          <h5 className={label}>{L.myAnswer}</h5>
+          <p className="mt-1 text-[13.5px] leading-relaxed whitespace-pre-wrap text-gray-700">{record.answer}</p>
         </div>
       )}
+      {/* 내 답 바로 아래에 모범 답변을 두어서, 무엇이 달랐는지 나란히 읽혀요. */}
+      {feedback.modelAnswer && <ModelAnswer text={feedback.modelAnswer} className="mt-4" />}
+      <div className="mt-4 space-y-4">
+        <FeedbackSections feedback={feedback} />
+        {feedback.followUp && (
+          <section>
+            <h5 className={label}>{L.followUp}</h5>
+            <p className="mt-1 text-[13.5px] leading-relaxed text-gray-700">{feedback.followUp}</p>
+          </section>
+        )}
+      </div>
     </li>
   )
 }
 
 /**
  * 지난 질문과 답변을 오른쪽에서 여는 칸에 모아 보여줘요. 예상 질문을 새로 뽑기 전의 예전 질문 답변도 여기서 봐요.
- * 맨 위에 답변 수와 평균 점수, 전체와 예전 질문만 고르는 칸이 있고, 답변은 날짜별로 묶여 최근 것부터 와요.
+ * 면접 연습의 결과 화면처럼 맨 위에 평균 점수 고리가 있고, 그 아래 전체와 예전 질문만 고르는 칸, 날짜별로 묶은 답변 카드가 최근 것부터 와요.
  */
 function PastPanel({ records, current, onClose }: { records: PracticeRecord[]; current: Set<string>; onClose: () => void }) {
   const L = useMessages(TEXT)
@@ -298,13 +307,13 @@ function PastPanel({ records, current, onClose }: { records: PracticeRecord[]; c
       onClose={onClose}
       closeLabel={L.close}
       labelledBy="past-panel-title"
-      className="max-w-[520px]"
+      className="max-w-[640px]"
       header={
         <div>
           <h2 id="past-panel-title" className="text-[20px] font-semibold text-gray-900">
             {L.pastTitle}
           </h2>
-          {records.length > 0 && <p className="mt-1 text-[13px] text-gray-500 tabular-nums">{L.pastSummary(records.length, average)}</p>}
+          {records.length > 0 && <p className="mt-1 text-[13px] text-gray-500 tabular-nums">{L.pastSummary(records.length)}</p>}
         </div>
       }
     >
@@ -313,6 +322,10 @@ function PastPanel({ records, current, onClose }: { records: PracticeRecord[]; c
           <Notice title={L.pastEmpty} body={L.pastEmptyBody} className="mt-16" />
         ) : (
           <>
+            <div className="mb-6 flex flex-col items-center text-center">
+              <ScoreRing score={average} />
+              <p className="mt-2 text-[12.5px] text-gray-500">{L.averageScore}</p>
+            </div>
             <Segmented
               label={L.pastFilter}
               options={[
@@ -329,9 +342,9 @@ function PastPanel({ records, current, onClose }: { records: PracticeRecord[]; c
                 {days.map(({ day, items }) => (
                   <section key={day}>
                     <h3 className="mb-2 text-[12.5px] font-medium text-gray-500">{day}</h3>
-                    <ol className="space-y-2">
-                      {items.map((record) => (
-                        <PastItem key={record.id} record={record} old={!current.has(record.questionId)} />
+                    <ol className="space-y-3">
+                      {items.map((record, index) => (
+                        <PastItem key={record.id} record={record} order={items.length - index} old={!current.has(record.questionId)} />
                       ))}
                     </ol>
                   </section>
