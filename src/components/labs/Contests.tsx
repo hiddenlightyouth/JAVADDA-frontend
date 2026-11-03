@@ -1,22 +1,27 @@
 import { useEffect, useMemo, useState } from 'react'
 import { track } from '../../lib/analytics'
-import { CONTEST_CATEGORIES, contestDaysLeft, fetchContests, type Contest, type ContestCategory, type ContestSite } from '../../lib/contests'
+import { CONTEST_CATEGORIES, contestDaysLeft, fetchContests, type Contest, type ContestCategory } from '../../lib/contests'
 import { useLoadHold, useLoadProgress } from '../../lib/load'
 import { messages, useMessages } from '../../lib/i18n'
 import { readItem, writeItem } from '../../lib/storage'
 import { Dropdown } from '../Dropdown'
-import { CardTag, DeadlineTag, Failed, Notice, filterChip, filterRow } from '../GapParts'
-import { SearchIcon } from '../Icons'
-import { Badge, LoadProgress, fieldBase, loadCenter, stagger, useShowMore } from '../ui'
+import { DeadlineTag, Failed, Notice, filterChip, filterRow } from '../GapParts'
+import { CalendarIcon, ExternalLinkIcon, SearchIcon } from '../Icons'
+import { jobsGrid, jobsList, NotchedFrame, onBlankClick, PostingCountBar, readLayout, useElementSize, type Layout } from '../JobCard'
+import { shortDate } from '../ScreenParts'
+import { Badge, LoadProgress, loadCenter, primaryButton, stagger, tag, useShowMore } from '../ui'
 
 /**
  * 잡아따 Labs의 공모전 (/labs/contests)이에요. 공모전 사이트 네 곳에서 모은 공모전을 분야로 골라 봐요.
- * 맨 위에 검색창과 정렬, 그 아래 분야 버튼 줄(IT가 맨 앞), 카드 목록이에요. 카드를 누르면 처음 모은 사이트의 공고를 새 탭으로 열어요.
+ * 모양은 공고 탐색과 같아요. 맨 위에 검색창과 정렬, 그 아래 분야 버튼 줄(IT가 맨 앞), 공모전 수와 보기 방식, 카드(`ContestCard`)나 줄(`ContestRow`)이에요.
+ * 어느 사이트에서 모았는지는 화면에 적지 않아요. 카드를 누르면 처음 모은 사이트의 공고를 새 탭으로 열어요.
  */
 
 type Sort = 'deadline' | 'recent'
 const SORTS: readonly Sort[] = ['deadline', 'recent']
 const CATEGORY_KEY = 'javadda:contests-category'
+/** 카드에 보여주는 분야 수예요. */
+const CATEGORIES_SHOWN = 3
 
 const TEXT = messages({
   ko: {
@@ -29,9 +34,10 @@ const TEXT = messages({
       it: 'IT, 소프트웨어', idea: '기획, 아이디어', startup: '창업, 취업', science: '과학, 공학', design: '디자인', marketing: '광고, 마케팅',
       video: '영상, 사진', naming: '네이밍, 슬로건', writing: '문학, 글', thesis: '논문, 학술', arts: '예체능', etc: '기타',
     } as Record<ContestCategory, string>,
-    sites: { linkareer: '링커리어', campuspick: '캠퍼스픽', wevity: '위비티', thinkgood: '씽굿' } as Record<ContestSite, string>,
     items: (count: number) => `${count.toLocaleString()}개의 공모전`,
     prize: (prize: string) => `상금 ${prize}`,
+    period: '접수 기간',
+    open: '공모전 보기',
     emptyTitle: '조건에 맞는 공모전이 없어요',
     emptyBody: '다른 분야를 고르거나 검색어를 바꿔 보세요.',
     noneTitle: '아직 모은 공모전이 없어요',
@@ -48,9 +54,10 @@ const TEXT = messages({
       it: 'IT and software', idea: 'Ideas and planning', startup: 'Startups and careers', science: 'Science and engineering', design: 'Design', marketing: 'Marketing',
       video: 'Video and photo', naming: 'Naming and slogans', writing: 'Writing', thesis: 'Research papers', arts: 'Arts', etc: 'Other',
     } as Record<ContestCategory, string>,
-    sites: { linkareer: 'Linkareer', campuspick: 'Campuspick', wevity: 'Wevity', thinkgood: 'Thinkgood' } as Record<ContestSite, string>,
     items: (count: number) => `${count.toLocaleString()} contests`,
     prize: (prize: string) => `Prize ${prize}`,
+    period: 'Entry period',
+    open: 'View contest',
     emptyTitle: 'No contests match',
     emptyBody: 'Try another category or search term.',
     noneTitle: 'No contests yet',
@@ -64,6 +71,14 @@ function savedCategory(): ContestCategory | null {
   return CONTEST_CATEGORIES.includes(value as ContestCategory) ? (value as ContestCategory) : null
 }
 
+/** 처음 모은 사이트의 공고를 새 탭으로 열어요. */
+function openContest(contest: Contest) {
+  const main = contest.links[0]
+  if (!main) return
+  track('labs_contest_open', { site: main.site, category: contest.categories[0] ?? 'etc' })
+  window.open(main.url, '_blank', 'noopener,noreferrer')
+}
+
 export function Contests() {
   const L = useMessages(TEXT)
   const { percent, one } = useLoadProgress()
@@ -73,6 +88,7 @@ export function Contests() {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState<Sort>('deadline')
   const [category, setCategory] = useState<ContestCategory | null>(savedCategory)
+  const [layout, setLayout] = useState<Layout>(readLayout)
 
   useEffect(() => {
     let alive = true
@@ -115,27 +131,29 @@ export function Contests() {
   if (contests.length === 0) return <Notice title={L.noneTitle} body={L.noneBody} className="pt-24" />
 
   return (
-    <div className="@container flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <label className={`flex h-11 min-w-0 flex-1 basis-64 items-center gap-2 rounded-xl px-3.5 ${fieldBase}`}>
+    <div className="@container">
+      {/* 공고 탐색의 거르는 줄(PostingFilterBar)과 같은 모양이에요. 좁으면 검색창이 한 줄을 다 쓰고 정렬은 아래로 내려가요. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="relative flex h-11 min-w-0 flex-1 basis-full items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-4 transition-colors focus-within:border-brand @2xl:basis-0">
           <SearchIcon />
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={L.search}
-            className="h-full min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-gray-400 sm:text-[14px]"
+            aria-label={L.search}
+            data-search-input
+            className="min-w-0 flex-1 bg-transparent text-base text-gray-900 outline-none placeholder:text-gray-400 sm:text-[14px] [&::-webkit-search-cancel-button]:hidden"
           />
         </label>
         <Dropdown
           size="lg"
           label={L.sort}
           value={L.sorts[sort]}
-          align="right"
           groups={[{ items: SORTS.map((value) => ({ label: L.sorts[value], checked: sort === value, onSelect: () => setSort(value) })) }]}
         />
       </div>
-      <div role="radiogroup" aria-label={L.category} className={filterRow}>
+      <div role="radiogroup" aria-label={L.category} className={`mt-4 ${filterRow}`}>
         <button type="button" role="radio" aria-checked={!category} onClick={() => choose(null)} className={`${filterChip(!category)} px-5`}>
           {L.all}
         </button>
@@ -146,106 +164,155 @@ export function Contests() {
             role="radio"
             aria-checked={category === each}
             onClick={() => choose(category === each ? null : each)}
-            className={`${filterChip(category === each)} gap-1.5 px-5`}
+            className={`${filterChip(category === each)} px-5`}
           >
             {L.categories[each]}
-            <span className="text-[12.5px] font-normal text-gray-400 tabular-nums">{counts.get(each) ?? 0}</span>
           </button>
         ))}
       </div>
-      <p className="text-[13px] text-gray-500 tabular-nums">{L.items(shown.length)}</p>
-      {shown.length === 0 ? (
-        <Notice
-          title={L.emptyTitle}
-          body={L.emptyBody}
-          action={L.reset}
-          onAction={() => {
-            setQuery('')
-            choose(null)
-          }}
-          className="pt-12"
-        />
-      ) : (
-        <>
-          <ul className="grid gap-3 @2xl:grid-cols-2 @5xl:grid-cols-3">
-            {shown.slice(0, count).map((contest, index) => (
-              <ContestCard key={contest.id} contest={contest} order={index} />
-            ))}
-          </ul>
-          {more}
-        </>
-      )}
+      <PostingCountBar count={shown.length} layout={layout} onLayout={setLayout} items={L.items} />
+      <div className="mt-4">
+        {shown.length === 0 ? (
+          <Notice
+            title={L.emptyTitle}
+            body={L.emptyBody}
+            action={L.reset}
+            onAction={() => {
+              setQuery('')
+              choose(null)
+            }}
+            className="mt-16"
+          />
+        ) : (
+          <>
+            <ul className={layout === 'gallery' ? jobsGrid : jobsList}>
+              {shown.slice(0, count).map((contest, order) =>
+                layout === 'gallery' ? (
+                  <ContestCard key={`${layout}:${sort}:${contest.id}`} contest={contest} order={order} />
+                ) : (
+                  <ContestRow key={`${layout}:${sort}:${contest.id}`} contest={contest} order={order} />
+                ),
+              )}
+            </ul>
+            {more}
+          </>
+        )}
+      </div>
     </div>
   )
 }
 
+/** 공모전 포스터예요. 공고 카드의 기업 로고 자리에 놓고, 없거나 못 불러오면 회색 칸이에요. */
+function Poster({ contest, className }: { contest: Contest; className: string }) {
+  const [broken, setBroken] = useState(false)
+  if (!contest.imageUrl || broken) return <span className={`shrink-0 rounded-xl bg-white ${className}`} />
+  return (
+    <img
+      src={contest.imageUrl}
+      alt=""
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setBroken(true)}
+      className={`shrink-0 rounded-xl bg-white object-cover ${className}`}
+    />
+  )
+}
+
+/** 접수 기간이에요. 시작일을 모르면 마감만 적고(~ 11.30), 마감을 모르면 두지 않아요. */
+function Period({ contest }: { contest: Contest }) {
+  const L = useMessages(TEXT)
+  if (!contest.deadline) return null
+  return (
+    <span className="flex shrink-0 items-center gap-1.5 tabular-nums">
+      <CalendarIcon className="size-3.5 shrink-0 text-gray-400" label={L.period} />
+      {contest.startDate ? `${shortDate(contest.startDate)} ` : ''}~ {shortDate(contest.deadline)}
+    </span>
+  )
+}
+
+/**
+ * 갤러리형 카드예요. 공고 탐색의 카드(`JobCard`)와 같은 모양으로, 오른쪽 위 홈에 마감까지 남은 날을 적어요.
+ * 기업 로고 자리에 포스터, 기업 이름 자리에 주최, 역량 이름표 자리에 분야, 맨 아래 줄에 상금과 공모전 보기가 있어요.
+ */
 function ContestCard({ contest, order }: { contest: Contest; order: number }) {
   const L = useMessages(TEXT)
-  const [broken, setBroken] = useState(false)
-  const main = contest.links[0]
-  const open = () => {
-    if (!main) return
-    track('labs_contest_open', { site: main.site, category: contest.categories[0] ?? 'etc' })
-    window.open(main.url, '_blank', 'noopener,noreferrer')
-  }
+  const [ref, size] = useElementSize<HTMLLIElement>()
+  const open = () => openContest(contest)
   return (
-    <li
-      className="group flex cursor-pointer animate-rise gap-4 rounded-2xl bg-gray-50 p-4 transition-colors hover:bg-gray-100"
-      style={stagger(order)}
-      onClick={open}
-    >
-      {contest.imageUrl && !broken && (
-        <img
-          src={contest.imageUrl}
-          alt=""
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          onError={() => setBroken(true)}
-          className="h-[104px] w-[78px] shrink-0 rounded-lg bg-white object-cover"
-        />
-      )}
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <DeadlineTag left={contestDaysLeft(contest)} />
-          {contest.categories.slice(0, 2).map((each) => (
-            <CardTag key={each} tone="gray">
-              {L.categories[each]}
-            </CardTag>
-          ))}
-        </div>
-        <a
-          href={main?.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(event) => {
-            event.stopPropagation()
-            event.preventDefault()
-            open()
-          }}
-          className="line-clamp-2 text-[15px] leading-snug font-semibold text-gray-900 transition-colors group-hover:text-brand"
-        >
-          {contest.title}
-        </a>
-        {contest.organizer && <p className="truncate text-[13px] text-gray-500">{contest.organizer}</p>}
-        <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-1">
-          {contest.prize && <Badge tone="brand">{L.prize(contest.prize)}</Badge>}
-          {contest.links.map((link) => (
-            <a
-              key={link.site}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) => {
-                event.stopPropagation()
-                track('labs_contest_open', { site: link.site, category: contest.categories[0] ?? 'etc' })
-              }}
-              className="inline-flex h-6 items-center rounded-md bg-white px-2 text-[12px] text-gray-600 transition-colors hover:text-brand"
-            >
-              {L.sites[link.site] ?? link.site}
-            </a>
-          ))}
-        </div>
+    <li ref={ref} onClick={onBlankClick(open)} className="group relative isolate flex animate-rise cursor-pointer flex-col p-5" style={stagger(order)}>
+      <NotchedFrame left={contestDaysLeft(contest)} card={size} />
+      <div className="flex items-center gap-3 pr-24">
+        <Poster contest={contest} className="size-10" />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13.5px] font-medium text-gray-900">{contest.organizer}</span>
+          <span className="block truncate text-[12px] text-gray-400">{L.categories[contest.categories[0] ?? 'etc']}</span>
+        </span>
       </div>
+
+      <h3 className="mt-4 text-[16px] leading-snug font-semibold text-gray-900">
+        <button type="button" onClick={open} className="text-left transition-colors group-hover:text-brand-hover">
+          {contest.title}
+        </button>
+      </h3>
+      <span className="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[12.5px] text-gray-600">
+        <Period contest={contest} />
+      </span>
+
+      <div className="mt-4 flex flex-1 flex-wrap content-start gap-1.5">
+        {contest.categories.slice(0, CATEGORIES_SHOWN).map((each) => (
+          <span key={each} className={tag}>
+            {L.categories[each]}
+          </span>
+        ))}
+      </div>
+
+      <div className="mt-5 flex items-center gap-1.5 border-t border-gray-200 pt-3">
+        {contest.prize && <Badge tone="brand">{L.prize(contest.prize)}</Badge>}
+        <button type="button" onClick={open} className={`${primaryButton} ml-auto shrink-0 gap-1.5`}>
+          {L.open}
+          <ExternalLinkIcon className="size-3.5" />
+        </button>
+      </div>
+    </li>
+  )
+}
+
+/** 리스트형 줄이에요. 공고 탐색의 줄(`JobRow`)과 같은 모양이고, 목록 폭이 좁으면 접수 기간, 분야, 상금, 버튼을 차례로 숨겨요. */
+function ContestRow({ contest, order }: { contest: Contest; order: number }) {
+  const L = useMessages(TEXT)
+  const open = () => openContest(contest)
+  return (
+    <li onClick={onBlankClick(open)} className="group flex animate-rise cursor-pointer items-center gap-4 rounded-2xl bg-gray-50 px-4 py-3.5 transition-colors hover:bg-gray-100" style={stagger(order)}>
+      <Poster contest={contest} className="size-10" />
+      <div className="min-w-0 flex-1">
+        <h3 className="flex text-[15px] font-semibold text-gray-900">
+          <button type="button" onClick={open} className="min-w-0 truncate text-left transition-colors group-hover:text-brand-hover">
+            {contest.title}
+          </button>
+        </h3>
+        <span className="mt-1 flex min-w-0 items-center gap-x-3 text-[12.5px] text-gray-600">
+          <span className="truncate font-medium text-gray-700">{contest.organizer}</span>
+          <span className="hidden @xl:flex">
+            <Period contest={contest} />
+          </span>
+        </span>
+      </div>
+      <div className="hidden shrink-0 gap-1.5 @5xl:flex">
+        {contest.categories.slice(0, 2).map((each) => (
+          <span key={each} className={tag}>
+            {L.categories[each]}
+          </span>
+        ))}
+      </div>
+      {contest.prize && (
+        <span className="hidden shrink-0 @2xl:inline-flex">
+          <Badge tone="brand">{L.prize(contest.prize)}</Badge>
+        </span>
+      )}
+      <DeadlineTag left={contestDaysLeft(contest)} />
+      <button type="button" onClick={open} className={`${primaryButton} hidden! shrink-0 @3xl:inline-flex!`}>
+        {L.open}
+      </button>
     </li>
   )
 }

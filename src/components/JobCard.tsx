@@ -40,9 +40,9 @@ const TEXT = messages({
 
 /** 공고 카드는 넓은 화면에서 한 줄에 둘이나 셋씩 놓여요. */
 // 원문 칸이 열리면 목록 폭이 줄어서, 화면 폭이 아니라 목록 폭(@container)을 보고 칸 수를 정해요.
-const jobsGrid = 'grid gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3'
+export const jobsGrid = 'grid gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3'
 /** 리스트형은 한 줄에 공고 하나씩이에요. */
-const jobsList = 'flex flex-col gap-2'
+export const jobsList = 'flex flex-col gap-2'
 /** 카드에 보여주는 필수 역량 수예요. 나머지는 수만 적어요. */
 const SKILLS_SHOWN = 4
 
@@ -70,11 +70,18 @@ export function LayoutToggle({ value, onChange }: { value: Layout; onChange: (la
 }
 
 /** 목록 위의 한 줄이에요. 왼쪽에 공고 수(받는 동안은 비워요), 오른쪽에 보기 방식 버튼이 있어요. 공고 탐색과 추천 공고가 같이 써요. */
-export function PostingCountBar({ count, layout, onLayout, children }: { count: number | null; layout: Layout; onLayout: (layout: Layout) => void; children?: ReactNode }) {
+export function PostingCountBar({ count, layout, onLayout, items, children }: {
+  count: number | null
+  layout: Layout
+  onLayout: (layout: Layout) => void
+  /** 공고가 아닌 것(Labs의 공모전)을 셀 때 "22개의 공모전"처럼 바꿔 적어요. */
+  items?: (count: number) => string
+  children?: ReactNode
+}) {
   const L = useMessages(TEXT)
   return (
     <div className="mt-4 flex h-8 items-center gap-3">
-      <p className="mr-auto text-[13px] text-gray-500 tabular-nums">{count === null ? '' : L.items(count)}</p>
+      <p className="mr-auto text-[13px] text-gray-500 tabular-nums">{count === null ? '' : (items ?? L.items)(count)}</p>
       {/* 화면마다 더하는 거르기(공고 탐색의 상시 채용 숨기기)는 보기 방식 버튼 앞에 둬요. */}
       {children}
       <LayoutToggle value={layout} onChange={onLayout} />
@@ -138,7 +145,7 @@ export function PostingList({ postings, layout, resume, browser, onAnalyze, anim
 }
 
 /** 카드와 줄의 빈 자리를 누른 것이에요. 안쪽 버튼(기업, 채용 공고 열기, 분석하기)은 저마다 따로 받아요. */
-const onBlankClick = (open: () => void) => (event: { target: EventTarget }) => {
+export const onBlankClick = (open: () => void) => (event: { target: EventTarget }) => {
   if (!(event.target as Element).closest('button, a')) open()
 }
 
@@ -193,7 +200,7 @@ function notchedPath(w: number, h: number, nw: number) {
  * 요소의 크기를 재요. 크기가 바뀌면 다시 재요. 카드는 그리드 안에서 0.5px 같은 소수 크기가 되는데, 반올림하면 바깥선이 카드 밖으로 넘어가
  * 공고 줄(overflow-hidden)에 잘려 가늘게 보여서 내림해요.
  */
-function useElementSize<T extends HTMLElement>() {
+export function useElementSize<T extends HTMLElement>() {
   const ref = useRef<T>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
   useLayoutEffect(() => {
@@ -216,7 +223,7 @@ function useElementSize<T extends HTMLElement>() {
  * 마감이 가장 중요한 정보라 가장 눈에 띄는 자리에 두고, 사흘 안으로 남으면 메인 컬러, 오늘 마감이면 글자와 카드 바깥선이 빨간색이에요. 구체적인 날짜는 직군과 지역 줄에 있어요.
  * 카드 바탕과 바깥선은 그 아래의 SVG가 그려서, 홈은 카드가 놓인 흰 바탕이 그대로 보이고 마우스를 올려 카드가 짙어져도 홈은 그대로예요.
  */
-function NotchedFrame({ left, card }: { left: number | null; card: { width: number; height: number } }) {
+export function NotchedFrame({ left, card }: { left: number | null; card: { width: number; height: number } }) {
   const L = useMessages(TEXT)
   const [label, labelSize] = useElementSize<HTMLSpanElement>()
   const tone = left === null ? 'text-gray-500' : left === 0 ? 'text-red-500' : left <= 3 ? 'text-brand' : 'text-gray-900'
