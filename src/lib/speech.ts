@@ -324,6 +324,7 @@ export function useSpeak() {
       // 질문 자료는 화면 언어와 달리 한국어일 수 있어서, 글자를 보고 읽을 언어를 정해요.
       const korean = /[가-힣]/.test(text)
       utterance.lang = korean ? 'ko-KR' : 'en-US'
+      utterance.rate = 1.08
       utterance.volume = practiceVolume.get()
       let boundary = -1
       let boundaryIndex = 0

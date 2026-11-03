@@ -20,8 +20,8 @@ const DEFAULT_BASE_URL = 'https://api.elevenlabs.io'
 /** 한국어를 지원하는 모델 중 가장 자연스러워요. 최신 v4는 이 API로 쓸 수 없어요. */
 const DEFAULT_MODEL_ID = 'eleven_multilingual_v2'
 const OUTPUT_FORMAT = 'mp3_44100_128'
-/** 면접관답게 흔들림 없이 말해요. 한국어는 빠르게 읽히면 음절이 뭉개져서 보통 빠르기로 두고, stability를 조금 높여 억양과 숨 쉬는 자리가 튀지 않게 해요. style은 0이어야 또렷해요. */
-const VOICE_SETTINGS = { stability: 0.65, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: 1.0 }
+/** 면접관답게 흔들림 없이 말해요. 보통 빠르기는 조금 느리게 들려서 살짝 빠르게 두고(1.1을 넘기면 한국어 음절이 뭉개져요), stability를 조금 높여 억양과 숨 쉬는 자리가 튀지 않게 해요. style은 0이어야 또렷해요. */
+const VOICE_SETTINGS = { stability: 0.65, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: 1.08 }
 
 export interface TtsEnv {
   ELEVENLABS_API_KEY?: string
@@ -73,8 +73,8 @@ function timingOf(alignment: Timestamped['alignment'], pieces: Piece[]): string 
 const reply = (status: number, code: string) => new Response(JSON.stringify({ code }), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
 
 async function cacheKey(voice: string, model: string, text: string) {
-  // 글자 시각을 함께 담기 시작하면서(v2), 영어 용어를 한국어 발음으로 읽고 설정을 바꾸면서(v3), 숨 쉬는 자리를 넣으면서(v4), 숫자와 붙여 쓴 이름을 읽기 시작하면서(v5) 예전 음성과 섞이지 않게 열쇠를 바꿨어요.
-  const bytes = new TextEncoder().encode(`v5\n${voice}\n${model}\n${text}`)
+  // 글자 시각을 함께 담기 시작하면서(v2), 영어 용어를 한국어 발음으로 읽고 설정을 바꾸면서(v3), 숨 쉬는 자리를 넣으면서(v4), 숫자와 붙여 쓴 이름을 읽기 시작하면서(v5), 빠르기를 올리면서(v6) 예전 음성과 섞이지 않게 열쇠를 바꿨어요.
+  const bytes = new TextEncoder().encode(`v6\n${voice}\n${model}\n${text}`)
   const hash = await crypto.subtle.digest('SHA-256', bytes)
   const name = [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
   return new Request(`https://tts.cache/${name}`)
