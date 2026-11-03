@@ -73,8 +73,8 @@ function timingOf(alignment: Timestamped['alignment'], pieces: Piece[]): string 
 const reply = (status: number, code: string) => new Response(JSON.stringify({ code }), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
 
 async function cacheKey(voice: string, model: string, text: string) {
-  // 글자 시각을 함께 담기 시작하면서(v2), 영어 용어를 한국어 발음으로 읽고 설정을 바꾸면서(v3), 숨 쉬는 자리를 넣으면서(v4), 숫자와 붙여 쓴 이름을 읽기 시작하면서(v5), 빠르기를 올리면서(v6) 예전 음성과 섞이지 않게 열쇠를 바꿨어요.
-  const bytes = new TextEncoder().encode(`v6\n${voice}\n${model}\n${text}`)
+  // 글자 시각을 함께 담기 시작하면서(v2), 영어 용어를 한국어 발음으로 읽고 설정을 바꾸면서(v3), 숨 쉬는 자리를 넣으면서(v4), 숫자와 붙여 쓴 이름을 읽기 시작하면서(v5), 빠르기를 올리면서(v6), 날짜를 읽기 시작하면서(v7) 예전 음성과 섞이지 않게 열쇠를 바꿨어요.
+  const bytes = new TextEncoder().encode(`v7\n${voice}\n${model}\n${text}`)
   const hash = await crypto.subtle.digest('SHA-256', bytes)
   const name = [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, '0')).join('')
   return new Request(`https://tts.cache/${name}`)

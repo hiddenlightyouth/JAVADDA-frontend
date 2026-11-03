@@ -66,9 +66,23 @@ const UNITS: Record<string, string> = {
 }
 
 /** 수를 세는 말이에요. 앞의 숫자를 한, 두, 세로 읽어요(99까지). 개월은 개가 아니라서 빼요. */
-const NATIVE_COUNTER = /^(?:번째|가지|시간|군데|개(?!월)|명|번|살|잔|곳|달|배|마리|권|건)/
+const NATIVE_COUNTER = /^(?:번째|가지|시간|군데|개(?!월)|명|번|살|잔|곳|달|배|마리|권|건|시(?=$|[\s,.?!]|에|부터|까지|쯤|반|경))/
 /** 일, 이, 삼으로 읽는 단위예요. 숫자와 띄어 읽어야 또렷해서 따로 알아봐요. */
 const SINO_COUNTER = /^(?:년|개월|주|일|초|분|차|회|단계|문단|위|점|원|층|대)/
+/** 2024년, 3월, 15일은 숫자와 붙여 한 낱말로 읽어야 날짜처럼 들려요(이천이십사년 삼월 십오일). */
+const DATE_UNIT = /^(?:년|월|일)/
+
+/** 6월은 육월이 아니라 유월, 10월은 십월이 아니라 시월이에요. */
+const monthOf = (month: number) => (month === 6 ? '유' : month === 10 ? '시' : sino(month)) + '월'
+
+/** 2024.03.15, 2024-03-15, 2024/3/15, 3/15처럼 숫자로만 적은 날짜를 읽어요. 날짜가 아니면 null이에요. */
+function dateOf(chunk: string): string | null {
+  const full = chunk.match(/^(\d{4})([.\-/])(\d{1,2})\2(\d{1,2})$/)
+  const short = chunk.match(/^(\d{1,2})\/(\d{1,2})$/)
+  const [year, month, day] = full ? [Number(full[1]), Number(full[3]), Number(full[4])] : short ? [0, Number(short[1]), Number(short[2])] : [0, 0, 0]
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null
+  return `${year ? `${sino(year)}년 ` : ''}${monthOf(month)} ${sino(day)}일`
+}
 
 const SINO = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구']
 const NATIVE_ONES = ['', '한', '두', '세', '네', '다섯', '여섯', '일곱', '여덟', '아홉']
@@ -137,10 +151,13 @@ const isNumber = (atom: string | undefined) => !!atom && /^\d/.test(atom)
  * after는 덩어리 바로 뒤의 글이에요. 3개, 3년처럼 뒤에 오는 말을 보고 숫자를 세 개로 읽을지 삼 년으로 읽을지 정해요.
  */
 function speakChunk(chunk: string, after: string): string {
+  const date = dateOf(chunk)
+  if (date) return date
   const percent = chunk.match(/%p?$/)?.[0] ?? ''
   const atoms = chunk.slice(0, chunk.length - percent.length).match(ATOM) ?? []
   const counter = percent ? null : after.match(NATIVE_COUNTER)?.[0] ?? null
-  const unit = percent ? null : counter ?? after.match(SINO_COUNTER)?.[0] ?? null
+  const unit = percent ? null : counter ?? after.match(SINO_COUNTER)?.[0] ?? (after.startsWith('월') ? '월' : null)
+  const dated = !percent && DATE_UNIT.test(after)
   const words = atoms.map((atom, index) => {
     const before = atoms[index - 1]
     const next = atoms[index + 1]
@@ -150,7 +167,7 @@ function speakChunk(chunk: string, after: string): string {
     if (atom === '.') return ''
     if (atom === '/') return ' '
     // 3~5명은 세에서 다섯 명보다 세 명에서 다섯 명이 자연스러워요.
-    if (atom === '~' || (atom === '-' && isNumber(before) && isNumber(next))) return unit ? ` ${unit}에서 ` : '에서 '
+    if (atom === '~' || (atom === '-' && isNumber(before) && isNumber(next))) return unit ? `${dated ? '' : ' '}${unit}에서 ` : '에서 '
     if (atom === '-') return ' '
     if (isLetters(atom)) return pronounceWord(atom)
     const [, whole, fraction, letters] = atom.match(/^([\d,]+)(?:\.(\d+))?([A-Za-z]*)$/) ?? []
@@ -164,10 +181,11 @@ function speakChunk(chunk: string, after: string): string {
     const attached = !fraction && ((isLetters(atoms[index - 2]) && (before === '+' || before === '-' || before === '/')) || (next === '-' && isLetters(atoms[index + 2])))
     if (attached) return english(whole)
     if (fraction) return `${sino(n)} 점 ${[...fraction].map((digit) => sino(Number(digit))).join('')}`
+    if (unit === '월' && !fraction && n >= 1 && n <= 12) return monthOf(n).slice(0, -1)
     return counter && n > 0 && n < 100 ? native(n, counter === '번째') : sino(n)
   })
   const spoken = (words.join('') + (percent === '%p' ? ' 퍼센트포인트' : percent ? ' 퍼센트' : '')).replace(/ {2,}/g, ' ').trim()
-  return unit && isNumber(atoms[atoms.length - 1]) ? spoken + ' ' : spoken
+  return unit && !dated && isNumber(atoms[atoms.length - 1]) ? spoken + ' ' : spoken
 }
 
 /** 영어나 숫자로 시작하는 덩어리예요. 점, 줄표, 빗금, 더하기, 물결로 이은 것까지 한 덩어리로 읽어요. 혼자 쓴 더하기와 괄호도 같이 찾아요. */
