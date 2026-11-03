@@ -32,7 +32,8 @@ import { pageFrame, PageHeader } from './AppPage'
 import { panelBody, SidePanel } from './Dialog'
 import { AiProgress, CompanyMark, SkillMark, Delta, FitBadge, KindLabel, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreHero, Sparkline, Tip, percent } from './GapParts'
 import { DeleteReportDialog, removeReport } from './History'
-import { AlertIcon, CheckIcon, ClockIcon, LevelIcon, RefreshIcon, TrashIcon } from './Icons'
+import { AlertIcon, CheckIcon, ClockIcon, ExternalLinkIcon, LevelIcon, RefreshIcon, TrashIcon } from './Icons'
+import { PostingBrowser, SplitView } from './PostingBrowser'
 import { ReviewTab } from './ReportReview'
 import { QuestionsTab } from './ReportQuestions'
 import { Callout, switchReport } from './ReportParts'
@@ -49,6 +50,7 @@ const TEXT = messages({
     tabList: '리포트 탭',
     back: '새 진단 화면으로 돌아가기',
     practice: '면접 연습',
+    openPosting: '공고 보기',
     rerun: '재진단',
     rerunDone: '다시 진단하고 있어요.',
     staleTitle: '이력서 업데이트를 감지했어요',
@@ -128,6 +130,7 @@ const TEXT = messages({
     tabList: 'Report tabs',
     back: 'Back to new diagnosis',
     practice: 'Practice',
+    openPosting: 'Posting',
     rerun: 'Re-run',
     rerunDone: 'Running the diagnosis again.',
     staleTitle: 'Your resume has changed',
@@ -752,6 +755,7 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
   const [gap, setGap] = useState<SkillGap | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [rerunning, setRerunning] = useState(false)
+  const [viewing, setViewing] = useState(false)
   const signedIn = useAuth().tokens !== null
 
   // 리포트가 바뀌면 열어 둔 갭 상세를 닫아요.
@@ -818,100 +822,109 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
   const closed = !postingOf(report.postingId)
 
   return (
-    <main className={pageFrame}>
-      <PageHeader
-        title={posting?.title ?? ''}
-        owner={company.name}
-        mark={<CompanyMark company={company} className="size-11 text-[15px]" />}
-        onBack={onBack}
-        backLabel={L.back}
-        actions={
-          <>
-            <button type="button" disabled={(!done && !failed) || rerunning} onClick={() => void rerun()} className={toolButton}>
-              <RefreshIcon className={`size-4 ${rerunning ? 'motion-safe:animate-spin' : ''}`} />
-              {L.rerun}
-            </button>
-            <button type="button" onClick={() => setDeleting(true)} className={toolDangerButton}>
-              <TrashIcon className="size-4" />
-              {L.delete}
-            </button>
-            <button type="button" disabled={!done} onClick={() => onPractice(id)} className={primaryButton}>
-              {L.practice}
-            </button>
-          </>
-        }
-      />
-
-      <Tabs
-        label={L.tabList}
-        items={TABS.map((item, index) => ({ key: item, label: L.tabs[item], shortcut: String(index + 1) }))}
-        current={tab}
-        onSelect={(item) => {
-          track('report_tab_view', { tab: item })
-          onTab(item)
-        }}
-        trailing={
-          done && (
-            <span className="hidden sm:inline-flex">
-              <FitBadge fit={report.fitScore} />
-            </span>
-          )
-        }
-      />
-
-      <div role="tabpanel" className="-mx-6 flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-5 pb-16 md:-mx-10 md:px-10">
-        {outdated && (
-          <Callout
-            className="mb-5 animate-rise"
-            icon={<AlertIcon className="size-5 shrink-0 text-brand" />}
-            title={sibling ? L.siblingTitle : closed ? L.closedTitle : L.staleTitle}
-            body={sibling ? L.siblingBody : closed ? L.closedBody : L.staleBody}
-            action={
-              // 대표 이력서로 만든 리포트가 있으면 그 리포트로 바로 가요. 없으면 공고 카드를 누른 것처럼 새로 진단해요.
-              (sibling || !closed) && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    track('report_resume_diagnose', { existing: Boolean(sibling) })
-                    if (sibling) switchReport(id, sibling.id)
-                    else onPick(report.postingId)
-                  }}
-                  className={primaryButton}
-                >
-                  {sibling ? L.siblingAction : L.staleAction}
+    <SplitView side={viewing && posting && <PostingBrowser posting={posting} onClose={() => setViewing(false)} />}>
+      <main className={pageFrame}>
+        <PageHeader
+          title={posting?.title ?? ''}
+          owner={company.name}
+          mark={<CompanyMark company={company} className="size-11 text-[15px]" />}
+          onBack={onBack}
+          backLabel={L.back}
+          actions={
+            <>
+              {/* 원문은 새 탭 대신 앱 안의 미니 브라우저로 열어요. 마감된 공고도 받은 주소로 열어요. */}
+              {posting?.url && (
+                <button type="button" aria-expanded={viewing} onClick={() => setViewing(true)} className={toolButton}>
+                  <ExternalLinkIcon className="size-4" />
+                  {L.openPosting}
                 </button>
-              )
-            }
+              )}
+              <button type="button" disabled={(!done && !failed) || rerunning} onClick={() => void rerun()} className={toolButton}>
+                <RefreshIcon className={`size-4 ${rerunning ? 'motion-safe:animate-spin' : ''}`} />
+                {L.rerun}
+              </button>
+              <button type="button" onClick={() => setDeleting(true)} className={toolDangerButton}>
+                <TrashIcon className="size-4" />
+                {L.delete}
+              </button>
+              <button type="button" disabled={!done} onClick={() => onPractice(id)} className={primaryButton}>
+                {L.practice}
+              </button>
+            </>
+          }
+        />
+
+        <Tabs
+          label={L.tabList}
+          items={TABS.map((item, index) => ({ key: item, label: L.tabs[item], shortcut: String(index + 1) }))}
+          current={tab}
+          onSelect={(item) => {
+            track('report_tab_view', { tab: item })
+            onTab(item)
+          }}
+          trailing={
+            done && (
+              <span className="hidden sm:inline-flex">
+                <FitBadge fit={report.fitScore} />
+              </span>
+            )
+          }
+        />
+
+        <div role="tabpanel" className="-mx-6 flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-5 pb-16 md:-mx-10 md:px-10">
+          {outdated && (
+            <Callout
+              className="mb-5 animate-rise"
+              icon={<AlertIcon className="size-5 shrink-0 text-brand" />}
+              title={sibling ? L.siblingTitle : closed ? L.closedTitle : L.staleTitle}
+              body={sibling ? L.siblingBody : closed ? L.closedBody : L.staleBody}
+              action={
+                // 대표 이력서로 만든 리포트가 있으면 그 리포트로 바로 가요. 없으면 공고 카드를 누른 것처럼 새로 진단해요.
+                (sibling || !closed) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      track('report_resume_diagnose', { existing: Boolean(sibling) })
+                      if (sibling) switchReport(id, sibling.id)
+                      else onPick(report.postingId)
+                    }}
+                    className={primaryButton}
+                  >
+                    {sibling ? L.siblingAction : L.staleAction}
+                  </button>
+                )
+              }
+            />
+          )}
+          {failed ? (
+            <Notice title={L.failedTitle} body={L.failedBody} action={L.failedAction} onAction={() => void rerun()} className="mt-16" />
+          ) : !done ? (
+            // 만드는 동안은 서버가 알려 주는 진행 정도를 막대로 보여줘요. 저장소가 1초마다 다시 물어요.
+            <AiProgress progress={report.progress ?? 0} stage={report.stage ?? 'queued'} className={loadCenter} />
+          ) : tab === 'summary' ? (
+            <SummaryTab report={report} onOpenGap={(item) => openGap(item, 'summary')} onPick={onPick} />
+          ) : tab === 'fit' ? (
+            <FitTab report={report} onPick={onPick} onOpenGap={(item) => openGap(item, 'fit')} />
+          ) : tab === 'review' ? (
+            <ReviewTab reportId={id} onQuestions={() => onTab('questions')} />
+          ) : (
+            <QuestionsTab reportId={id} onPractice={(question) => onPractice(id, question)} />
+          )}
+        </div>
+
+        {gap && <GapPanel gap={gap} trend={report.trends.find((item) => item.skill === gap.skill)?.series} onClose={() => setGap(null)} />}
+        {deleting && (
+          <DeleteReportDialog
+            report={report}
+            onCancel={() => setDeleting(false)}
+            onConfirm={() => {
+              removeReport(report, 'report')
+              setDeleting(false)
+              onBack()
+            }}
           />
         )}
-        {failed ? (
-          <Notice title={L.failedTitle} body={L.failedBody} action={L.failedAction} onAction={() => void rerun()} className="mt-16" />
-        ) : !done ? (
-          // 만드는 동안은 서버가 알려 주는 진행 정도를 막대로 보여줘요. 저장소가 1초마다 다시 물어요.
-          <AiProgress progress={report.progress ?? 0} stage={report.stage ?? 'queued'} className={loadCenter} />
-        ) : tab === 'summary' ? (
-          <SummaryTab report={report} onOpenGap={(item) => openGap(item, 'summary')} onPick={onPick} />
-        ) : tab === 'fit' ? (
-          <FitTab report={report} onPick={onPick} onOpenGap={(item) => openGap(item, 'fit')} />
-        ) : tab === 'review' ? (
-          <ReviewTab reportId={id} onQuestions={() => onTab('questions')} />
-        ) : (
-          <QuestionsTab reportId={id} onPractice={(question) => onPractice(id, question)} />
-        )}
-      </div>
-
-      {gap && <GapPanel gap={gap} trend={report.trends.find((item) => item.skill === gap.skill)?.series} onClose={() => setGap(null)} />}
-      {deleting && (
-        <DeleteReportDialog
-          report={report}
-          onCancel={() => setDeleting(false)}
-          onConfirm={() => {
-            removeReport(report, 'report')
-            setDeleting(false)
-            onBack()
-          }}
-        />
-      )}
-    </main>
+      </main>
+    </SplitView>
   )
 }
