@@ -778,36 +778,29 @@ header[data-on-dark] .logo-mark {
   color: var(--color-brand-hover);
 }
 
-/* 잡아따 Labs의 글자예요. 메인 컬러에서 보라, 분홍으로 넘어가는 빛이 왼쪽에서 오른쪽으로 사악 지나가요.
-   그라데이션 금지 규칙의 예외예요. 사이드바의 Labs 줄과 Labs 화면 제목에만 써요. */
-.labs-shine {
-  background-image: linear-gradient(100deg, #2e90fa 0%, #7a5af8 30%, #ee46bc 50%, #7a5af8 70%, #2e90fa 100%);
-  background-size: 200% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: labs-shine 3.2s linear infinite;
+/* 사이드바의 잡아따 Labs 줄이에요. 크리스마스라 빨강과 초록 바탕 위로 금빛이 사악 지나가요.
+   그라데이션 금지 규칙의 예외이고, 사이드바의 이 줄에만 써요. 계절이 바뀌면 색만 바꿔요. */
+.labs-season {
+  background-image:
+    linear-gradient(105deg, transparent 35%, rgb(255 236 170 / 0.55) 50%, transparent 65%),
+    linear-gradient(100deg, #d32f2f 0%, #c62828 44%, #2e7d32 56%, #1b5e20 100%);
+  background-size: 250% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  animation: labs-season 3.2s ease-in-out infinite;
 }
 
-/* 아이콘과 테두리처럼 글자가 아닌 곳에 같은 빛을 깔 때 써요. */
-.labs-glow {
-  background-image: linear-gradient(100deg, #2e90fa 0%, #7a5af8 30%, #ee46bc 50%, #7a5af8 70%, #2e90fa 100%);
-  background-size: 200% 100%;
-  animation: labs-shine 3.2s linear infinite;
-}
-
-@keyframes labs-shine {
+@keyframes labs-season {
   from {
-    background-position: 200% 0;
+    background-position: 130% 0, 0 0;
   }
   to {
-    background-position: 0 0;
+    background-position: -30% 0, 0 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .labs-shine,
-  .labs-glow {
+  .labs-season {
     animation: none;
+    background-position: 130% 0, 0 0;
   }
 }

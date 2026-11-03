@@ -12,7 +12,7 @@ import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { readJson, writeJson } from '../lib/storage'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
-import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, FlaskIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
+import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, FlaskIcon, SnowflakeIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { fitColor, Tip } from './GapParts'
 import { Avatar } from './Avatar'
@@ -407,7 +407,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           icon={<DocumentIcon />}
           trailing={resume && <CheckIcon className="size-3.5 shrink-0 text-brand" label={text.resumeReady} />}
         />
-        {/* 실험 기능은 다른 메뉴와 달리 글자에 빛이 사악 지나가서, 재미로 들르는 곳이라는 게 보여요. */}
+        {/* 실험 기능은 다른 메뉴와 달리 계절 색 바탕에 빛이 사악 지나가서, 재미로 들르는 곳이라는 게 보여요. 지금은 크리스마스예요. */}
         <a
           href="/labs"
           aria-current={page === 'labs' ? 'page' : undefined}
@@ -415,10 +415,11 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
             track('labs_open', { from: 'sidebar' })
             onLabs()
           })}
-          className={`${link} mt-1.5 gap-2 ${tone(page === 'labs')}`}
+          className={`${link} labs-season mt-1.5 gap-2 font-semibold text-white transition-[filter] hover:brightness-110 ${page === 'labs' ? 'ring-2 ring-[#c62828]/30 ring-offset-1 ring-offset-gray-50' : ''}`}
         >
-          <FlaskIcon className="size-4 shrink-0 text-[#7a5af8]" />
-          <span className="labs-shine flex-1 font-semibold">{text.labs}</span>
+          <FlaskIcon className="size-4 shrink-0" />
+          <span className="flex-1">{text.labs}</span>
+          <SnowflakeIcon className="size-3.5 shrink-0 text-white/80" />
         </a>
       </div>
 

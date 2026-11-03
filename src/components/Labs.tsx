@@ -76,11 +76,11 @@ export function Labs({ id, onOpen }: { id: string | null; onOpen: (id: string | 
   }
 
   return (
-    <ScrollPage header={<PageHeader title={<span className="labs-shine">{L.title}</span>} />}>
+    <ScrollPage header={<PageHeader title={L.title} />}>
       <p className="text-[14px] leading-relaxed text-gray-500">{L.intro}</p>
       {EXPERIMENTS.length === 0 ? (
         <div className="flex flex-col items-center gap-4 pt-24">
-          <span className="labs-glow flex size-12 items-center justify-center rounded-2xl text-white">
+          <span className="flex size-12 items-center justify-center rounded-2xl bg-gray-50 text-gray-400">
             <FlaskIcon className="size-6" />
           </span>
           <Notice title={L.emptyTitle} body={L.emptyBody} />
