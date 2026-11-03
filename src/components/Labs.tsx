@@ -36,7 +36,6 @@ const EXPERIMENTS: Experiment[] = []
 const TEXT = messages({
   ko: {
     title: '잡아따 Labs',
-    intro: '재미로 만들어 보는 실험실이에요. 언제든 바뀌거나 사라질 수 있어요.',
     emptyTitle: '첫 번째 실험을 준비하고 있어요',
     emptyBody: '곧 재미있는 기능이 하나씩 올라와요.',
     missingTitle: '이 실험을 찾을 수 없어요',
@@ -46,7 +45,6 @@ const TEXT = messages({
   },
   en: {
     title: 'Javadda Labs',
-    intro: 'A playground for fun experiments. Things here may change or disappear anytime.',
     emptyTitle: 'Cooking up the first experiment',
     emptyBody: 'Fun little features will show up here soon.',
     missingTitle: 'Experiment not found',
@@ -77,7 +75,6 @@ export function Labs({ id, onOpen }: { id: string | null; onOpen: (id: string | 
 
   return (
     <ScrollPage header={<PageHeader title={L.title} />}>
-      <p className="text-[14px] leading-relaxed text-gray-500">{L.intro}</p>
       {EXPERIMENTS.length === 0 ? (
         <div className="flex flex-col items-center gap-4 pt-24">
           <span className="flex size-12 items-center justify-center rounded-2xl bg-gray-50 text-gray-400">
@@ -86,7 +83,7 @@ export function Labs({ id, onOpen }: { id: string | null; onOpen: (id: string | 
           <Notice title={L.emptyTitle} body={L.emptyBody} />
         </div>
       ) : (
-        <ul className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {EXPERIMENTS.map((each, index) => (
             <li key={each.id} className="animate-rise" style={stagger(index)}>
               <a
