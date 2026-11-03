@@ -13,6 +13,7 @@ const Recommend = lazy(() => import('./Recommend').then((module) => ({ default: 
 const JobMap = lazy(() => import('./JobMap').then((module) => ({ default: module.JobMap })))
 const DeadlineCalendar = lazy(() => import('./DeadlineCalendar').then((module) => ({ default: module.DeadlineCalendar })))
 const Blogs = lazy(() => import('./Blogs').then((module) => ({ default: module.Blogs })))
+const Labs = lazy(() => import('./Labs').then((module) => ({ default: module.Labs })))
 const MyResume = lazy(() => import('./MyResume').then((module) => ({ default: module.MyResume })))
 const Company = lazy(() => import('./Company').then((module) => ({ default: module.Company })))
 const Diagnose = lazy(() => import('./Diagnose').then((module) => ({ default: module.Diagnose })))
@@ -49,6 +50,8 @@ interface Props {
   onResumeDoc: (id: string, replace?: boolean) => void
   /** 기술 블로그를 열어요. 기업을 넘기면 그 기업의 분석으로 가요. */
   onBlogs: (company: string | null) => void
+  /** 잡아따 Labs를 열어요. 실험 아이디를 넘기면 그 실험을 열어요. */
+  onLabs: (id: string | null) => void
   /** 그 기업 공고만 골라 둔 공고 탐색으로 가요. */
   onCompany: (company: string) => void
   onAdmin: (tab?: AdminTab) => void
@@ -65,7 +68,7 @@ interface Props {
 }
 
 /** 메인 화면(새 진단)을 뺀, 주소로 여는 화면을 그려요. 화면 코드는 열 때만 받아요. */
-export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExplore, onResume, onResumeAdd, onResumeList, onResumeDoc, onBlogs, onCompany, onAdmin, onArticle, onAccount, onSignedIn, onOpenReport, loginNotice, loginReturnTo, adminApi, feedback }: Props) {
+export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExplore, onResume, onResumeAdd, onResumeList, onResumeDoc, onBlogs, onLabs, onCompany, onAdmin, onArticle, onAccount, onSignedIn, onOpenReport, loginNotice, loginReturnTo, adminApi, feedback }: Props) {
   return (
     <Suspense fallback={<main className="flex-1" />}>
       {page.kind === 'app-login' ? (
@@ -82,6 +85,8 @@ export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExp
         <MyResume add={page.add ?? false} docId={page.id ?? null} onAdd={onResumeAdd} onList={onResumeList} onDoc={onResumeDoc} onExplore={onExplore} />
       ) : page.kind === 'blogs' ? (
         <Blogs company={page.company ?? null} onCompany={onBlogs} onJobs={onCompany} />
+      ) : page.kind === 'labs' ? (
+        <Labs id={page.id ?? null} onOpen={onLabs} />
       ) : page.kind === 'company' ? (
         <Company key={page.id} id={page.id} onBack={onHome} onPick={onDiagnose} onPostings={onCompany} onBlogs={onBlogs} />
       ) : page.kind === 'diagnose' ? (

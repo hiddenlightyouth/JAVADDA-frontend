@@ -777,3 +777,37 @@ header[data-on-dark] .logo-mark {
   padding: 0 0.25em;
   color: var(--color-brand-hover);
 }
+
+/* 잡아따 Labs의 글자예요. 메인 컬러에서 보라, 분홍으로 넘어가는 빛이 왼쪽에서 오른쪽으로 사악 지나가요.
+   그라데이션 금지 규칙의 예외예요. 사이드바의 Labs 줄과 Labs 화면 제목에만 써요. */
+.labs-shine {
+  background-image: linear-gradient(100deg, #2e90fa 0%, #7a5af8 30%, #ee46bc 50%, #7a5af8 70%, #2e90fa 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: labs-shine 3.2s linear infinite;
+}
+
+/* 아이콘과 테두리처럼 글자가 아닌 곳에 같은 빛을 깔 때 써요. */
+.labs-glow {
+  background-image: linear-gradient(100deg, #2e90fa 0%, #7a5af8 30%, #ee46bc 50%, #7a5af8 70%, #2e90fa 100%);
+  background-size: 200% 100%;
+  animation: labs-shine 3.2s linear infinite;
+}
+
+@keyframes labs-shine {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .labs-shine,
+  .labs-glow {
+    animation: none;
+  }
+}

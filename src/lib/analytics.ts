@@ -52,6 +52,7 @@ const PAGE_TITLES = {
   map: 'Javadda 채용 지도',
   resume: 'Javadda 내 이력서',
   blogs: 'Javadda 기술 블로그',
+  labs: 'Javadda Labs',
   company: 'Javadda 기업 상세',
   diagnose: 'Javadda 진단 시작',
   report: 'Javadda 리포트',

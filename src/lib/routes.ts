@@ -37,6 +37,8 @@ const MAP_PATH = /^\/map\/?$/
 
 const RESUME_PATH = /^\/resume(?:\/([^/]+))?\/?$/
 
+const LABS_PATH = /^\/labs(?:\/([^/]+))?\/?$/
+
 const BLOGS_PATH = /^\/blogs(?:\/([^/]+))?\/?$/
 
 const COMPANY_PATH = /^\/company\/([^/]+)\/?$/
@@ -73,6 +75,8 @@ export type Page =
   /** add면 서류 추가 화면(/resume/new), id면 서류 하나의 상세 화면(/resume/아이디)이에요. */
   | { kind: 'resume'; add?: boolean; id?: string }
   | { kind: 'blogs'; company?: string }
+  /** id면 실험 하나를 연 화면(/labs/아이디)이에요. */
+  | { kind: 'labs'; id?: string }
   | { kind: 'company'; id: string }
   | { kind: 'diagnose'; postingId: string }
   | { kind: 'report'; id: string; tab: ReportTab }
@@ -81,7 +85,7 @@ export type Page =
   | { kind: 'account'; page: AccountPage }
   | { kind: 'article'; slug: string | null }
 
-/** 공고 탐색, 추천 공고, 마감 달력, 채용 지도, 내 이력서, 기술 블로그, 기업 상세, 진단, 리포트, 면접 연습, 관리자 화면은 앱 화면(macOS 앱, 웹의 /app)에서만 써요. */
+/** 공고 탐색, 추천 공고, 마감 달력, 채용 지도, 내 이력서, 기술 블로그, 잡아따 Labs, 기업 상세, 진단, 리포트, 면접 연습, 관리자 화면은 앱 화면(macOS 앱, 웹의 /app)에서만 써요. */
 export const isAppOnly = (page: Page) =>
   page.kind === 'explore' ||
   page.kind === 'recommend' ||
@@ -89,6 +93,7 @@ export const isAppOnly = (page: Page) =>
   page.kind === 'map' ||
   page.kind === 'resume' ||
   page.kind === 'blogs' ||
+  page.kind === 'labs' ||
   page.kind === 'company' ||
   page.kind === 'diagnose' ||
   page.kind === 'report' ||
@@ -110,6 +115,8 @@ export function pageFromPath(): Page | null {
   // 기술 블로그는 /blogs/기업아이디로 그 기업의 분석을 바로 열어요.
   const blogs = BLOGS_PATH.exec(path)
   if (blogs) return { kind: 'blogs', company: blogs[1] ? decodeURIComponent(blogs[1]) : undefined }
+  const labs = LABS_PATH.exec(path)
+  if (labs) return { kind: 'labs', id: labs[1] ? decodeURIComponent(labs[1]) : undefined }
   const company = COMPANY_PATH.exec(path)?.[1]
   if (company) return { kind: 'company', id: decodeURIComponent(company) }
   const postingId = diagnoseFromPath()
@@ -150,6 +157,8 @@ export function pathOf(page: Page | null): string {
       return page.add ? '/resume/new' : page.id ? `/resume/${encodeURIComponent(page.id)}` : '/resume'
     case 'blogs':
       return page.company ? `/blogs/${encodeURIComponent(page.company)}` : '/blogs'
+    case 'labs':
+      return page.id ? `/labs/${encodeURIComponent(page.id)}` : '/labs'
     case 'company':
       return `/company/${encodeURIComponent(page.id)}`
     case 'diagnose':

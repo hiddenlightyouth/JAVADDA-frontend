@@ -38,7 +38,7 @@
 - 숫자나 색만으로는 뜻을 모르는 것에는 마우스를 올리면 뜨는 짧은 설명(`Tip`)을 붙여요. 적합도(`FitBadge`)는 무엇을 재는지, 공고 기준으로 칠한 스킬 이름표(`SkillChip`의 met, partial, missing)는 충분히 보여요, 근거가 약해요, 보이지 않아요를 알려줘요. 잠깐(0.3초) 머물러야 뜨고, 짙은 회색 말풍선이에요. 카드나 스크롤 칸에 잘리지 않게 말풍선은 body에 고정 위치로 그리고, 위에 자리가 없으면 아래로 뒤집고 창 가장자리 안으로 맞춰요. 사이드바처럼 옆이 빈 곳에서는 `side="right"`로 오른쪽에 꼬리 달린 말풍선을 띄우고, 오른쪽에 자리가 없으면 위로 돌아가요.
 - 화면을 옮기면(리포트의 탭을 바꾸는 것도) 스크롤이 맨 위로 가요. `App.tsx`가 화면 칸(`data-screen`) 안의 스크롤 칸을 모두 맨 위로 올려요. 사이드바는 그대로예요.
 - 키보드로 옮겨 다닐 때는 버튼과 링크에 메인 컬러 테두리(`focus-visible`, `src/index.css`)가 보여요. 입력칸은 테두리 색으로 알려요.
-- 그림자 효과는 쓰지 않아요. 소개 화면 첫 화면의 빛줄기와 비네팅만 그라데이션의 예외예요. 경계가 필요하면 옅은 회색 테두리나 배경색 차이로 구분해요.
+- 그림자 효과는 쓰지 않아요. 소개 화면 첫 화면의 빛줄기와 비네팅, 잡아따 Labs의 빛(`index.css`의 `labs-shine`, `labs-glow`)만 그라데이션의 예외예요. 경계가 필요하면 옅은 회색 테두리나 배경색 차이로 구분해요.
 - 앱 화면의 바탕은 새 진단 화면처럼 모두 흰색이에요. 그 위의 카드와 칸(`Panel`, `JobCard`, `PostingTile`)은 테두리 없이 옅은 회색(gray-50)으로 채우고, 마우스를 올리면 한 단계 짙어져요. 회색 칸 안의 이름표와 작은 칸은 흰색, 막대의 빈 부분과 회색 배지는 gray-200/70이라 회색 바탕에서도 보여요. 서류를 흉내 내는 종이(`paper`)와 입력칸만 흰 바탕에 테두리를 둘러요. 공고 탐색의 카드(`JobCard`)는 예외로, 오른쪽 위 홈을 따라 옅은 회색 테두리를 둘러요.
 - 앱 화면의 제목(`PageHeader`)은 26px이고, 아래에 구분선 없이 여백만으로 내용과 나눠요(제목 줄의 pb-4와 내용의 pt-8, 합쳐 48px). 리포트처럼 탭이 있는 화면만 탭 줄 아래에 선이 있어요. 넓은 화면에서는 헤더를 36px로 줄여서 제목이 사이드바 로고와 같은 높이에 와요. 좁은 화면은 사이드바 버튼 자리 때문에 56px 그대로예요.
 - 그래프는 라이브러리 없이 SVG와 CSS로 그려요. 레이더(`Radar`), 점수 고리(`ScoreRing`), 점수 머리말의 구간 띠(`ScoreHero`, 50과 70에서 끊겨요), 가로 막대(`Meter`), 작은 세로 막대(`Sparkline`)가 `GapParts`에 있어요. 색은 메인 컬러와 회색만 써요.
@@ -72,7 +72,7 @@ public/skills/        기술 스택 로고 (스킬마다 SVG, 120개쯤). Devico
 public/download/appcast.xml  예전 Lofy 앱이 새 버전이 있는지 읽어 가는 업데이트 목록. 지우지 않아요.
 public/download/WhoIsLoafing.dmg  예전 Lofy 앱 설치 파일.
 public/download/javadda/  Javadda 앱의 설치 파일(Javadda.dmg), 업데이트 파일, 업데이트 목록(appcast.xml). JAVADDA-app 레포의 `PUBLISH=1 ./scripts/make-dmg.sh`가 만들어 넣어요.
-public/robots.txt     검색 로봇 안내 (API, /app 아래 주소, 리포트, 진단, 추천, 이력서, 기업 상세, 탐색, 내 정보와 내 리포트, 앱 로그인 화면, 관리자 화면은 막고, 사이트맵 위치를 알려줘요)
+public/robots.txt     검색 로봇 안내 (API, /app 아래 주소, 리포트, 진단, 추천, 이력서, 기업 상세, 탐색, Labs, 내 정보와 내 리포트, 앱 로그인 화면, 관리자 화면은 막고, 사이트맵 위치를 알려줘요)
 scripts/korea-map.mjs 채용 지도의 경계선(`src/lib/koreaMap.ts`)을 만들어요. 통계청 행정구역 경계를 줄인 southkorea-maps(kostat 2013)와 Natural Earth의 강(퍼블릭 도메인, 한강, 남한강, 낙동강)을 받아 돌리고, 자료에 없는 독도를 더해요. 강은 점이 드물어서 곡선으로 이어요. 한 번 만들어 커밋해 두고 경계가 바뀔 때만 다시 돌려요
 scripts/prerender.mjs 빌드 마지막에 소개 화면(메인 주소 `index.html`, 영어 `en.html`)과 아티클 화면을 언어별, 페이지별 HTML 파일로 만들고 사이트맵을 만들어요
 .env.production       배포용 빌드에 들어가는 공개 값 (백엔드 서버 주소, GA 측정 ID)
@@ -125,10 +125,11 @@ src/
   components/AppGate.tsx     앱에서 로그인하지 않았을 때 보여주는 로그인 화면
   components/AppFrame.tsx    앱의 배치. 왼쪽 사이드바와 접기 버튼, 설정 창, 화면 공유 중 가리는 막을 두르고, 로그인하지 않았을 때의 화면(`AppSignedOut`)도 여기 있어요
   components/PageView.tsx    주소로 여는 화면(공고 탐색, 추천 공고, 내 이력서, 기술 블로그, 기업 상세, 진단 시작, 리포트, 면접 연습, 관리자, 소개, 아티클, 계정, 앱 로그인)을 고르고, 화면 코드는 열 때만 받아요
-  components/AppSidebar.tsx  앱 화면 왼쪽의 사이드바 (새 진단, 공고 탐색, 추천 공고, 마감 달력, 채용 지도, 기술 블로그, 내 이력서, 내 리포트 목록, 앱 다운로드, 계정 메뉴)
+  components/AppSidebar.tsx  앱 화면 왼쪽의 사이드바 (새 진단, 공고 탐색, 추천 공고, 마감 달력, 채용 지도, 기술 블로그, 내 이력서, 잡아따 Labs, 내 리포트 목록, 앱 다운로드, 계정 메뉴)
   components/Home.tsx        새 진단 화면 (앱의 메인). 손글씨 Javadda, 타이틀, 기업과 공고 검색창, 그 아래 공고 줄(나와 잘 맞는 공고, 따끈따끈 공고, 마감이 가까운 공고, 다시 볼 공고)
   components/Jobs.tsx        공고 탐색 (/explore). 검색창과 직군, 경력, 정렬 드롭다운 한 줄, 기업 분류 버튼 줄(CategoryFilter), 갤러리형 카드(JobCard)와 리스트형 줄(JobRow)
   components/Blogs.tsx       기술 블로그 (/blogs, /blogs/기업). 모든 기업의 글을 기업과 주제로 걸러 보는 갤러리, 많이 다룬 주제 칸, 기업을 고르면 그 기업의 요즘 고민과 면접에서 쓸 점. 글은 미니 브라우저로 열어요
+  components/Labs.tsx        잡아따 Labs (/labs, 실험 하나는 /labs/아이디). 재미로 넣는 실험 기능 목록(EXPERIMENTS)과 실험 화면
   components/Recommend.tsx   추천 공고 (/recommend). 정렬, 적합도 메뉴 한 줄과 공고 탐색과 같은 카드
   components/Company.tsx     기업 상세 (/company/기업아이디). 소개와 훑어보는 정보, 채용 중인 공고, 자주 나오는 면접 질문, 위치(`CompanyLocation`), 기술 스택, 기술 블로그 요약(`blogs.ts`). 기업 사이트는 미니 브라우저로 열어요
   components/Carousel.tsx    한 줄에 들어가는 만큼 칸을 보여주고 잠깐마다 한 칸씩 밀며 도는 줄(Carousel). 새 진단 화면의 기업으로 둘러보기가 써요
@@ -319,6 +320,12 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 글 카드와 블로그 열기는 공고 원문처럼 앱 안의 미니 브라우저(`PostingBrowser`의 `page`)로 열어요. Cmd, Ctrl, Shift, 가운데 버튼으로 누르면 새 탭으로 열려요. 네이버 D2, 카카오, 미디엄(당근, 쿠팡, 원티드, 직방), 무신사 블로그는 다른 서비스 안에 띄우는 것을 막아 둬서(`FRAME_BLOCKED`), 미니 브라우저를 거치지 않고 "해당 링크로 이동하는 중" 창(`LeaveDialog`)에서 "3초 뒤에 새 탭에서 해당 링크가 열립니다."로 숫자를 센 뒤 새 탭으로 열어요. 취소로 멈추고 이동으로 바로 열어요. 브라우저가 새 탭을 막으면 창을 그대로 두고 이동을 누르라고 알려요.
 - 주제(`THEME_NAMES`)는 여러 기업의 글을 같은 기준으로 묶는 이름이에요. 주제 칸과 주제 메뉴는 글에 붙인 주제로 계산해서, 글을 더하면 분석도 같이 바뀌어요.
 
+잡아따 Labs (`Labs`, `/labs`, 실험 하나는 `/labs/아이디`)
+
+- 진단과 상관없이 재미로 넣는 실험 기능을 모아 두는 곳이에요. 사이드바의 내 이력서 아래에 플라스크 아이콘과 "잡아따 Labs"(영어는 Javadda Labs)가 있고, 글자에 메인 컬러에서 보라, 분홍으로 넘어가는 빛이 왼쪽에서 오른쪽으로 계속 지나가요(`labs-shine`). Labs 화면 제목도 같은 빛이에요. 움직임 줄이기 설정이면 멈춰요. 브랜딩의 서비스명 규칙과 달리 화면에 "잡아따"를 그대로 써요.
+- 화면에는 "재미로 만들어 보는 실험실이에요. 언제든 바뀌거나 사라질 수 있어요." 한 줄과 실험 카드(회색 칸에 이름과 한두 문장)가 있어요. 실험이 없으면 빛이 지나가는 플라스크 칸과 "첫 번째 실험을 준비하고 있어요"를 보여줘요. 카드를 누르면 `/labs/아이디`로 그 실험을 열고, 제목 줄의 뒤로 가기는 Labs로 가요. 없는 실험이면 안내와 Labs로 돌아가는 버튼이에요.
+- 실험을 더할 때는 컴포넌트를 따로 만들고(`components/labs/` 아래) `Labs.tsx`의 `EXPERIMENTS`에 아이디, 이름, 설명, lazy로 감싼 화면을 한 줄 더해요. 실험 코드는 열 때만 받아요. 로그인 없이 볼 수 있어요.
+
 기업 상세 (`Company`, `/company/기업아이디`)
 
 - 새 진단 화면의 기업으로 둘러보기에서 기업을 누르면 열려요. 제목 줄에 기업 로고, 업종(작게), 기업 이름, 뒤로 가기가 있고, 오른쪽에 "기술 블로그"와 "기업 사이트"(미니 브라우저, `SplitView`) 버튼이 있어요. 기술 블로그는 `blogs.ts`에 요약이 있으면 기술 블로그 화면의 그 기업(`/blogs/기업아이디`)으로, 없고 블로그 주소만 있으면 새 탭으로 열어요.
@@ -459,7 +466,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 | 이벤트 | 언제 | 주요 값 |
 | --- | --- | --- |
-| `page_view` | 화면이 바뀔 때 | `screen`(home, explore, recommend, calendar, map, resume, blogs, company, diagnose, report, practice, about, articles, article, login, signup, me, history, app-login, admin), `posting`, `tab`, `slug` |
+| `page_view` | 화면이 바뀔 때 | `screen`(home, explore, recommend, calendar, map, resume, blogs, labs, company, diagnose, report, practice, about, articles, article, login, signup, me, history, app-login, admin), `posting`, `tab`, `slug`, `experiment`(Labs의 실험, 목록이면 all) |
 | `posting_select` | 공고 카드나 검색 결과를 눌러 진단 시작으로 갔을 때 | `posting`, `from`(home, explore, recommend, company, map, calendar-cell, calendar-list), `query` |
 | `home_more_click` | 새 진단 화면의 공고 줄에서 전체 보기를 눌렀을 때 | `row`(fit, companies, recent, closing) |
 | `home_company_select` | 새 진단 화면의 요즘 뜨는 기업이나 기업으로 둘러보기에서 기업을 눌렀을 때 | `company`, `from`(hot, browse) |
@@ -474,6 +481,8 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `map_company_select` | 채용 지도에서 기업 이름표를 누르거나 풀었을 때 | `company` |
 | `company_map_open` | 기업 상세의 위치 칸에서 네이버 지도를 열었을 때 | `company` |
 | `explore_open`, `recommend_open`, `resume_open`, `blogs_open` | 사이드바에서 공고 탐색, 추천 공고, 내 이력서, 기술 블로그를 눌렀을 때 | `from`(sidebar) |
+| `labs_open` | 사이드바에서 잡아따 Labs를 눌렀을 때 | `from`(sidebar) |
+| `labs_experiment_open` | Labs에서 실험 카드를 눌렀을 때 | `experiment` |
 | `blog_company_select` | 기술 블로그에서 기업을 고르거나 전체로 돌아갔을 때 | `company`, `from`(chips) |
 | `blog_theme_select` | 기술 블로그에서 주제를 고르거나 풀었을 때 | `theme`, `from`(menu, card, outlook, empty) |
 | `blog_post_open` | 기술 블로그에서 글이나 블로그를 열었을 때. 기업 상세의 블로그 글도 이 이벤트예요 | `company`, `from`(browser, tab, company) |
@@ -543,6 +552,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 소개 화면을 메인 주소로, 웹의 /app에서 앱과 같은 화면으로 진단하기 (위의 웹 앱 절 참고)
 - 새 진단 화면 (손글씨 Javadda, 타이틀, 기업과 공고 검색, 공고 줄)
 - 기업 기술 블로그 요약과 요즘 고민 분석 (위의 진단 흐름 절 참고)
+- 잡아따 Labs 자리 (실험 기능은 아직 없어요, 위의 진단 흐름 절 참고)
 - 채용 지도와 기업 상세의 위치 (위의 진단 흐름 절 참고)
 - 공고 탐색, 추천 공고, 기업 상세, 내 이력서, 진단 시작, 리포트(네 탭과 갭 상세), 면접 연습, 내 리포트 (위의 진단 흐름 절 참고)
 - 소개 화면과 아티클, 한국어와 영어 화면 (위의 각 절 참고)
@@ -569,6 +579,6 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 아티클과 `public/about` 스크린샷을 이 서비스에 맞게 바꾸기
 - 레포 분석 시절에 남은 것 정리: 로그인할 때 부르는 POST `/users/me/chats/claim`과 `X-Owner-Key`(`auth.ts`의 `startSession`, `http.ts`의 `ownerHeaders`), 앱 로그인 화면의 권한 문구(`PERMISSIONS`), 요금제 설명, 아티클 맨 아래 "레포 분석하러 가기", 버그 신고의 `chatId`, 관리자 화면의 채팅 탭과 채팅 수치(`PageView`가 넘기는 `onOpenChat`은 아무것도 하지 않아서 "채팅 열기" 버튼이 동작하지 않아요)
 - 설정 창처럼 `Modal` 안에서 드롭다운을 연 채 Esc를 누르면 메뉴만 닫히지 않고 창이 닫혀요. `Modal`이 Esc를 먼저 받아요
-- 예전 주소(`/app`이 없는 주소)를 옮기는 `shell.ts`의 `APP_ROUTES`에 마감 달력, 채용 지도, 기술 블로그가 없어요
+- 예전 주소(`/app`이 없는 주소)를 옮기는 `shell.ts`의 `APP_ROUTES`에 마감 달력, 채용 지도, 기술 블로그가 없어요(Labs는 있어요)
 - `npm run typecheck`가 `vite.config.ts`와 `scripts/`를 보지 않아요(tsconfig의 include)
 - `useServerConfig`는 `/config`를 처음 한 번만 받아서, 설정 창이 다시 받은 값(`refreshConfig`)을 따라가지 않아요

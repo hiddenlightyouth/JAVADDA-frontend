@@ -12,7 +12,7 @@ import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { readJson, writeJson } from '../lib/storage'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
-import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
+import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, FlaskIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { fitColor, Tip } from './GapParts'
 import { Avatar } from './Avatar'
@@ -28,6 +28,7 @@ const TEXT = messages({
     resume: '내 이력서',
     resumeReady: '이력서 등록됨',
     blogs: '기술 블로그',
+    labs: '잡아따 Labs',
     me: '내 정보',
     admin: '관리자',
     signOut: '로그아웃',
@@ -49,6 +50,7 @@ const TEXT = messages({
     resume: 'My resume',
     resumeReady: 'Resume added',
     blogs: 'Tech blogs',
+    labs: 'Javadda Labs',
     me: 'Account',
     admin: 'Admin',
     signOut: 'Sign out',
@@ -71,7 +73,7 @@ function resetLeft(value: string): { days: number; hours: number } | null {
   return { days: hours >= 24 ? Math.ceil(ms / 86_400_000) : 0, hours }
 }
 
-type SidebarPage = 'explore' | 'recommend' | 'calendar' | 'map' | 'resume' | 'blogs' | 'articles' | 'me' | 'history' | 'admin' | null
+type SidebarPage = 'explore' | 'recommend' | 'calendar' | 'map' | 'resume' | 'blogs' | 'labs' | 'articles' | 'me' | 'history' | 'admin' | null
 
 /** 접어 둔 이력서 폴더의 아이디예요. 이 기기에 기억해요. */
 const CLOSED_FOLDERS_KEY = 'javadda:sidebar-closed-resumes'
@@ -95,6 +97,8 @@ interface Props {
   onResume: () => void
   /** 기술 블로그 요약을 열어요. */
   onBlogs: () => void
+  /** 재미로 넣는 실험 기능을 모은 잡아따 Labs를 열어요. */
+  onLabs: () => void
   onOpenReport: (id: string) => void
   /** 내 리포트 화면(전체 목록)을 열어요. */
   onHistory: () => void
@@ -255,8 +259,8 @@ function NavLink({ href, active, onClick, icon, label, shortcut, trailing, locke
   )
 }
 
-/** 앱 화면 왼쪽의 사이드바예요. 새 진단, 공고 탐색, 추천 공고, 기술 블로그, 내 이력서, 내 리포트 목록과 관리, 내 정보로 가는 링크가 있어요. */
-export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onCalendar, onMap, onResume, onBlogs, onOpenReport, onHistory, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, signedIn, onLogin }: Props) {
+/** 앱 화면 왼쪽의 사이드바예요. 새 진단, 공고 탐색, 추천 공고, 기술 블로그, 내 이력서, 잡아따 Labs, 내 리포트 목록과 관리, 내 정보로 가는 링크가 있어요. */
+export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onCalendar, onMap, onResume, onBlogs, onLabs, onOpenReport, onHistory, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, signedIn, onLogin }: Props) {
   const { me } = useAuth()
   const list = useMessages(REPORT_LIST_TEXT)
   const text = useMessages(TEXT)
@@ -403,6 +407,19 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           icon={<DocumentIcon />}
           trailing={resume && <CheckIcon className="size-3.5 shrink-0 text-brand" label={text.resumeReady} />}
         />
+        {/* 실험 기능은 다른 메뉴와 달리 글자에 빛이 사악 지나가서, 재미로 들르는 곳이라는 게 보여요. */}
+        <a
+          href="/labs"
+          aria-current={page === 'labs' ? 'page' : undefined}
+          onClick={followLink(() => {
+            track('labs_open', { from: 'sidebar' })
+            onLabs()
+          })}
+          className={`${link} mt-1.5 gap-2 ${tone(page === 'labs')}`}
+        >
+          <FlaskIcon className="size-4 shrink-0 text-[#7a5af8]" />
+          <span className="labs-shine flex-1 font-semibold">{text.labs}</span>
+        </a>
       </div>
 
       <div className="mt-5 flex items-center justify-between px-6">

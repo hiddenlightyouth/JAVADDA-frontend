@@ -330,6 +330,16 @@ export function SparkleIcon({ className = 'size-3.5 shrink-0', strokeWidth = 1.4
   )
 }
 
+/** 잡아따 Labs의 실험실 플라스크예요. */
+export function FlaskIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M6 2.5h4M6.6 2.5v3.8L3 12.4a.8.8 0 0 0 .7 1.1h8.6a.8.8 0 0 0 .7-1.1L9.4 6.3V2.5" />
+      <path d="M4.6 9.8h6.8" />
+    </Icon>
+  )
+}
+
 /** 마우스를 올리면 그 자리에서 고칠 수 있다고 알리는 연필이에요. */
 export function PencilIcon({ className = 'size-3.5 shrink-0', strokeWidth = 1.4, label }: IconProps) {
   return (

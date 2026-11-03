@@ -46,7 +46,8 @@ export function ScrollPage({ header, children, className = '' }: { header: React
  * 오른쪽에는 그 화면의 버튼을 둬요. 탭이 있으면 이 줄 바로 아래에 붙여요.
  */
 export function PageHeader({ title, owner, mark, onBack, backLabel, actions }: {
-  title: string
+  /** 보통은 글자예요. 잡아따 Labs처럼 제목을 꾸밀 때만 글자 대신 요소를 넘겨요. */
+  title: ReactNode
   owner?: string
   /** 제목 왼쪽에 두는 그림. 기업 로고 같은 것이에요. */
   mark?: ReactNode

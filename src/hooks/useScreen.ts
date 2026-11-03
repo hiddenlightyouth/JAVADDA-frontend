@@ -28,6 +28,8 @@ function trackPage(page: Page | null) {
     case 'map':
     case 'resume':
       return trackPageView(page.kind)
+    case 'labs':
+      return trackPageView('labs', { experiment: page.id ?? 'all' })
     case 'blogs':
       return trackPageView('blogs', { company: page.company ?? 'all' })
     case 'company':

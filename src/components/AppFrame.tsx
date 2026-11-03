@@ -116,6 +116,8 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
       onRecommend={closing(sidebar.onRecommend)!}
       onCalendar={closing(sidebar.onCalendar)!}
       onMap={closing(sidebar.onMap)!}
+      onBlogs={closing(sidebar.onBlogs)!}
+      onLabs={closing(sidebar.onLabs)!}
       onAdmin={closing(sidebar.onAdmin)}
       onSettings={openSettings}
       settingsOpen={settingsOpen}
