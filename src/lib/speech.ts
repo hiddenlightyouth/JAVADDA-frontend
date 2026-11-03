@@ -200,7 +200,7 @@ export function setPracticeVolume(value: number) {
 export function prefetchVoice(text: string, voice: string | null) {
   const name = voiceName(text, voice)
   if (voices.has(name) || prefetching.has(name)) return
-  const request = fetchVoice(text, voice, new AbortController().signal).finally(() => prefetching.delete(name))
+  const request = fetchVoice(text, voice, new AbortController().signal, false).finally(() => prefetching.delete(name))
   prefetching.set(name, request)
 }
 
@@ -209,32 +209,84 @@ const voiceName = (text: string, voice: string | null) => `${voice ?? ''}\n${tex
 /** 미리 받는 중인 음성이에요. 받는 사이에 그 질문을 읽으면 같은 음성을 두 번 만들지 않고 이것을 기다려요. 미리 받기는 멈추지 않아요. */
 const prefetching = new Map<string, Promise<Voice | null>>()
 
-/** 사람 목소리 음성을 받아요. 못 받으면 null이에요. */
-async function fetchVoice(text: string, voice: string | null, signal: AbortSignal): Promise<Voice | null> {
+/**
+ * 한 번에 서버로 보내는 음성 요청 수예요. ElevenLabs는 동시에 만들 수 있는 수가 정해져 있어서(요금제마다 2에서 5), 시작 화면에서 인사와 잡담을 한꺼번에 보내면 일부가 거절돼요.
+ * 넘는 요청은 줄을 서고, 지금 읽을 음성은 미리 받는 음성보다 먼저예요.
+ */
+const MAX_REQUESTS = 2
+let activeRequests = 0
+const waiting: { name: string; run: () => void }[] = []
+
+function slot(name: string, urgent: boolean): Promise<() => void> {
+  return new Promise((resolve) => {
+    const run = () => {
+      activeRequests += 1
+      let released = false
+      resolve(() => {
+        if (released) return
+        released = true
+        activeRequests -= 1
+        waiting.shift()?.run()
+      })
+    }
+    if (activeRequests < MAX_REQUESTS) run()
+    else if (urgent) waiting.unshift({ name, run })
+    else waiting.push({ name, run })
+  })
+}
+
+/** 줄을 서 있는 미리 받기를 맨 앞으로 당겨요. 지금 그 음성을 읽으려고 기다릴 때예요. */
+function hurry(name: string) {
+  const at = waiting.findIndex((item) => item.name === name)
+  if (at > 0) waiting.unshift(...waiting.splice(at, 1))
+}
+
+/** 잠깐 몰려서 거절된 요청(동시에 너무 많이, 서버 오류)은 조금 쉬었다가 다시 보내요. */
+const RETRY_STATUS = new Set([429, 500, 502, 504])
+const RETRY_DELAYS_MS = [700, 1600, 3000]
+
+const pause = (ms: number, signal: AbortSignal) =>
+  new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, ms)
+    signal.addEventListener('abort', () => (clearTimeout(timer), resolve()), { once: true })
+  })
+
+/** 사람 목소리 음성을 받아요. 못 받으면 null이에요. urgent는 지금 읽을 음성이라 줄 맨 앞에 서고 더 여러 번 다시 보내요. */
+async function fetchVoice(text: string, voice: string | null, signal: AbortSignal, urgent = true): Promise<Voice | null> {
   const name = voiceName(text, voice)
   const known = voices.get(name)
   if (known) return known
   const ahead = prefetching.get(name)
-  if (ahead) {
+  if (ahead && urgent) {
+    hurry(name)
     // 미리 받기가 실패했으면 아래에서 다시 받아요.
     const got = await ahead
     if (got) return got
   }
-  if (remoteOff) return null
-  try {
-    const response = await fetch('/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, voice: voice ?? undefined }), signal })
-    if (!response.ok) {
-      if (response.status === 503 || response.status === 404 || response.status === 405) remoteOff = true
-      else track('practice_tts_fallback', { status: response.status })
-      return null
+  const tries = urgent ? RETRY_DELAYS_MS.length + 1 : 2
+  for (let attempt = 0; attempt < tries && !remoteOff && !signal.aborted; attempt += 1) {
+    if (attempt > 0) await pause(RETRY_DELAYS_MS[attempt - 1], signal)
+    const release = await slot(name, urgent)
+    try {
+      if (signal.aborted) return null
+      const response = await fetch('/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, voice: voice ?? undefined }), signal })
+      if (!response.ok) {
+        if (response.status === 503 || response.status === 404 || response.status === 405) remoteOff = true
+        else track('practice_tts_fallback', { status: response.status, attempt })
+        if (!RETRY_STATUS.has(response.status)) return null
+        continue
+      }
+      const timing = readTiming(response.headers.get('X-TTS-Timing'), text)
+      const result = { url: URL.createObjectURL(await response.blob()), timing }
+      voices.set(name, result)
+      return result
+    } catch {
+      if (signal.aborted) return null
+    } finally {
+      release()
     }
-    const timing = readTiming(response.headers.get('X-TTS-Timing'), text)
-    const result = { url: URL.createObjectURL(await response.blob()), timing }
-    voices.set(name, result)
-    return result
-  } catch {
-    return null
   }
+  return null
 }
 
 /** 브라우저 음성이 글자 위치를 알려 주지 않을 때, 한 글자를 읽는 데 걸린다고 보는 시간(초)이에요. */
@@ -270,6 +322,10 @@ export function useSpeak() {
   const [preparing, setPreparing] = useState(false)
   /** 사람 목소리를 쓸 수 있는지예요. 서버에 키가 없으면 목소리를 고를 수 없어요. */
   const [remote, setRemote] = useState(!remoteOff)
+  /** 사람 목소리를 끝내 받지 못했는지예요. 브라우저 음성으로 바꿔 읽지 않고, 화면이 준비되지 않았다고 알리고 다시 시도를 받아요. */
+  const [failed, setFailed] = useState(false)
+  /** 지금 읽는 글이에요. 다시 시도할 때 써요. */
+  const current = useRef<{ text: string; voice: string | null; hold: boolean } | null>(null)
   const [progress, setProgress] = useState(0)
   /** 가장 최근의 읽기예요. 음성을 받는 동안 멈추면 늦게 온 음성을 틀지 않아요. */
   const turn = useRef(0)
@@ -300,8 +356,10 @@ export function useSpeak() {
     audio.current = null
     if ('speechSynthesis' in window) window.speechSynthesis.cancel()
     pose.current = REST
+    current.current = null
     setSpeaking(false)
     setPreparing(false)
+    setFailed(false)
     finish()
   }, [finish])
 
@@ -365,24 +423,39 @@ export function useSpeak() {
     [ended],
   )
 
-  const speak = useCallback(
-    (text: string, voice: string | null = null) => {
-      stop()
+  /**
+   * 사람 목소리를 끝내 받지 못했을 때예요. 서버에 키가 없으면 브라우저 음성으로 읽고, 있으면 브라우저 음성으로 바꾸지 않아요.
+   * hold면 다시 시도하거나 멈출 때까지 끝내지 않고(질문), 아니면 소리 없이 끝내요(인사, 잡담).
+   */
+  const fail = useCallback(
+    (text: string, mine: number, hold: boolean) => {
+      if (mine !== turn.current) return
+      audio.current = null
+      pose.current = REST
+      if (remoteOff) return speakInBrowser(text, mine)
+      if (!hold) return ended(mine)
+      setFailed(true)
+    },
+    [ended, speakInBrowser],
+  )
+
+  /** 음성을 받아 틀어요. speak와 retry가 같이 써요. 끝나는 약속(settle)은 건드리지 않아요. */
+  const play = useCallback(
+    (text: string, voice: string | null, hold: boolean) => {
       const mine = turn.current
-      const done = new Promise<void>((resolve) => {
-        settle.current = resolve
-      })
       const controller = new AbortController()
       request.current = controller
+      current.current = { text, voice, hold }
       setProgress(0)
       setSpeaking(true)
       setPreparing(true)
+      setFailed(false)
       void (async () => {
         const result = await fetchVoice(text, voice, controller.signal)
         if (mine !== turn.current) return
         setPreparing(false)
         setRemote(!remoteOff)
-        if (!result) return speakInBrowser(text, mine)
+        if (!result) return fail(text, mine, hold)
         const { url, timing } = result
         const player = new Audio(url)
         player.volume = practiceVolume.get()
@@ -399,10 +472,9 @@ export function useSpeak() {
         } catch { /* Character timing remains available without Web Audio. */ }
         player.onended = () => ended(mine)
         player.onerror = () => {
+          // 재생 실패와 오류가 둘 다 와도 한 번만 실패로 쳐요.
           if (mine !== turn.current || audio.current !== player) return
-          // 사람 목소리의 칠하기가 브라우저 음성의 칠하기와 겹치지 않게 놓아요. 재생 실패와 오류가 둘 다 와도 브라우저 음성은 한 번만 읽어요.
-          audio.current = null
-          speakInBrowser(text, mine)
+          fail(text, mine, hold)
         }
         const tick = () => {
           if (mine !== turn.current || audio.current !== player || player.ended) return
@@ -420,24 +492,43 @@ export function useSpeak() {
           else if (player.duration > 0) setProgress(Math.min(1, player.currentTime / player.duration))
           requestAnimationFrame(tick)
         }
-        // 음성을 받는 사이에 브라우저가 재생을 막으면 브라우저 음성으로 넘어가요.
+        // 음성을 받는 사이에 브라우저가 재생을 막으면 실패로 쳐요. 다시 시도를 누르면 그 순간이라 막히지 않아요.
         await player.play().then(
           () => requestAnimationFrame(tick),
           () => {
             if (mine !== turn.current || audio.current !== player) return
-            audio.current = null
-            speakInBrowser(text, mine)
+            fail(text, mine, hold)
           },
         )
       })()
+    },
+    [ended, fail],
+  )
+
+  /** hold는 사람 목소리를 받지 못했을 때 끝내지 않고 다시 시도를 기다릴지예요. 질문을 읽을 때 켜요. */
+  const speak = useCallback(
+    (text: string, voice: string | null = null, { hold = false }: { hold?: boolean } = {}) => {
+      stop()
+      const done = new Promise<void>((resolve) => {
+        settle.current = resolve
+      })
+      play(text, voice, hold)
       return done
     },
-    [ended, speakInBrowser, stop],
+    [play, stop],
   )
+
+  /** 받지 못한 음성을 다시 받아요. speak가 돌려준 약속은 그대로라, 다 읽으면 이어서 진행돼요. */
+  const retry = useCallback(() => {
+    const last = current.current
+    if (!last) return
+    turn.current += 1
+    play(last.text, last.voice, last.hold)
+  }, [play])
 
   useEffect(() => stop, [stop])
 
-  return { speaking, preparing, remote, progress, pose, speak, stop }
+  return { speaking, preparing, failed, remote, progress, pose, speak, stop, retry }
 }
 
 /** 띵 소리를 낼 오디오예요. 처음 누를 때 만들어 둬야 브라우저가 막지 않아요. */

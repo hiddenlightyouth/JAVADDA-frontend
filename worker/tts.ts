@@ -20,6 +20,7 @@ const DEFAULT_BASE_URL = 'https://api.elevenlabs.io'
 /** 한국어를 지원하는 모델 중 가장 자연스러워요. 최신 v4는 이 API로 쓸 수 없어요. */
 const DEFAULT_MODEL_ID = 'eleven_multilingual_v2'
 const OUTPUT_FORMAT = 'mp3_44100_128'
+const UPSTREAM_RETRY_MS = [600, 1500]
 /** 면접관답게 흔들림 없이 말해요. 보통 빠르기는 조금 느리게 들려서 살짝 빠르게 두고(1.1을 넘기면 한국어 음절이 뭉개져요), stability를 조금 높여 억양과 숨 쉬는 자리가 튀지 않게 해요. style은 0이어야 또렷해요. */
 const VOICE_SETTINGS = { stability: 0.65, similarity_boost: 0.75, style: 0, use_speaker_boost: true, speed: 1.08 }
 
@@ -104,13 +105,22 @@ export async function handleTts(request: Request, env: TtsEnv, options: TtsOptio
 
   const pieces = piecesOf(text)
   const base = (env.ELEVENLABS_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, '')
+  const apiKey = env.ELEVENLABS_API_KEY
   // with-timestamps는 음성과 함께 글자마다 읽는 시각을 돌려줘요. 화면의 자막을 소리와 맞추는 데 써요.
-  const upstream = await fetch(`${base}/v1/text-to-speech/${encodeURIComponent(voice)}/with-timestamps?output_format=${OUTPUT_FORMAT}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'xi-api-key': env.ELEVENLABS_API_KEY },
-    // v3는 설정의 허용 범위가 달라서 목소리에 저장된 값을 그대로 써요.
-    body: JSON.stringify({ text: pieces.map((piece) => piece.spoken).join(''), model_id: model, ...(model.startsWith('eleven_v3') ? {} : { voice_settings: VOICE_SETTINGS }) }),
-  }).catch(() => null)
+  const call = () =>
+    fetch(`${base}/v1/text-to-speech/${encodeURIComponent(voice)}/with-timestamps?output_format=${OUTPUT_FORMAT}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'xi-api-key': apiKey },
+      // v3는 설정의 허용 범위가 달라서 목소리에 저장된 값을 그대로 써요.
+      body: JSON.stringify({ text: pieces.map((piece) => piece.spoken).join(''), model_id: model, ...(model.startsWith('eleven_v3') ? {} : { voice_settings: VOICE_SETTINGS }) }),
+    }).catch(() => null)
+  // ElevenLabs는 동시에 만드는 수가 넘거나 잠깐 바쁘면 429나 5xx로 거절해요. 조금 쉬었다가 두 번까지 다시 보내요.
+  let upstream = await call()
+  for (const delay of UPSTREAM_RETRY_MS) {
+    if (upstream && upstream.status !== 429 && upstream.status < 500) break
+    await new Promise((resolve) => setTimeout(resolve, delay))
+    upstream = await call()
+  }
   if (!upstream?.ok) {
     console.error('ElevenLabs request failed', upstream?.status ?? 'network')
     return reply(502, 'upstream_failed')

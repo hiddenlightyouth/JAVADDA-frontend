@@ -39,6 +39,8 @@ const TEXT = messages({
     ready: '이제 면접 질문이 준비되었어요. 첫 번째 질문을 시작할게요.',
     gradedBy: (name: string) => `${name} 면접관의 평가예요`,
     preparing: '면접관이 질문을 준비하고 있어요',
+    voiceFailed: '면접관 목소리를 아직 준비하지 못했어요',
+    retryVoice: '다시 시도',
     speaking: '질문 중',
     answerNow: '바로 답하기',
     listening: '답변을 기다리는 중',
@@ -93,6 +95,8 @@ const TEXT = messages({
     ready: 'Your interview questions are ready. Let us start with the first one.',
     gradedBy: (name: string) => `Graded by ${name}`,
     preparing: 'The interviewer is getting ready',
+    voiceFailed: "The interviewer's voice isn't ready yet",
+    retryVoice: 'Try again',
     speaking: 'Asking',
     answerNow: 'Answer now',
     listening: 'Waiting for your answer',
@@ -277,8 +281,8 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     const question = questions[at]
     const upcoming = questions[at + 1]
     if (upcoming && canSpeak()) prefetchVoice(upcoming.question, speaker)
-    // 바로 답하기를 누르면 읽기가 멈추면서 여기서 이어져요.
-    if (canSpeak()) await voice.speak(question.question, speaker)
+    // 바로 답하기를 누르면 읽기가 멈추면서 여기서 이어져요. 목소리를 받지 못하면 다시 시도나 바로 답하기를 누를 때까지 기다려요.
+    if (canSpeak()) await voice.speak(question.question, speaker, { hold: true })
     if (mine !== run.current) return
     chime()
     setPhase('answering')
@@ -563,7 +567,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
         <div className="flex flex-1 flex-col pt-[5vh] pb-6">
           <Interviewer key={interviewer.key} pose={voice.pose} portrait={interviewer.portrait} label={`${pick(interviewer.role)} ${pick(interviewer.name)}`} />
           <p className="flex items-center gap-2 text-[13px] font-medium text-[#fff]/45">
-            <span>{phase === 'asking' ? (voice.preparing ? L.preparing : L.speaking) : phase === 'moving' ? (index + 1 >= total ? L.last : L.moving) : L.listening}</span>
+            <span>{phase === 'asking' ? (voice.failed ? L.voiceFailed : voice.preparing ? L.preparing : L.speaking) : phase === 'moving' ? (index + 1 >= total ? L.last : L.moving) : L.listening}</span>
           </p>
           <Karaoke key={current.id} text={current.question} progress={progressValue} dim={phase === 'moving'} />
 
@@ -606,6 +610,11 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
           </p>
         )}
         <div className="flex min-h-14 flex-wrap items-center justify-center gap-3 pb-2">
+          {phase === 'asking' && canSpeak() && voice.failed && (
+            <button type="button" onClick={voice.retry} className={darkButton}>
+              {L.retryVoice}
+            </button>
+          )}
           {phase === 'asking' && canSpeak() && (
             <button type="button" onClick={() => voice.stop()} className={darkButton}>
               {L.answerNow}

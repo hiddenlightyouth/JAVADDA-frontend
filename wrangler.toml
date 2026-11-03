@@ -8,11 +8,11 @@ not_found_handling = "single-page-application"
 # 음성 경로만 Worker가 받고, 나머지는 정적 파일이 바로 응답해요.
 run_worker_first = ["/tts"]
 
-# 음성을 새로 만드는 횟수는 주소 하나당 1분에 20번까지예요.
+# 음성을 새로 만드는 횟수는 주소 하나당 1분에 60번까지예요. 시작 화면에서 인사와 잡담을 한꺼번에 미리 받아서 20번이면 모자라요.
 [[ratelimits]]
 name = "TTS_LIMIT"
 namespace_id = "1001"
 
   [ratelimits.simple]
-  limit = 20
+  limit = 60
   period = 60
