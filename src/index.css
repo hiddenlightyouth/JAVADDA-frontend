@@ -778,15 +778,10 @@ header[data-on-dark] .logo-mark {
   color: var(--color-brand-hover);
 }
 
-/* 사이드바의 잡아따 Labs 줄이에요. 크리스마스라 빨강과 초록 바탕 위로 금빛이 사악 지나가요.
+/* 사이드바의 잡아따 Labs 줄이에요. 크리스마스라 빨강과 초록 바탕이에요.
    그라데이션 금지 규칙의 예외이고, 사이드바의 이 줄에만 써요. 계절이 바뀌면 색만 바꿔요. */
 .labs-season {
-  background-image:
-    linear-gradient(105deg, transparent 35%, rgb(255 236 170 / 0.55) 50%, transparent 65%),
-    linear-gradient(100deg, #d32f2f 0%, #c62828 44%, #2e7d32 56%, #1b5e20 100%);
-  background-size: 250% 100%, 100% 100%;
-  background-repeat: no-repeat;
-  animation: labs-season 3.2s ease-in-out infinite;
+  background-image: linear-gradient(100deg, #d32f2f 0%, #c62828 44%, #2e7d32 56%, #1b5e20 100%);
 }
 
 /* 잡아따 Labs 줄 안에 눈이 내려요. 송이마다 자리와 크기, 빠르기, 늦게 시작하는 시간을 인라인 값(--x, --s, --d, --t)으로 받아요. */
@@ -823,20 +818,7 @@ header[data-on-dark] .logo-mark {
   }
 }
 
-@keyframes labs-season {
-  from {
-    background-position: 130% 0, 0 0;
-  }
-  to {
-    background-position: -30% 0, 0 0;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .labs-season {
-    animation: none;
-    background-position: 130% 0, 0 0;
-  }
   .labs-snow {
     display: none;
   }

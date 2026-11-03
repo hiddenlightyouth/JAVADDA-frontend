@@ -435,7 +435,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           icon={<DocumentIcon />}
           trailing={resume && <CheckIcon className="size-3.5 shrink-0 text-brand" label={text.resumeReady} />}
         />
-        {/* 실험 기능은 다른 메뉴와 달리 계절 색 바탕에 빛이 사악 지나가고 눈이 내려서, 재미로 들르는 곳이라는 게 보여요. 지금은 크리스마스예요. */}
+        {/* 실험 기능은 다른 메뉴와 달리 계절 색 바탕에 눈이 내려서, 재미로 들르는 곳이라는 게 보여요. 지금은 크리스마스예요. */}
         <a
           href="/labs"
           aria-current={page === 'labs' ? 'page' : undefined}
