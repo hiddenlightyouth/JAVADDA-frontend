@@ -8,7 +8,7 @@ import { FlaskIcon } from './Icons'
 import { stagger } from './ui'
 
 /**
- * 잡아따 Labs (/labs, 실험 하나는 /labs/아이디)예요. 진단과 상관없이 재미로 넣는 실험 기능을 모아 둬요.
+ * 사이드바의 잡아따 Labs를 누르면 여는 실험실 (/labs, 실험 하나는 /labs/아이디)이에요. 화면 제목은 실험실이에요. 진단과 상관없이 재미로 넣는 실험 기능을 모아 둬요.
  * 실험을 더할 때는 컴포넌트를 따로 만들고 아래 EXPERIMENTS에 한 줄 더해요. 실험 코드는 열 때만 받아요.
  */
 
@@ -35,22 +35,22 @@ const EXPERIMENTS: Experiment[] = []
 
 const TEXT = messages({
   ko: {
-    title: '잡아따 Labs',
+    title: '실험실',
     emptyTitle: '실험실에 오신 것을 환영합니다!',
     emptyBody: '어떤 기능이 준비될까요?',
     missingTitle: '이 실험을 찾을 수 없어요',
     missingBody: '끝났거나 자리를 옮긴 실험이에요.',
-    backToLabs: 'Labs로 돌아가기',
-    back: 'Labs로',
+    backToLabs: '실험실로 돌아가기',
+    back: '실험실로',
   },
   en: {
-    title: 'Javadda Labs',
+    title: 'Lab',
     emptyTitle: 'Welcome to the lab!',
     emptyBody: 'What will we cook up next?',
     missingTitle: 'Experiment not found',
     missingBody: 'It may have ended or moved.',
-    backToLabs: 'Back to Labs',
-    back: 'Back to Labs',
+    backToLabs: 'Back to the lab',
+    back: 'Back to the lab',
   },
 })
 
