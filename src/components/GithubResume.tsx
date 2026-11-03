@@ -203,7 +203,7 @@ function ConnectCard({ clientId, waiting, onStart, onRecheck }: { clientId: stri
   }, [legacyApp, onRecheck])
 
   return (
-    <div className="flex flex-col items-start rounded-2xl bg-gray-50 p-7">
+    <div className="flex flex-col items-start rounded-2xl bg-gray-50 p-5 sm:p-7">
       <span className="flex size-14 items-center justify-center rounded-full bg-white text-gray-900">
         <GitHubMark className="size-6" />
       </span>
@@ -311,7 +311,7 @@ function RepoPicker({ connection, addTo, onDone, onWorking, onDisconnected }: {
   // 레포마다 AI가 글을 써서 1분이 넘게 걸릴 수 있어요. 그동안은 고른 레포 이름과 진행 막대만 보여줘요.
   if (working) {
     return (
-      <div className="rounded-2xl bg-gray-50 p-6">
+      <div className="rounded-2xl bg-gray-50 p-4 sm:p-6">
         <AiProgress progress={working.progress} stage={working.stage} title={picked.map((name) => name.split('/')[1]).join(', ')} />
       </div>
     )

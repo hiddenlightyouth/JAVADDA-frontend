@@ -243,7 +243,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
       </ScrollPage>
       {/* 모든 공고를 보고 있으면 오른쪽 아래에서 개발 직군만 볼지 한 번 물어요. 고르거나 닫으면 다시 묻지 않아요. 원문 칸이 열려 있으면 가리지 않게 두지 않아요. */}
       {!asked && family === null && !browser.side && (
-        <div role="dialog" aria-labelledby="jobs-dev-ask" className="fixed right-6 bottom-6 z-30 w-[min(320px,calc(100vw-32px))] animate-rise rounded-2xl border border-gray-200 bg-white p-5">
+        <div role="dialog" aria-labelledby="jobs-dev-ask" className="fixed right-4 bottom-4 z-30 sm:right-6 sm:bottom-6 w-[min(320px,calc(100vw-32px))] animate-rise rounded-2xl border border-gray-200 bg-white p-5">
           <p id="jobs-dev-ask" className="text-[15px] font-semibold text-gray-900">{L.askTitle}</p>
           <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">{L.askBody}</p>
           <div className="mt-4 flex justify-end gap-1">

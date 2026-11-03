@@ -655,7 +655,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
       <div aria-hidden className={`interview-glow interview-glow-b ${live ? 'opacity-100' : 'opacity-50'}`} />
 
       {/* 앱에서는 창 버튼과 겹치지 않게 그 아래에서 시작하고, 위쪽 빈 자리로 창을 옮겨요. */}
-      <header data-app-drag={isApp || undefined} className={`relative flex shrink-0 items-center gap-4 px-5 md:px-8 ${isApp ? 'pt-11' : 'pt-5'}`}>
+      <header data-app-drag={isApp || undefined} className={`relative flex shrink-0 items-center gap-3 px-4 sm:gap-4 sm:px-5 md:px-8 ${isApp ? 'pt-11' : 'pt-4 sm:pt-5'}`}>
         <button type="button" onClick={requestExit} aria-label={L.exit} className="flex size-10 items-center justify-center rounded-full bg-[#fff]/10 text-white transition-colors hover:bg-[#fff]/20">
           <CloseIcon className="size-4" strokeWidth={1.8} />
         </button>
@@ -675,14 +675,14 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
       </header>
       {/* 질문 수만큼 나눈 가는 막대예요. 답한 질문은 밝게 채워요. */}
       {total > 0 && phase !== 'intro' && phase !== 'finished' && (
-        <div aria-hidden className="relative mt-4 flex gap-1 px-5 md:px-8">
+        <div aria-hidden className="relative mt-3 flex gap-1 px-4 sm:mt-4 sm:px-5 md:px-8">
           {questions?.map((item, order) => (
             <span key={item.id} className={`h-[3px] flex-1 rounded-full transition-colors duration-500 ${order < index || (order === index && phase === 'moving') ? 'bg-[#fff]/80' : order === index ? 'bg-[#fff]/35' : 'bg-[#fff]/12'}`} />
           ))}
         </div>
       )}
 
-      <main className="relative min-h-0 flex-1 overflow-y-auto px-6 pb-8 md:px-12">{body}</main>
+      <main className="relative min-h-0 flex-1 overflow-y-auto px-4 pb-8 sm:px-6 md:px-12">{body}</main>
 
       {/* 확인 창(`ConfirmDialog`)은 이 검은 화면보다 아래 층에 떠서, 같은 모양을 이 화면 안에 그려요. */}
       {confirming && (

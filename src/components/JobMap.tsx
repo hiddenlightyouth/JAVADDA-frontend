@@ -5,7 +5,7 @@ import { messages, useMessages } from '../lib/i18n'
 import { naverMapEnabled } from '../lib/naverMap'
 import { isBroad, kmBetween, placesOf, REGIONS, type Place, type RegionId } from '../lib/regions'
 import { showToast } from '../lib/toast'
-import { PageHeader } from './AppPage'
+import { framePad, gutter, PageHeader } from './AppPage'
 import { CompanyMark, DeadlineTag, DiagnosedTag, FitTag, usePickConfirm } from './GapParts'
 import { CloseButton, CrosshairIcon } from './Icons'
 import { PickRow } from './JobCard'
@@ -249,10 +249,10 @@ export function JobMap({ onPick }: { onPick: (postingId: string) => void }) {
 
   return (
     <main className="flex min-h-0 flex-1 flex-col">
-      <div className="shrink-0 px-6 pt-14 md:px-10 md:pt-9">
+      <div className={`shrink-0 ${framePad}`}>
         <PageHeader title={L.title} />
       </div>
-      <div className="min-h-0 flex-1 px-6 pt-4 pb-6 md:px-10 md:pb-8">
+      <div className={`min-h-0 flex-1 ${gutter} pt-3 pb-4 sm:pt-4 sm:pb-6 md:pb-8`}>
         <LoadGate waiting={waiting} failed={loaded === 'failed'} percent={percent} onRetry={retry}>
           {() => (
             <div className="relative size-full min-h-[420px] overflow-hidden rounded-2xl bg-gray-50">

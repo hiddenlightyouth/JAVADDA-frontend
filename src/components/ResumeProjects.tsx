@@ -288,7 +288,7 @@ function ProjectCard({ resume, index, project, autoWrite, queued, onAutoStart, o
   }
 
   return (
-    <li className="rounded-2xl bg-gray-50 p-5">
+    <li className="rounded-2xl bg-gray-50 p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <Editable value={project.name} placeholder={L.empty.name} onSave={(name) => name.trim() && update({ name: name.trim() })} className="text-[15px] font-semibold text-gray-900" />

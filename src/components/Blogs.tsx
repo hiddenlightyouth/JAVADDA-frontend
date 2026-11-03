@@ -356,7 +356,7 @@ function PostCard({ entry, order, read }: { entry: Entry; order: number; read: (
       target="_blank"
       rel="noopener noreferrer"
       onClick={openIn(read, { url: entry.url, title: entry.title, companyId: entry.companyId })}
-      className="group block rounded-2xl bg-gray-50 p-5 transition-colors hover:bg-gray-100"
+      className="group block rounded-2xl bg-gray-50 p-4 transition-colors hover:bg-gray-100 sm:p-5"
       style={stagger(order)}
     >
       <span className="flex items-center gap-2 text-[12.5px] text-gray-500">
@@ -415,7 +415,7 @@ function OutlookCard({ outlook, onTheme }: { outlook: BlogOutlook; onTheme: (the
   const [first, second] = outlook.themes.map((item) => THEME_NAMES[item.theme])
   const missing = resume ? outlook.skills.filter((item) => skillTone(item.skill, resume) !== 'met').length : 0
   return (
-    <section className="mb-4 animate-rise rounded-2xl bg-gray-50 p-5 @2xl:p-6">
+    <section className="mb-4 animate-rise rounded-2xl bg-gray-50 p-4 sm:p-5 @2xl:p-6">
       {/* 서버의 총정리는 AI가 쓴 머리 문장과 흐름 문단이 있고, 화면이 계산한 총정리는 주제 이름으로 머리 문장을 만들어요. */}
       <h2 className="text-[19px] leading-snug font-semibold text-gray-900 @2xl:text-[21px]">
         {outlook.headline ?? (
@@ -490,7 +490,7 @@ function CompanyCard({ digest, onJobs }: { digest: BlogDigest; onJobs: (company:
   const openings = POSTINGS.filter((posting) => posting.companyId === digest.companyId).length
   const paused = isStale(digest)
   return (
-    <div className="rounded-2xl bg-gray-50 p-5">
+    <div className="rounded-2xl bg-gray-50 p-4 sm:p-5">
       {paused && <p className="mb-4 rounded-xl bg-white px-4 py-3 text-[13px] leading-relaxed text-gray-600">{L.stale(dayLabel(digest.posts[0].date))}</p>}
       <p className="text-[17px] leading-snug font-semibold text-gray-900">{digest.headline}</p>
       <p className="mt-2.5 text-[13.5px] leading-relaxed text-gray-600">{digest.analysis}</p>

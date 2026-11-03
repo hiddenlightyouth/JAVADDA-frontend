@@ -239,7 +239,7 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
           />
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8 md:px-10">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 md:px-10">
           <div className="mx-auto max-w-[560px]">
             <p className="text-[15px] font-semibold text-gray-900">{posting ? L.blocked : L.companyBlocked}</p>
             <p className="mt-1.5 text-[13.5px] leading-relaxed text-gray-500">{posting ? L.blockedBody : L.companyBlockedBody}</p>

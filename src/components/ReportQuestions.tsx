@@ -267,12 +267,12 @@ function PastScreen({ records, current, onClose }: { records: PracticeRecord[]; 
     <div role="dialog" aria-modal="true" aria-labelledby="past-screen-title" className="dark fixed inset-0 z-[45] flex animate-fade flex-col overflow-hidden bg-[#000] text-white">
       <div aria-hidden className="interview-glow interview-glow-a opacity-50" />
       <div aria-hidden className="interview-glow interview-glow-b opacity-50" />
-      <header data-app-drag={isApp || undefined} className={`relative flex shrink-0 items-center gap-4 px-5 md:px-8 ${isApp ? 'pt-11' : 'pt-5'}`}>
+      <header data-app-drag={isApp || undefined} className={`relative flex shrink-0 items-center gap-3 px-4 sm:gap-4 sm:px-5 md:px-8 ${isApp ? 'pt-11' : 'pt-4 sm:pt-5'}`}>
         <button type="button" onClick={onClose} aria-label={L.close} className="flex size-10 items-center justify-center rounded-full bg-[#fff]/10 text-white transition-colors hover:bg-[#fff]/20">
           <CloseIcon className="size-4" strokeWidth={1.8} />
         </button>
       </header>
-      <main className="relative min-h-0 flex-1 overflow-y-auto px-6 pb-12 md:px-12">
+      <main className="relative min-h-0 flex-1 overflow-y-auto px-4 pb-12 sm:px-6 md:px-12">
         <div className="mx-auto w-full max-w-3xl animate-rise pt-10">
           <div className="flex flex-col items-center text-center">
             {records.length > 0 && <ScoreRing score={average} />}
@@ -390,7 +390,8 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
       {/* 맨 위 한 줄에 유형 탭(수와 함께)과 연습 현황, 전체 연습 버튼을 둬요. 질문을 받기 전에는 비워 둬요. */}
       {questions && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-          <div role="radiogroup" aria-label={L.type} className="flex flex-wrap gap-1.5">
+          {/* 휴대폰에서는 두 줄로 꺾지 않고 화면 가장자리까지 옆으로 넘겨요. */}
+          <div role="radiogroup" aria-label={L.type} className="flex gap-1.5 [scrollbar-width:none] max-sm:-mx-4 max-sm:basis-[calc(100%+2rem)] max-sm:overflow-x-auto max-sm:px-4 sm:flex-wrap [&>*]:shrink-0">
             {[null, ...CATEGORIES].map((value) => {
               const count = value ? questions.filter((question) => question.category === value).length : questions.length
               const on = category === value

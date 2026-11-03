@@ -6,7 +6,7 @@ import { AdminFeedback } from './AdminFeedback'
 import { AdminOverview } from './AdminOverview'
 import { AdminUsage } from './AdminUsage'
 import { AdminUsers } from './AdminUsers'
-import { pageFrame, PageHeader } from './AppPage'
+import { bleed, gutter, pageFrame, PageHeader } from './AppPage'
 import { Tabs } from './ui'
 import { messages, useMessages } from '../lib/i18n'
 
@@ -70,7 +70,7 @@ export function Admin({ tab, onTab, full, feedback, onOpenChat }: Props) {
         <Tabs label={L.title} items={tabs.map((item, index) => ({ key: item, label: L.tabs[item], shortcut: String(index + 1) }))} current={current} onSelect={select} />
       )}
 
-      <div role="tabpanel" className="-mx-6 min-h-0 flex-1 overflow-y-auto px-6 pt-6 pb-10 md:-mx-10 md:px-10">
+      <div role="tabpanel" className={`${bleed} ${gutter} min-h-0 flex-1 overflow-y-auto pt-6 pb-10`}>
         {current === 'overview' ? (
           <AdminOverview />
         ) : current === 'users' ? (

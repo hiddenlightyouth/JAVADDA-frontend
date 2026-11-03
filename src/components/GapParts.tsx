@@ -493,8 +493,10 @@ export const filterChip = (on: boolean) =>
   }`
 /** 로고(`CompanyMark`, size-8)를 앞에 붙인 거르는 버튼의 여백이에요. */
 const filterLogoChip = 'gap-2.5 py-1 pr-4.5 pl-1.5'
-/** 거르는 버튼 줄의 바깥이에요. 넓은 목록에서는 여러 줄로, 좁으면 옆으로 넘겨요. */
-export const filterRow = '-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] @2xl:flex-wrap'
+/** 거르는 버튼 줄의 바깥이에요. 넓은 목록에서는 여러 줄로, 좁으면 옆으로 넘겨요. 휴대폰에서는 화면 가장자리까지 넘겨요. */
+export const filterRow = '-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] max-sm:-mx-4 max-sm:px-4 @2xl:flex-wrap'
+/** 드롭다운을 나란히 놓는 줄이에요. 좁으면 여러 줄로 쌓지 않고 한 줄로 옆으로 넘겨요. 휴대폰에서는 화면 가장자리까지 넘겨요. 메뉴는 body에 그려서 잘리지 않아요. */
+export const toolRow = 'flex items-center gap-2 overflow-x-auto [scrollbar-width:none] max-sm:-mx-4 max-sm:px-4 [&>*]:shrink-0'
 
 /**
  * 기업의 사업 분류를 고르는 버튼 줄이에요. 기업이 많아져서 공고 탐색과 마감 달력은 기업 대신 이것으로 골라요. 공고가 있는 분류만 보여줘요.
@@ -643,7 +645,7 @@ export function PostingTile({ posting, resume, fit = fitOf(posting, resume), tag
 /** 흰 바탕 위의 회색 칸이에요(테두리 없이 gray-50). 안에 놓는 이름표와 작은 칸은 흰색이에요. 제목 줄 오른쪽에 버튼을 둘 수 있어요. */
 export function Panel({ title, action, children, className = '' }: { title?: ReactNode; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded-2xl bg-gray-50 p-5 ${className}`}>
+    <section className={`rounded-2xl bg-gray-50 p-4 sm:p-5 ${className}`}>
       {(title || action) && (
         <div className="mb-4 flex items-center justify-between gap-3">
           {title && <h2 className="text-[14px] font-semibold text-gray-900">{title}</h2>}
@@ -738,7 +740,7 @@ const BANDS = [
 export function ScoreHero({ score, label, meta, title, body }: { score: number; label: string; meta?: ReactNode; title: string; body: string }) {
   const L = useMessages(TEXT)
   return (
-    <section className="flex animate-rise flex-col gap-6 rounded-2xl bg-gray-50 p-5 sm:flex-row sm:items-end sm:justify-between sm:gap-12">
+    <section className="flex animate-rise flex-col gap-5 rounded-2xl bg-gray-50 p-4 sm:flex-row sm:p-5 sm:items-end sm:justify-between sm:gap-12">
       <div className="min-w-0 max-w-2xl">
         {meta && <p className="mb-1.5 text-[12.5px] text-gray-500">{meta}</p>}
         <h2 className="text-[22px] leading-snug font-semibold text-gray-900">{title}</h2>

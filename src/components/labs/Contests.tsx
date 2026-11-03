@@ -248,7 +248,7 @@ function ContestCard({ contest, order }: { contest: Contest; order: number }) {
   const [ref, size] = useElementSize<HTMLLIElement>()
   const open = () => openContest(contest)
   return (
-    <li ref={ref} onClick={onBlankClick(open)} className="group relative isolate flex animate-rise cursor-pointer flex-col p-5" style={stagger(order)}>
+    <li ref={ref} onClick={onBlankClick(open)} className="group relative isolate flex animate-rise cursor-pointer flex-col p-4 sm:p-5" style={stagger(order)}>
       <NotchedFrame left={contestDaysLeft(contest)} card={size} />
       <div className="flex flex-1 gap-4">
         <Poster contest={contest} className="aspect-[3/4] w-28 self-start @6xl:w-32" />

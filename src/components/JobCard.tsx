@@ -253,7 +253,7 @@ export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onComp
   return (
     // 제목 버튼을 카드 전체에 늘여 덮으면, 누른 곳과 뗀 곳이 달라져 클릭이 한 번 씹혀서 카드가 직접 받아요.
     // 바탕과 바깥선은 NotchedFrame의 SVG가 그려서, 카드(isolate) 안쪽 맨 뒤에 깔아요.
-    <li ref={ref} onClick={onBlankClick(onOpen)} className="group relative isolate flex animate-rise cursor-pointer flex-col p-5" style={stagger(order)}>
+    <li ref={ref} onClick={onBlankClick(onOpen)} className="group relative isolate flex animate-rise cursor-pointer flex-col p-4 sm:p-5" style={stagger(order)}>
       <NotchedFrame left={left} card={size} />
       {/* 오른쪽 위는 홈이 파고들어 있어서, 기업 줄은 그 자리를 비워 둬요. */}
       <div className="flex items-center gap-3 pr-24">

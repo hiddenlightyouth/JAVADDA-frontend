@@ -76,7 +76,7 @@ export const softDangerButton = `${softBase} hover:text-red-500`
 
 // 누를 수 없을 때는 글자만 흐려지고, 마우스를 올려도 테두리와 글자가 바뀌지 않아요.
 const toolBase =
-  'flex items-center gap-2 border border-gray-200 bg-white font-medium transition-colors disabled:text-gray-400 disabled:hover:border-gray-200 disabled:hover:text-gray-400'
+  'flex items-center gap-2 border border-gray-200 bg-white font-medium whitespace-nowrap transition-colors disabled:text-gray-400 disabled:hover:border-gray-200 disabled:hover:text-gray-400'
 /** 테두리를 두른 흰 도구 버튼이에요(36px). 드롭다운, 재진단, 복사 같은 보조 작업에 써요. */
 export const toolButton = `${toolBase} h-9 rounded-lg px-3.5 text-[13px] text-gray-800 hover:border-gray-300 hover:text-gray-950`
 /**
@@ -86,6 +86,12 @@ export const toolButton = `${toolBase} h-9 rounded-lg px-3.5 text-[13px] text-gr
 export const toolButtonLg = `${toolBase} h-11 rounded-xl px-4 text-[14px] text-gray-800 hover:border-gray-300 hover:text-gray-950`
 /** 도구 버튼의 빨간 모양이에요. 삭제에 써요. */
 export const toolDangerButton = `${toolBase} h-9 rounded-lg px-3.5 text-[13px] text-red-500 hover:border-red-200 hover:text-red-600`
+/**
+ * 제목 줄의 도구 버튼을 휴대폰(640px 미만)에서 아이콘만 남긴 36px 칸으로 줄여요. 버튼에 덧붙이고, 글자는 `phoneHidden`으로 감싸 화면 읽기 프로그램에는 남겨요.
+ * 리포트처럼 제목 줄 버튼이 많아 두 줄로 넘치는 화면이 써요.
+ */
+export const iconOnPhone = 'max-sm:w-9 max-sm:justify-center max-sm:px-0'
+export const phoneHidden = 'max-sm:sr-only'
 
 const ghostBase = 'h-8 shrink-0 rounded-md px-2 text-[12.5px] font-medium transition-colors disabled:text-gray-300 disabled:hover:bg-transparent'
 /** 줄과 표 안에 두는 작은 글자 버튼이에요(32px). */

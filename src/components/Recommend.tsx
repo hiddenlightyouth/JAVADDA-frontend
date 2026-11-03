@@ -6,7 +6,7 @@ import { followLink } from '../lib/links'
 import { pathOf } from '../lib/routes'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
-import { Notice } from './GapParts'
+import { Notice, toolRow } from './GapParts'
 import { PostingCountBar, PostingList, readLayout, useJobBrowser, type Layout } from './JobCard'
 import { SplitView } from './PostingBrowser'
 import { LoadGate, usePostings } from './ScreenParts'
@@ -106,7 +106,7 @@ export function Recommend({ onPick, onResume, onExplore }: { onPick: (postingId:
   return (
     <SplitView side={browser.side}>
       <ScrollPage header={<PageHeader title={L.title} />} className="@container">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className={toolRow}>
           <Dropdown
             size="lg"
             label={L.sort}

@@ -28,7 +28,7 @@ import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { showToast } from '../lib/toast'
-import { pageFrame, PageHeader } from './AppPage'
+import { bleed, gutter, pageFrame, PageHeader } from './AppPage'
 import { panelBody, SidePanel } from './Dialog'
 import { AiProgress, CompanyMark, SkillMark, Delta, FitBadge, KindLabel, Notice, Panel, PostingTile, Radar, RequirementLabel, ScoreHero, Sparkline, Tip, percent } from './GapParts'
 import { DeleteReportDialog, removeReport } from './History'
@@ -37,7 +37,7 @@ import { PostingBrowser, SplitView } from './PostingBrowser'
 import { ReviewTab } from './ReportReview'
 import { QuestionsTab } from './ReportQuestions'
 import { Callout, switchReport } from './ReportParts'
-import { Badge, Bullets, label, loadCenter, LoadProgress, NumberedList, primaryButton, Segmented, stagger, Tabs, textArea, toolButton, toolDangerButton } from './ui'
+import { Badge, Bullets, label, loadCenter, LoadProgress, NumberedList, primaryButton, Segmented, stagger, Tabs, textArea, toolButton, toolDangerButton, iconOnPhone, phoneHidden } from './ui'
 
 /** 리포트의 탭이에요. 요약, 적합도 설명, 서류 검증, 예상 면접 질문 순서예요. */
 export type ReportTab = 'summary' | 'fit' | 'review' | 'questions'
@@ -834,18 +834,18 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
             <>
               {/* 원문은 새 탭 대신 앱 안의 미니 브라우저로 열어요. 마감된 공고도 받은 주소로 열어요. */}
               {posting?.url && (
-                <button type="button" aria-expanded={viewing} onClick={() => setViewing(true)} className={toolButton}>
+                <button type="button" aria-expanded={viewing} onClick={() => setViewing(true)} className={`${toolButton} ${iconOnPhone}`}>
                   <ExternalLinkIcon className="size-4" />
-                  {L.openPosting}
+                  <span className={phoneHidden}>{L.openPosting}</span>
                 </button>
               )}
-              <button type="button" disabled={(!done && !failed) || rerunning} onClick={() => void rerun()} className={toolButton}>
+              <button type="button" disabled={(!done && !failed) || rerunning} onClick={() => void rerun()} className={`${toolButton} ${iconOnPhone}`}>
                 <RefreshIcon className={`size-4 ${rerunning ? 'motion-safe:animate-spin' : ''}`} />
-                {L.rerun}
+                <span className={phoneHidden}>{L.rerun}</span>
               </button>
-              <button type="button" onClick={() => setDeleting(true)} className={toolDangerButton}>
+              <button type="button" onClick={() => setDeleting(true)} className={`${toolDangerButton} ${iconOnPhone}`}>
                 <TrashIcon className="size-4" />
-                {L.delete}
+                <span className={phoneHidden}>{L.delete}</span>
               </button>
               <button type="button" disabled={!done} onClick={() => onPractice(id)} className={primaryButton}>
                 {L.practice}
@@ -871,7 +871,7 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
           }
         />
 
-        <div role="tabpanel" className="-mx-6 flex min-h-0 flex-1 flex-col overflow-y-auto px-6 pt-5 pb-16 md:-mx-10 md:px-10">
+        <div role="tabpanel" className={`${bleed} ${gutter} flex min-h-0 flex-1 flex-col overflow-y-auto pt-4 pb-16 sm:pt-5`}>
           {outdated && (
             <Callout
               className="mb-5 animate-rise"

@@ -3,6 +3,7 @@ import { track } from '../lib/analytics'
 import { careerName, companyOf, COMPANY_SIZES, companySizeOf, familyName, sizeName, type CareerLevel, type CompanySize, type JobFamily, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { Dropdown } from './Dropdown'
+import { toolRow } from './GapParts'
 import { SearchIcon } from './Icons'
 import { SuggestionHint, useSuggestion } from './ScreenParts'
 
@@ -66,7 +67,7 @@ interface Props {
   children?: ReactNode
 }
 
-/** 검색창 옆에 직군, 경력, 기업 규모를 드롭다운으로 나란히 둬요. 좁으면 검색창이 한 줄을 다 쓰고 메뉴는 아래로 내려가요. 화면은 @container여야 해요. */
+/** 검색창 옆에 직군, 경력, 기업 규모를 드롭다운으로 나란히 둬요. 좁으면 검색창이 한 줄을 다 쓰고 메뉴는 아래 한 줄에서 옆으로 넘겨요. 화면은 @container여야 해요. */
 export function PostingFilterBar({ from, query, onQuery, family, onFamily, career, onCareer, size, onSize, postings, children }: Props) {
   const L = useMessages(TEXT)
   // 검색창이 비어 있는 동안 추천 검색어가 하나씩 아래에서 올라오며 바뀌어요.
@@ -102,62 +103,64 @@ export function PostingFilterBar({ from, query, onQuery, family, onFamily, caree
         />
         {!query && <SuggestionHint {...suggestion} className="right-4 left-[42px]" />}
       </label>
-      <Dropdown
-        size="lg"
-        active={family !== null}
-        label={L.family}
-        value={family === 'dev' ? L.devAll : family ? familyName(family) : L.all}
-        groups={[
-          {
-            items: ([null, 'dev', ...FAMILIES] as FamilyFilter[]).map((value) => ({
-              label: value === 'dev' ? L.devAll : value ? familyName(value) : L.all,
-              checked: family === value,
-              onSelect: () => {
-                track(`${from}_family_select`, { family: value ?? 'all' })
-                onFamily(value)
-              },
-            })),
-          },
-        ]}
-      />
-      <Dropdown
-        size="lg"
-        active={career !== null}
-        label={L.career}
-        value={career ? careerName(career) : L.all}
-        groups={[
-          {
-            items: [null, ...CAREERS].map((value) => ({
-              label: value ? careerName(value) : L.all,
-              checked: career === value,
-              onSelect: () => {
-                track(`${from}_career_select`, { career: value ?? 'all' })
-                onCareer(value)
-              },
-            })),
-          },
-        ]}
-      />
-      <Dropdown
-        size="lg"
-        active={size !== null}
-        label={L.size}
-        value={size ? sizeName(size) : L.all}
-        groups={[
-          {
-            items: [null, ...COMPANY_SIZES].map((value) => ({
-              label: value ? sizeName(value) : L.all,
-              hint: value ? String(sizeCounts.get(value) ?? 0) : undefined,
-              checked: size === value,
-              onSelect: () => {
-                track(`${from}_size_select`, { size: value ?? 'all' })
-                onSize(value)
-              },
-            })),
-          },
-        ]}
-      />
-      {children}
+      <div className={`${toolRow} basis-full max-sm:basis-[calc(100%+2rem)] @2xl:basis-auto @2xl:overflow-visible`}>
+        <Dropdown
+          size="lg"
+          active={family !== null}
+          label={L.family}
+          value={family === 'dev' ? L.devAll : family ? familyName(family) : L.all}
+          groups={[
+            {
+              items: ([null, 'dev', ...FAMILIES] as FamilyFilter[]).map((value) => ({
+                label: value === 'dev' ? L.devAll : value ? familyName(value) : L.all,
+                checked: family === value,
+                onSelect: () => {
+                  track(`${from}_family_select`, { family: value ?? 'all' })
+                  onFamily(value)
+                },
+              })),
+            },
+          ]}
+        />
+        <Dropdown
+          size="lg"
+          active={career !== null}
+          label={L.career}
+          value={career ? careerName(career) : L.all}
+          groups={[
+            {
+              items: [null, ...CAREERS].map((value) => ({
+                label: value ? careerName(value) : L.all,
+                checked: career === value,
+                onSelect: () => {
+                  track(`${from}_career_select`, { career: value ?? 'all' })
+                  onCareer(value)
+                },
+              })),
+            },
+          ]}
+        />
+        <Dropdown
+          size="lg"
+          active={size !== null}
+          label={L.size}
+          value={size ? sizeName(size) : L.all}
+          groups={[
+            {
+              items: [null, ...COMPANY_SIZES].map((value) => ({
+                label: value ? sizeName(value) : L.all,
+                hint: value ? String(sizeCounts.get(value) ?? 0) : undefined,
+                checked: size === value,
+                onSelect: () => {
+                  track(`${from}_size_select`, { size: value ?? 'all' })
+                  onSize(value)
+                },
+              })),
+            },
+          ]}
+        />
+        {children}
+      </div>
     </div>
   )
 }

@@ -7,7 +7,7 @@ import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { resumeMarkdown, type ResumeMarkdownPart } from '../lib/resumeMarkdown'
 import { showToast } from '../lib/toast'
-import { canvas, pageFrame, PageHeader } from './AppPage'
+import { canvas, gutter, pageFrame, PageHeader } from './AppPage'
 import { ConfirmDialog } from './Dialog'
 import { Dropdown } from './Dropdown'
 import { AiProgress, Notice, SkillChip, Tip } from './GapParts'
@@ -15,7 +15,7 @@ import { GithubResume } from './GithubResume'
 import { GitHubMark } from './Social'
 import { ChevronRightIcon, CloseIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
 import { ResumeProjects } from './ResumeProjects'
-import { Badge, menuPanel, NumberedList, primaryButton, textFieldSm, toolButton, toolDangerButton } from './ui'
+import { Badge, menuPanel, NumberedList, primaryButton, textFieldSm, toolButton, toolDangerButton, iconOnPhone, phoneHidden } from './ui'
 
 /**
  * 내 이력서 화면이에요. 이력서나 포트폴리오 PDF를 올리면 역량을 읽어 이름표로 보여주고, 잘못 읽은 것은 빼거나 더해요.
@@ -167,7 +167,7 @@ function AddChoice({ onFile, onGithub }: { onFile: (file: File) => void; onGithu
           const file = event.dataTransfer.files[0]
           if (file) onFile(file)
         }}
-        className="group flex min-h-60 flex-col items-start rounded-2xl bg-gray-50 p-7 text-left transition-colors hover:bg-gray-100">
+        className="group flex flex-col items-start rounded-2xl bg-gray-50 p-5 text-left transition-colors hover:bg-gray-100 sm:min-h-60 sm:p-7">
         <span className="flex size-14 items-center justify-center rounded-full bg-white text-gray-500 transition-colors group-hover:text-brand">
           <UploadIcon className="size-6" strokeWidth={1.2} />
         </span>
@@ -178,7 +178,7 @@ function AddChoice({ onFile, onGithub }: { onFile: (file: File) => void; onGithu
           <ChevronRightIcon className="size-3.5 shrink-0" />
         </span>
       </button>
-      <button type="button" onClick={onGithub} className="group flex min-h-60 flex-col items-start rounded-2xl bg-gray-50 p-7 text-left transition-colors hover:bg-gray-100">
+      <button type="button" onClick={onGithub} className="group flex flex-col items-start rounded-2xl bg-gray-50 p-5 text-left transition-colors hover:bg-gray-100 sm:min-h-60 sm:p-7">
         <span className="flex size-14 items-center justify-center rounded-full bg-white text-gray-500 transition-colors group-hover:text-gray-900">
           <GitHubMark className="size-6" />
         </span>
@@ -251,7 +251,7 @@ export function ResumeUploader({ onDone, onWorking, file: initialFile }: {
   // 읽는 동안은 서버가 알려 주는 진행 정도를 막대로 보여줘요. 위에 올린 파일 이름을 작게 적어요.
   if (working) {
     return (
-      <div className="rounded-2xl bg-gray-50 p-6">
+      <div className="rounded-2xl bg-gray-50 p-4 sm:p-6">
         <AiProgress progress={working.progress} stage={working.stage} title={working.name} />
       </div>
     )
@@ -491,7 +491,7 @@ export function MyResume({ add, docId, onAdd, onList, onDoc, onExplore }: {
           backLabel={step !== 'choose' ? L.otherWay : L.title}
         />
         <div className={canvas}>
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-16 md:px-10">
+          <div className={`min-h-0 flex-1 overflow-y-auto ${gutter} pt-4 pb-16`}>
             <div className="max-w-3xl">
               {step === 'choose' ? (
                 <AddChoice
@@ -556,7 +556,7 @@ export function MyResume({ add, docId, onAdd, onList, onDoc, onExplore }: {
       />
       <div className={canvas}>
         {/* 공고 탐색처럼 제목 줄과 같은 폭으로 늘어놓고, 칸 수는 목록 폭을 보고 정해요. */}
-        <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-16 md:px-10">
+        <div className={`@container min-h-0 flex-1 overflow-y-auto ${gutter} pt-4 pb-16`}>
           {shelf.list.length === 0 ? (
             <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={addDocument} className="mt-16" />
           ) : (
@@ -626,9 +626,9 @@ function ResumeDetail({ resume, primary, onPrimary, onExplore, onBack, onRemoved
                 {L.copy}
               </button>
             )}
-            <button type="button" disabled={writing} onClick={() => setRemoving(true)} className={toolDangerButton}>
+            <button type="button" disabled={writing} onClick={() => setRemoving(true)} className={`${toolDangerButton} ${iconOnPhone}`}>
               <TrashIcon className="size-4" />
-              {L.remove}
+              <span className={phoneHidden}>{L.remove}</span>
             </button>
             {primary ? (
               <button type="button" onClick={onExplore} className={primaryButton}>
@@ -644,14 +644,14 @@ function ResumeDetail({ resume, primary, onPrimary, onExplore, onBack, onRemoved
         }
       />
       <div className={canvas}>
-        <div className="@container min-h-0 flex-1 overflow-y-auto px-6 pt-2 pb-16 md:px-10">
+        <div className={`@container min-h-0 flex-1 overflow-y-auto ${gutter} pt-2 pb-16`}>
           <p className="flex items-center gap-2 text-[13px] text-gray-500">
             <Badge tone="gray" strong>{L.sources[resume.source]}</Badge>
             {L.uploadedAt(formatDateTime(resume.uploadedAt))}
           </p>
           {/* 넓으면 역량을 왼쪽에 멈춰 두고, 읽은 문단이나 프로젝트를 오른쪽에 넓게 둬요. */}
           <div className="mt-8 grid items-start gap-x-10 gap-y-10 @5xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-            <section className="rounded-2xl bg-gray-50 p-5 @5xl:sticky @5xl:top-0">
+            <section className="rounded-2xl bg-gray-50 p-4 sm:p-5 @5xl:sticky @5xl:top-0">
               <h2 className="text-[15px] font-semibold text-gray-900">{L.skills}</h2>
               <div className="mt-3">
                 <SkillEditor resume={resume} />
@@ -724,7 +724,7 @@ function ResumeCard({ resume, primary, onSelect, onPrimary }: { resume: Resume; 
     // 안쪽 별 버튼과 겹치지 않게, 카드(li)가 직접 클릭을 받아요. 공고 탐색의 카드와 같아요.
     <li
       onClick={onSelect}
-      className="group flex cursor-pointer flex-col rounded-2xl bg-gray-50 p-5 transition-colors hover:bg-gray-100"
+      className="group flex cursor-pointer flex-col rounded-2xl bg-gray-50 p-4 transition-colors hover:bg-gray-100 sm:p-5"
     >
       <div className="flex items-start justify-between gap-3">
         <span className="flex h-9 min-w-9 items-center justify-center rounded-lg bg-white px-2 text-[11px] font-semibold text-gray-600">{L.sources[resume.source]}</span>

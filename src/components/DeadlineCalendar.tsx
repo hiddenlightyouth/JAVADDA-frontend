@@ -306,11 +306,11 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
                             setSelected(key)
                           }
                         }}
-                        className={`flex min-h-20 cursor-pointer flex-col gap-1 p-1.5 text-left transition-colors outline-none focus-visible:bg-brand-soft ${index % 7 !== 6 ? 'border-r' : ''} ${
+                        className={`flex min-h-16 cursor-pointer flex-col gap-1 p-1 text-left @xl:min-h-20 @xl:p-1.5 transition-colors outline-none focus-visible:bg-brand-soft ${index % 7 !== 6 ? 'border-r' : ''} ${
                           index < days.length - 7 ? 'border-b' : ''
                         } border-gray-200 ${isSelected ? 'bg-brand-soft/60' : inMonth ? 'hover:bg-gray-50' : 'bg-gray-50/60 hover:bg-gray-100/60'}`}
                       >
-                        <span className="flex min-w-0 items-center gap-0.5 @3xl:gap-1">
+                        <span className="flex min-w-0 flex-wrap items-center gap-0.5 @xl:flex-nowrap @3xl:gap-1">
                           <span
                             className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[12.5px] tabular-nums ${
                               key === todayKey ? 'bg-brand font-semibold text-white' : inMonth ? `${tone} ${past ? 'opacity-50' : ''}` : 'text-gray-300'

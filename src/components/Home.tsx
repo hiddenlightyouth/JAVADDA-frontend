@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEven
 import { track } from '../lib/analytics'
 import { COMPANIES, companyOf, fitOf, majorCompanies, POSTINGS, postingOf, RECOMMEND_MIN_FIT, sortPostings, useReports, useResume, type Company, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
+import { gutter } from './AppPage'
 import { Carousel } from './Carousel'
 import { CompanyMark, DiagnosedTag, FitBadge } from './GapParts'
 import { JobCard, useJobBrowser } from './JobCard'
@@ -280,8 +281,8 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   return (
     <SplitView side={browser.side}>
       <main className="relative flex-1 overflow-hidden">
-        <div className="relative h-full overflow-y-auto px-6 pb-10 md:px-10">
-          <div className="mx-auto w-full max-w-lg pt-[max(6rem,16vh)] pb-14">
+        <div className={`relative h-full overflow-y-auto ${gutter} pb-10`}>
+          <div className="mx-auto w-full max-w-lg pt-[max(4.5rem,11vh)] pb-10 sm:pt-[max(6rem,16vh)] sm:pb-14">
             <LofyScript className="mx-auto mb-5 h-16 w-auto sm:h-20" />
             <Title text={L.title} />
             <p className="mt-3 mb-7 animate-rise text-balance break-keep text-center text-[13px] leading-relaxed text-gray-500 sm:mb-8 sm:text-[14px]" style={{ animationDelay: '250ms' }}>

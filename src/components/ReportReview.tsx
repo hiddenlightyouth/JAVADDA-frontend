@@ -278,7 +278,7 @@ function DocumentView({ title, owner, paragraphs, filter }: { title: string; own
 
   return (
     <div ref={box} className="relative md:grid md:grid-cols-[minmax(0,1fr)_320px] md:items-start md:gap-x-12" style={layout ? { minHeight: layout.height } : undefined}>
-      <article ref={sheet} className="rounded-xl border border-gray-200 bg-white px-6 py-8 md:px-12 md:py-11">
+      <article ref={sheet} className="rounded-xl border border-gray-200 bg-white px-4 py-6 sm:px-6 sm:py-8 md:px-12 md:py-11">
         <header className="mb-6 border-b border-gray-100 pb-5">
           <p className="text-[19px] font-semibold text-gray-900">{title}</p>
           {owner && <p className="mt-1 truncate text-[12.5px] text-gray-400">{owner}</p>}
