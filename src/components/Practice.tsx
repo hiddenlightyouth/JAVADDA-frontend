@@ -13,8 +13,8 @@ import { isApp } from '../lib/app'
 import { ChevronRightIcon, CloseIcon, SpeakerIcon } from './Icons'
 import { Interviewer } from './Interviewer'
 import { InterviewerPicker } from './InterviewerPicker'
-import { FeedbackSections } from './ReportParts'
-import { label, loadCenter, LoadProgress } from './ui'
+import { darkButton, lightButton, ResultCard } from './ReportParts'
+import { loadCenter, LoadProgress } from './ui'
 
 const TEXT = messages({
   ko: {
@@ -62,14 +62,11 @@ const TEXT = messages({
     singleDone: '답변 피드백',
     singleDoneBody: '이런 부분은 이렇게 말해 보세요. 다시 답해 보면 차이가 보여요.',
     score: '점수',
-    modelAnswer: '이렇게 답했으면 좋았어요',
     answerAgain: '다시 답하기',
     average: '평균 점수',
     grading: '채점하고 있어요',
     gradeFailed: '채점하지 못했어요',
     skipped: '답변하지 않음',
-    myAnswer: '내 답변',
-    followUp: '꼬리 질문',
     again: '다시 연습하기',
     toReport: '리포트로 돌아가기',
   },
@@ -118,14 +115,11 @@ const TEXT = messages({
     singleDone: 'Answer feedback',
     singleDoneBody: 'Try saying these parts like this. Answer again to feel the difference.',
     score: 'Score',
-    modelAnswer: 'A stronger answer',
     answerAgain: 'Answer again',
     average: 'Average score',
     grading: 'Grading',
     gradeFailed: "Couldn't grade this one",
     skipped: 'Not answered',
-    myAnswer: 'Your answer',
-    followUp: 'Follow-up',
     again: 'Practice again',
     toReport: 'Back to the report',
   },
@@ -719,11 +713,6 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   )
 }
 
-/** 검은 화면의 보조 버튼이에요. 옅은 흰 바탕이에요. */
-const darkButton = 'h-11 rounded-full bg-[#fff]/10 px-5 text-[14px] font-medium text-white transition-colors hover:bg-[#fff]/20'
-/** 검은 화면의 주 버튼이에요. 흰 바탕에 검은 글자예요. */
-const lightButton = 'h-11 rounded-full bg-[#fff] px-6 text-[14px] font-semibold text-[#000] transition-opacity hover:opacity-90 disabled:opacity-30'
-
 /**
  * 면접관이 읽는 질문이에요. 노래방 자막처럼 읽은 만큼 낱말이 왼쪽부터 밝아져요.
  * 낱말마다 흰색과 옅은 흰색을 가르는 그러데이션을 글자 모양으로 잘라서(bg-clip-text), 읽고 있는 낱말은 중간까지만 밝아요.
@@ -856,38 +845,14 @@ function Summary({ answers, single, interviewer, onAgain, onBack }: { answers: A
 
       <ol className="mt-12 space-y-4">
         {answers.map((item, order) => (
-          <li key={item.question.id} className="rounded-2xl bg-[#fff]/[0.06] p-5 md:p-6">
-            <div className="flex items-start gap-4">
-              <span className="mt-0.5 shrink-0 text-[13px] font-semibold text-[#fff]/40 tabular-nums">Q{order + 1}</span>
-              <h2 className="min-w-0 flex-1 text-[16px] leading-snug font-semibold text-white">{item.question.question}</h2>
-              {typeof item.feedback === 'object' && <span className="shrink-0 text-[20px] font-bold text-brand tabular-nums">{item.feedback.score}</span>}
-            </div>
-            {item.text && (
-              <div className="mt-4">
-                <h3 className={label}>{L.myAnswer}</h3>
-                <p className="mt-1 text-[13.5px] leading-relaxed text-[#fff]/70">{item.text}</p>
-              </div>
-            )}
-            {/* 내 답 바로 아래에 모범 답변을 두어서, 무엇이 달랐는지 나란히 읽혀요. */}
-            {typeof item.feedback === 'object' && item.feedback.modelAnswer && (
-              <div className="mt-4 rounded-xl bg-brand/15 p-4">
-                <h3 className="text-[12.5px] font-semibold text-brand">{L.modelAnswer}</h3>
-                <p className="mt-1.5 text-[14px] leading-relaxed text-[#fff]/90">{item.feedback.modelAnswer}</p>
-              </div>
-            )}
-            {item.feedback === 'grading' && <p className="mt-4 text-[13px] text-[#fff]/45 motion-safe:animate-pulse">{L.grading}</p>}
-            {item.feedback === 'failed' && <p className="mt-4 text-[13px] text-[#fff]/45">{L.gradeFailed}</p>}
-            {item.feedback === 'skipped' && <p className="mt-4 text-[13px] text-[#fff]/45">{L.skipped}</p>}
-            {typeof item.feedback === 'object' && (
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <FeedbackSections feedback={item.feedback} />
-                <section>
-                  <h3 className={label}>{L.followUp}</h3>
-                  <p className="mt-1 text-[13.5px] leading-relaxed text-[#fff]/70">{item.feedback.followUp}</p>
-                </section>
-              </div>
-            )}
-          </li>
+          <ResultCard
+            key={item.question.id}
+            order={order + 1}
+            question={item.question.question}
+            answer={item.text}
+            feedback={typeof item.feedback === 'object' ? item.feedback : null}
+            note={item.feedback === 'grading' ? <span className="motion-safe:animate-pulse">{L.grading}</span> : item.feedback === 'failed' ? L.gradeFailed : item.feedback === 'skipped' ? L.skipped : undefined}
+          />
         ))}
       </ol>
     </div>

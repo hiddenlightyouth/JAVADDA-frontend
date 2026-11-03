@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { track } from '../lib/analytics'
 import { fetchAnswers, fetchQuestions, PROGRESS_START, regenerateQuestions, type InterviewQuestion, type PracticeRecord, type ProgressState, type QuestionCategory } from '../lib/gap'
 import { formatDate, formatDateTime, parseServerTime } from '../lib/format'
 import { messages, useMessages } from '../lib/i18n'
 import { AiProgress, Failed, Notice, ScoreRing, Tip } from './GapParts'
-import { ConfirmDialog, panelBody, SidePanel } from './Dialog'
-import { CheckIcon, ChevronDownIcon, ClockIcon, RefreshIcon } from './Icons'
-import { Callout, FeedbackSections, ModelAnswer } from './ReportParts'
-import { Badge, Bullets, ghostButton, label, loadCenter, primaryButton, Segmented, stagger, toolButton } from './ui'
+import { ConfirmDialog } from './Dialog'
+import { isApp } from '../lib/app'
+import { useDismiss } from '../hooks/useDismiss'
+import { CheckIcon, ChevronDownIcon, ClockIcon, CloseIcon, RefreshIcon } from './Icons'
+import { Callout, ModelAnswer, ResultCard } from './ReportParts'
+import { Bullets, ghostButton, label, loadCenter, primaryButton, Segmented, stagger, toolButton } from './ui'
 
 const CATEGORIES: QuestionCategory[] = ['tech', 'project', 'cs', 'culture']
 
@@ -241,56 +244,13 @@ function Row({ question, index, order, records, onPractice }: { question: Interv
 }
 
 /**
- * 지난 기록 칸의 답변 하나예요. 면접 연습의 결과 화면처럼 번호, 질문, 점수, 내 답변, 모범 답변, 피드백, 꼬리 질문을 접지 않고 한 칸에 보여줘요.
+ * 지난 질문과 답변을 면접 연습의 결과 화면과 같은 검은 화면으로 보여줘요. 예상 질문을 새로 뽑기 전의 예전 질문 답변도 여기서 봐요.
+ * 맨 위에 평균 점수 고리와 답변 수, 전체와 예전 질문만 고르는 칸이 있고, 답변은 날짜별로 묶어 최근 날짜부터 결과 카드(`ResultCard`)로 놓여요.
  */
-function PastItem({ record, order, old }: { record: PracticeRecord; order: number; old: boolean }) {
-  const L = useMessages(TEXT)
-  const { feedback } = record
-  return (
-    <li className="rounded-2xl bg-gray-50 p-5">
-      <div className="flex items-start gap-4">
-        <span className="mt-0.5 shrink-0 text-[13px] font-semibold text-gray-400 tabular-nums">Q{order}</span>
-        <div className="min-w-0 flex-1">
-          <h4 className={`text-[15px] leading-snug font-semibold ${record.question ? 'text-gray-900' : 'text-gray-400'}`}>{record.question || L.noQuestionText}</h4>
-          <p className="mt-1.5 flex items-center gap-2 text-[12px] text-gray-400 tabular-nums">
-            {formatDateTime(record.createdAt)}
-            {old && (
-              <Badge tone="gray" strong>
-                {L.oldQuestion}
-              </Badge>
-            )}
-          </p>
-        </div>
-        <span className="shrink-0 text-[20px] font-bold text-brand tabular-nums">{feedback.score}</span>
-      </div>
-      {record.answer && (
-        <div className="mt-4">
-          <h5 className={label}>{L.myAnswer}</h5>
-          <p className="mt-1 text-[13.5px] leading-relaxed whitespace-pre-wrap text-gray-700">{record.answer}</p>
-        </div>
-      )}
-      {/* 내 답 바로 아래에 모범 답변을 두어서, 무엇이 달랐는지 나란히 읽혀요. */}
-      {feedback.modelAnswer && <ModelAnswer text={feedback.modelAnswer} className="mt-4" />}
-      <div className="mt-4 space-y-4">
-        <FeedbackSections feedback={feedback} />
-        {feedback.followUp && (
-          <section>
-            <h5 className={label}>{L.followUp}</h5>
-            <p className="mt-1 text-[13.5px] leading-relaxed text-gray-700">{feedback.followUp}</p>
-          </section>
-        )}
-      </div>
-    </li>
-  )
-}
-
-/**
- * 지난 질문과 답변을 오른쪽에서 여는 칸에 모아 보여줘요. 예상 질문을 새로 뽑기 전의 예전 질문 답변도 여기서 봐요.
- * 면접 연습의 결과 화면처럼 맨 위에 평균 점수 고리가 있고, 그 아래 전체와 예전 질문만 고르는 칸, 날짜별로 묶은 답변 카드가 최근 것부터 와요.
- */
-function PastPanel({ records, current, onClose }: { records: PracticeRecord[]; current: Set<string>; onClose: () => void }) {
+function PastScreen({ records, current, onClose }: { records: PracticeRecord[]; current: Set<string>; onClose: () => void }) {
   const L = useMessages(TEXT)
   const [onlyOld, setOnlyOld] = useState(false)
+  useDismiss(true, null, onClose)
   const list = onlyOld ? records.filter((record) => !current.has(record.questionId)) : records
   const average = records.length === 0 ? 0 : Math.round(records.reduce((sum, record) => sum + record.feedback.score, 0) / records.length)
   // 날짜별로 묶어요. 답변은 최근 것부터 와서 묶음도 최근 날짜부터예요.
@@ -302,59 +262,68 @@ function PastPanel({ records, current, onClose }: { records: PracticeRecord[]; c
     if (last && last.day === day) last.items.push(record)
     else days.push({ day, items: [record] })
   }
-  return (
-    <SidePanel
-      onClose={onClose}
-      closeLabel={L.close}
-      labelledBy="past-panel-title"
-      className="max-w-[640px]"
-      header={
-        <div>
-          <h2 id="past-panel-title" className="text-[20px] font-semibold text-gray-900">
-            {L.pastTitle}
-          </h2>
-          {records.length > 0 && <p className="mt-1 text-[13px] text-gray-500 tabular-nums">{L.pastSummary(records.length)}</p>}
-        </div>
-      }
-    >
-      <div className={panelBody}>
-        {records.length === 0 ? (
-          <Notice title={L.pastEmpty} body={L.pastEmptyBody} className="mt-16" />
-        ) : (
-          <>
-            <div className="mb-6 flex flex-col items-center text-center">
-              <ScoreRing score={average} />
-              <p className="mt-2 text-[12.5px] text-gray-500">{L.averageScore}</p>
-            </div>
-            <Segmented
-              label={L.pastFilter}
-              options={[
-                ['all', L.pastAll],
-                ['old', L.pastOld],
-              ] as const}
-              value={onlyOld ? 'old' : 'all'}
-              onChange={(value) => setOnlyOld(value === 'old')}
-            />
-            {list.length === 0 ? (
-              <Notice title={L.pastOldEmpty} className="mt-12" />
-            ) : (
-              <div className="mt-5 space-y-6">
-                {days.map(({ day, items }) => (
-                  <section key={day}>
-                    <h3 className="mb-2 text-[12.5px] font-medium text-gray-500">{day}</h3>
-                    <ol className="space-y-3">
-                      {items.map((record, index) => (
-                        <PastItem key={record.id} record={record} order={items.length - index} old={!current.has(record.questionId)} />
-                      ))}
-                    </ol>
-                  </section>
-                ))}
+  return createPortal(
+    // 면접 연습처럼 검은 화면 안은 다크 모드 색으로 그려요.
+    <div role="dialog" aria-modal="true" aria-labelledby="past-screen-title" className="dark fixed inset-0 z-[45] flex animate-fade flex-col overflow-hidden bg-[#000] text-white">
+      <div aria-hidden className="interview-glow interview-glow-a opacity-50" />
+      <div aria-hidden className="interview-glow interview-glow-b opacity-50" />
+      <header data-app-drag={isApp || undefined} className={`relative flex shrink-0 items-center gap-4 px-5 md:px-8 ${isApp ? 'pt-11' : 'pt-5'}`}>
+        <button type="button" onClick={onClose} aria-label={L.close} className="flex size-10 items-center justify-center rounded-full bg-[#fff]/10 text-white transition-colors hover:bg-[#fff]/20">
+          <CloseIcon className="size-4" strokeWidth={1.8} />
+        </button>
+      </header>
+      <main className="relative min-h-0 flex-1 overflow-y-auto px-6 pb-12 md:px-12">
+        <div className="mx-auto w-full max-w-3xl animate-rise pt-10">
+          <div className="flex flex-col items-center text-center">
+            {records.length > 0 && <ScoreRing score={average} />}
+            {records.length > 0 && <p className="mt-2 text-[12.5px] text-[#fff]/50">{L.averageScore}</p>}
+            <h1 id="past-screen-title" className="mt-5 text-[28px] font-bold tracking-tight text-white">
+              {L.pastTitle}
+            </h1>
+            <p className="mt-2 max-w-md text-[14px] leading-relaxed text-[#fff]/55">{records.length > 0 ? L.pastSummary(records.length) : L.pastEmptyBody}</p>
+            {records.length > 0 && (
+              <div className="mt-6">
+                <Segmented
+                  label={L.pastFilter}
+                  options={[
+                    ['all', L.pastAll],
+                    ['old', L.pastOld],
+                  ] as const}
+                  value={onlyOld ? 'old' : 'all'}
+                  onChange={(value) => setOnlyOld(value === 'old')}
+                />
               </div>
             )}
-          </>
-        )}
-      </div>
-    </SidePanel>
+          </div>
+          {records.length > 0 && list.length === 0 && <p className="mt-16 text-center text-[14px] text-[#fff]/45">{L.pastOldEmpty}</p>}
+          <div className="mt-12 space-y-10">
+            {days.map(({ day, items }) => (
+              <section key={day}>
+                <h2 className="mb-3 text-[13px] font-medium text-[#fff]/45">{day}</h2>
+                <ol className="space-y-4">
+                  {items.map((record, index) => (
+                    <ResultCard
+                      key={record.id}
+                      order={index + 1}
+                      question={record.question || <span className="text-[#fff]/45">{L.noQuestionText}</span>}
+                      meta={
+                        <>
+                          <span>{formatDateTime(record.createdAt)}</span>
+                          {!current.has(record.questionId) && <span className="rounded-full bg-[#fff]/10 px-2 py-0.5 text-[11.5px] font-medium text-[#fff]/70">{L.oldQuestion}</span>}
+                        </>
+                      }
+                      answer={record.answer}
+                      feedback={record.feedback}
+                    />
+                  ))}
+                </ol>
+              </section>
+            ))}
+          </div>
+        </div>
+      </main>
+    </div>,
+    document.body,
   )
 }
 
@@ -531,7 +500,7 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
           }
         />
       )}
-      {showPast && <PastPanel records={allRecords} current={currentIds} onClose={() => setShowPast(false)} />}
+      {showPast && <PastScreen records={allRecords} current={currentIds} onClose={() => setShowPast(false)} />}
       {asking && (
         <ConfirmDialog
           title={L.regenerateTitle}

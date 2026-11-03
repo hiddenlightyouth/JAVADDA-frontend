@@ -9,8 +9,8 @@ import { Bullets, label } from './ui'
  */
 
 const TEXT = messages({
-  ko: { modelAnswer: '이렇게 답했으면 좋았어요', good: '좋았어요', improve: '보완할 점', rephrase: '이렇게 말해 보세요' },
-  en: { modelAnswer: 'A stronger answer', good: 'What went well', improve: 'To improve', rephrase: 'Try saying it like this' },
+  ko: { modelAnswer: '이렇게 답했으면 좋았어요', good: '좋았어요', improve: '보완할 점', rephrase: '이렇게 말해 보세요', myAnswer: '내 답변', followUp: '꼬리 질문' },
+  en: { modelAnswer: 'A stronger answer', good: 'What went well', improve: 'To improve', rephrase: 'Try saying it like this', myAnswer: 'Your answer', followUp: 'Follow-up' },
 })
 
 /**
@@ -67,6 +67,62 @@ export function FeedbackSections({ feedback }: { feedback: PracticeFeedback }) {
     </>
   )
 }
+
+/**
+ * 검은 면접 결과 화면의 답변 카드예요. 번호와 질문, 오른쪽에 점수, 내 답변, 모범 답변, 피드백과 꼬리 질문을 한 칸에 적어요.
+ * 면접 연습의 결과와 예상 질문의 지난 기록이 같이 써요. 채점 중이나 건너뜀처럼 피드백이 없을 때의 한 줄은 note로 넘겨요.
+ */
+export function ResultCard({ order, question, meta, answer, feedback, note }: {
+  order: number
+  question: ReactNode
+  /** 질문 아래 작은 줄이에요. 지난 기록의 시각과 예전 질문 이름표가 들어가요. */
+  meta?: ReactNode
+  answer: string
+  feedback: PracticeFeedback | null
+  note?: ReactNode
+}) {
+  const L = useMessages(TEXT)
+  return (
+    <li className="rounded-2xl bg-[#fff]/[0.06] p-5 md:p-6">
+      <div className="flex items-start gap-4">
+        <span className="mt-0.5 shrink-0 text-[13px] font-semibold text-[#fff]/40 tabular-nums">Q{order}</span>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[16px] leading-snug font-semibold text-white">{question}</h2>
+          {meta && <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px] text-[#fff]/40 tabular-nums">{meta}</div>}
+        </div>
+        {feedback && <span className="shrink-0 text-[20px] font-bold text-brand tabular-nums">{feedback.score}</span>}
+      </div>
+      {answer && (
+        <div className="mt-4">
+          <h3 className={label}>{L.myAnswer}</h3>
+          <p className="mt-1 text-[13.5px] leading-relaxed whitespace-pre-wrap text-[#fff]/70">{answer}</p>
+        </div>
+      )}
+      {/* 내 답 바로 아래에 모범 답변을 두어서, 무엇이 달랐는지 나란히 읽혀요. */}
+      {feedback?.modelAnswer && (
+        <div className="mt-4 rounded-xl bg-brand/15 p-4">
+          <h3 className="text-[12.5px] font-semibold text-brand">{L.modelAnswer}</h3>
+          <p className="mt-1.5 text-[14px] leading-relaxed text-[#fff]/90">{feedback.modelAnswer}</p>
+        </div>
+      )}
+      {note && <p className="mt-4 text-[13px] text-[#fff]/45">{note}</p>}
+      {feedback && (
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <FeedbackSections feedback={feedback} />
+          <section>
+            <h3 className={label}>{L.followUp}</h3>
+            <p className="mt-1 text-[13.5px] leading-relaxed text-[#fff]/70">{feedback.followUp}</p>
+          </section>
+        </div>
+      )}
+    </li>
+  )
+}
+
+/** 검은 화면의 보조 버튼이에요. 옅은 흰 바탕이에요. */
+export const darkButton = 'h-11 rounded-full bg-[#fff]/10 px-5 text-[14px] font-medium text-white transition-colors hover:bg-[#fff]/20'
+/** 검은 화면의 주 버튼이에요. 흰 바탕에 검은 글자예요. */
+export const lightButton = 'h-11 rounded-full bg-[#fff] px-6 text-[14px] font-semibold text-[#000] transition-opacity hover:opacity-90 disabled:opacity-30'
 
 /** 리포트 화면 안에서 다른 리포트로 주소를 바꿔요. replace면 뒤로 가기 기록을 남기지 않아요(재진단). 보던 탭은 그대로예요. */
 export function switchReport(from: string, to: string, replace = false) {
