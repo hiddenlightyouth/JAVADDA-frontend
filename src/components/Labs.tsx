@@ -28,8 +28,8 @@ const EXPERIMENTS: Experiment[] = [
     id: 'contests',
     title: { ko: '공모전', en: 'Contests' },
     summary: {
-      ko: '링커리어, 캠퍼스픽, 위비티, 씽굿의 공모전을 한곳에 모아 분야별로 봐요.',
-      en: 'Contests from four Korean contest sites, sorted by category.',
+      ko: '어떤 공모전이 진행되고 있을까요?',
+      en: 'What contests are open right now?',
     },
     screen: lazy(() => import('./labs/Contests').then((module) => ({ default: module.Contests }))),
   },
