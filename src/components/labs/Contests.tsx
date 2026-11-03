@@ -6,7 +6,7 @@ import { messages, useMessages } from '../../lib/i18n'
 import { readItem, writeItem } from '../../lib/storage'
 import { Dropdown } from '../Dropdown'
 import { DeadlineTag, Failed, Notice, filterChip, filterRow } from '../GapParts'
-import { CalendarIcon, ExternalLinkIcon, SearchIcon } from '../Icons'
+import { CalendarIcon, DocumentIcon, ExternalLinkIcon, SearchIcon } from '../Icons'
 import { jobsGrid, jobsList, NotchedFrame, onBlankClick, PostingCountBar, readLayout, useElementSize, type Layout } from '../JobCard'
 import { shortDate } from '../ScreenParts'
 import { Badge, LoadProgress, loadCenter, primaryButton, stagger, tag, useShowMore } from '../ui'
@@ -202,10 +202,19 @@ export function Contests() {
   )
 }
 
-/** 공모전 포스터예요. 공고 카드의 기업 로고 자리에 놓고, 없거나 못 불러오면 회색 칸이에요. */
+/**
+ * 공모전 포스터예요. 공모전은 포스터로 알아보는 경우가 많아서 카드의 왼쪽을 크게 차지해요.
+ * 없거나 못 불러오면 같은 크기의 흰 칸에 옅은 서류 아이콘이라 카드 모양이 흐트러지지 않아요.
+ */
 function Poster({ contest, className }: { contest: Contest; className: string }) {
   const [broken, setBroken] = useState(false)
-  if (!contest.imageUrl || broken) return <span className={`shrink-0 rounded-xl bg-white ${className}`} />
+  if (!contest.imageUrl || broken) {
+    return (
+      <span className={`flex shrink-0 items-center justify-center rounded-xl bg-white text-gray-300 ${className}`}>
+        <DocumentIcon className="size-1/3 max-w-8" />
+      </span>
+    )
+  }
   return (
     <img
       src={contest.imageUrl}
@@ -213,7 +222,7 @@ function Poster({ contest, className }: { contest: Contest; className: string })
       loading="lazy"
       referrerPolicy="no-referrer"
       onError={() => setBroken(true)}
-      className={`shrink-0 rounded-xl bg-white object-cover ${className}`}
+      className={`shrink-0 rounded-xl border border-gray-200/70 bg-white object-cover ${className}`}
     />
   )
 }
@@ -232,7 +241,7 @@ function Period({ contest }: { contest: Contest }) {
 
 /**
  * 갤러리형 카드예요. 공고 탐색의 카드(`JobCard`)와 같은 모양으로, 오른쪽 위 홈에 마감까지 남은 날을 적어요.
- * 기업 로고 자리에 포스터, 기업 이름 자리에 주최, 역량 이름표 자리에 분야, 맨 아래 줄에 상금과 공모전 보기가 있어요.
+ * 왼쪽에 포스터를 크게(3:4) 두고, 오른쪽에 주최와 첫 분야, 제목, 접수 기간, 분야 이름표를 적어요. 맨 아래 줄에 상금과 공모전 보기가 있어요.
  */
 function ContestCard({ contest, order }: { contest: Contest; order: number }) {
   const L = useMessages(TEXT)
@@ -241,29 +250,28 @@ function ContestCard({ contest, order }: { contest: Contest; order: number }) {
   return (
     <li ref={ref} onClick={onBlankClick(open)} className="group relative isolate flex animate-rise cursor-pointer flex-col p-5" style={stagger(order)}>
       <NotchedFrame left={contestDaysLeft(contest)} card={size} />
-      <div className="flex items-center gap-3 pr-24">
-        <Poster contest={contest} className="size-10" />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13.5px] font-medium text-gray-900">{contest.organizer}</span>
-          <span className="block truncate text-[12px] text-gray-400">{L.categories[contest.categories[0] ?? 'etc']}</span>
-        </span>
-      </div>
-
-      <h3 className="mt-4 text-[16px] leading-snug font-semibold text-gray-900">
-        <button type="button" onClick={open} className="text-left transition-colors group-hover:text-brand-hover">
-          {contest.title}
-        </button>
-      </h3>
-      <span className="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[12.5px] text-gray-600">
-        <Period contest={contest} />
-      </span>
-
-      <div className="mt-4 flex flex-1 flex-wrap content-start gap-1.5">
-        {contest.categories.slice(0, CATEGORIES_SHOWN).map((each) => (
-          <span key={each} className={tag}>
-            {L.categories[each]}
+      <div className="flex flex-1 gap-4">
+        <Poster contest={contest} className="aspect-[3/4] w-28 self-start @6xl:w-32" />
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* 오른쪽 위는 홈이 파고들어 있어서, 주최 줄은 그 자리를 비워 둬요. */}
+          <span className="block truncate pr-20 text-[13.5px] font-medium text-gray-900">{contest.organizer}</span>
+          <span className="block truncate pr-20 text-[12px] text-gray-400">{L.categories[contest.categories[0] ?? 'etc']}</span>
+          <h3 className="mt-3 line-clamp-3 text-[16px] leading-snug font-semibold text-gray-900">
+            <button type="button" onClick={open} className="text-left transition-colors group-hover:text-brand-hover">
+              {contest.title}
+            </button>
+          </h3>
+          <span className="mt-2 flex flex-wrap items-center gap-x-3.5 gap-y-1 text-[12.5px] text-gray-600">
+            <Period contest={contest} />
           </span>
-        ))}
+          <div className="mt-3 flex flex-wrap content-start gap-1.5">
+            {contest.categories.slice(0, CATEGORIES_SHOWN).map((each) => (
+              <span key={each} className={tag}>
+                {L.categories[each]}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="mt-5 flex items-center gap-1.5 border-t border-gray-200 pt-3">
@@ -283,7 +291,7 @@ function ContestRow({ contest, order }: { contest: Contest; order: number }) {
   const open = () => openContest(contest)
   return (
     <li onClick={onBlankClick(open)} className="group flex animate-rise cursor-pointer items-center gap-4 rounded-2xl bg-gray-50 px-4 py-3.5 transition-colors hover:bg-gray-100" style={stagger(order)}>
-      <Poster contest={contest} className="size-10" />
+      <Poster contest={contest} className="aspect-[3/4] w-12" />
       <div className="min-w-0 flex-1">
         <h3 className="flex text-[15px] font-semibold text-gray-900">
           <button type="button" onClick={open} className="min-w-0 truncate text-left transition-colors group-hover:text-brand-hover">
