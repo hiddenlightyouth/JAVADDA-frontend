@@ -36,8 +36,8 @@ const EXPERIMENTS: Experiment[] = []
 const TEXT = messages({
   ko: {
     title: '잡아따 Labs',
-    emptyTitle: '첫 번째 실험을 준비하고 있어요',
-    emptyBody: '곧 재미있는 기능이 하나씩 올라와요.',
+    emptyTitle: '실험실에 오신 것을 환영합니다!',
+    emptyBody: '어떤 기능이 준비될까요?',
     missingTitle: '이 실험을 찾을 수 없어요',
     missingBody: '끝났거나 자리를 옮긴 실험이에요.',
     backToLabs: 'Labs로 돌아가기',
@@ -45,8 +45,8 @@ const TEXT = messages({
   },
   en: {
     title: 'Javadda Labs',
-    emptyTitle: 'Cooking up the first experiment',
-    emptyBody: 'Fun little features will show up here soon.',
+    emptyTitle: 'Welcome to the lab!',
+    emptyBody: 'What will we cook up next?',
     missingTitle: 'Experiment not found',
     missingBody: 'It may have ended or moved.',
     backToLabs: 'Back to Labs',
