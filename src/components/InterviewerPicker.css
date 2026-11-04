@@ -1,7 +1,10 @@
 /* 면접관 고르기 카드예요. 가운데 카드가 크게 서고, 양옆 카드는 안쪽으로 비스듬히 돌아 뒤로 물러나요. */
 .picker-stage {
   position: relative;
-  height: clamp(250px, 44vh, 400px);
+  height: clamp(250px, 44svh, 400px);
+  /* 화면이 낮으면 시작 줄이 밀려나지 않게 카드가 줄어들어요. */
+  flex-shrink: 1;
+  min-height: 170px;
   perspective: 1400px;
 }
 .picker-card {

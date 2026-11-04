@@ -265,7 +265,7 @@ export function PastScreen<T extends PracticeRecord>({ records, current, tags, o
   }
   return createPortal(
     // 면접 연습처럼 검은 화면 안은 다크 모드 색으로 그려요.
-    <div role="dialog" aria-modal="true" aria-labelledby="past-screen-title" className="dark fixed inset-0 z-[45] flex animate-fade flex-col overflow-hidden bg-[#000] text-white">
+    <div role="dialog" aria-modal="true" aria-labelledby="past-screen-title" className="dark fixed inset-0 z-[45] flex animate-fade flex-col overflow-clip overscroll-none bg-[#000] text-white">
       <div aria-hidden className="interview-glow interview-glow-a opacity-50" />
       <div aria-hidden className="interview-glow interview-glow-b opacity-50" />
       <header data-app-drag={isApp || undefined} className={`relative flex shrink-0 items-center gap-3 px-4 sm:gap-4 sm:px-5 md:px-8 ${isApp ? 'pt-11' : 'pt-4 sm:pt-5'}`}>

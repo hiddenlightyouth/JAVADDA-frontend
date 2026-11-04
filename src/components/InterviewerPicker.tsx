@@ -27,7 +27,7 @@ export function InterviewerPicker({ value, onChange }: { value: InterviewerProfi
   }, [])
 
   return (
-    <div className="w-full">
+    <div className="flex min-h-0 w-full flex-col">
       <div className="picker-stage" role="radiogroup" aria-label={lang === 'ko' ? '면접관 고르기' : 'Choose an interviewer'}>
         {INTERVIEWERS.map((item, order) => {
           // 가운데에서 몇 칸 떨어졌는지예요. 셋이라 늘 왼쪽 하나, 가운데, 오른쪽 하나로 둘러요.

@@ -568,10 +568,11 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
   } else if (phase === 'intro') {
     body = (
       // 위의 나가기 줄 높이만큼 아래를 비워서, 화면 전체의 가운데에 오게 해요. 옆 카드가 화면 밖으로 넘치지 않게 가로로 잘라요.
-      <div className="mx-auto flex min-h-full max-w-5xl animate-rise flex-col items-center justify-center overflow-x-clip pt-4 pb-10 text-center">
-        <h1 className="text-[28px] leading-tight font-bold tracking-tight text-white md:text-[34px]">{L.introTitle}</h1>
-        <p className="mt-3 text-[14.5px] leading-relaxed break-keep text-[#fff]/60">{lab ? L.introBodyLab : L.introBody}</p>
-        <div className="mt-8 w-full">
+      <div className="mx-auto flex h-full max-w-5xl animate-rise flex-col items-center justify-center overflow-x-clip pt-2 pb-4 text-center sm:pt-4 sm:pb-10">
+        <h1 className="text-[24px] leading-tight font-bold tracking-tight text-white sm:text-[28px] md:text-[34px]">{L.introTitle}</h1>
+        <p className="mt-2 text-[13.5px] leading-relaxed break-keep text-[#fff]/60 sm:mt-3 sm:text-[14.5px]">{lab ? L.introBodyLab : L.introBody}</p>
+        {/* 화면이 낮으면 면접관 카드가 줄어들어서, 시작 줄까지 스크롤 없이 한 화면에 들어와요. */}
+        <div className="mt-5 flex min-h-0 w-full flex-col sm:mt-8">
           <InterviewerPicker
             value={interviewer}
             onChange={(next) => {
@@ -585,7 +586,7 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
           />
         </div>
         {/* 시작 줄이에요. 누구와 면접하는지 한 번 더 적고 바로 시작해요. */}
-        <div className="mt-6 flex w-full max-w-xl items-center justify-between gap-4 rounded-[22px] bg-[#fff] py-3 pr-3 pl-6">
+        <div className="mt-5 flex w-full max-w-xl shrink-0 items-center justify-between gap-4 rounded-[22px] bg-[#fff] py-3 pr-3 pl-6">
           <p className="min-w-0 truncate text-left text-[15px] font-semibold text-[#000]/85">{L.startNote(pick(interviewer.name))}</p>
           <button type="button" onClick={begin} className="flex h-12 shrink-0 items-center gap-2 rounded-2xl bg-[#1c1c1e] px-6 text-[15px] font-semibold text-white transition-opacity hover:opacity-85">
             {L.start}
@@ -600,7 +601,7 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
     body = (
       <div className="mx-auto flex h-full w-full max-w-4xl flex-col">
         {/* 면접관은 질문이 바뀌어도 같은 자리에 그대로 있어요. 위에서부터 놓아서 질문 길이나 답변 칸 때문에 얼굴이 움직이지 않아요. */}
-        <div className="flex flex-1 flex-col pt-[5vh] pb-6">
+        <div className="flex min-h-0 flex-1 flex-col pt-[3svh] pb-4 sm:pt-[5svh] sm:pb-6">
           <Interviewer key={interviewer.key} pose={voice.pose} portrait={interviewer.portrait} label={`${pick(interviewer.role)} ${pick(interviewer.name)}`} />
           <p className="flex items-center gap-2 text-[13px] font-medium text-[#fff]/45">
             <span>{phase === 'asking' ? (voice.failed ? L.voiceFailed : voice.preparing ? L.preparing : L.speaking) : phase === 'moving' ? (index + 1 >= total ? L.last : L.moving) : L.listening}</span>
@@ -609,7 +610,7 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
 
           {/* 내 답이에요. 말하는 동안 확정된 글자는 밝게, 아직 바뀔 수 있는 글자는 옅게 보여요. */}
           {phase !== 'asking' && (
-            <div className="mt-10 animate-fade">
+            <div className="mt-6 flex min-h-0 flex-1 animate-fade flex-col sm:mt-10">
               {typing ? (
                 <textarea
                   autoFocus
@@ -617,10 +618,10 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
                   readOnly={phase !== 'answering'}
                   onChange={(event) => setAnswer(event.target.value)}
                   placeholder={L.typePlaceholder}
-                  className="min-h-40 w-full resize-none rounded-2xl border border-[#fff]/10 bg-[#fff]/[0.06] p-5 text-[18px] leading-relaxed text-white outline-none placeholder:text-[#fff]/30 focus:border-[#fff]/25"
+                  className="min-h-20 w-full flex-1 resize-none rounded-2xl border border-[#fff]/10 bg-[#fff]/[0.06] p-5 text-[18px] leading-relaxed text-white outline-none placeholder:text-[#fff]/30 focus:border-[#fff]/25"
                 />
               ) : (
-                <div ref={transcript} className="max-h-[30vh] overflow-y-auto [mask-image:linear-gradient(to_bottom,transparent,#000_24px)] pt-6">
+                <div ref={transcript} className="max-h-[30svh] min-h-0 overflow-y-auto [mask-image:linear-gradient(to_bottom,transparent,#000_24px)] pt-6">
                   {shown ? (
                     <p className="text-[20px] leading-relaxed font-medium break-keep text-[#fff]/85 md:text-[24px]">
                       {answer}
@@ -645,7 +646,7 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
             {L.silenceNote}
           </p>
         )}
-        <div className="flex min-h-14 flex-wrap items-center justify-center gap-3 pb-2">
+        <div className="flex min-h-14 shrink-0 flex-wrap items-center justify-center gap-3 pb-2">
           {phase === 'asking' && canSpeak() && voice.failed && (
             <button type="button" onClick={voice.retry} className={darkButton}>
               {L.retryVoice}
@@ -692,7 +693,7 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
   const live = phase === 'asking' || phase === 'answering'
   return createPortal(
     // 검은 화면 안은 다크 모드 색으로 그려서, 같이 쓰는 부품(진행 고리, 점수 고리, 안내)도 어두운 바탕에 맞게 보여요.
-    <div role="dialog" aria-modal="true" aria-label={L.title} className="dark fixed inset-0 z-[45] flex animate-fade flex-col overflow-hidden bg-[#000] text-white">
+    <div role="dialog" aria-modal="true" aria-label={L.title} className="dark fixed inset-0 z-[45] flex animate-fade flex-col overflow-clip overscroll-none bg-[#000] text-white">
       <div aria-hidden className={`interview-glow interview-glow-a ${live ? 'opacity-100' : 'opacity-50'}`} />
       <div aria-hidden className={`interview-glow interview-glow-b ${live ? 'opacity-100' : 'opacity-50'}`} />
 
@@ -724,7 +725,8 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
         </div>
       )}
 
-      <main className="relative min-h-0 flex-1 overflow-y-auto px-4 pb-8 sm:px-6 md:px-12">{body}</main>
+      {/* 면접 중에는 화면이 움직이지 않게 스크롤하지 않아요. 결과 화면만 길어서 스크롤해요. */}
+      <main className={`relative min-h-0 flex-1 px-4 sm:px-6 md:px-12 ${phase === 'finished' ? 'overflow-y-auto overscroll-contain pb-8' : 'overflow-clip pb-4 sm:pb-8'}`}>{body}</main>
 
       {/* 확인 창(`ConfirmDialog`)은 이 검은 화면보다 아래 층에 떠서, 같은 모양을 이 화면 안에 그려요. */}
       {confirming && (
@@ -764,7 +766,7 @@ function Karaoke({ text, progress, dim }: { text: string; progress: number; dim:
   const lit = progress * text.length
   let offset = 0
   return (
-    <h2 aria-label={text} className={`mt-4 text-[30px] leading-[1.3] font-bold tracking-tight break-keep text-white transition-opacity duration-700 md:text-[44px] ${dim ? 'opacity-40' : ''}`}>
+    <h2 aria-label={text} className={`mt-4 shrink-0 text-[24px] leading-[1.3] font-bold sm:text-[30px] tracking-tight break-keep text-white transition-opacity duration-700 md:text-[44px] ${dim ? 'opacity-40' : ''}`}>
       {text.split(/(\s+)/).map((part, order) => {
         const start = offset
         offset += part.length

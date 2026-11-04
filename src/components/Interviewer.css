@@ -1,11 +1,15 @@
 .interviewer {
-  width: clamp(148px, 26vh, 264px);
+  width: clamp(148px, 26svh, 264px);
   flex-shrink: 0;
   overflow: hidden;
   border-radius: 28px;
   background: #dfe9f1;
   border: 1px solid #ffffff26;
   box-shadow: 0 12px 45px #0003;
+}
+/* 낮은 화면(휴대폰)에서는 질문과 답변 칸, 버튼까지 스크롤 없이 한 화면에 들어오게 얼굴을 줄여요. */
+@media (max-height: 760px) {
+  .interviewer { width: clamp(96px, 19svh, 264px); border-radius: 22px; }
 }
 /* 사진을 먼저 깔아 둬요. 캔버스가 준비되기 전이나 그릴 수 없는 환경에서도 같은 자리에 같은 얼굴이 보여요. 사진과 자리는 면접관마다 portraitBackground가 정해요. */
 .interviewer-portrait {
