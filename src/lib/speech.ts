@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { track } from './analytics'
 import { charPose, REST, withLoudness, type MouthPose } from './lipsync'
+import { isApp } from './shell'
 import { readItem, writeItem } from './storage'
 import { createStore, useStore } from './store'
 
@@ -27,6 +28,7 @@ interface Recognition {
   onresult: ((event: RecognitionEvent) => void) | null
   onerror: ((event: { error: string }) => void) | null
   onend: (() => void) | null
+  onstart?: (() => void) | null
   start: () => void
   abort: () => void
 }
@@ -41,6 +43,60 @@ const recognitionClass = (): RecognitionClass | null => {
 
 /** 말로 답하기를 쓸 수 있는 브라우저인지예요. */
 export const canDictate = () => recognitionClass() !== null
+
+/** 마이크를 미리 받은 결과예요. 'denied'는 권한이 없고, 'missing'은 마이크를 찾지 못한 거예요. */
+export type MicResult = 'ready' | 'denied' | 'missing'
+
+/** 음성 인식 허락을 기다리는 가장 긴 시간이에요. 허락 창에 답하는 동안 기다려요. */
+const PRIME_TIMEOUT_MS = 15000
+
+/**
+ * 면접을 시작하기 전에 마이크 허락을 미리 받아요. 첫 질문에 답할 때 허락 창이 뜨지 않게 해요.
+ * 마이크를 한 번 열었다 바로 닫고, Safari와 macOS 앱은 음성 인식 허락을 따로 물어서 음성 인식도 한 번 켰다 꺼요.
+ * Chrome은 마이크 허락 하나로 음성 인식까지 되고, 한 번 허락하면 그 사이트에 기억해서 다시 묻지 않아요.
+ * 시작 버튼을 누른 순간에 불러야 브라우저가 허락 창을 띄워요.
+ */
+export async function prepareMic(lang: string): Promise<MicResult> {
+  if (!navigator.mediaDevices?.getUserMedia) return 'ready'
+  try {
+    const media = await navigator.mediaDevices.getUserMedia({ audio: true })
+    media.getTracks().forEach((track) => track.stop())
+  } catch (error) {
+    const name = (error as { name?: string } | null)?.name
+    if (name === 'NotFoundError' || name === 'OverconstrainedError') return 'missing'
+    if (name === 'NotAllowedError' || name === 'SecurityError') return 'denied'
+    return 'ready'
+  }
+  const Class = recognitionClass()
+  const chrome = typeof window !== 'undefined' && 'chrome' in window && !isApp
+  if (!Class || chrome) return 'ready'
+  return new Promise<MicResult>((resolve) => {
+    let done = false
+    const recognition = new Class()
+    const end = (result: MicResult) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      recognition.onstart = recognition.onerror = recognition.onend = recognition.onresult = null
+      try {
+        recognition.abort()
+      } catch {
+        // 이미 멈췄으면 그대로 둬요.
+      }
+      resolve(result)
+    }
+    const timer = setTimeout(() => end('ready'), PRIME_TIMEOUT_MS)
+    recognition.lang = lang
+    recognition.onstart = () => end('ready')
+    recognition.onerror = (event) => end(event.error === 'not-allowed' || event.error === 'service-not-allowed' ? 'denied' : 'ready')
+    recognition.onend = () => end('ready')
+    try {
+      recognition.start()
+    } catch {
+      end('ready')
+    }
+  })
+}
 
 /** 질문을 소리로 읽어 줄 수 있는 브라우저인지예요. */
 export const canSpeak = () => typeof window !== 'undefined' && ('Audio' in window || 'speechSynthesis' in window)

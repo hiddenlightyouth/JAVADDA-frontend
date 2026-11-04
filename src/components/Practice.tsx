@@ -5,7 +5,7 @@ import { companyOf, fetchQuestions, PROGRESS_START, submitAnswer, useReport, use
 import { messages, pick, useLang, useMessages } from '../lib/i18n'
 import { greetingOf, INTERVIEWERS, setInterviewer, useInterviewer, type InterviewerKey, type InterviewerProfile } from '../lib/interviewers'
 import { useLoadHold, useLoadProgress } from '../lib/load'
-import { canDictate, canSpeak, chime, joinSpeech, prefetchVoice, setPracticeVolume, unlockChime, useDictation, useMicLevel, usePracticeVolume, useSpeak } from '../lib/speech'
+import { canDictate, canSpeak, chime, joinSpeech, prefetchVoice, prepareMic, setPracticeVolume, unlockChime, useDictation, useMicLevel, usePracticeVolume, useSpeak } from '../lib/speech'
 import type { MouthPose } from '../lib/lipsync'
 import { showToast } from '../lib/toast'
 import { AiProgress, CompanyMark, Notice, ScoreRing } from './GapParts'
@@ -210,8 +210,9 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
   const run = useRef(0)
   /** 이번 답을 말로 했는지. 분석과 결과에서 글로 쓴 답과 나눠 봐요. */
   const spoken = useRef(false)
+  const speechLang = lang === 'ko' ? 'ko-KR' : 'en-US'
   const dictation = useDictation(
-    lang === 'ko' ? 'ko-KR' : 'en-US',
+    speechLang,
     (text) => {
       spoken.current = true
       setAnswer((prev) => joinSpeech(prev, text))
@@ -223,6 +224,22 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
       showToast(denied ? L.micDenied : code === 'audio-capture' ? L.micMissing : L.micFailed)
     },
   )
+  /** 시작을 누를 때 미리 받은 마이크 허락이에요. 첫 답을 듣기 전에 이것을 기다려서, 면접 중간에 허락 창이 뜨지 않아요. */
+  const micReady = useRef<Promise<void> | null>(null)
+
+  /** 면접을 시작하기 전에 마이크와 음성 인식 허락을 받아 둬요. 시작 버튼을 누른 순간이라 브라우저가 허락 창을 띄워요. */
+  function readyMic() {
+    if (typingRef.current || !canDictate() || micReady.current) return
+    micReady.current = prepareMic(speechLang).then((result) => {
+      if (result === 'ready') return
+      // 다음에 시작을 누르면 다시 물어 볼 수 있게 비워 둬요.
+      micReady.current = null
+      typingRef.current = true
+      setTyping(true)
+      track('practice_voice_error', { code: result, from: 'prepare' })
+      showToast(result === 'denied' ? L.micDenied : L.micMissing)
+    })
+  }
   /** 말로 답하는 동안의 마이크 소리 크기예요. 오른쪽 위 소리 막대가 읽어요. */
   const mic = useMicLevel(dictation.listening)
 
@@ -299,6 +316,9 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
     // 바로 답하기를 누르면 읽기가 멈추면서 여기서 이어져요. 목소리를 받지 못하면 다시 시도나 바로 답하기를 누를 때까지 기다려요.
     if (canSpeak()) await voice.speak(question.question, speaker, { hold: true })
     if (mine !== run.current) return
+    // 시작할 때 띄운 마이크 허락 창에 아직 답하지 않았으면 기다려요.
+    if (micReady.current) await micReady.current
+    if (mine !== run.current) return
     chime()
     setPhase('answering')
     if (!typingRef.current) {
@@ -369,6 +389,7 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
   function begin() {
     // 띵 소리와 음성은 사용자가 누른 순간에 준비해야 브라우저가 막지 않아요.
     unlockChime()
+    readyMic()
     if (questions) return start()
     // 받지 못했으면 한 번 더 받아 봐요.
     if (questions === null) {
