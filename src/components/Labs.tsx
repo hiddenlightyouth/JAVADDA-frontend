@@ -25,6 +25,15 @@ interface Experiment {
 /** 지금 올라와 있는 실험이에요. 위에 있을수록 먼저 보여요. */
 const EXPERIMENTS: Experiment[] = [
   {
+    id: 'tech-interview',
+    title: { ko: '기술 면접', en: 'Tech interview' },
+    summary: {
+      ko: '백엔드와 프론트엔드 기술 면접 질문 300개로 가상 면접을 봐요.',
+      en: 'Take a mock interview with 300 backend and frontend tech questions.',
+    },
+    screen: lazy(() => import('./labs/TechInterview').then((module) => ({ default: module.TechInterview }))),
+  },
+  {
     id: 'contests',
     title: { ko: '공모전', en: 'Contests' },
     summary: {

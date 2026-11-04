@@ -33,6 +33,7 @@ const TEXT = messages({
     progress: (current: number, total: number) => `${current} / ${total}`,
     introTitle: '가상 면접 시작',
     introBody: '함께할 면접관을 골라 주세요. 면접관의 성격에 따라 묻는 질문과 채점이 달라져요.',
+    introBodyLab: '함께할 면접관을 골라 주세요. 면접관의 성격에 따라 채점과 꼬리 질문이 달라져요.',
     start: '면접 시작하기',
     startNote: (name: string) => `${name} 면접관과 면접을 시작해요`,
     writing: '질문을 만들고 있어요',
@@ -86,6 +87,7 @@ const TEXT = messages({
     progress: (current: number, total: number) => `${current} / ${total}`,
     introTitle: 'Start a mock interview',
     introBody: "Pick your interviewer. Their personality changes the questions they ask and how they grade.",
+    introBodyLab: 'Pick your interviewer. Their personality changes how they grade and follow up.',
     start: 'Start interview',
     startNote: (name: string) => `Your interview with ${name}`,
     writing: 'Writing your questions',
@@ -141,6 +143,19 @@ const PREFETCH_DELAY_MS = 900
 /** 띵 소리가 마이크에 들어가지 않게, 소리가 끝난 뒤에 듣기 시작해요. */
 const LISTEN_AFTER_MS = 450
 
+/**
+ * 리포트 없이 하는 면접이에요. 잡아따 Labs의 기술 면접이 써요. 질문은 미리 골라 오고, 채점은 grade로 받아요.
+ * 질문이 하나면 질문 하나만 연습할 때처럼 답하자마자 피드백을 보여줘요.
+ */
+export interface LabSession {
+  /** 위 줄에 적는 이름이에요(백엔드 기술 면접 등). */
+  title: string
+  questions: InterviewQuestion[]
+  grade: (question: InterviewQuestion, answer: string, interviewer: InterviewerKey) => Promise<PracticeFeedback | null>
+  /** 결과 화면에서 돌아가는 버튼의 글자예요. */
+  backLabel: string
+}
+
 /** 면접의 단계예요. 시작 전, 면접관이 묻는 중, 내가 답하는 중, 다음 질문으로 넘어가는 중, 끝. */
 type Phase = 'intro' | 'asking' | 'answering' | 'moving' | 'finished'
 
@@ -160,22 +175,23 @@ interface Answer {
  * 음성 인식이 없는 브라우저(Firefox)나 마이크를 쓸 수 없으면(macOS 앱 2.0 등) 글로 답해요. 면접관은 시작 화면에서 고르고, 면접관마다 목소리와 질문, 채점이 달라요(`interviewers.ts`).
  * 질문 하나를 골라 들어오면 그 질문만 연습하고, 답하면 바로 점수와 피드백, 모범 답변을 보여줘요. 시작 화면은 전체 연습과 같은 "가상 면접 시작"이에요.
  */
-export function Practice({ id, question: startId, onBack }: { id: string; question?: string; onBack: () => void }) {
+export function Practice({ id = '', question: startId, onBack, lab }: { id?: string; question?: string; onBack: () => void; lab?: LabSession }) {
   const L = useMessages(TEXT)
   const lang = useLang()
   const reportLoad = useLoadProgress()
-  const report = useReport(id, reportLoad.one)
+  // 실험실의 기술 면접은 리포트 없이 해서 리포트를 받지 않아요.
+  const report = useReport(lab ? null : id, reportLoad.one)
   // 리포트 상세는 자료를 받는 것이라 받은 바이트로, 질문은 AI가 만드는 것이라 서버의 단계로 퍼센트를 보여줘요.
-  const waitingReport = useLoadHold(report === undefined)
+  const waitingReport = useLoadHold(!lab && report === undefined)
   /** 면접관마다 AI가 따로 만든 질문이에요. 받는 중이면 없고, 받지 못했거나 비었으면 null이에요. */
   const [sets, setSets] = useState<Partial<Record<InterviewerKey, InterviewQuestion[] | null>>>({})
   const [progresses, setProgresses] = useState<Partial<Record<InterviewerKey, ProgressState>>>({})
   /** 시작을 눌렀지만 질문이 아직 오지 않아서 기다리는 중이에요. 오면 바로 첫 질문을 읽어요. */
   const [starting, setStarting] = useState(false)
   /** 질문 하나를 골라 들어왔는지예요. 그 질문은 예상 질문 탭의 질문(실무 팀장)이라, 고른 면접관과 상관없이 그 묶음에서 찾고 채점만 면접관을 따라요. */
-  const single = !!startId
+  const single = lab ? lab.questions.length === 1 : !!startId
   const interviewer = useInterviewer()
-  const setKey: InterviewerKey = single ? 'balanced' : interviewer.key
+  const setKey: InterviewerKey = single && !lab ? 'balanced' : interviewer.key
   const [phase, setPhase] = useState<Phase>('intro')
   const [index, setIndex] = useState(0)
   const [answer, setAnswer] = useState('')
@@ -228,6 +244,11 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   function load(key: InterviewerKey) {
     if (requested.current.has(key)) return
     requested.current.add(key)
+    // 실험실의 기술 면접은 질문을 이미 골라 왔어요. 면접관이 달라도 같은 질문이고 채점만 달라요.
+    if (lab) {
+      setSets((prev) => ({ ...prev, [key]: lab.questions.length > 0 ? lab.questions : null }))
+      return
+    }
     void fetchQuestions(
       id,
       (next) => setProgresses((prev) => ({ ...prev, [key]: next })),
@@ -390,7 +411,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
     setAnswers((prev) => [...prev.slice(0, at), entry])
     if (gradable) {
       track('practice_submit', { voice: spoken.current })
-      void submitAnswer(id, question, text, undefined, interviewer.key).then((result) => {
+      void (lab ? lab.grade(question, text, interviewer.key) : submitAnswer(id, question, text, undefined, interviewer.key)).then((result) => {
         setAnswers((prev) => prev.map((item, order) => (order === at ? { ...item, feedback: result ?? 'failed' } : item)))
       })
     } else track('practice_skip')
@@ -489,9 +510,9 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
   const total = questions?.length ?? 0
 
   let body
-  if (report === null || (questions === null && phase !== 'intro')) {
+  if ((!lab && report === null) || (questions === null && phase !== 'intro')) {
     body = <Notice title={L.missing} body={L.missingBody} action={L.back} onAction={exit} className="mt-[18vh]" />
-  } else if (waitingReport || report === undefined) {
+  } else if (!lab && (waitingReport || report === undefined)) {
     body = <LoadProgress percent={reportLoad.percent} className={loadCenter} />
   } else if (questions === null && single) {
     body = <Notice title={L.missing} body={L.missingBody} action={L.back} onAction={exit} className="mt-[18vh]" />
@@ -528,7 +549,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
       // 위의 나가기 줄 높이만큼 아래를 비워서, 화면 전체의 가운데에 오게 해요. 옆 카드가 화면 밖으로 넘치지 않게 가로로 잘라요.
       <div className="mx-auto flex min-h-full max-w-5xl animate-rise flex-col items-center justify-center overflow-x-clip pt-4 pb-10 text-center">
         <h1 className="text-[28px] leading-tight font-bold tracking-tight text-white md:text-[34px]">{L.introTitle}</h1>
-        <p className="mt-3 text-[14.5px] leading-relaxed break-keep text-[#fff]/60">{L.introBody}</p>
+        <p className="mt-3 text-[14.5px] leading-relaxed break-keep text-[#fff]/60">{lab ? L.introBodyLab : L.introBody}</p>
         <div className="mt-8 w-full">
           <InterviewerPicker
             value={interviewer}
@@ -553,7 +574,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
       </div>
     )
   } else if (phase === 'finished') {
-    body = <Summary answers={answers} single={single} interviewer={pick(interviewer.name)} onAgain={begin} onBack={exit} />
+    body = <Summary answers={answers} single={single} interviewer={pick(interviewer.name)} onAgain={begin} onBack={exit} backLabel={lab?.backLabel} />
   } else if (current) {
     body = (
       <div className="mx-auto flex h-full w-full max-w-4xl flex-col">
@@ -667,7 +688,7 @@ export function Practice({ id, question: startId, onBack }: { id: string; questi
             <span className="truncate text-[14px] font-medium text-[#fff]/80">{posting.title}</span>
           </span>
         ) : (
-          <p className="min-w-0 flex-1 truncate text-[13px] text-[#fff]/55">{L.title}</p>
+          <p className="min-w-0 flex-1 truncate text-[13px] text-[#fff]/55">{lab?.title ?? L.title}</p>
         )}
         {total > 0 && phase !== 'intro' && phase !== 'finished' && <span className="shrink-0 text-[13px] font-medium text-[#fff]/55 tabular-nums">{L.progress(index + 1, total)}</span>}
         {phase !== 'finished' && <AudioMeter voice={voice.pose} mic={mic} />}
@@ -817,7 +838,7 @@ function VolumeControl({ highlight = false }: { highlight?: boolean }) {
 }
 
 /** 면접이 끝나고 보여주는 결과예요. 평균 점수와 질문마다 내 답, 점수, 피드백이 있어요. 채점이 덜 끝난 질문은 끝나는 대로 채워져요. */
-function Summary({ answers, single, interviewer, onAgain, onBack }: { answers: Answer[]; single: boolean; interviewer: string; onAgain: () => void; onBack: () => void }) {
+function Summary({ answers, single, interviewer, onAgain, onBack, backLabel }: { answers: Answer[]; single: boolean; interviewer: string; onAgain: () => void; onBack: () => void; backLabel?: string }) {
   const L = useMessages(TEXT)
   const scores = answers.flatMap((item) => (typeof item.feedback === 'object' ? [item.feedback.score] : []))
   const grading = answers.some((item) => item.feedback === 'grading')
@@ -837,7 +858,7 @@ function Summary({ answers, single, interviewer, onAgain, onBack }: { answers: A
             {single ? L.answerAgain : L.again}
           </button>
           <button type="button" onClick={onBack} className={lightButton}>
-            {L.toReport}
+            {backLabel ?? L.toReport}
           </button>
         </div>
         {grading && <p className="mt-4 text-[12.5px] text-[#fff]/45 motion-safe:animate-pulse">{L.grading}</p>}

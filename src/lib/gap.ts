@@ -2346,6 +2346,20 @@ export async function regenerateQuestions(reportId: string, onProgress?: OnProgr
 
 // ---------- 면접 연습 ----------
 
+/**
+ * 잡아따 Labs의 기술 면접 답변을 채점해요(POST /labs/interview/answers). 리포트 없이 질문 글만으로 채점하고, 서버는 답을 저장하지 않아요.
+ * topic은 질문의 분야 이름이에요. 로그인하지 않았으면 로그인 화면으로 보내고 null이에요. 실패하면 토스트로 알리고 null이에요.
+ */
+export async function gradeLabAnswer(question: string, topic: string, answer: string, interviewer?: string, onProgress?: OnProgress): Promise<PracticeFeedback | null> {
+  if (!requireLogin()) return null
+  const result = await withProgress(onProgress, (headers) => call<PracticeFeedback>('/labs/interview/answers', send('POST', { question, topic, answer, interviewer }), true, headers))
+  if (!result.ok || !result.data) {
+    fail(result)
+    return null
+  }
+  return result.data
+}
+
 /** 이 리포트에서 연습한 답변이에요(GET /reports/{id}/questions/answers). 최근 것부터예요. 실패하면 조용히 빈 목록이에요(질문 목록은 그대로 보여요). */
 export async function fetchAnswers(reportId: string): Promise<PracticeRecord[]> {
   const result = await call<PracticeRecord[]>(`/reports/${Number(currentId(reportId))}/questions/answers`)
