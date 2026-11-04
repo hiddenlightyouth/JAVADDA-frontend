@@ -40,7 +40,8 @@ const TEXT = messages({
 
 /** 공고 카드는 넓은 화면에서 한 줄에 둘이나 셋씩 놓여요. */
 // 원문 칸이 열리면 목록 폭이 줄어서, 화면 폭이 아니라 목록 폭(@container)을 보고 칸 수를 정해요.
-export const jobsGrid = 'grid gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3'
+// 칸 수를 적지 않으면 한 칸의 폭이 긴 제목에 맞춰 늘어나 휴대폰에서 카드가 화면 밖으로 넘쳐서, 한 칸일 때도 grid-cols-1로 목록 폭에 맞춰요.
+export const jobsGrid = 'grid grid-cols-1 gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3'
 /** 리스트형은 한 줄에 공고 하나씩이에요. */
 export const jobsList = 'flex flex-col gap-2'
 /** 카드에 보여주는 필수 역량 수예요. 나머지는 수만 적어요. */

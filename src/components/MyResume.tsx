@@ -560,7 +560,7 @@ export function MyResume({ add, docId, onAdd, onList, onDoc, onExplore }: {
           {shelf.list.length === 0 ? (
             <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={addDocument} className="mt-16" />
           ) : (
-            <ul className="grid gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3">
               {ordered.map((resume) => (
                 <ResumeCard
                   key={resume.id}

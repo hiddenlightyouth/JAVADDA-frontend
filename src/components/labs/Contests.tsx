@@ -251,7 +251,7 @@ function ContestCard({ contest, order }: { contest: Contest; order: number }) {
     <li ref={ref} onClick={onBlankClick(open)} className="group relative isolate flex animate-rise cursor-pointer flex-col p-4 sm:p-5" style={stagger(order)}>
       <NotchedFrame left={contestDaysLeft(contest)} card={size} />
       <div className="flex flex-1 gap-4">
-        <Poster contest={contest} className="aspect-[3/4] w-28 self-start @6xl:w-32" />
+        <Poster contest={contest} className="aspect-[3/4] w-24 self-start @sm:w-28 @6xl:w-32" />
         <div className="flex min-w-0 flex-1 flex-col">
           {/* 오른쪽 위는 홈이 파고들어 있어서, 주최 줄은 그 자리를 비워 둬요. */}
           <span className="block truncate pr-20 text-[13.5px] font-medium text-gray-900">{contest.organizer}</span>
