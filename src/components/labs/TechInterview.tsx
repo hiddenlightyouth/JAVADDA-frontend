@@ -8,6 +8,7 @@ import { readJson, writeJson } from '../../lib/storage'
 import { TECH_QUESTIONS, type TechTrack } from '../../lib/techQuestions'
 import { filterChip, filterRow, Notice } from '../GapParts'
 import { Modal } from '../Dialog'
+import { Dropdown } from '../Dropdown'
 import { CheckIcon, ChevronRightIcon, ClockIcon, CloseButton, SearchIcon } from '../Icons'
 import { Practice, type LabSession } from '../Practice'
 import { PastScreen } from '../ReportQuestions'
@@ -200,6 +201,14 @@ export function TechInterview() {
     })
   }
 
+  /** 파트(백엔드, 프론트엔드)를 바꿔요. 화면 위의 메뉴와 시작 창이 같이 써요. 분야와 고르던 질문은 풀어요. */
+  function changeTrack(value: TechTrack) {
+    if (value === saved.track) return
+    track('labs_interview_track', { track: value })
+    update({ track: value, topic: null })
+    setPicking((prev) => (prev ? [] : prev))
+  }
+
   function togglePick(item: Item) {
     setPicking((prev) => {
       if (!prev) return prev
@@ -230,6 +239,20 @@ export function TechInterview() {
             className="min-w-0 flex-1 bg-transparent text-base text-gray-900 outline-none placeholder:text-gray-400 sm:text-[14px] [&::-webkit-search-cancel-button]:hidden"
           />
         </label>
+        <Dropdown
+          size="lg"
+          label={L.part}
+          value={L.tracks[saved.track]}
+          groups={[
+            {
+              items: (['backend', 'frontend'] as const).map((value) => ({
+                label: L.tracks[value],
+                checked: saved.track === value,
+                onSelect: () => changeTrack(value),
+              })),
+            },
+          ]}
+        />
         <button
           type="button"
           disabled={shown.length === 0}
@@ -361,10 +384,7 @@ export function TechInterview() {
       {choosing && (
         <StartDialog
           part={saved.track}
-          onPart={(value) => {
-            track('labs_interview_track', { track: value })
-            update({ track: value, topic: null })
-          }}
+          onPart={changeTrack}
           total={shown.length}
           count={saved.count}
           onCount={(value) => update({ count: value })}
