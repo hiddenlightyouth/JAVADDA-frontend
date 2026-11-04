@@ -8,15 +8,17 @@ import { readJson, writeJson } from '../../lib/storage'
 import { TECH_QUESTIONS, type TechTrack } from '../../lib/techQuestions'
 import { Dropdown } from '../Dropdown'
 import { filterChip, filterRow, Notice } from '../GapParts'
-import { CheckIcon, ChevronRightIcon, ClockIcon, SearchIcon } from '../Icons'
+import { Modal } from '../Dialog'
+import { CheckIcon, ChevronRightIcon, ClockIcon, CloseButton, SearchIcon } from '../Icons'
 import { Practice, type LabSession } from '../Practice'
 import { PastScreen } from '../ReportQuestions'
-import { toolButtonLg, useShowMore } from '../ui'
+import { primaryButton, quietButton, Segmented, toolButtonLg, useShowMore } from '../ui'
 
 /**
  * 잡아따 Labs의 기술 면접 (/labs/tech-interview)이에요. 모아 둔 백엔드와 프론트엔드 기술 면접 질문(`techQuestions.ts`)으로 가상 면접을 봐요.
- * 맨 위에 검색창, 직군과 질문 수 메뉴, "가상 면접 시작" 버튼이 있고, 그 아래 분야 버튼 줄과 질문 목록이에요.
- * 시작하면 지금 걸러진 질문 중에서 고른 수만큼 섞어 뽑아 면접 연습과 같은 가상 면접(`Practice`의 lab)을 열어요. 질문 줄을 누르면 그 질문 하나만 연습해요.
+ * 맨 위에 검색창, 직군 메뉴, "기술 면접 시작하기" 버튼이 있고, 그 아래 분야 버튼 줄과 질문 목록이에요.
+ * 시작하기를 누르면 창(`StartDialog`)에서 랜덤으로 뽑기(3, 5, 10개)와 직접 고르기 중 하나를 골라요. 랜덤은 지금 걸러진 질문을 섞어 뽑아 바로 면접 연습과 같은 가상 면접(`Practice`의 lab)을 열고,
+ * 직접 고르기는 목록에 체크 칸이 생겨서 10개(`MAX_PICK`)까지 고른 뒤 아래에 붙은 줄의 "면접 시작하기"로 열어요. 평소에는 질문 줄을 누르면 그 질문 하나만 연습해요.
  * 채점은 서버가 리포트 없이 질문 글로 해서(`gradeLabAnswer`) 로그인해야 해요. 서버가 답과 피드백을 계정에 저장해서, "지난 기록"에서 예상 질문 탭과 같은 검은 화면(`PastScreen`)으로 다시 보고
  * 연습한 질문 줄에는 체크와 최근 점수가 붙어요. 고른 직군, 분야, 질문 수는 이 기기에 기억해요.
  */
@@ -24,6 +26,8 @@ import { toolButtonLg, useShowMore } from '../ui'
 const COUNTS = [3, 5, 10] as const
 type Count = (typeof COUNTS)[number]
 const SAVED_KEY = 'javadda:labs-interview'
+/** 직접 고를 때 한 번에 고르는 질문 수의 끝이에요. */
+const MAX_PICK = 10
 
 interface Saved {
   track: TechTrack
@@ -38,7 +42,20 @@ const TEXT = messages({
     tracks: { backend: '백엔드', frontend: '프론트엔드' } as Record<TechTrack, string>,
     count: '질문 수',
     counts: (count: number) => `질문 ${count}개`,
-    start: '가상 면접 시작',
+    start: '기술 면접 시작하기',
+    startTitle: '기술 면접 시작하기',
+    startBody: '어떻게 질문을 고를까요?',
+    randomTitle: '랜덤으로 뽑기',
+    randomBody: (scope: string) => `${scope} 질문 중에서 섞어서 물어봐요.`,
+    randomStart: (count: number) => `${count}개로 시작하기`,
+    pickTitle: '직접 고르기',
+    pickBody: `목록에서 묻고 싶은 질문을 ${MAX_PICK}개까지 골라요.`,
+    pickStart: '질문 고르기',
+    picked: (count: number) => (count === 0 ? '면접에서 물을 질문을 골라 주세요' : `${count}개 골랐어요`),
+    pickFull: `${MAX_PICK}개까지 고를 수 있어요`,
+    pickBegin: '면접 시작하기',
+    cancel: '취소',
+    close: '닫기',
     topic: '분야',
     all: '전체',
     items: (count: number) => `${count.toLocaleString()}개의 질문`,
@@ -58,7 +75,20 @@ const TEXT = messages({
     tracks: { backend: 'Backend', frontend: 'Frontend' } as Record<TechTrack, string>,
     count: 'Questions',
     counts: (count: number) => `${count} questions`,
-    start: 'Start mock interview',
+    start: 'Start tech interview',
+    startTitle: 'Start a tech interview',
+    startBody: 'How should we pick the questions?',
+    randomTitle: 'Random',
+    randomBody: (scope: string) => `We'll shuffle questions from ${scope}.`,
+    randomStart: (count: number) => `Start with ${count}`,
+    pickTitle: 'Pick them yourself',
+    pickBody: `Choose up to ${MAX_PICK} questions from the list.`,
+    pickStart: 'Pick questions',
+    picked: (count: number) => (count === 0 ? 'Pick the questions to be asked' : `${count} picked`),
+    pickFull: `You can pick up to ${MAX_PICK}`,
+    pickBegin: 'Start interview',
+    cancel: 'Cancel',
+    close: 'Close',
     topic: 'Topic',
     all: 'All',
     items: (count: number) => `${count.toLocaleString()} questions`,
@@ -123,6 +153,10 @@ export function TechInterview() {
   const [records, setRecords] = useState<LabRecord[]>([])
   const [showPast, setShowPast] = useState(false)
   const [reload, setReload] = useState(0)
+  /** 시작하기 창이 열려 있는지예요. */
+  const [choosing, setChoosing] = useState(false)
+  /** 직접 고르는 중이면 고른 질문의 아이디(고른 순서)예요. 고르는 중이 아니면 null이에요. */
+  const [picking, setPicking] = useState<string[] | null>(null)
 
   useEffect(() => {
     if (!signedIn) return setRecords([])
@@ -157,7 +191,7 @@ export function TechInterview() {
   const practicedCount = useMemo(() => shown.filter((item) => latest.has(item.id)).length, [shown, latest])
   const { count, more } = useShowMore(shown.length, `${saved.track}|${saved.topic}|${query}`)
 
-  function open(picked: Item[], from: 'start' | 'question') {
+  function open(picked: Item[], from: 'random' | 'pick' | 'question') {
     if (picked.length === 0) return
     // 채점은 서버의 AI가 해서 로그인해야 해요. 로그인하면 이 화면으로 돌아와요.
     if (!isSignedIn()) return requestLogin()
@@ -169,6 +203,21 @@ export function TechInterview() {
       grade: (question, answer, interviewer) => gradeLabAnswer(question.id, question.question, question.source.label, answer, interviewer),
       backLabel: L.back,
     })
+  }
+
+  function togglePick(item: Item) {
+    setPicking((prev) => {
+      if (!prev) return prev
+      if (prev.includes(item.id)) return prev.filter((id) => id !== item.id)
+      return prev.length >= MAX_PICK ? prev : [...prev, item.id]
+    })
+  }
+
+  function beginPicked() {
+    if (!picking) return
+    const byId = new Map(items.map((item) => [item.id, item]))
+    open(picking.flatMap((id) => byId.get(id) ?? []), 'pick')
+    setPicking(null)
   }
 
   return (
@@ -198,21 +247,20 @@ export function TechInterview() {
                 onSelect: () => {
                   track('labs_interview_track', { track: value })
                   update({ track: value, topic: null })
+                  setPicking((prev) => (prev ? [] : prev))
                 },
               })),
             },
           ]}
         />
-        <Dropdown
-          size="lg"
-          label={L.count}
-          value={L.counts(saved.count)}
-          groups={[{ items: COUNTS.map((value) => ({ label: L.counts(value), checked: saved.count === value, onSelect: () => update({ count: value }) })) }]}
-        />
         <button
           type="button"
           disabled={shown.length === 0}
-          onClick={() => open(shuffled(shown).slice(0, saved.count), 'start')}
+          onClick={() => {
+            // 채점은 서버의 AI가 해서 로그인해야 해요. 로그인하면 이 화면으로 돌아와요.
+            if (!isSignedIn()) return requestLogin()
+            setChoosing(true)
+          }}
           className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-brand px-5 text-[14px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-gray-200 disabled:text-gray-400"
         >
           {L.start}
@@ -275,14 +323,24 @@ export function TechInterview() {
       ) : (
         <>
           <ul className="mt-3 divide-y divide-gray-200/70 rounded-2xl bg-gray-50">
-            {shown.slice(0, count).map((item, order) => (
+            {shown.slice(0, count).map((item, order) => {
+              const chosen = picking?.includes(item.id) ?? false
+              const full = !!picking && !chosen && picking.length >= MAX_PICK
+              return (
               <li key={item.id}>
                 <button
                   type="button"
-                  onClick={() => open([item], 'question')}
-                  className="group flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors first:rounded-t-2xl last:rounded-b-2xl hover:bg-gray-100 sm:px-5"
+                  role={picking ? 'checkbox' : undefined}
+                  aria-checked={picking ? chosen : undefined}
+                  disabled={full}
+                  onClick={() => (picking ? togglePick(item) : open([item], 'question'))}
+                  className={`group flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors first:rounded-t-2xl last:rounded-b-2xl disabled:opacity-40 sm:px-5 ${chosen ? 'bg-brand-soft' : 'hover:bg-gray-100'}`}
                 >
-                  {latest.has(item.id) ? (
+                  {picking ? (
+                    <span className={`flex size-5 shrink-0 items-center justify-center rounded-md border transition-colors ${chosen ? 'border-brand bg-brand' : 'border-gray-300 bg-white'}`}>
+                      {chosen && <CheckIcon className="size-3.5 text-white" strokeWidth={2.2} />}
+                    </span>
+                  ) : latest.has(item.id) ? (
                     <span className="flex w-7 shrink-0 flex-col items-start">
                       <CheckIcon className="size-4 text-brand" strokeWidth={2} />
                       <span className="text-[11px] font-semibold text-brand tabular-nums">{latest.get(item.id)}</span>
@@ -294,14 +352,53 @@ export function TechInterview() {
                     <span className="block text-[14.5px] leading-snug font-medium break-keep text-gray-900 transition-colors group-hover:text-brand">{item.question}</span>
                     {!saved.topic && <span className="mt-1 block text-[12.5px] text-gray-500">{item.topic}</span>}
                   </span>
-                  <span className="hidden shrink-0 text-[12.5px] font-medium text-gray-400 transition-colors group-hover:text-brand sm:block">{L.practice}</span>
-                  <ChevronRightIcon className="size-4 shrink-0 text-gray-400 transition-colors group-hover:text-brand" strokeWidth={1.8} />
+                  {picking ? (
+                    chosen && <span className="shrink-0 text-[12.5px] font-semibold text-brand tabular-nums">{picking.indexOf(item.id) + 1}</span>
+                  ) : (
+                    <>
+                      <span className="hidden shrink-0 text-[12.5px] font-medium text-gray-400 transition-colors group-hover:text-brand sm:block">{L.practice}</span>
+                      <ChevronRightIcon className="size-4 shrink-0 text-gray-400 transition-colors group-hover:text-brand" strokeWidth={1.8} />
+                    </>
+                  )}
                 </button>
               </li>
-            ))}
+              )
+            })}
           </ul>
           {more}
         </>
+      )}
+
+      {/* 직접 고르는 동안 아래에 붙어 있어서, 목록이 길어도 시작 버튼을 찾지 않아요. 스크롤 칸의 아래 여백만큼 내려 화면 맨 아래에 붙여요. */}
+      {picking && (
+        <div className="sticky bottom-[-4rem] z-10 mt-6 flex items-center gap-3 border-t border-gray-200 bg-white py-4">
+          <p className={`min-w-0 flex-1 text-[13px] ${picking.length >= MAX_PICK ? 'text-brand' : 'text-gray-500'}`}>{picking.length >= MAX_PICK ? L.pickFull : L.picked(picking.length)}</p>
+          <button type="button" onClick={() => setPicking(null)} className={quietButton}>
+            {L.cancel}
+          </button>
+          <button type="button" disabled={picking.length === 0} onClick={beginPicked} className={primaryButton}>
+            {L.pickBegin}
+          </button>
+        </div>
+      )}
+
+      {choosing && (
+        <StartDialog
+          scope={saved.topic ?? L.tracks[saved.track]}
+          total={shown.length}
+          count={saved.count}
+          onCount={(value) => update({ count: value })}
+          onRandom={() => {
+            setChoosing(false)
+            open(shuffled(shown).slice(0, saved.count), 'random')
+          }}
+          onPick={() => {
+            setChoosing(false)
+            track('labs_interview_pick_open')
+            setPicking([])
+          }}
+          onClose={() => setChoosing(false)}
+        />
       )}
 
       {session && (
@@ -326,5 +423,53 @@ export function TechInterview() {
         />
       )}
     </div>
+  )
+}
+
+/**
+ * 기술 면접 시작하기 창이에요. 랜덤으로 뽑기와 직접 고르기를 큰 회색 칸 두 개로 나란히 보여줘요.
+ * 랜덤 칸에는 질문 수(3, 5, 10개)를 고르는 칸과 바로 시작하는 버튼이, 직접 고르기 칸에는 목록에서 고르러 가는 버튼이 있어요.
+ */
+function StartDialog({ scope, total, count, onCount, onRandom, onPick, onClose }: {
+  scope: string
+  total: number
+  count: Count
+  onCount: (count: Count) => void
+  onRandom: () => void
+  onPick: () => void
+  onClose: () => void
+}) {
+  const L = useMessages(TEXT)
+  const counts = COUNTS.filter((value) => value <= total || value === COUNTS[0])
+  const size = Math.min(count, total)
+  return (
+    <Modal onClose={onClose} labelledBy="tech-interview-start" className="w-full max-w-xl p-5 sm:p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 id="tech-interview-start" className="text-[18px] font-bold text-gray-900">
+            {L.startTitle}
+          </h2>
+          <p className="mt-1 text-[13.5px] text-gray-500">{L.startBody}</p>
+        </div>
+        <CloseButton onClick={onClose} label={L.close} />
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <section className="flex flex-col rounded-2xl bg-gray-50 p-4 sm:p-5">
+          <h3 className="text-[15px] font-semibold text-gray-900">{L.randomTitle}</h3>
+          <p className="mt-1 flex-1 text-[13px] leading-relaxed break-keep text-gray-500">{L.randomBody(scope)}</p>
+          <Segmented label={L.count} options={counts.map((value) => [value, L.counts(value)] as const)} value={count} onChange={onCount} size="md" className="mt-4 self-start" />
+          <button type="button" onClick={onRandom} className={`${primaryButton} mt-3 w-full`}>
+            {L.randomStart(size)}
+          </button>
+        </section>
+        <section className="flex flex-col rounded-2xl bg-gray-50 p-4 sm:p-5">
+          <h3 className="text-[15px] font-semibold text-gray-900">{L.pickTitle}</h3>
+          <p className="mt-1 flex-1 text-[13px] leading-relaxed break-keep text-gray-500">{L.pickBody}</p>
+          <button type="button" onClick={onPick} className={`${primaryButton} mt-4 w-full`}>
+            {L.pickStart}
+          </button>
+        </section>
+      </div>
+    </Modal>
   )
 }
