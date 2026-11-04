@@ -1,24 +1,26 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { track } from '../../lib/analytics'
 import { isSignedIn, useAuth } from '../../lib/auth'
 import { fetchLabAnswers, gradeLabAnswer, requestLogin, type InterviewQuestion, type LabRecord } from '../../lib/gap'
 import { messages, pick, useMessages } from '../../lib/i18n'
 import { INTERVIEWERS } from '../../lib/interviewers'
 import { readJson, writeJson } from '../../lib/storage'
+import { fetchTechAnswer, TECH_ANSWER_SOURCE } from '../../lib/techAnswer'
 import { TECH_QUESTIONS, type TechTrack } from '../../lib/techQuestions'
-import { filterChip, filterRow, Notice } from '../GapParts'
+import { Failed, filterChip, filterRow, Notice } from '../GapParts'
 import { Modal } from '../Dialog'
 import { Dropdown } from '../Dropdown'
-import { CheckIcon, ChevronRightIcon, ClockIcon, CloseButton, SearchIcon } from '../Icons'
+import { BackIcon, CheckIcon, ChevronRightIcon, ClockIcon, CloseButton, SearchIcon } from '../Icons'
 import { Practice, type LabSession } from '../Practice'
 import { PastScreen } from '../ReportQuestions'
-import { primaryButton, quietButton, Segmented, toolButtonLg, useShowMore } from '../ui'
+import { ghostButton, LoadProgress, loadCenter, primaryButton, primaryButtonMd, quietButton, Segmented, toolButtonLg, useShowMore } from '../ui'
 
 /**
  * 잡아따 Labs의 기술 면접 (/labs/tech-interview)이에요. 모아 둔 백엔드와 프론트엔드 기술 면접 질문(`techQuestions.ts`)으로 가상 면접을 봐요.
  * 맨 위에 검색창, 직군 메뉴, "기술 면접 시작하기" 버튼이 있고, 그 아래 분야 버튼 줄과 질문 목록이에요.
  * 시작하기를 누르면 창(`StartDialog`)에서 랜덤으로 뽑기(3, 5, 10개)와 직접 고르기 중 하나를 골라요. 랜덤은 지금 걸러진 질문을 섞어 뽑아 바로 면접 연습과 같은 가상 면접(`Practice`의 lab)을 열고,
- * 직접 고르기는 목록에 체크 칸이 생겨서 10개(`MAX_PICK`)까지 고른 뒤 아래에 붙은 줄의 "면접 시작하기"로 열어요. 평소에는 질문 줄을 누르면 그 질문 하나만 연습해요.
+ * 직접 고르기는 목록에 체크 칸이 생겨서 10개(`MAX_PICK`)까지 고른 뒤 아래에 붙은 줄의 "면접 시작하기"로 열어요.
+ * 평소에는 질문 줄을 누르면 그 질문의 상세(`AnswerView`)로 가서 매일메일 답변 원문(`techAnswer.ts`)을 보고, 오른쪽 아래 "가상 면접 시작하기"로 그 질문 하나만 연습해요.
  * 채점은 서버가 리포트 없이 질문 글로 해서(`gradeLabAnswer`) 로그인해야 해요. 서버가 답과 피드백을 계정에 저장해서, "지난 기록"에서 예상 질문 탭과 같은 검은 화면(`PastScreen`)으로 다시 보고
  * 연습한 질문 줄에는 체크와 최근 점수가 붙어요. 고른 직군, 분야, 질문 수는 이 기기에 기억해요.
  */
@@ -54,6 +56,12 @@ const TEXT = messages({
     pickBegin: '면접 시작하기',
     cancel: '취소',
     close: '닫기',
+    toList: '질문 목록',
+    answer: '답변',
+    answerFailed: '답변을 불러오지 못했어요',
+    source: '출처 매일메일',
+    practiceThis: '가상 면접 시작하기',
+    lastScore: (value: number) => `최근 ${value}점`,
     topic: '분야',
     part: '파트',
     all: '전체',
@@ -85,6 +93,12 @@ const TEXT = messages({
     pickBegin: 'Start interview',
     cancel: 'Cancel',
     close: 'Close',
+    toList: 'Questions',
+    answer: 'Answer',
+    answerFailed: "Couldn't load the answer",
+    source: 'Source: Maeil Mail',
+    practiceThis: 'Start mock interview',
+    lastScore: (value: number) => `Last ${value} pts`,
     topic: 'Topic',
     part: 'Part',
     all: 'All',
@@ -149,6 +163,8 @@ export function TechInterview() {
   const [records, setRecords] = useState<LabRecord[]>([])
   const [showPast, setShowPast] = useState(false)
   const [reload, setReload] = useState(0)
+  /** 답변을 보고 있는 질문이에요. 없으면 목록이에요. */
+  const [viewing, setViewing] = useState<Item | null>(null)
   /** 시작하기 창이 열려 있는지예요. */
   const [choosing, setChoosing] = useState(false)
   /** 직접 고르는 중이면 고른 질문의 아이디(고른 순서)예요. 고르는 중이 아니면 null이에요. */
@@ -222,6 +238,41 @@ export function TechInterview() {
     const byId = new Map(items.map((item) => [item.id, item]))
     open(picking.flatMap((id) => byId.get(id) ?? []), 'pick')
     setPicking(null)
+  }
+
+  const overlays = (
+    <>
+      {session && (
+        <Practice
+          key={round}
+          lab={session}
+          onBack={() => {
+            setSession(null)
+            setReload((value) => value + 1)
+          }}
+        />
+      )}
+      {showPast && (
+        <PastScreen
+          records={records}
+          tags={(record) => (
+            <span className="rounded-full bg-[#fff]/10 px-2 py-0.5 text-[11.5px] font-medium text-[#fff]/70">
+              {[record.topic, pick(INTERVIEWERS.find((each) => each.key === record.interviewer)?.name ?? INTERVIEWERS[0].name)].filter(Boolean).join(', ')}
+            </span>
+          )}
+          onClose={() => setShowPast(false)}
+        />
+      )}
+    </>
+  )
+
+  if (viewing) {
+    return (
+      <>
+        <AnswerView item={viewing} score={latest.get(viewing.id)} onBack={() => setViewing(null)} onPractice={() => open([viewing], 'question')} />
+        {overlays}
+      </>
+    )
   }
 
   return (
@@ -333,7 +384,7 @@ export function TechInterview() {
                   role={picking ? 'checkbox' : undefined}
                   aria-checked={picking ? chosen : undefined}
                   disabled={full}
-                  onClick={() => (picking ? togglePick(item) : open([item], 'question'))}
+                  onClick={() => (picking ? togglePick(item) : setViewing(item))}
                   className={`group flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors first:rounded-t-2xl last:rounded-b-2xl disabled:opacity-40 sm:px-5 ${chosen ? 'bg-brand-soft' : 'hover:bg-gray-100'}`}
                 >
                   {picking ? (
@@ -401,27 +452,7 @@ export function TechInterview() {
         />
       )}
 
-      {session && (
-        <Practice
-          key={round}
-          lab={session}
-          onBack={() => {
-            setSession(null)
-            setReload((value) => value + 1)
-          }}
-        />
-      )}
-      {showPast && (
-        <PastScreen
-          records={records}
-          tags={(record) => (
-            <span className="rounded-full bg-[#fff]/10 px-2 py-0.5 text-[11.5px] font-medium text-[#fff]/70">
-              {[record.topic, pick(INTERVIEWERS.find((each) => each.key === record.interviewer)?.name ?? INTERVIEWERS[0].name)].filter(Boolean).join(', ')}
-            </span>
-          )}
-          onClose={() => setShowPast(false)}
-        />
-      )}
+      {overlays}
     </div>
   )
 }
@@ -479,5 +510,69 @@ function StartDialog({ part, onPart, total, count, onCount, onRandom, onPick, on
         </section>
       </div>
     </Modal>
+  )
+}
+
+/**
+ * 질문 하나의 상세예요. 위에 질문 목록으로 돌아가는 버튼, 분야와 질문, 그 아래 매일메일 답변 원문(아티클과 같은 `.article` 모양)이 있어요.
+ * 오른쪽 아래에 붙어 있는 "가상 면접 시작하기"로 그 질문 하나만 가상 면접으로 연습해요. 원문 맨 아래에 출처를 적어요.
+ */
+function AnswerView({ item, score, onBack, onPractice }: { item: Item; score?: number; onBack: () => void; onPractice: () => void }) {
+  const L = useMessages(TEXT)
+  const top = useRef<HTMLDivElement>(null)
+  /** 받는 중이면 undefined, 받지 못했으면 null이에요. */
+  const [html, setHtml] = useState<string | null | undefined>(undefined)
+  const [attempt, setAttempt] = useState(0)
+
+  useEffect(() => {
+    top.current?.scrollIntoView({ block: 'start' })
+  }, [item.id])
+
+  useEffect(() => {
+    let stale = false
+    setHtml(undefined)
+    void fetchTechAnswer(item.id).then((value) => {
+      if (!stale) setHtml(value)
+    })
+    return () => {
+      stale = true
+    }
+  }, [item.id, attempt])
+
+  return (
+    <div ref={top} className="mx-auto w-full max-w-3xl scroll-mt-4">
+      <button type="button" onClick={onBack} className={`${ghostButton} -ml-2 inline-flex items-center gap-1`}>
+        <BackIcon className="size-3.5" />
+        {L.toList}
+      </button>
+      <p className="mt-5 text-[13px] text-gray-500">
+        {item.topic}
+        {score !== undefined && <span className="ml-2 font-semibold text-brand">{L.lastScore(score)}</span>}
+      </p>
+      <h2 className="mt-1.5 text-[22px] leading-snug font-bold tracking-tight break-keep text-gray-900">{item.question}</h2>
+
+      <div className="mt-8">
+        {html === undefined ? (
+          <LoadProgress percent={30} className={loadCenter} />
+        ) : html === null ? (
+          <Failed message={L.answerFailed} onRetry={() => setAttempt((value) => value + 1)} className="pt-16" />
+        ) : (
+          <>
+            <div className="article tech-answer" dangerouslySetInnerHTML={{ __html: html }} />
+            <a href={TECH_ANSWER_SOURCE} target="_blank" rel="noopener noreferrer" className="mt-10 inline-block text-[12.5px] text-gray-400 transition-colors hover:text-gray-600">
+              {L.source}
+            </a>
+          </>
+        )}
+      </div>
+
+      {/* 길게 읽어 내려가도 늘 오른쪽 아래에 있어요. 스크롤 칸의 아래 여백(pb-16)만큼 내려서 화면 맨 아래 가까이에 붙여요. */}
+      <div className="pointer-events-none sticky bottom-[-2.5rem] mt-10 flex justify-end">
+        <button type="button" onClick={onPractice} className={`${primaryButtonMd} pointer-events-auto gap-1.5 font-semibold`}>
+          {L.practiceThis}
+          <ChevronRightIcon className="size-4 text-white" strokeWidth={2} />
+        </button>
+      </div>
+    </div>
   )
 }

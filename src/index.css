@@ -312,6 +312,33 @@
   color: var(--color-gray-900);
 }
 
+/* 잡아따 Labs 기술 면접의 답변 원문이에요. 아티클 모양에 원문에 섞인 그림과 접는 칸만 더해요. */
+.tech-answer {
+  font-size: 15px;
+}
+
+.tech-answer img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+}
+
+.tech-answer details {
+  border-radius: 12px;
+  background: var(--color-gray-50);
+  padding: 0.9em 1.15em;
+}
+
+.tech-answer summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-gray-900);
+}
+
+.tech-answer details[open] summary {
+  margin-bottom: 0.6em;
+}
+
 /*
   소개 화면의 스크롤 등장 효과예요. 화면이 준비되면(data-armed) 아직 보이지 않는 덩어리(data-reveal)를 숨겨 두고,
   스크롤해서 화면에 들어오면(data-shown) 아래에서 천천히 떠올라요. 같은 때 들어온 것끼리는 --d만큼 늦게 떠올라요. 한 번 나타나면 그대로 있어요.
