@@ -857,3 +857,39 @@ header[data-on-dark] .logo-mark {
     display: none;
   }
 }
+
+/*
+ * 사이드바를 접었거나 좁은 화면이라 사이드바가 옆에 없으면, 화면의 제목 줄(PageHeader)을 사이드바 버튼과 같은 줄로 올려요.
+ * 제목 줄 가운데가 버튼 가운데(앱은 위 16px, 웹은 위 28px)에 오게 위로 당기고, 버튼 오른쪽에서 시작하게 왼쪽을 비워요.
+ * 위에 겹친 헤더보다 앞에 둬서 제목 줄의 버튼이 눌려요. 값은 framePad(pt-12, md:pt-9)와 gutter(16, 24, 40px)에 맞춘 거예요.
+ */
+[data-sidebar='closed'] [data-page-header] {
+  position: relative;
+  z-index: 21;
+}
+[data-sidebar='closed'][data-shell='mac'] [data-page-header] {
+  margin-top: -62px;
+  padding-left: 102px;
+}
+[data-sidebar='closed'][data-shell='web'] [data-page-header] {
+  margin-top: -50px;
+  padding-left: 36px;
+}
+@media (min-width: 640px) {
+  [data-sidebar='closed'][data-shell='mac'] [data-page-header] {
+    padding-left: 94px;
+  }
+  [data-sidebar='closed'][data-shell='web'] [data-page-header] {
+    padding-left: 28px;
+  }
+}
+@media (min-width: 768px) {
+  [data-sidebar='closed'][data-shell='mac'] [data-page-header] {
+    margin-top: -50px;
+    padding-left: 78px;
+  }
+  [data-sidebar='closed'][data-shell='web'] [data-page-header] {
+    margin-top: -38px;
+    padding-left: 12px;
+  }
+}

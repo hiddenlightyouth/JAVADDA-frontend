@@ -1,35 +1,78 @@
 import { lazy, Suspense } from 'react'
+import { LoadProgress, loadCenter } from './ui'
 import type { AccountPage } from './Account'
 import type { AdminTab } from './Admin'
 import type { ReportTab } from './Report'
 import type { Page } from '../lib/routes'
 
+/** 화면마다 코드를 받는 함수예요. 화면을 열 때 받고, 앱 화면에서는 처음 그린 뒤 쉬는 틈에 미리 받아 둬요(preloadScreens). */
+const load = {
+  AppLogin: () => import('./AppLogin'),
+  Jobs: () => import('./Jobs'),
+  Recommend: () => import('./Recommend'),
+  JobMap: () => import('./JobMap'),
+  DeadlineCalendar: () => import('./DeadlineCalendar'),
+  Blogs: () => import('./Blogs'),
+  Labs: () => import('./Labs'),
+  MyResume: () => import('./MyResume'),
+  Company: () => import('./Company'),
+  Diagnose: () => import('./Diagnose'),
+  Report: () => import('./Report'),
+  Practice: () => import('./Practice'),
+  Admin: () => import('./Admin'),
+  Account: () => import('./Account'),
+  About: () => import('./About'),
+  Articles: () => import('./Articles'),
+}
+
+/** 처음 그린 뒤에 자주 여는 화면 코드를 쉬는 틈에 하나씩 미리 받아 둬요. 앱에서 화면을 처음 열 때 빈 화면으로 기다리지 않아요. */
+export function preloadScreens() {
+  const queue = [load.Jobs, load.Report, load.Practice, load.MyResume, load.Recommend, load.Company, load.Diagnose, load.DeadlineCalendar, load.Blogs, load.Labs, load.JobMap, load.Account]
+  const idle = (run: () => void) => (typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback(run, { timeout: 2000 }) : window.setTimeout(run, 300))
+  const next = () => {
+    const task = queue.shift()
+    if (!task) return
+    // 받지 못한 것은 화면을 열 때 다시 받아요.
+    void task()
+      .catch(() => undefined)
+      .finally(() => idle(next))
+  }
+  idle(next)
+}
+
+/** 화면 코드를 받는 동안의 자리예요. 바이트를 알 수 없어서 미니 브라우저처럼 30%로 두고, 금방 오면 보이지 않아요. */
+export const screenFallback = (
+  <main className="flex min-w-0 flex-1 flex-col pt-[20vh]">
+    <LoadProgress percent={30} className={loadCenter} />
+  </main>
+)
+
 // 앱이 브라우저로 열어 주는 로그인 화면은 필요할 때만 받아요.
-const AppLogin = lazy(() => import('./AppLogin').then((module) => ({ default: module.AppLogin })))
+const AppLogin = lazy(() => load.AppLogin().then((module) => ({ default: module.AppLogin })))
 
 // 진단 화면들은 열 때만 받아요.
-const Jobs = lazy(() => import('./Jobs').then((module) => ({ default: module.Jobs })))
-const Recommend = lazy(() => import('./Recommend').then((module) => ({ default: module.Recommend })))
-const JobMap = lazy(() => import('./JobMap').then((module) => ({ default: module.JobMap })))
-const DeadlineCalendar = lazy(() => import('./DeadlineCalendar').then((module) => ({ default: module.DeadlineCalendar })))
-const Blogs = lazy(() => import('./Blogs').then((module) => ({ default: module.Blogs })))
-const Labs = lazy(() => import('./Labs').then((module) => ({ default: module.Labs })))
-const MyResume = lazy(() => import('./MyResume').then((module) => ({ default: module.MyResume })))
-const Company = lazy(() => import('./Company').then((module) => ({ default: module.Company })))
-const Diagnose = lazy(() => import('./Diagnose').then((module) => ({ default: module.Diagnose })))
-const Report = lazy(() => import('./Report').then((module) => ({ default: module.Report })))
-const Practice = lazy(() => import('./Practice').then((module) => ({ default: module.Practice })))
+const Jobs = lazy(() => load.Jobs().then((module) => ({ default: module.Jobs })))
+const Recommend = lazy(() => load.Recommend().then((module) => ({ default: module.Recommend })))
+const JobMap = lazy(() => load.JobMap().then((module) => ({ default: module.JobMap })))
+const DeadlineCalendar = lazy(() => load.DeadlineCalendar().then((module) => ({ default: module.DeadlineCalendar })))
+const Blogs = lazy(() => load.Blogs().then((module) => ({ default: module.Blogs })))
+const Labs = lazy(() => load.Labs().then((module) => ({ default: module.Labs })))
+const MyResume = lazy(() => load.MyResume().then((module) => ({ default: module.MyResume })))
+const Company = lazy(() => load.Company().then((module) => ({ default: module.Company })))
+const Diagnose = lazy(() => load.Diagnose().then((module) => ({ default: module.Diagnose })))
+const Report = lazy(() => load.Report().then((module) => ({ default: module.Report })))
+const Practice = lazy(() => load.Practice().then((module) => ({ default: module.Practice })))
 
 // 관리자 화면은 앱에서 관리자 계정만 쓰는 화면이라, 열 때만 받아요.
-const Admin = lazy(() => import('./Admin').then((module) => ({ default: module.Admin })))
+const Admin = lazy(() => load.Admin().then((module) => ({ default: module.Admin })))
 
-const Account = lazy(() => import('./Account').then((module) => ({ default: module.Account })))
+const Account = lazy(() => load.Account().then((module) => ({ default: module.Account })))
 
 // 소개 화면은 헤더의 소개 링크로 들어올 때만 받아요.
-const About = lazy(() => import('./About').then((module) => ({ default: module.About })))
+const About = lazy(() => load.About().then((module) => ({ default: module.About })))
 
 // 아티클 글과 마크다운 변환 코드는 아티클 화면을 열 때만 받아요.
-const Articles = lazy(() => import('./Articles').then((module) => ({ default: module.Articles })))
+const Articles = lazy(() => load.Articles().then((module) => ({ default: module.Articles })))
 
 interface Props {
   page: Page
@@ -70,7 +113,7 @@ interface Props {
 /** 메인 화면(새 진단)을 뺀, 주소로 여는 화면을 그려요. 화면 코드는 열 때만 받아요. */
 export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExplore, onResume, onResumeAdd, onResumeList, onResumeDoc, onBlogs, onLabs, onCompany, onAdmin, onArticle, onAccount, onSignedIn, onOpenReport, loginNotice, loginReturnTo, adminApi, feedback }: Props) {
   return (
-    <Suspense fallback={<main className="flex-1" />}>
+    <Suspense fallback={screenFallback}>
       {page.kind === 'app-login' ? (
         <AppLogin onCancel={onHome} />
       ) : page.kind === 'explore' ? (

@@ -125,7 +125,8 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
   )
 
   return (
-    <div className="relative flex h-dvh bg-white">
+    // 사이드바가 옆에 없으면 화면의 제목 줄이 사이드바 버튼 옆, 같은 줄로 올라가요(index.css의 page-header 규칙).
+    <div data-sidebar={!narrow && sidebarOpen ? 'open' : 'closed'} data-shell={isWebApp ? 'web' : 'mac'} className="relative flex h-dvh bg-white">
       {/* 사이드바 접기 버튼은 늘 같은 자리에 있어서 접어도 펴도 움직이지 않아요. 앱에서는 창 버튼 바로 옆, 웹에서는 왼쪽 위예요. */}
       <button
         type="button"

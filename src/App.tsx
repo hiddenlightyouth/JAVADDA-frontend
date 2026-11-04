@@ -3,7 +3,7 @@ import type { AdminTab } from './components/Admin'
 import type { ReportTab } from './components/Report'
 import { AppFrame, AppSignedOut, useSidebarOpen } from './components/AppFrame'
 import { Header } from './components/Header'
-import { PageView } from './components/PageView'
+import { PageView, preloadScreens, screenFallback } from './components/PageView'
 import { ShortcutTip } from './components/Shortcuts'
 import { Toast } from './components/Toast'
 import { useScreen } from './hooks/useScreen'
@@ -81,6 +81,11 @@ export default function App() {
   useEffect(() => {
     if (appShell) void refreshUsage()
   }, [signedIn, meId])
+
+  // 앱 화면은 처음 그린 뒤 쉬는 틈에 다른 화면 코드를 미리 받아 둬서, 사이드바로 옮길 때 기다리지 않아요.
+  useEffect(() => {
+    if (appShell) preloadScreens()
+  }, [])
 
   const openReport = useCallback((id: string, tab: ReportTab = 'summary', replace = false) => open({ kind: 'report', id, tab }, replace), [open])
 
@@ -250,7 +255,7 @@ export default function App() {
           feedback={feedback.ready}
         />
       ) : (
-        <Suspense fallback={<main className="flex-1" />}>
+        <Suspense fallback={screenFallback}>
           <Home onPick={openDiagnose} onExplore={openExplore} onRecommend={openRecommend} onResume={openResume} onCompany={openCompanyPage} />
         </Suspense>
       )}

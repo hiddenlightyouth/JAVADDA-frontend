@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { isApp } from '../lib/app'
 import { messages, useMessages } from '../lib/i18n'
 import { BackIcon } from './Icons'
 
@@ -61,7 +62,8 @@ export function PageHeader({ title, owner, mark, onBack, backLabel, actions }: {
 }) {
   const L = useMessages(TEXT)
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 pt-2 pb-3 sm:pb-4">
+    // 사이드바를 접으면 제목 줄이 사이드바 버튼과 같은 줄로 올라가요(index.css의 page-header 규칙). 앱에서는 빈 자리를 잡아 창을 옮겨요.
+    <div data-page-header data-app-drag={isApp || undefined} className="flex shrink-0 flex-wrap items-center justify-between gap-x-6 gap-y-3 pt-2 pb-3 sm:pb-4">
       <div className="flex min-h-11 min-w-0 items-center gap-2">
         {onBack && (
           <button
