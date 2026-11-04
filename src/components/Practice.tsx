@@ -5,12 +5,12 @@ import { companyOf, fetchQuestions, PROGRESS_START, submitAnswer, useReport, use
 import { messages, pick, useLang, useMessages } from '../lib/i18n'
 import { greetingOf, INTERVIEWERS, setInterviewer, useInterviewer, type InterviewerKey, type InterviewerProfile } from '../lib/interviewers'
 import { useLoadHold, useLoadProgress } from '../lib/load'
-import { canDictate, canSpeak, chime, joinSpeech, prefetchVoice, prepareMic, setPracticeVolume, unlockChime, useDictation, useMicLevel, usePracticeVolume, useSpeak } from '../lib/speech'
-import type { MouthPose } from '../lib/lipsync'
+import { canDictate, canSpeak, chime, joinSpeech, micAllowed, prefetchVoice, prepareMic, setPracticeVolume, unlockChime, useDictation, useMicLevel, usePracticeVolume, useSpeak } from '../lib/speech'
+import { REST, type MouthPose } from '../lib/lipsync'
 import { showToast } from '../lib/toast'
 import { AiProgress, CompanyMark, Notice, ScoreRing } from './GapParts'
 import { isApp } from '../lib/app'
-import { ChevronRightIcon, CloseIcon, SpeakerIcon } from './Icons'
+import { ChevronRightIcon, CloseIcon, MicIcon, SpeakerIcon } from './Icons'
 import { Interviewer } from './Interviewer'
 import { InterviewerPicker } from './InterviewerPicker'
 import { darkButton, lightButton, ResultCard } from './ReportParts'
@@ -59,6 +59,14 @@ const TEXT = messages({
     micDenied: '마이크 권한이 없어서 글로 답해요.',
     micMissing: '마이크를 찾지 못해서 글로 답해요.',
     micFailed: '음성을 알아듣지 못했어요. 다시 말해 주세요.',
+    micIdle: '말로 답하려면 마이크를 켜 주세요',
+    micAsking: '브라우저 창에서 허용을 눌러 주세요',
+    micReady: '마이크가 켜졌어요. 말해 보면 막대가 움직여요',
+    micBlocked: '마이크가 막혀 있어서 글로 답해요. 주소창 옆 설정에서 허용할 수 있어요',
+    micNone: '마이크를 찾지 못해서 글로 답해요',
+    micUnsupported: '이 브라우저는 음성 인식이 안 돼서 글로 답해요',
+    micOn: '마이크 켜기',
+    micRetry: '다시 시도',
     doneTitle: '가상 면접이 종료됨',
     doneBody: (count: number) => `${count}개의 질문에 답했어요. 질문마다 보완할 점을 하나씩 다듬어 보세요.`,
     singleDone: '답변 피드백',
@@ -114,6 +122,14 @@ const TEXT = messages({
     micDenied: 'No microphone access, so you can type your answer.',
     micMissing: "We couldn't find a microphone, so you can type your answer.",
     micFailed: "We couldn't recognize your voice. Please say it again.",
+    micIdle: 'Turn on your microphone to answer out loud',
+    micAsking: 'Click Allow in the browser prompt',
+    micReady: 'Your microphone is on. Say something to see the bars move',
+    micBlocked: 'Microphone access is blocked, so you can type. You can allow it in the site settings',
+    micNone: "We couldn't find a microphone, so you can type",
+    micUnsupported: "This browser can't recognize speech, so you can type",
+    micOn: 'Turn on mic',
+    micRetry: 'Try again',
     doneTitle: 'Mock interview ended',
     doneBody: (count: number) => `You answered ${count} ${count === 1 ? 'question' : 'questions'}. Work on one improvement per question.`,
     singleDone: 'Answer feedback',
@@ -226,27 +242,39 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
       showToast(denied ? L.micDenied : code === 'audio-capture' ? L.micMissing : L.micFailed)
     },
   )
-  /** 가상 면접에 들어올 때 미리 받은 마이크 허락이에요. 첫 답을 듣기 전에 이것을 기다려서, 면접 중간에 허락 창이 뜨지 않아요. */
+  /** 마이크 칸의 상태예요. 시작 화면에서 "마이크 켜기"를 눌러야 허락 창이 떠요. 묻지 않고 들어오자마자 창을 띄우지 않아요. */
+  const [micState, setMicState] = useState<MicState>(() => (canDictate() ? 'idle' : 'unsupported'))
+  /** "마이크 켜기"로 받는 중인 허락이에요. 허락 창에 답하기 전에 면접을 시작하면 첫 답을 듣기 전에 이것을 기다려요. */
   const micReady = useRef<Promise<void> | null>(null)
 
-  /** 마이크와 음성 인식 허락을 받아 둬요. 가상 면접에 들어오자마자 묻고, 그때 받지 못했으면 시작 버튼을 누를 때 한 번 더 물어요. */
-  function readyMic() {
-    if (typingRef.current || !canDictate() || micReady.current) return
+  /** 마이크와 음성 인식 허락을 받아요. Safari와 macOS 앱은 음성 인식 창이 하나 더 떠요. */
+  function enableMic() {
+    if (micReady.current) return
+    setMicState('asking')
+    track('practice_mic_enable', { from: micState })
     micReady.current = prepareMic(speechLang).then((result) => {
-      if (result === 'ready') return
       micReady.current = null
+      setMicState(result)
+      if (result === 'ready') return
+      track('practice_voice_error', { code: result, from: 'prepare' })
+      // 허락을 기다리는 동안 면접을 시작했으면 글로 답해요.
       typingRef.current = true
       setTyping(true)
-      track('practice_voice_error', { code: result, from: 'prepare' })
-      showToast(result === 'denied' ? L.micDenied : L.micMissing)
     })
   }
-  // 가상 면접 화면에 들어오는 순간 허락을 물어요. 시작 화면에서 면접관을 고르는 동안 답할 수 있어요.
+
+  // Chrome에서 이 사이트에 마이크를 허락해 뒀으면 묻지 않고 켜진 것으로 둬요.
   useEffect(() => {
-    readyMic()
+    if (micState !== 'idle') return
+    void micAllowed().then((allowed) => {
+      if (allowed) setMicState((prev) => (prev === 'idle' ? 'ready' : prev))
+    })
   }, [])
+
   /** 말로 답하는 동안의 마이크 소리 크기예요. 오른쪽 위 소리 막대가 읽어요. */
-  const mic = useMicLevel(dictation.listening)
+  // 시작 화면에서는 마이크를 켰을 때 소리 막대로 잘 들리는지 보여줘요. 면접관이 인사하는 동안은 휴대폰이 소리를 통화 모드로 바꾸지 않게 열지 않아요.
+  const micCheck = phase === 'intro' && !starting && micState === 'ready' && !voice.speaking
+  const mic = useMicLevel(dictation.listening || micCheck)
 
   /** 말하는 동안에는 아직 확정되지 않은 글자까지 보여줘요. */
   const shown = joinSpeech(answer, dictation.interim)
@@ -394,7 +422,10 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
   function begin() {
     // 띵 소리와 음성은 사용자가 누른 순간에 준비해야 브라우저가 막지 않아요.
     unlockChime()
-    readyMic()
+    // 마이크를 켰거나 허락 창에 답하는 중이면 말로, 아니면 글로 답해요. 답하는 중에 "말로 답하기"로 바꿀 수 있어요.
+    const speakAnswers = micState === 'ready' || micState === 'asking'
+    typingRef.current = !speakAnswers
+    setTyping(!speakAnswers)
     if (questions) return start()
     // 받지 못했으면 한 번 더 받아 봐요.
     if (questions === null) {
@@ -590,8 +621,9 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
             }}
           />
         </div>
+        <MicCheck state={micState} level={mic} onEnable={enableMic} />
         {/* 시작 줄이에요. 누구와 면접하는지 한 번 더 적고 바로 시작해요. 휴대폰은 폭이 좁아서 "서도윤 선택 됨"으로 줄여요. */}
-        <div className="mt-5 flex w-full max-w-xl shrink-0 items-center justify-between gap-4 rounded-[22px] bg-[#fff] py-3 pr-3 pl-6">
+        <div className="mt-2.5 flex w-full max-w-xl shrink-0 items-center justify-between gap-4 rounded-[22px] bg-[#fff] py-3 pr-3 pl-6">
           <p className="min-w-0 truncate text-left text-[15px] font-semibold text-[#000]/85">
             <span className="sm:hidden">{L.startNoteShort(pick(interviewer.name))}</span>
             <span className="hidden sm:inline">{L.startNote(pick(interviewer.name))}</span>
@@ -803,6 +835,42 @@ const METER_BARS = [0.45, 0.75, 1, 0.75, 0.45]
  * 오른쪽 위의 작은 소리 막대예요. 면접관이 말하는 소리(입 모양의 열림)와 내가 말하는 소리(마이크)를 하나로 합쳐 보여줘요.
  * 매 프레임 바뀌어서 React 상태 대신 막대의 높이를 직접 바꿔요. 조용하면 작은 점으로 남아요.
  */
+type MicState = 'idle' | 'asking' | 'ready' | 'denied' | 'missing' | 'unsupported'
+
+/** 소리 막대가 면접관 소리 없이 내 마이크만 읽게 하는 빈 입 모양이에요. */
+const SILENT = { current: REST }
+
+/**
+ * 시작 화면의 마이크 칸이에요. "마이크 켜기"를 눌러야 허락 창이 떠서, 왜 묻는지 알고 허락해요.
+ * 켜지면 내 목소리에 맞춰 소리 막대가 움직여서 잘 들리는지 바로 보여요. 켜지 않고 시작하면 글로 답해요.
+ */
+function MicCheck({ state, level, onEnable }: { state: MicState; level: { current: number }; onEnable: () => void }) {
+  const L = useMessages(TEXT)
+  const text = { idle: L.micIdle, asking: L.micAsking, ready: L.micReady, denied: L.micBlocked, missing: L.micNone, unsupported: L.micUnsupported }[state]
+  const action = state === 'idle' || state === 'asking' ? L.micOn : state === 'denied' || state === 'missing' ? L.micRetry : null
+  return (
+    <div className="mt-5 flex w-full max-w-xl shrink-0 items-center gap-3 rounded-[22px] bg-[#fff]/8 py-2.5 pr-2.5 pl-4 text-left">
+      <span className={`flex size-9 shrink-0 items-center justify-center rounded-full ${state === 'ready' ? 'bg-brand text-white' : 'bg-[#fff]/10 text-[#fff]/70'}`}>
+        <MicIcon className="size-[18px]" strokeWidth={1.6} />
+      </span>
+      <p aria-live="polite" className="min-w-0 flex-1 text-[13.5px] leading-snug break-keep text-[#fff]/75">
+        {text}
+      </p>
+      {state === 'ready' && <AudioMeter voice={SILENT} mic={level} />}
+      {action && (
+        <button
+          type="button"
+          onClick={onEnable}
+          disabled={state === 'asking'}
+          className="flex h-10 shrink-0 items-center rounded-2xl bg-[#fff]/12 px-4 text-[14px] font-semibold text-white transition-colors hover:bg-[#fff]/20 disabled:opacity-50"
+        >
+          {action}
+        </button>
+      )}
+    </div>
+  )
+}
+
 function AudioMeter({ voice, mic }: { voice: { current: MouthPose }; mic: { current: number } }) {
   const bars = useRef<(HTMLSpanElement | null)[]>([])
   useEffect(() => {
