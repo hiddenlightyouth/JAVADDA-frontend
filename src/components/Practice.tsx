@@ -36,6 +36,7 @@ const TEXT = messages({
     introBodyLab: '함께할 면접관을 골라 주세요. 면접관의 성격에 따라 채점과 꼬리 질문이 달라져요.',
     start: '면접 시작하기',
     startNote: (name: string) => `${name} 면접관과 면접을 시작해요`,
+    startNoteShort: (name: string) => `${name} 선택 됨`,
     writing: '질문을 만들고 있어요',
     ready: '이제 면접 질문이 준비되었어요. 첫 번째 질문을 시작할게요.',
     gradedBy: (name: string) => `${name} 면접관의 평가예요`,
@@ -90,6 +91,7 @@ const TEXT = messages({
     introBodyLab: 'Pick your interviewer. Their personality changes how they grade and follow up.',
     start: 'Start interview',
     startNote: (name: string) => `Your interview with ${name}`,
+    startNoteShort: (name: string) => `${name} selected`,
     writing: 'Writing your questions',
     ready: 'Your interview questions are ready. Let us start with the first one.',
     gradedBy: (name: string) => `Graded by ${name}`,
@@ -588,9 +590,12 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
             }}
           />
         </div>
-        {/* 시작 줄이에요. 누구와 면접하는지 한 번 더 적고 바로 시작해요. */}
+        {/* 시작 줄이에요. 누구와 면접하는지 한 번 더 적고 바로 시작해요. 휴대폰은 폭이 좁아서 "서도윤 선택 됨"으로 줄여요. */}
         <div className="mt-5 flex w-full max-w-xl shrink-0 items-center justify-between gap-4 rounded-[22px] bg-[#fff] py-3 pr-3 pl-6">
-          <p className="min-w-0 truncate text-left text-[15px] font-semibold text-[#000]/85">{L.startNote(pick(interviewer.name))}</p>
+          <p className="min-w-0 truncate text-left text-[15px] font-semibold text-[#000]/85">
+            <span className="sm:hidden">{L.startNoteShort(pick(interviewer.name))}</span>
+            <span className="hidden sm:inline">{L.startNote(pick(interviewer.name))}</span>
+          </p>
           <button type="button" onClick={begin} className="flex h-12 shrink-0 items-center gap-2 rounded-2xl bg-[#1c1c1e] px-6 text-[15px] font-semibold text-white transition-opacity hover:opacity-85">
             {L.start}
             <ChevronRightIcon className="size-4 text-white" strokeWidth={2} />
