@@ -2346,13 +2346,27 @@ export async function regenerateQuestions(reportId: string, onProgress?: OnProgr
 
 // ---------- 면접 연습 ----------
 
+/** 잡아따 Labs 기술 면접에서 답한 기록 하나예요(GET /labs/interview/answers). 질문 글과 분야는 답할 때의 모습 그대로예요. */
+export interface LabRecord extends PracticeRecord {
+  topic: string | null
+  /** 고른 면접관(balanced, friendly, strict)이에요. */
+  interviewer: string
+}
+
+/** 잡아따 Labs 기술 면접에서 답한 기록이에요. 최근 것부터예요. 로그인하지 않았거나 실패하면 조용히 빈 목록이에요. */
+export async function fetchLabAnswers(): Promise<LabRecord[]> {
+  if (!isSignedIn()) return []
+  const result = await call<LabRecord[]>('/labs/interview/answers')
+  return result.ok && Array.isArray(result.data) ? result.data : []
+}
+
 /**
- * 잡아따 Labs의 기술 면접 답변을 채점해요(POST /labs/interview/answers). 리포트 없이 질문 글만으로 채점하고, 서버는 답을 저장하지 않아요.
- * topic은 질문의 분야 이름이에요. 로그인하지 않았으면 로그인 화면으로 보내고 null이에요. 실패하면 토스트로 알리고 null이에요.
+ * 잡아따 Labs의 기술 면접 답변을 채점해요(POST /labs/interview/answers). 리포트 없이 질문 글만으로 채점하고, 서버가 답과 피드백을 계정에 저장해요.
+ * questionId는 화면 목록의 아이디(be-1), topic은 질문의 분야 이름이에요. 로그인하지 않았으면 로그인 화면으로 보내고 null이에요. 실패하면 토스트로 알리고 null이에요.
  */
-export async function gradeLabAnswer(question: string, topic: string, answer: string, interviewer?: string, onProgress?: OnProgress): Promise<PracticeFeedback | null> {
+export async function gradeLabAnswer(questionId: string, question: string, topic: string, answer: string, interviewer?: string, onProgress?: OnProgress): Promise<PracticeFeedback | null> {
   if (!requireLogin()) return null
-  const result = await withProgress(onProgress, (headers) => call<PracticeFeedback>('/labs/interview/answers', send('POST', { question, topic, answer, interviewer }), true, headers))
+  const result = await withProgress(onProgress, (headers) => call<PracticeFeedback>('/labs/interview/answers', send('POST', { questionId, question, topic, answer, interviewer }), true, headers))
   if (!result.ok || !result.data) {
     fail(result)
     return null

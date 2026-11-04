@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { track } from '../lib/analytics'
 import { fetchAnswers, fetchQuestions, PROGRESS_START, regenerateQuestions, type InterviewQuestion, type PracticeRecord, type ProgressState, type QuestionCategory } from '../lib/gap'
@@ -246,15 +246,16 @@ function Row({ question, index, order, records, onPractice }: { question: Interv
 /**
  * 지난 질문과 답변을 면접 연습의 결과 화면과 같은 검은 화면으로 보여줘요. 예상 질문을 새로 뽑기 전의 예전 질문 답변도 여기서 봐요.
  * 맨 위에 평균 점수 고리와 답변 수, 전체와 예전 질문만 고르는 칸이 있고, 답변은 날짜별로 묶어 최근 날짜부터 결과 카드(`ResultCard`)로 놓여요.
+ * 잡아따 Labs의 기술 면접도 같은 화면을 써요. 그때는 예전 질문이 없어서 current를 넘기지 않고(고르는 칸과 예전 질문 이름표가 없어요), tags로 분야와 면접관을 적어요.
  */
-function PastScreen({ records, current, onClose }: { records: PracticeRecord[]; current: Set<string>; onClose: () => void }) {
+export function PastScreen<T extends PracticeRecord>({ records, current, tags, onClose }: { records: T[]; current?: Set<string>; tags?: (record: T) => ReactNode; onClose: () => void }) {
   const L = useMessages(TEXT)
   const [onlyOld, setOnlyOld] = useState(false)
   useDismiss(true, null, onClose)
-  const list = onlyOld ? records.filter((record) => !current.has(record.questionId)) : records
+  const list = onlyOld && current ? records.filter((record) => !current.has(record.questionId)) : records
   const average = records.length === 0 ? 0 : Math.round(records.reduce((sum, record) => sum + record.feedback.score, 0) / records.length)
   // 날짜별로 묶어요. 답변은 최근 것부터 와서 묶음도 최근 날짜부터예요.
-  const days: { day: string; items: PracticeRecord[] }[] = []
+  const days: { day: string; items: T[] }[] = []
   for (const record of list) {
     const date = parseServerTime(record.createdAt)
     const day = date ? formatDate(date) : ''
@@ -281,7 +282,7 @@ function PastScreen({ records, current, onClose }: { records: PracticeRecord[]; 
               {L.pastTitle}
             </h1>
             <p className="mt-2 max-w-md text-[14px] leading-relaxed text-[#fff]/55">{records.length > 0 ? L.pastSummary(records.length) : L.pastEmptyBody}</p>
-            {records.length > 0 && (
+            {records.length > 0 && current && (
               <div className="mt-6">
                 <Segmented
                   label={L.pastFilter}
@@ -309,7 +310,8 @@ function PastScreen({ records, current, onClose }: { records: PracticeRecord[]; 
                       meta={
                         <>
                           <span>{formatDateTime(record.createdAt)}</span>
-                          {!current.has(record.questionId) && <span className="rounded-full bg-[#fff]/10 px-2 py-0.5 text-[11.5px] font-medium text-[#fff]/70">{L.oldQuestion}</span>}
+                          {tags?.(record)}
+                          {current && !current.has(record.questionId) && <span className="rounded-full bg-[#fff]/10 px-2 py-0.5 text-[11.5px] font-medium text-[#fff]/70">{L.oldQuestion}</span>}
                         </>
                       }
                       answer={record.answer}

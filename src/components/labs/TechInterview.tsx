@@ -1,21 +1,24 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { track } from '../../lib/analytics'
-import { isSignedIn } from '../../lib/auth'
-import { gradeLabAnswer, requestLogin, type InterviewQuestion } from '../../lib/gap'
-import { messages, useMessages } from '../../lib/i18n'
+import { isSignedIn, useAuth } from '../../lib/auth'
+import { fetchLabAnswers, gradeLabAnswer, requestLogin, type InterviewQuestion, type LabRecord } from '../../lib/gap'
+import { messages, pick, useMessages } from '../../lib/i18n'
+import { INTERVIEWERS } from '../../lib/interviewers'
 import { readJson, writeJson } from '../../lib/storage'
 import { TECH_QUESTIONS, type TechTrack } from '../../lib/techQuestions'
 import { Dropdown } from '../Dropdown'
 import { filterChip, filterRow, Notice } from '../GapParts'
-import { ChevronRightIcon, SearchIcon } from '../Icons'
+import { CheckIcon, ChevronRightIcon, ClockIcon, SearchIcon } from '../Icons'
 import { Practice, type LabSession } from '../Practice'
-import { useShowMore } from '../ui'
+import { PastScreen } from '../ReportQuestions'
+import { toolButtonLg, useShowMore } from '../ui'
 
 /**
  * 잡아따 Labs의 기술 면접 (/labs/tech-interview)이에요. 모아 둔 백엔드와 프론트엔드 기술 면접 질문(`techQuestions.ts`)으로 가상 면접을 봐요.
  * 맨 위에 검색창, 직군과 질문 수 메뉴, "가상 면접 시작" 버튼이 있고, 그 아래 분야 버튼 줄과 질문 목록이에요.
  * 시작하면 지금 걸러진 질문 중에서 고른 수만큼 섞어 뽑아 면접 연습과 같은 가상 면접(`Practice`의 lab)을 열어요. 질문 줄을 누르면 그 질문 하나만 연습해요.
- * 채점은 서버가 리포트 없이 질문 글로 해서(`gradeLabAnswer`) 로그인해야 해요. 고른 직군, 분야, 질문 수는 이 기기에 기억해요.
+ * 채점은 서버가 리포트 없이 질문 글로 해서(`gradeLabAnswer`) 로그인해야 해요. 서버가 답과 피드백을 계정에 저장해서, "지난 기록"에서 예상 질문 탭과 같은 검은 화면(`PastScreen`)으로 다시 보고
+ * 연습한 질문 줄에는 체크와 최근 점수가 붙어요. 고른 직군, 분야, 질문 수는 이 기기에 기억해요.
  */
 
 const COUNTS = [3, 5, 10] as const
@@ -45,6 +48,9 @@ const TEXT = messages({
     emptyTitle: '맞는 질문이 없어요',
     emptyBody: '다른 분야를 고르거나 검색어를 바꿔 보세요.',
     reset: '조건 초기화',
+    past: '지난 기록',
+    practiced: (done: number, total: number) => `${total}개 중 ${done}개 연습했어요`,
+    score: (value: number) => `${value}점`,
   },
   en: {
     search: 'Find a question',
@@ -62,6 +68,9 @@ const TEXT = messages({
     emptyTitle: 'No questions match',
     emptyBody: 'Try another topic or search term.',
     reset: 'Reset filters',
+    past: 'History',
+    practiced: (done: number, total: number) => `${done} of ${total} practiced`,
+    score: (value: number) => `${value} pts`,
   },
 })
 
@@ -109,6 +118,29 @@ export function TechInterview() {
   const [session, setSession] = useState<LabSession | null>(null)
   /** 같은 질문으로 다시 열어도 면접을 처음부터 그리게 열 때마다 올려요. */
   const [round, setRound] = useState(0)
+  const signedIn = useAuth().tokens !== null
+  /** 서버에 저장된 지난 답변이에요(최근 것부터). 면접을 마치고 닫을 때마다 다시 받아요. */
+  const [records, setRecords] = useState<LabRecord[]>([])
+  const [showPast, setShowPast] = useState(false)
+  const [reload, setReload] = useState(0)
+
+  useEffect(() => {
+    if (!signedIn) return setRecords([])
+    let stale = false
+    void fetchLabAnswers().then((list) => {
+      if (!stale) setRecords(list)
+    })
+    return () => {
+      stale = true
+    }
+  }, [signedIn, reload])
+
+  /** 질문마다 가장 최근 점수예요. 기록이 최근 것부터 와서 처음 본 것이 최근이에요. */
+  const latest = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const record of records) if (!map.has(record.questionId)) map.set(record.questionId, record.feedback.score)
+    return map
+  }, [records])
 
   const update = (next: Partial<Saved>) => {
     const value = { ...saved, ...next }
@@ -122,6 +154,7 @@ export function TechInterview() {
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
     return items.filter((item) => (!saved.topic || item.topic === saved.topic) && words.every((word) => item.question.toLowerCase().includes(word)))
   }, [items, saved.topic, query])
+  const practicedCount = useMemo(() => shown.filter((item) => latest.has(item.id)).length, [shown, latest])
   const { count, more } = useShowMore(shown.length, `${saved.track}|${saved.topic}|${query}`)
 
   function open(picked: Item[], from: 'start' | 'question') {
@@ -133,7 +166,7 @@ export function TechInterview() {
     setSession({
       title: L.title(L.tracks[saved.track]),
       questions: picked.map(asQuestion),
-      grade: (question, answer, interviewer) => gradeLabAnswer(question.question, question.source.label, answer, interviewer),
+      grade: (question, answer, interviewer) => gradeLabAnswer(question.id, question.question, question.source.label, answer, interviewer),
       backLabel: L.back,
     })
   }
@@ -185,6 +218,20 @@ export function TechInterview() {
           {L.start}
           <ChevronRightIcon className="size-4" strokeWidth={2} />
         </button>
+        {signedIn && (
+          <button
+            type="button"
+            onClick={() => {
+              track('labs_interview_history_open', { count: records.length })
+              setShowPast(true)
+            }}
+            className={`${toolButtonLg} whitespace-nowrap`}
+          >
+            <ClockIcon />
+            {L.past}
+            {records.length > 0 && <span className="text-gray-400 tabular-nums">{records.length}</span>}
+          </button>
+        )}
       </div>
 
       <div role="radiogroup" aria-label={L.topic} className={`mt-4 ${filterRow}`}>
@@ -209,7 +256,10 @@ export function TechInterview() {
         ))}
       </div>
 
-      <p className="mt-6 text-[13px] text-gray-500">{L.items(shown.length)}</p>
+      <p className="mt-6 flex flex-wrap items-center justify-between gap-2 text-[13px] text-gray-500">
+        <span>{L.items(shown.length)}</span>
+        {practicedCount > 0 && <span className="text-brand">{L.practiced(practicedCount, shown.length)}</span>}
+      </p>
 
       {shown.length === 0 ? (
         <Notice
@@ -232,7 +282,14 @@ export function TechInterview() {
                   onClick={() => open([item], 'question')}
                   className="group flex w-full items-center gap-4 px-4 py-3.5 text-left transition-colors first:rounded-t-2xl last:rounded-b-2xl hover:bg-gray-100 sm:px-5"
                 >
-                  <span className="w-7 shrink-0 text-[13px] text-gray-400 tabular-nums">{order + 1}</span>
+                  {latest.has(item.id) ? (
+                    <span className="flex w-7 shrink-0 flex-col items-start">
+                      <CheckIcon className="size-4 text-brand" strokeWidth={2} />
+                      <span className="text-[11px] font-semibold text-brand tabular-nums">{latest.get(item.id)}</span>
+                    </span>
+                  ) : (
+                    <span className="w-7 shrink-0 text-[13px] text-gray-400 tabular-nums">{order + 1}</span>
+                  )}
                   <span className="min-w-0 flex-1">
                     <span className="block text-[14.5px] leading-snug font-medium break-keep text-gray-900 transition-colors group-hover:text-brand">{item.question}</span>
                     {!saved.topic && <span className="mt-1 block text-[12.5px] text-gray-500">{item.topic}</span>}
@@ -247,7 +304,27 @@ export function TechInterview() {
         </>
       )}
 
-      {session && <Practice key={round} lab={session} onBack={() => setSession(null)} />}
+      {session && (
+        <Practice
+          key={round}
+          lab={session}
+          onBack={() => {
+            setSession(null)
+            setReload((value) => value + 1)
+          }}
+        />
+      )}
+      {showPast && (
+        <PastScreen
+          records={records}
+          tags={(record) => (
+            <span className="rounded-full bg-[#fff]/10 px-2 py-0.5 text-[11.5px] font-medium text-[#fff]/70">
+              {[record.topic, pick(INTERVIEWERS.find((each) => each.key === record.interviewer)?.name ?? INTERVIEWERS[0].name)].filter(Boolean).join(', ')}
+            </span>
+          )}
+          onClose={() => setShowPast(false)}
+        />
+      )}
     </div>
   )
 }
