@@ -371,6 +371,15 @@ export function SidebarIcon({ className = 'size-4', strokeWidth = 1.4, label }: 
   )
 }
 
+/** 좁은 화면에서 사이드바 서랍을 여는 햄버거 버튼의 그림이에요. */
+export function MenuIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" />
+    </Icon>
+  )
+}
+
 /** 개념 아이콘의 옅은 면이에요. 선과 같은 색을 14%만 깔아서 두 톤으로 보여요. */
 const SOFT = { fill: 'currentColor', fillOpacity: 0.14 } as const
 

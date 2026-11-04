@@ -4,7 +4,7 @@ import { track } from '../lib/analytics'
 import { isWebApp } from '../lib/app'
 import { messages, useMessages } from '../lib/i18n'
 import { readFlag, writeFlag } from '../lib/storage'
-import { SidebarIcon } from './Icons'
+import { MenuIcon, SidebarIcon } from './Icons'
 
 // 앱에서만 쓰는 화면은 필요할 때만 받아요.
 const AppGate = lazy(() => import('./AppGate').then((module) => ({ default: module.AppGate })))
@@ -127,7 +127,7 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
   return (
     // 사이드바가 옆에 없으면 화면의 제목 줄이 사이드바 버튼 옆, 같은 줄로 올라가요(index.css의 page-header 규칙).
     <div data-sidebar={!narrow && sidebarOpen ? 'open' : 'closed'} data-shell={isWebApp ? 'web' : 'mac'} className="relative flex h-dvh bg-white">
-      {/* 사이드바 접기 버튼은 늘 같은 자리에 있어서 접어도 펴도 움직이지 않아요. 앱에서는 창 버튼 바로 옆, 웹에서는 왼쪽 위예요. */}
+      {/* 사이드바 접기 버튼은 늘 같은 자리에 있어서 접어도 펴도 움직이지 않아요. 앱에서는 창 버튼 바로 옆, 웹에서는 왼쪽 위예요. 좁은 화면에서는 서랍을 여는 햄버거 그림이에요. */}
       <button
         type="button"
         aria-label={open ? text.closeSidebar : text.openSidebar}
@@ -135,7 +135,7 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
         onClick={toggle}
         className={`absolute z-[31] flex size-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-200/70 hover:text-gray-900 ${isWebApp ? 'top-3.5 left-3' : 'top-0.5 left-[78px]'}`}
       >
-        <SidebarIcon />
+        {narrow ? <MenuIcon /> : <SidebarIcon />}
       </button>
       {open &&
         (narrow ? (
