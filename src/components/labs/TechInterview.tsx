@@ -7,7 +7,7 @@ import { INTERVIEWERS } from '../../lib/interviewers'
 import { readJson, writeJson } from '../../lib/storage'
 import { TECH_QUESTIONS, type TechTrack } from '../../lib/techQuestions'
 import { Dropdown } from '../Dropdown'
-import { filterChip, filterRow, Notice } from '../GapParts'
+import { Notice } from '../GapParts'
 import { Modal } from '../Dialog'
 import { CheckIcon, ChevronRightIcon, ClockIcon, CloseButton, SearchIcon } from '../Icons'
 import { Practice, type LabSession } from '../Practice'
@@ -41,29 +41,26 @@ const TEXT = messages({
     track: '직군',
     tracks: { backend: '백엔드', frontend: '프론트엔드' } as Record<TechTrack, string>,
     count: '질문 수',
-    counts: (count: number) => `질문 ${count}개`,
+    counts: (count: number) => `${count}개`,
     start: '기술 면접 시작하기',
     startTitle: '기술 면접 시작하기',
-    startBody: '어떻게 질문을 고를까요?',
-    randomTitle: '랜덤으로 뽑기',
-    randomBody: (scope: string) => `${scope} 질문 중에서 섞어서 물어봐요.`,
+    randomTitle: '랜덤 질문',
     randomStart: (count: number) => `${count}개로 시작하기`,
-    pickTitle: '직접 고르기',
-    pickBody: `목록에서 묻고 싶은 질문을 ${MAX_PICK}개까지 골라요.`,
-    pickStart: '질문 고르기',
+    pickTitle: '직접 선택',
+    pickBody: '가상 면접을 원하는 질문을 직접 선택합니다.',
+    pickStart: '선택하기',
     picked: (count: number) => (count === 0 ? '면접에서 물을 질문을 골라 주세요' : `${count}개 골랐어요`),
     pickFull: `${MAX_PICK}개까지 고를 수 있어요`,
     pickBegin: '면접 시작하기',
     cancel: '취소',
     close: '닫기',
-    topic: '분야',
+    topic: '파트',
     all: '전체',
     items: (count: number) => `${count.toLocaleString()}개의 질문`,
-    practice: '이 질문 연습',
     title: (track: string) => `${track} 기술 면접`,
     back: '질문 목록으로',
     emptyTitle: '맞는 질문이 없어요',
-    emptyBody: '다른 분야를 고르거나 검색어를 바꿔 보세요.',
+    emptyBody: '검색어를 바꿔 보세요.',
     reset: '조건 초기화',
     past: '지난 기록',
     practiced: (done: number, total: number) => `${total}개 중 ${done}개 연습했어요`,
@@ -74,29 +71,26 @@ const TEXT = messages({
     track: 'Track',
     tracks: { backend: 'Backend', frontend: 'Frontend' } as Record<TechTrack, string>,
     count: 'Questions',
-    counts: (count: number) => `${count} questions`,
+    counts: (count: number) => `${count}`,
     start: 'Start tech interview',
     startTitle: 'Start a tech interview',
-    startBody: 'How should we pick the questions?',
-    randomTitle: 'Random',
-    randomBody: (scope: string) => `We'll shuffle questions from ${scope}.`,
+    randomTitle: 'Random questions',
     randomStart: (count: number) => `Start with ${count}`,
-    pickTitle: 'Pick them yourself',
-    pickBody: `Choose up to ${MAX_PICK} questions from the list.`,
-    pickStart: 'Pick questions',
+    pickTitle: 'Choose yourself',
+    pickBody: 'Choose the questions you want in your mock interview.',
+    pickStart: 'Choose',
     picked: (count: number) => (count === 0 ? 'Pick the questions to be asked' : `${count} picked`),
     pickFull: `You can pick up to ${MAX_PICK}`,
     pickBegin: 'Start interview',
     cancel: 'Cancel',
     close: 'Close',
-    topic: 'Topic',
+    topic: 'Part',
     all: 'All',
     items: (count: number) => `${count.toLocaleString()} questions`,
-    practice: 'Practice this',
     title: (track: string) => `${track} tech interview`,
     back: 'Back to questions',
     emptyTitle: 'No questions match',
-    emptyBody: 'Try another topic or search term.',
+    emptyBody: 'Try another search term.',
     reset: 'Reset filters',
     past: 'History',
     practiced: (done: number, total: number) => `${done} of ${total} practiced`,
@@ -186,10 +180,12 @@ export function TechInterview() {
   const items = useMemo<Item[]>(() => topics.flatMap((each) => each.questions.map(([id, question]) => ({ id, question, topic: each.name }))), [topics])
   const shown = useMemo(() => {
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
-    return items.filter((item) => (!saved.topic || item.topic === saved.topic) && words.every((word) => item.question.toLowerCase().includes(word)))
-  }, [items, saved.topic, query])
+    return items.filter((item) => words.every((word) => item.question.toLowerCase().includes(word)))
+  }, [items, query])
+  /** 랜덤 질문을 뽑는 곳이에요. 시작하기 창에서 고른 파트이고, 고르지 않았으면 직군 전체예요. */
+  const pool = useMemo(() => (saved.topic ? items.filter((item) => item.topic === saved.topic) : items), [items, saved.topic])
   const practicedCount = useMemo(() => shown.filter((item) => latest.has(item.id)).length, [shown, latest])
-  const { count, more } = useShowMore(shown.length, `${saved.track}|${saved.topic}|${query}`)
+  const { count, more } = useShowMore(shown.length, `${saved.track}|${query}`)
 
   function open(picked: Item[], from: 'random' | 'pick' | 'question') {
     if (picked.length === 0) return
@@ -282,28 +278,6 @@ export function TechInterview() {
         )}
       </div>
 
-      <div role="radiogroup" aria-label={L.topic} className={`mt-4 ${filterRow}`}>
-        <button type="button" role="radio" aria-checked={!saved.topic} onClick={() => update({ topic: null })} className={`${filterChip(!saved.topic)} px-5`}>
-          {L.all}
-        </button>
-        {topics.map((each) => (
-          <button
-            key={each.name}
-            type="button"
-            role="radio"
-            aria-checked={saved.topic === each.name}
-            onClick={() => {
-              const next = saved.topic === each.name ? null : each.name
-              track('labs_interview_topic', { topic: next ?? 'all' })
-              update({ topic: next })
-            }}
-            className={`${filterChip(saved.topic === each.name)} px-5`}
-          >
-            {each.name}
-          </button>
-        ))}
-      </div>
-
       <p className="mt-6 flex flex-wrap items-center justify-between gap-2 text-[13px] text-gray-500">
         <span>{L.items(shown.length)}</span>
         {practicedCount > 0 && <span className="text-brand">{L.practiced(practicedCount, shown.length)}</span>}
@@ -314,10 +288,7 @@ export function TechInterview() {
           title={L.emptyTitle}
           body={L.emptyBody}
           action={L.reset}
-          onAction={() => {
-            setQuery('')
-            update({ topic: null })
-          }}
+          onAction={() => setQuery('')}
           className="mt-16"
         />
       ) : (
@@ -350,13 +321,12 @@ export function TechInterview() {
                   )}
                   <span className="min-w-0 flex-1">
                     <span className="block text-[14.5px] leading-snug font-medium break-keep text-gray-900 transition-colors group-hover:text-brand">{item.question}</span>
-                    {!saved.topic && <span className="mt-1 block text-[12.5px] text-gray-500">{item.topic}</span>}
+                    <span className="mt-1 block text-[12.5px] text-gray-500">{item.topic}</span>
                   </span>
                   {picking ? (
                     chosen && <span className="shrink-0 text-[12.5px] font-semibold text-brand tabular-nums">{picking.indexOf(item.id) + 1}</span>
                   ) : (
                     <>
-                      <span className="hidden shrink-0 text-[12.5px] font-medium text-gray-400 transition-colors group-hover:text-brand sm:block">{L.practice}</span>
                       <ChevronRightIcon className="size-4 shrink-0 text-gray-400 transition-colors group-hover:text-brand" strokeWidth={1.8} />
                     </>
                   )}
@@ -384,13 +354,18 @@ export function TechInterview() {
 
       {choosing && (
         <StartDialog
-          scope={saved.topic ?? L.tracks[saved.track]}
-          total={shown.length}
+          topics={topics.map((each) => each.name)}
+          topic={saved.topic}
+          onTopic={(value) => {
+            track('labs_interview_topic', { topic: value ?? 'all' })
+            update({ topic: value })
+          }}
+          total={pool.length}
           count={saved.count}
           onCount={(value) => update({ count: value })}
           onRandom={() => {
             setChoosing(false)
-            open(shuffled(shown).slice(0, saved.count), 'random')
+            open(shuffled(pool).slice(0, saved.count), 'random')
           }}
           onPick={() => {
             setChoosing(false)
@@ -428,10 +403,12 @@ export function TechInterview() {
 
 /**
  * 기술 면접 시작하기 창이에요. 랜덤으로 뽑기와 직접 고르기를 큰 회색 칸 두 개로 나란히 보여줘요.
- * 랜덤 칸에는 질문 수(3, 5, 10개)를 고르는 칸과 바로 시작하는 버튼이, 직접 고르기 칸에는 목록에서 고르러 가는 버튼이 있어요.
+ * 랜덤 질문 칸에는 파트(전체와 분야) 메뉴, 질문 수(3, 5, 10개)를 고르는 칸, 바로 시작하는 버튼이 있고, 직접 선택 칸에는 목록에서 고르러 가는 버튼이 있어요.
  */
-function StartDialog({ scope, total, count, onCount, onRandom, onPick, onClose }: {
-  scope: string
+function StartDialog({ topics, topic, onTopic, total, count, onCount, onRandom, onPick, onClose }: {
+  topics: string[]
+  topic: string | null
+  onTopic: (topic: string | null) => void
   total: number
   count: Count
   onCount: (count: Count) => void
@@ -444,20 +421,31 @@ function StartDialog({ scope, total, count, onCount, onRandom, onPick, onClose }
   const size = Math.min(count, total)
   return (
     <Modal onClose={onClose} labelledBy="tech-interview-start" className="w-full max-w-xl p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 id="tech-interview-start" className="text-[18px] font-bold text-gray-900">
-            {L.startTitle}
-          </h2>
-          <p className="mt-1 text-[13.5px] text-gray-500">{L.startBody}</p>
-        </div>
+      <div className="flex items-center justify-between gap-4">
+        <h2 id="tech-interview-start" className="text-[18px] font-bold text-gray-900">
+          {L.startTitle}
+        </h2>
         <CloseButton onClick={onClose} label={L.close} />
       </div>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">
         <section className="flex flex-col rounded-2xl bg-gray-50 p-4 sm:p-5">
           <h3 className="text-[15px] font-semibold text-gray-900">{L.randomTitle}</h3>
-          <p className="mt-1 flex-1 text-[13px] leading-relaxed break-keep text-gray-500">{L.randomBody(scope)}</p>
-          <Segmented label={L.count} options={counts.map((value) => [value, L.counts(value)] as const)} value={count} onChange={onCount} size="md" className="mt-4 self-start" />
+          <div className="mt-3 flex-1">
+            <Dropdown
+              label={L.topic}
+              value={topic ?? L.all}
+              active={!!topic}
+              groups={[
+                {
+                  items: [
+                    { label: L.all, checked: !topic, onSelect: () => onTopic(null) },
+                    ...topics.map((name) => ({ label: name, checked: topic === name, onSelect: () => onTopic(name) })),
+                  ],
+                },
+              ]}
+            />
+          </div>
+          <Segmented label={L.count} options={counts.map((value) => [value, L.counts(value)] as const)} value={count} onChange={onCount} size="md" className="mt-3 self-start" />
           <button type="button" onClick={onRandom} className={`${primaryButton} mt-3 w-full`}>
             {L.randomStart(size)}
           </button>
