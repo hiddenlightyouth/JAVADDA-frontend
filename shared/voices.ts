@@ -12,7 +12,7 @@ export interface PracticeVoice {
 }
 
 export const VOICES: PracticeVoice[] = [
-  { key: 'doyun', id: 'rVUtObZZcKWXuuDGiQ9n', name: { ko: '서도윤', en: 'Doyun Seo' }, hint: { ko: '차분한 남성', en: 'Calm male' } },
+  { key: 'doyun', id: 'MjgCRuI4LXcdcFzHd5Bs', name: { ko: '서도윤', en: 'Doyun Seo' }, hint: { ko: '차분한 남성', en: 'Calm male' } },
   { key: 'jiho', id: 'mfID3WvcnG2r75MMq9LY', name: { ko: '한지호', en: 'Jiho Han' }, hint: { ko: '친근하고 자연스러운 남성', en: 'Friendly male' } },
   { key: 'taemin', id: 'RbBvMD54acwEpBm74TTD', name: { ko: '강태민', en: 'Taemin Kang' }, hint: { ko: '단단한 남성', en: 'Firm male' } },
 ]
