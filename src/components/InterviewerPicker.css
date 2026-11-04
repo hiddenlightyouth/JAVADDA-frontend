@@ -6,6 +6,10 @@
   flex-shrink: 1;
   min-height: 170px;
   perspective: 1400px;
+  /* 옆으로 미는 것은 면접관 바꾸기로 받고, 위아래 스크롤은 브라우저에 맡겨요. */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
 }
 .picker-card {
   position: absolute;

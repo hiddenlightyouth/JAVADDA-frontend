@@ -1,11 +1,14 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react'
 import { INTERVIEWERS, type InterviewerProfile } from '../lib/interviewers'
 import { pick, useLang } from '../lib/i18n'
 import './InterviewerPicker.css'
 
+/** 이만큼 옆으로 밀면 다음 면접관으로 넘어가요. */
+const SWIPE_PX = 40
+
 /**
  * 면접 연습 시작 화면의 면접관 고르기예요. 고른 면접관 카드가 가운데에 크게 서고, 나머지는 양옆으로 비스듬히 물러나요.
- * 옆 카드를 누르거나 좌우 방향키로 바꾸고, 카드 아래에 고른 면접관의 성격 소개가 나와요. 가운데 카드를 다시 눌러도 onChange를 불러서 인사를 한 번 더 들어요.
+ * 옆 카드를 누르거나, 좌우로 밀거나, 좌우 방향키로 바꾸고, 카드 아래에 고른 면접관의 성격 소개가 나와요. 가운데 카드를 다시 눌러도 onChange를 불러서 인사를 한 번 더 들어요.
  */
 export function InterviewerPicker({ value, onChange }: { value: InterviewerProfile; onChange: (next: InterviewerProfile) => void }) {
   const lang = useLang()
@@ -14,6 +17,29 @@ export function InterviewerPicker({ value, onChange }: { value: InterviewerProfi
   const step = (by: number) => onChange(INTERVIEWERS[(at + by + total) % total])
   const stepRef = useRef(step)
   stepRef.current = step
+
+  /** 밀기 시작한 자리예요. 손가락이나 마우스를 뗄 때 얼마나 옮겼는지 봐요. */
+  const swipe = useRef<{ x: number; y: number; id: number } | null>(null)
+  /** 방금 밀어서 바꿨는지예요. 손을 뗀 뒤에 따라오는 클릭이 카드를 다시 고르지 않게 해요. */
+  const swiped = useRef(false)
+
+  function onPointerDown(event: ReactPointerEvent) {
+    if (event.pointerType === 'mouse' && event.button !== 0) return
+    swipe.current = { x: event.clientX, y: event.clientY, id: event.pointerId }
+    swiped.current = false
+  }
+
+  function onPointerUp(event: ReactPointerEvent) {
+    const start = swipe.current
+    swipe.current = null
+    if (!start || start.id !== event.pointerId) return
+    const dx = event.clientX - start.x
+    const dy = event.clientY - start.y
+    // 옆으로 충분히, 위아래보다 많이 밀었을 때만 바꿔요.
+    if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < Math.abs(dy)) return
+    swiped.current = true
+    step(dx < 0 ? 1 : -1)
+  }
 
   // 좌우 방향키로 면접관을 바꿔요. 글을 쓰는 중에는 받지 않아요.
   useEffect(() => {
@@ -28,7 +54,18 @@ export function InterviewerPicker({ value, onChange }: { value: InterviewerProfi
 
   return (
     <div className="flex min-h-0 w-full flex-col">
-      <div className="picker-stage" role="radiogroup" aria-label={lang === 'ko' ? '면접관 고르기' : 'Choose an interviewer'}>
+      <div
+        className="picker-stage"
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerCancel={() => (swipe.current = null)}
+        onClickCapture={(event) => {
+          if (!swiped.current) return
+          swiped.current = false
+          event.preventDefault()
+          event.stopPropagation()
+        }}
+        role="radiogroup" aria-label={lang === 'ko' ? '면접관 고르기' : 'Choose an interviewer'}>
         {INTERVIEWERS.map((item, order) => {
           // 가운데에서 몇 칸 떨어졌는지예요. 셋이라 늘 왼쪽 하나, 가운데, 오른쪽 하나로 둘러요.
           let offset = order - at

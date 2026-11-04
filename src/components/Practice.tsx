@@ -570,8 +570,8 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
     )
   } else if (phase === 'intro') {
     body = (
-      // 위의 나가기 줄 높이만큼 아래를 비워서, 화면 전체의 가운데에 오게 해요. 옆 카드가 화면 밖으로 넘치지 않게 가로로 잘라요.
-      <div className="mx-auto flex h-full max-w-5xl animate-rise flex-col items-center justify-center overflow-x-clip pt-2 pb-4 text-center sm:pt-4 sm:pb-10">
+      // 위의 나가기 줄 높이만큼 아래를 비워서, 화면 전체의 가운데에 오게 해요. 옆 카드는 여백에서 잘리지 않고 화면 끝까지 보이고, 화면 밖은 바깥 칸이 잘라요.
+      <div className="mx-auto flex h-full max-w-5xl animate-rise flex-col items-center justify-center pt-2 pb-4 text-center sm:pt-4 sm:pb-10">
         <h1 className="text-[24px] leading-tight font-bold tracking-tight text-white sm:text-[28px] md:text-[34px]">{L.introTitle}</h1>
         <p className="mt-2 text-[13.5px] leading-relaxed break-keep text-[#fff]/60 sm:mt-3 sm:text-[14.5px]">{lab ? L.introBodyLab : L.introBody}</p>
         {/* 화면이 낮으면 면접관 카드가 줄어들어서, 시작 줄까지 스크롤 없이 한 화면에 들어와요. */}
