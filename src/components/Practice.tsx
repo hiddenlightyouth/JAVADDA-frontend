@@ -224,15 +224,14 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
       showToast(denied ? L.micDenied : code === 'audio-capture' ? L.micMissing : L.micFailed)
     },
   )
-  /** 시작을 누를 때 미리 받은 마이크 허락이에요. 첫 답을 듣기 전에 이것을 기다려서, 면접 중간에 허락 창이 뜨지 않아요. */
+  /** 가상 면접에 들어올 때 미리 받은 마이크 허락이에요. 첫 답을 듣기 전에 이것을 기다려서, 면접 중간에 허락 창이 뜨지 않아요. */
   const micReady = useRef<Promise<void> | null>(null)
 
-  /** 면접을 시작하기 전에 마이크와 음성 인식 허락을 받아 둬요. 시작 버튼을 누른 순간이라 브라우저가 허락 창을 띄워요. */
+  /** 마이크와 음성 인식 허락을 받아 둬요. 가상 면접에 들어오자마자 묻고, 그때 받지 못했으면 시작 버튼을 누를 때 한 번 더 물어요. */
   function readyMic() {
     if (typingRef.current || !canDictate() || micReady.current) return
     micReady.current = prepareMic(speechLang).then((result) => {
       if (result === 'ready') return
-      // 다음에 시작을 누르면 다시 물어 볼 수 있게 비워 둬요.
       micReady.current = null
       typingRef.current = true
       setTyping(true)
@@ -240,6 +239,10 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
       showToast(result === 'denied' ? L.micDenied : L.micMissing)
     })
   }
+  // 가상 면접 화면에 들어오는 순간 허락을 물어요. 시작 화면에서 면접관을 고르는 동안 답할 수 있어요.
+  useEffect(() => {
+    readyMic()
+  }, [])
   /** 말로 답하는 동안의 마이크 소리 크기예요. 오른쪽 위 소리 막대가 읽어요. */
   const mic = useMicLevel(dictation.listening)
 

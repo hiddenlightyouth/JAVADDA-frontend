@@ -54,7 +54,7 @@ const PRIME_TIMEOUT_MS = 15000
  * 면접을 시작하기 전에 마이크 허락을 미리 받아요. 첫 질문에 답할 때 허락 창이 뜨지 않게 해요.
  * 마이크를 한 번 열었다 바로 닫고, Safari와 macOS 앱은 음성 인식 허락을 따로 물어서 음성 인식도 한 번 켰다 꺼요.
  * Chrome은 마이크 허락 하나로 음성 인식까지 되고, 한 번 허락하면 그 사이트에 기억해서 다시 묻지 않아요.
- * 시작 버튼을 누른 순간에 불러야 브라우저가 허락 창을 띄워요.
+ * 가상 면접 화면에 들어올 때 불러서, 면접관을 고르는 동안 허락 창에 답하게 해요.
  */
 export async function prepareMic(lang: string): Promise<MicResult> {
   if (!navigator.mediaDevices?.getUserMedia) return 'ready'
