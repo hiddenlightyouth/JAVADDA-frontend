@@ -23,7 +23,7 @@ const TEXT = messages({
     view: '채용 공고 열기',
     analyze: '분석하기',
     more: (count: number) => `외 ${count}개`,
-    items: (count: number) => `${count}개의 공고`,
+    items: (count: number) => `${count.toLocaleString()}개의 공고`,
   },
   en: {
     companyInfo: (name: string) => `About ${name}`,
@@ -34,7 +34,7 @@ const TEXT = messages({
     view: 'Open posting',
     analyze: 'Analyze',
     more: (count: number) => `+${count} more`,
-    items: (count: number) => `${count} ${count === 1 ? 'posting' : 'postings'}`,
+    items: (count: number) => `${count.toLocaleString()} ${count === 1 ? 'posting' : 'postings'}`,
   },
 })
 
