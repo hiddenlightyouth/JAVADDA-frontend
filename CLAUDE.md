@@ -185,6 +185,10 @@ src/
   components/CaptureShield.tsx  앱에서 화면 공유나 녹화가 감지되면 화면 전체를 가리는 막
   components/Admin.tsx       앱의 관리자 화면 (/admin). 관리자 계정만 보고, 탭으로 나눠요
   components/AdminManage.tsx  운영 현황, 회원, 채용공고, 기업, 수집, AI 사용량 탭
+  components/AdminApi.tsx     관리자의 API 탭. API 키 요청 목록, 심사 칸(KeyPanel: 권한, 한도, 기간, 메모, 승인과 거절과 해지), 전체 호출량
+  components/ApiKeys.tsx      내 API 키(/api-keys). 키 목록과 상세(호출량), 키 요청 창(RequestDialog), 공개 API 문서(Docs), 상태 이름표(StatusBadge)
+  components/ApiUsage.tsx     API 호출량(ApiUsageView). 숫자 칸, 날짜별 막대, 키별과 API별 막대, 최근 호출. 내 API 키와 관리자가 같이 써요
+  lib/apiKeys.ts      API 키 타입과 요청(fetchMyKeys, requestKey, revokeKey, fetchKeyUsage, fetchScopes), 공개 API 주소(PUBLIC_API_BASE)와 문서 자료(ENDPOINTS, ERROR_DOCS)
   components/AdminOverview.tsx, AdminUsers.tsx, AdminChats.tsx, AdminFeedback.tsx, AdminUsage.tsx  연결하지 않는 예전 채팅 관리자 화면
   components/AdminParts.tsx  관리자 탭이 같이 쓰는 부품. 숫자 칸(Stat, StatsLoading), 막대 그래프(BarChart), 기기 태그(DeviceTags), 회원 칸(MemberCell), 검색창(SearchBox, useDebounced), 한 번에 받는 자료(useAdminData)와 더 보기로 받는 목록(usePaged), 표(PagedTable, th, td, 눌러 여는 줄 openableRow), 상세 칸의 이름과 값(InfoGrid)과 내용 자리(PanelContent)
   components/Plans.tsx       요금제 세 개만 보여주는 업그레이드 창(PlansModal)
@@ -413,6 +417,18 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 내 리포트 화면(`/history`)은 두 개 이상의 이력서로 진단했으면 맨 위에 이력서 메뉴(`Dropdown`, 전체와 이력서마다 리포트 수)가 있어서 한 이력서의 리포트만 골라 봐요. 전체를 볼 때는 이력서와 상관없이 마감이 가까운 순서예요.
 - `/history`에도 같은 목록이 있어요. 웹의 헤더에서 들어가고, 앱 사이드바에는 링크를 두지 않아요.
 
+## API 키와 공개 API
+
+우리 자료를 외부 서비스가 쓰도록 공개 API(서버의 `/api/public/v1`)를 열어요. 키는 관리자가 승인해야 쓸 수 있어요.
+
+- 사이드바 맨 아래 계정 메뉴의 "API 키"(열쇠 아이콘 `KeyIcon`)가 내 API 키 화면(`/api-keys`, `ApiKeys`)을 열어요. 탭은 내 키와 문서예요.
+- 키 요청(`RequestDialog`): 키 이름, 쓸 API(권한, 체크 칸과 설명), 사유(10자 넘게), 서비스 주소(선택)를 적어 보내요. 보내면 키 원문(`jvd_`로 시작)을 이 창에서 한 번만 보여주고 복사하게 해요. 서버는 키의 SHA-256 값과 앞부분(prefix)만 남겨서 다시 보여줄 수 없어요. 키는 심사 중으로 만들어지고 관리자가 승인하면 바로 쓸 수 있어요. 심사 중과 사용 중을 합쳐 다섯 개(`MAX_KEYS`)까지 가질 수 있어요.
+- 키 목록은 회색 카드(이름, 상태, 앞부분, 권한, 오늘 호출이나 요청한 때)이고, 누르면 상세(상태, 관리자 메모, 한도와 기간, 받은 권한과 승인되지 않은 권한, 사유, 호출량)예요. 심사 중이면 "요청 거두기", 사용 중이면 "해지"(확인 창, 다시 켤 수 없어요)가 있어요.
+- 권한(서버의 `ApiScope`)은 채용 공고 `postings:read`, 기업 `companies:read`, 기술 스택 `skills:read`, 채용 통계 `stats:read`, 기술 블로그 `blogs:read`, 공모전 `contests:read`예요. 화면은 GET /api-keys/scopes로 이름과 설명을 받아요. 새 권한은 서버에만 더하면 화면에 나와요. 문서 탭의 API 목록(`ENDPOINTS`)은 화면에 적어 둬서 서버의 공개 API를 더하면 같이 고쳐요.
+- 문서 탭은 시작하기(요청, 승인, X-API-Key 헤더, 응답 모양, curl 보기), API 목록(주소, 설명, 파라미터, 필요한 권한), 오류 코드예요.
+- 관리자의 API 탭(`/admin/api`, `AdminApi`): 검색(키 이름, 요청자)과 상태 메뉴(전체, 심사 중, 사용 중, 거절, 해지), 심사 중과 사용 중인 키 수, 키 표(심사 중이 맨 위)가 있고, 아래에 기간별 전체 호출량(키별, API별, 최근 호출)이 있어요. 줄을 누르면 오른쪽 심사 칸(`KeyPanel`)에서 사유와 서비스 주소를 보고, 권한(요청한 것에 "요청함")을 골라 일부만 줄 수 있고, 1분과 하루 한도, 사용 기간, 요청자에게 보일 메모를 정해 승인, 거절, 저장, 해지해요. 해지한 키는 고칠 수 없어요. 승인한 키는 그 키의 호출량도 보여줘요.
+- 호출량(`ApiUsageView`)은 호출, 오류 비율, 한도 넘음(429), 평균 응답, 날짜별 막대, 키별과 API별 막대, 최근 호출 30개(시각, API, 응답 코드, 시간)예요.
+
 ## 웹 앱 (/app)
 
 브라우저에서도 macOS 앱과 같은 화면으로 쓸 수 있어요. 메인 주소(/)의 소개 화면에서 "시작하기"를 누르면 `/app`으로 가요. 코드는 `src/lib/shell.ts`에서 시작해요.
@@ -559,6 +575,8 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `sidebar_report_pin` | 사이드바에서 리포트를 고정하거나 풀었을 때 | `pinned` |
 | `sidebar_folder_toggle` | 사이드바에서 이력서 폴더를 접거나 폈을 때 | `open` |
 | `history_resume_select` | 내 리포트 화면에서 이력서 메뉴를 골랐을 때 | `resume`(all, resume, deleted) |
+| `api_keys_open`, `api_keys_tab`, `api_key_request_open`, `api_key_request`, `api_key_revoke` | 계정 메뉴에서 API 키를 열거나, 탭을 바꾸거나, 키를 요청하거나 해지했을 때 | `from`(menu), `tab`(keys, docs), `scopes`, `status` |
+| `admin_api_key_update` | 관리자가 API 키를 승인, 거절, 해지하거나 저장했을 때 | `status`(approved, rejected, revoked, save), `scopes` |
 | `admin_tab_view`, `admin_period_change`, `admin_user_open`, `admin_user_action`, `admin_call_open`, `admin_call_copy`, `admin_chat_action` | 관리자 화면 | 전과 같아요 |
 | `language_change` | 헤더나 앱의 설정 창에서 언어를 바꿨을 때 | `lang`(ko, en), `from`(header, settings) |
 | `about_faq_open` | 소개 화면에서 자주 묻는 질문을 펼쳤을 때 | `id` |
@@ -580,6 +598,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 로그인, 회원가입, 내 정보, GitHub와 카카오 로그인, 회원 탈퇴 (위의 로그인과 계정 절 참고)
 - 앱의 관리자 화면 (위의 관리자 화면 절 참고)
 - 요금제 창, 평가와 버그 신고, Google Analytics 이벤트 추적
+- API 키 요청과 관리자 승인, 권한과 한도, 호출량, 공개 API 문서 (위의 API 키와 공개 API 절 참고)
 
 ## 남은 작업
 
@@ -617,6 +636,8 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 6. AI 사용량(`/admin/ai`): 기간(7일, 30일, 90일, 1년, 전체, `Segmented`)을 고르면 GET /admin/manage/ai-usage?days=로 집계를 받아요(전체는 0). 맨 위 숫자 칸 여섯 개는 비용(달러와 원 어림, 단가를 모르는 호출이 있으면 별표에 말풍선), 호출(하루 평균), 호출당 비용, 입력 토큰, 출력 토큰(호출당), 실패율(평균 처리 시간)이고, 직전 같은 길이 기간보다 비용과 호출이 얼마나 변했는지 한 줄로 적어요. 그 아래 날짜별 막대 그래프(비용, 호출, 토큰을 고르고, 120일이 넘으면 달별), 모델별과 용도별 표(호출, 실패, 입력과 출력 토큰, 평균 시간, 비용과 전체 중 비중 막대. 모델은 공급자와 100만 토큰당 단가)가 있어요. 맨 아래 최근 호출 표(전체와 실패만)는 호출마다 어림 비용을 적고, 실패한 호출은 이름표와 오류를 붙여요. 줄을 누르면 오른쪽 칸(`CallPanel`, GET /admin/manage/ai-calls/{id})에 모델, 처리 시간, 토큰, 비용, 오류와 그때 보낸 입력, 받은 답, 시스템 프롬프트(지금 파일이라 그때와 다를 수 있어서 접어 둬요)를 보여줘요. JSON이면 줄을 바꿔 읽기 좋게 하고, 칸마다 글자 수와 복사 버튼이 있어요. 입력과 답은 서버가 보관 일수(기본 30일) 동안만 남겨서, 지났거나 남기기 전의 호출이면 없다고 적어요. 용도 이름(`PURPOSES`)은 화면 말로 바꿔요(posting은 공고 정리 등). 비용은 서버가 모델 단가(서버 `application.yml`의 `input-price`, `output-price`, 토큰 100만 개당 달러)로 어림하고, 원은 `ai.krw-per-usd`(기본 1400)로 바꿔요.
 
 관리자 탭은 앱의 다른 화면과 같은 부품을 써요. 거르는 줄은 검색창, 드롭다운(`Dropdown`), 오른쪽 끝 새로고침 아이콘이고, 표는 테두리 없는 회색 칸에 옅은 선으로 줄을 나눠요. 회원, 공고, 기업은 줄을 누르면 오른쪽 칸(`SidePanel`)에서 고치고, 칸 안의 입력칸, 드롭다운, 체크 칸(`Checkbox`)도 공통 부품이에요. 상태와 권한은 `Badge`로 적어요. 설명 문구는 두지 않아요.
+
+7. API(`/admin/api`): API 키 요청 심사와 공개 API 호출량이에요. 자세한 것은 위의 API 키와 공개 API 절에 있어요.
 
 목록은 `/admin/manage/*`의 `{items, page, size, hasNext}`를 20개씩 조회해요. 검색어는 디바운스하고, 필터 변경 시 첫 페이지부터 받아요. 변경 작업은 중복 제출을 막고 실패 시 오류를 표시해요. 권한 변경, 로그아웃, 수집 실행과 활성화 변경은 확인 창을 거쳐요. 예전 `/admin/chats`와 `/admin/feedback` 주소는 운영 현황을 표시해요.
 

@@ -12,7 +12,7 @@ import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { readJson, writeJson } from '../lib/storage'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
-import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, FlaskIcon, ChristmasTreeIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
+import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, FlaskIcon, KeyIcon, ChristmasTreeIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { fitColor, Tip } from './GapParts'
 import { Avatar } from './Avatar'
@@ -31,6 +31,7 @@ const TEXT = messages({
     labs: '잡아따 Labs',
     me: '내 정보',
     admin: '관리자',
+    apiKeys: 'API 키',
     signOut: '로그아웃',
     changePlan: '업그레이드',
     weekly: (percent: number) => `${percent}% 사용됨`,
@@ -53,6 +54,7 @@ const TEXT = messages({
     labs: 'Javadda Labs',
     me: 'Account',
     admin: 'Admin',
+    apiKeys: 'API keys',
     signOut: 'Sign out',
     changePlan: 'Upgrade',
     weekly: (percent: number) => `${percent}% used`,
@@ -73,7 +75,7 @@ function resetLeft(value: string): { days: number; hours: number } | null {
   return { days: hours >= 24 ? Math.ceil(ms / 86_400_000) : 0, hours }
 }
 
-type SidebarPage = 'explore' | 'recommend' | 'calendar' | 'map' | 'resume' | 'blogs' | 'labs' | 'articles' | 'me' | 'history' | 'admin' | null
+type SidebarPage = 'explore' | 'recommend' | 'calendar' | 'map' | 'resume' | 'blogs' | 'labs' | 'articles' | 'me' | 'history' | 'admin' | 'api-keys' | null
 
 /** 접어 둔 이력서 폴더의 아이디예요. 이 기기에 기억해요. */
 const CLOSED_FOLDERS_KEY = 'javadda:sidebar-closed-resumes'
@@ -111,6 +113,8 @@ interface Props {
   settingsOpen: boolean
   /** 관리자 화면을 열어요. 관리자 계정일 때만 넘기고, 아니면 메뉴에 보여주지 않아요. */
   onAdmin?: () => void
+  /** 내 API 키 화면을 열어요. */
+  onApiKeys: () => void
   /** 로그인했는지. 로그인하지 않았으면 계정 버튼 자리에 로그인 버튼을 보여줘요. */
   signedIn: boolean
   onLogin?: () => void
@@ -289,7 +293,7 @@ function NavLink({ href, active, onClick, icon, label, shortcut, trailing, locke
 }
 
 /** 앱 화면 왼쪽의 사이드바예요. 새 진단, 공고 탐색, 추천 공고, 기술 블로그, 내 이력서, 잡아따 Labs, 내 리포트 목록과 관리, 내 정보로 가는 링크가 있어요. */
-export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onCalendar, onMap, onResume, onBlogs, onLabs, onOpenReport, onHistory, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, signedIn, onLogin }: Props) {
+export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onCalendar, onMap, onResume, onBlogs, onLabs, onOpenReport, onHistory, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, onApiKeys, signedIn, onLogin }: Props) {
   const { me } = useAuth()
   const list = useMessages(REPORT_LIST_TEXT)
   const text = useMessages(TEXT)
@@ -559,7 +563,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
         </div>
       )}
 
-      <AccountMenu me={signedIn ? me : null} page={page} onMe={onMe} onSettings={onSettings} settingsOpen={settingsOpen} onAdmin={onAdmin} onLogin={signedIn ? undefined : onLogin} />
+      <AccountMenu me={signedIn ? me : null} page={page} onMe={onMe} onSettings={onSettings} settingsOpen={settingsOpen} onAdmin={onAdmin} onApiKeys={onApiKeys} onLogin={signedIn ? undefined : onLogin} />
 
       {deleting && (
         <DeleteReportDialog
@@ -584,13 +588,14 @@ const PLAN_NAMES: Record<PlanId, string> = { FREE: 'Free', LITE: 'Lite', PRO: 'P
  * 사이드바 맨 아래의 계정 버튼이에요. 누르면 위로 메뉴가 펼쳐져서 내 정보, 관리자 화면으로 가거나 로그아웃해요. 오른쪽에는 설정과 버그 신고 버튼이 있어요.
  * 바깥을 누르거나 Esc를 누르면 닫혀요.
  */
-function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onLogin }: {
+function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onApiKeys, onLogin }: {
   me: Me | null
   page: SidebarPage
   onMe: () => void
   onSettings: () => void
   settingsOpen: boolean
   onAdmin?: () => void
+  onApiKeys: () => void
   /** 로그인하지 않았으면 넘겨요. 계정 버튼 대신 로그인 버튼을 보여줘요. */
   onLogin?: () => void
 }) {
@@ -638,6 +643,13 @@ function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onLogi
             <PersonIcon className={menuIcon} />
             {text.me}
           </button>
+          <button type="button" role="menuitem" onClick={go(() => {
+            track('api_keys_open', { from: 'menu' })
+            onApiKeys()
+          })} className={menuRow}>
+            <KeyIcon className={menuIcon} />
+            {text.apiKeys}
+          </button>
           {onAdmin && (
             <button type="button" role="menuitem" onClick={go(onAdmin)} className={menuRow}>
               <ShieldIcon className={menuIcon} />
@@ -682,7 +694,7 @@ function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onLogi
             if (!open) track('app_menu_open')
             setOpen((value) => !value)
           }}
-          className={`flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 text-left transition-colors ${tone(open || page === 'me' || page === 'articles' || page === 'admin')}`}
+          className={`flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 text-left transition-colors ${tone(open || page === 'me' || page === 'articles' || page === 'admin' || page === 'api-keys')}`}
         >
           {/* 프로필 사진 대신 이름의 첫 글자를 동그라미에 넣어요. */}
           <Avatar name={me?.name ?? ''} />

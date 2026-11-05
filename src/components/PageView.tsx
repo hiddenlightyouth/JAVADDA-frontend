@@ -20,6 +20,7 @@ const load = {
   Report: () => import('./Report'),
   Practice: () => import('./Practice'),
   Admin: () => import('./Admin'),
+  ApiKeys: () => import('./ApiKeys'),
   Account: () => import('./Account'),
   About: () => import('./About'),
   Articles: () => import('./Articles'),
@@ -68,6 +69,7 @@ const Practice = lazy(() => load.Practice().then((module) => ({ default: module.
 
 // 관리자 화면은 앱에서 관리자 계정만 쓰는 화면이라, 열 때만 받아요.
 const Admin = lazy(() => load.Admin().then((module) => ({ default: module.Admin })))
+const ApiKeys = lazy(() => load.ApiKeys().then((module) => ({ default: module.ApiKeys })))
 
 const Account = lazy(() => load.Account().then((module) => ({ default: module.Account })))
 
@@ -141,6 +143,8 @@ export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExp
         <Report id={page.id} tab={page.tab} onTab={(tab) => onReport(page.id, tab)} onBack={onHome} onPractice={onPractice} onPick={onDiagnose} />
       ) : page.kind === 'practice' ? (
         <Practice id={page.id} question={page.question} onBack={() => onReport(page.id, 'questions')} />
+      ) : page.kind === 'api-keys' ? (
+        <ApiKeys />
       ) : page.kind === 'admin' ? (
         <Admin tab={page.tab} onTab={onAdmin} full={adminApi} feedback={feedback} onOpenChat={() => undefined} />
       ) : page.kind === 'about' ? (

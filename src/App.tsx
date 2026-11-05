@@ -138,6 +138,7 @@ export default function App() {
   const openBlogs = useCallback((company: string | null = null) => open({ kind: 'blogs', company: company ?? undefined }), [open])
   const openLabs = useCallback((id: string | null = null) => open({ kind: 'labs', id: id ?? undefined }), [open])
   const openAdmin = useCallback((tab: AdminTab = 'overview') => open({ kind: 'admin', tab }), [open])
+  const openApiKeys = useCallback(() => open({ kind: 'api-keys' }), [open])
 
   // 로그인 화면에서 로그인하면, 보던 리포트가 있으면 그리로 돌아가고 아니면 새 진단 화면으로 가요.
   const handleSignedIn = useCallback(() => {
@@ -285,7 +286,7 @@ export default function App() {
       sidebar={{
         activeReportId,
         page:
-          page?.kind === 'explore' || page?.kind === 'recommend' || page?.kind === 'calendar' || page?.kind === 'map' || page?.kind === 'resume' || page?.kind === 'blogs' || page?.kind === 'labs' || page?.kind === 'admin'
+          page?.kind === 'explore' || page?.kind === 'recommend' || page?.kind === 'calendar' || page?.kind === 'map' || page?.kind === 'resume' || page?.kind === 'blogs' || page?.kind === 'labs' || page?.kind === 'admin' || page?.kind === 'api-keys'
             ? page.kind
             : account === 'me' || account === 'history'
               ? account
@@ -312,6 +313,7 @@ export default function App() {
           if (id === activeReportId) goHome()
         },
         onAdmin: isAdmin(me) ? () => openAdmin() : undefined,
+        onApiKeys: openApiKeys,
         onMe: () => {
           if (account !== 'me') go('me')
         },

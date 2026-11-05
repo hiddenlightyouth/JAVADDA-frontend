@@ -58,6 +58,7 @@ const PAGE_TITLES = {
   report: 'Javadda 리포트',
   practice: 'Javadda 면접 연습',
   admin: 'Javadda 관리자',
+  'api-keys': 'Javadda API 키',
   about: 'Javadda 소개',
 }
 

@@ -119,6 +119,7 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
       onBlogs={closing(sidebar.onBlogs)!}
       onLabs={closing(sidebar.onLabs)!}
       onAdmin={closing(sidebar.onAdmin)}
+      onApiKeys={closing(sidebar.onApiKeys)!}
       onSettings={openSettings}
       settingsOpen={settingsOpen}
     />

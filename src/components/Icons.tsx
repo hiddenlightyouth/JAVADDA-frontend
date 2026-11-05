@@ -310,6 +310,18 @@ export function ShieldIcon({ className = 'size-4 shrink-0', strokeWidth = 1.4, l
   )
 }
 
+/** API 키예요. */
+export function KeyIcon({ className = 'size-4 shrink-0', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <circle cx="5.25" cy="10.75" r="2.75" />
+      <path d="M7.2 8.8 13 3" />
+      <path d="M11 5l1.75 1.75" />
+      <path d="M9.5 6.5l1.25 1.25" />
+    </Icon>
+  )
+}
+
 /** 비공개 레포를 나타내는 자물쇠예요. */
 export function LockIcon({ className = 'size-3.5 shrink-0', strokeWidth = 1.4, label }: IconProps) {
   return (

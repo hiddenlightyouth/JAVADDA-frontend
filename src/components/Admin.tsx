@@ -9,8 +9,9 @@ import {
   ManagementCrawl,
   ManagementAi,
 } from './AdminManage'
+import { ManagementApi } from './AdminApi'
 
-export type AdminTab = 'overview' | 'users' | 'postings' | 'companies' | 'crawl' | 'ai' | 'chats' | 'feedback'
+export type AdminTab = 'overview' | 'users' | 'postings' | 'companies' | 'crawl' | 'ai' | 'api' | 'chats' | 'feedback'
 const tabs = [
   { key: 'overview', label: '운영 현황' },
   { key: 'users', label: '회원' },
@@ -18,6 +19,7 @@ const tabs = [
   { key: 'companies', label: '기업' },
   { key: 'crawl', label: '데이터 수집' },
   { key: 'ai', label: 'AI 사용량' },
+  { key: 'api', label: 'API' },
 ] as const
 
 interface Props {
@@ -56,6 +58,8 @@ export function Admin({ tab, onTab, full }: Props) {
               <ManagementCompanies />
             ) : current === 'crawl' ? (
               <ManagementCrawl />
+            ) : current === 'api' ? (
+              <ManagementApi />
             ) : (
               <ManagementAi />
             )}

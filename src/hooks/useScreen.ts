@@ -42,6 +42,8 @@ function trackPage(page: Page | null) {
       return trackPageView('practice')
     case 'admin':
       return trackPageView('admin', { tab: page.tab })
+    case 'api-keys':
+      return trackPageView('api-keys')
     case 'account':
       return trackPageView(page.page)
     case 'article':

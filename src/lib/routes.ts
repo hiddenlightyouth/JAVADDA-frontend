@@ -56,7 +56,9 @@ export function reportFromPath(): { id: string; tab: ReportTab | 'practice' } | 
   return match ? { id: match[1], tab: (match[2] as ReportTab | 'practice' | undefined) ?? 'summary' } : null
 }
 
-const ADMIN_PATH = /^\/admin(?:\/(users|postings|companies|crawl|chats|feedback|ai))?\/?$/
+const ADMIN_PATH = /^\/admin(?:\/(users|postings|companies|crawl|chats|feedback|ai|api))?\/?$/
+
+const API_KEYS_PATH = /^\/api-keys\/?$/
 
 /** 관리자 화면 주소면 보고 있는 탭을 돌려줘요. */
 function adminFromPath(): AdminTab | null {
@@ -82,6 +84,8 @@ export type Page =
   | { kind: 'report'; id: string; tab: ReportTab }
   | { kind: 'practice'; id: string; question?: string }
   | { kind: 'admin'; tab: AdminTab }
+  /** 내 API 키(요청, 사용량, 문서) */
+  | { kind: 'api-keys' }
   | { kind: 'account'; page: AccountPage }
   | { kind: 'article'; slug: string | null }
 
@@ -98,7 +102,8 @@ export const isAppOnly = (page: Page) =>
   page.kind === 'diagnose' ||
   page.kind === 'report' ||
   page.kind === 'practice' ||
-  page.kind === 'admin'
+  page.kind === 'admin' ||
+  page.kind === 'api-keys'
 
 /** 주소에서 지금 보여줄 화면을 읽어요. 앱 전용 화면인지는 따지지 않아요. */
 export function pageFromPath(): Page | null {
@@ -128,6 +133,7 @@ export function pageFromPath(): Page | null {
     const question = new URLSearchParams(window.location.search).get('q') ?? undefined
     return { kind: 'practice', id: report.id, question }
   }
+  if (API_KEYS_PATH.test(path)) return { kind: 'api-keys' }
   const tab = adminFromPath()
   if (tab) return { kind: 'admin', tab }
   const account = accountFromPath()
@@ -169,6 +175,8 @@ export function pathOf(page: Page | null): string {
       return `/r/${page.id}/practice${page.question ? `?q=${encodeURIComponent(page.question)}` : ''}`
     case 'admin':
       return page.tab === 'overview' ? '/admin' : `/admin/${page.tab}`
+    case 'api-keys':
+      return '/api-keys'
     case 'account':
       return `/${page.page}`
     case 'article':
