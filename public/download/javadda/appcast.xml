@@ -3,12 +3,12 @@
   <channel>
     <title>Javadda</title>
     <item>
-      <title>2.6</title>
-      <pubDate>Mon, 02 Nov 2026 23:59:18 +0000</pubDate>
-      <sparkle:version>7</sparkle:version>
-      <sparkle:shortVersionString>2.6</sparkle:shortVersionString>
+      <title>2.7</title>
+      <pubDate>Thu, 05 Nov 2026 17:35:12 +0000</pubDate>
+      <sparkle:version>8</sparkle:version>
+      <sparkle:shortVersionString>2.7</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://javadda.hidly.dev/download/javadda/Javadda-2.6.zip" type="application/octet-stream" sparkle:edSignature="DYhrBpm4Zogbiasn6G8DxFMdyYq5QUuMPS2M7ApqAkvc9VR1xWnYqGebkDYWb2FqIgxDD8QkpjpLkfGxiF+TBA==" length="1226422" />
+      <enclosure url="https://javadda.hidly.dev/download/javadda/Javadda-2.7.zip" type="application/octet-stream" sparkle:edSignature="FUsT6B69vPoPQ1pZNStADU0yynEB7S42d5B/a4veZioM+BuEifhL5K+M422udUlSJBNlrKTS5EbMIqEEvLIVDw==" length="1247896" />
     </item>
   </channel>
 </rss>
