@@ -6,6 +6,8 @@ export interface Member {
   email: string
   name: string
   role: 'USER' | 'ADMIN'
+  /** GitHub로만 가입해서 비밀번호가 없는 계정이에요. */
+  socialOnly?: boolean
   registeredAt: string | null
 }
 export interface MemberDetail {
@@ -127,6 +129,7 @@ export interface Overview {
   aiFailures: number
 }
 const errors: Record<string, string> = {
+  C4007: 'GitHub로만 가입한 계정은 비밀번호를 초기화할 수 없어요.',
   C403: '관리자 권한이 필요해요. 내 계정의 권한과 로그인 상태를 확인해 주세요.',
   C404: '자료가 없어요. 목록을 새로고침해 주세요.',
   C002: '입력한 값이나 주소를 확인해 주세요.',

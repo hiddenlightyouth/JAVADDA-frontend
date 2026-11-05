@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode, type FormEvent } from 'react'
+import { useEffect, useId, useState, type ReactNode, type FormEvent } from 'react'
 import {
   getManage,
   listManage,
@@ -43,7 +43,7 @@ import {
   usePaged,
   type Bar,
 } from './AdminParts'
-import { ConfirmDialog, SidePanel } from './Dialog'
+import { ConfirmDialog, Modal, SidePanel } from './Dialog'
 import { Dropdown } from './Dropdown'
 import { Panel, Tip } from './GapParts'
 import { RefreshIcon } from './Icons'
@@ -86,8 +86,9 @@ function useMutation() {
     body: string
     run: () => Promise<Result<null>>
     after: () => void
+    done?: string
   } | null>(null)
-  async function execute(run: () => Promise<Result<null>>, after: () => void) {
+  async function execute(run: () => Promise<Result<null>>, after: () => void, done = '저장했어요.') {
     if (busy) return
     setBusy(true)
     setError('')
@@ -99,7 +100,7 @@ function useMutation() {
       }
       setPending(null)
       after()
-      showToast('저장했어요.')
+      showToast(done)
     } finally {
       setBusy(false)
     }
@@ -107,9 +108,9 @@ function useMutation() {
   return {
     busy,
     execute,
-    ask: (title: string, body: string, run: () => Promise<Result<null>>, after: () => void) => {
+    ask: (title: string, body: string, run: () => Promise<Result<null>>, after: () => void, done?: string) => {
       setError('')
-      setPending({ title, body, run, after })
+      setPending({ title, body, run, after, done })
     },
     notice: <FormError className="mt-3">{!pending && error}</FormError>,
     dialog: pending && (
@@ -126,7 +127,7 @@ function useMutation() {
         onCancel={() => {
           if (!busy) setPending(null)
         }}
-        onConfirm={() => void execute(pending.run, pending.after)}
+        onConfirm={() => void execute(pending.run, pending.after, pending.done)}
       />
     ),
   }
@@ -301,10 +302,17 @@ function MemberPanel({ member, close, changed }: { member: Member; close: () => 
   const { me } = useAuth()
   const state = useAdminData(() => getManage<MemberDetail>(`/users/${member.id}`), member.id, true)
   const mutation = useMutation()
+  const [tempPassword, setTempPassword] = useState('')
   const self = member.id === me?.id
   const reload = () => {
     state.reload()
     changed()
+  }
+  async function resetPassword(id: number): Promise<Result<null>> {
+    const result = await manageRequest<{ password: string }>(`/admin/manage/users/${id}/password`, 'POST')
+    if (!result.ok) return result
+    setTempPassword(result.data.password)
+    return { ok: true, data: null }
   }
   return (
     <>
@@ -352,6 +360,24 @@ function MemberPanel({ member, close, changed }: { member: Member; close: () => 
                   >
                     모든 기기 로그아웃
                   </button>
+                  {!user.socialOnly && (
+                    <button
+                      type="button"
+                      disabled={mutation.busy}
+                      className={toolDangerButton}
+                      onClick={() =>
+                        mutation.ask(
+                          '비밀번호를 초기화할까요?',
+                          `${user.name} 님의 비밀번호를 임시 비밀번호로 바꾸고 모든 기기에서 로그아웃해요. 지금 비밀번호로는 더 이상 로그인할 수 없어요.`,
+                          () => resetPassword(user.id),
+                          reload,
+                          '비밀번호를 초기화했어요.',
+                        )
+                      }
+                    >
+                      비밀번호 초기화
+                    </button>
+                  )}
                 </div>
               )}
               {mutation.notice}
@@ -403,7 +429,43 @@ function MemberPanel({ member, close, changed }: { member: Member; close: () => 
         </PanelContent>
       </EditPanel>
       {mutation.dialog}
+      {tempPassword && <TempPasswordDialog password={tempPassword} onClose={() => setTempPassword('')} />}
     </>
+  )
+}
+
+/** 초기화한 임시 비밀번호를 한 번만 보여줘요. 닫으면 다시 볼 수 없어요. */
+function TempPasswordDialog({ password, onClose }: { password: string; onClose: () => void }) {
+  const titleId = useId()
+  const [copied, setCopied] = useState(false)
+  async function copy() {
+    const ok = await navigator.clipboard.writeText(password).then(
+      () => true,
+      () => false,
+    )
+    if (ok) setCopied(true)
+    else showToast('복사하지 못했어요.')
+  }
+  return (
+    <Modal onClose={onClose} labelledBy={titleId} closeOnBackdrop={false} className="w-full max-w-md p-6">
+      <h2 id={titleId} className="text-[17px] font-semibold text-gray-900">
+        임시 비밀번호를 전달해 주세요
+      </h2>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
+        이 창을 닫으면 다시 볼 수 없어요. 회원은 이 비밀번호로 다시 로그인해요.
+      </p>
+      <div className="mt-4 flex items-center gap-2 rounded-xl bg-gray-50 p-3">
+        <code className="min-w-0 flex-1 font-mono text-[15px] tracking-wide break-all text-gray-900">{password}</code>
+        <button type="button" className={ghostButton} onClick={() => void copy()}>
+          {copied ? '복사됨' : '복사'}
+        </button>
+      </div>
+      <div className="mt-5 flex justify-end">
+        <button type="button" className={primaryButton} onClick={onClose}>
+          닫기
+        </button>
+      </div>
+    </Modal>
   )
 }
 
