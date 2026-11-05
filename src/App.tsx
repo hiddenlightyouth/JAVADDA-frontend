@@ -3,7 +3,7 @@ import type { AdminTab } from './components/Admin'
 import type { ReportTab } from './components/Report'
 import { AppFrame, AppSignedOut, useSidebarOpen } from './components/AppFrame'
 import { Header } from './components/Header'
-import { PageView, preloadScreens, screenFallback } from './components/PageView'
+import { aboutFallback, PageView, preloadScreens, screenFallback } from './components/PageView'
 import { ShortcutTip } from './components/Shortcuts'
 import { Toast } from './components/Toast'
 import { useScreen } from './hooks/useScreen'
@@ -230,6 +230,8 @@ export default function App() {
         // 계정 화면은 웹의 /app 안에 있어요. 소개와 아티클 화면에서는 시작하기 버튼이 대신해요.
         onAccount={appShell ? (next) => go(next) : undefined}
       />
+      {/* 메인 화면과 주소로 여는 화면을 한 자리(Suspense)로 둘러요. 자리가 바뀌지 않아서, 화면을 옮길 때 받는 동안의 칸이 끼지 않고 보던 화면이 그대로 있다가 바뀌어요. */}
+      <Suspense fallback={page?.kind === 'about' ? aboutFallback : screenFallback}>
       {page ? (
         <PageView
           page={page}
@@ -256,10 +258,9 @@ export default function App() {
           feedback={feedback.ready}
         />
       ) : (
-        <Suspense fallback={screenFallback}>
-          <Home onPick={openDiagnose} onExplore={openExplore} onRecommend={openRecommend} onResume={openResume} onCompany={openCompanyPage} />
-        </Suspense>
+        <Home onPick={openDiagnose} onExplore={openExplore} onRecommend={openRecommend} onResume={openResume} onCompany={openCompanyPage} />
       )}
+      </Suspense>
       {feedback.bugOpen && (
         <Suspense fallback={null}>
           <BugReport chatId={null} />

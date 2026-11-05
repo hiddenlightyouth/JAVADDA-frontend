@@ -14,38 +14,45 @@ export type LoadedPostings = JobPosting[] | 'failed' | undefined
 /** 검색어가 있으면 이만큼(ms) 멈췄을 때 보내요. */
 const QUERY_DELAY_MS = 250
 
+/** 이번 접속에서 조건마다 받은 공고예요. 화면을 다시 열면 이것으로 먼저 그려요. */
+const postingCache = new Map<string, JobPosting[]>()
+
 /**
  * 공고 목록을 받아요(GET /postings). 공고 탐색, 추천 공고, 마감 달력, 채용 지도가 같이 써요.
  * 받는 동안 loaded는 undefined이고, 받지 못하면 'failed'예요. retry로 다시 받아요. 조건이 바뀌면 앞의 요청의 답은 버려요.
  * 검색어가 있으면 잠깐 멈췄을 때 보내요. waiting은 진행 칸을 보여줄지(`useLoadHold`)이고, percent는 받은 정도예요.
  */
 export function usePostings({ query = '', family = null, career = null }: { query?: string; family?: JobFamily | null; career?: CareerLevel | null } = {}) {
-  const [loaded, setLoaded] = useState<LoadedPostings>(undefined)
+  const key = `${query}|${family ?? ''}|${career ?? ''}`
+  const [loaded, setLoaded] = useState<LoadedPostings>(() => postingCache.get(key))
   const [attempt, setAttempt] = useState(0)
   const load = useLoadProgress()
 
   useEffect(() => {
     let stale = false
-    setLoaded(undefined)
-    const onLoad = load.one()
+    // 이번 접속에서 같은 조건으로 받아 둔 공고가 있으면 그것으로 바로 그리고, 뒤에서 새로 받아 바꿔요. 화면을 옮길 때마다 받는 칸이 뜨지 않아요.
+    const cached = postingCache.get(key)
+    setLoaded(cached)
+    const onLoad = cached ? undefined : load.one()
     const timer = window.setTimeout(
       () => {
         void fetchPostings({ query, family, career }, onLoad).then(
           (list) => {
+            postingCache.set(key, list)
             if (!stale) setLoaded(list)
           },
           () => {
-            if (!stale) setLoaded('failed')
+            if (!stale && !cached) setLoaded('failed')
           },
         )
       },
-      query ? QUERY_DELAY_MS : 0,
+      query && !cached ? QUERY_DELAY_MS : 0,
     )
     return () => {
       stale = true
       window.clearTimeout(timer)
     }
-  }, [query, family, career, attempt, load.one])
+  }, [key, query, family, career, attempt, load.one])
 
   const hold = useLoadHold(loaded === undefined)
   const retry = useCallback(() => setAttempt((value) => value + 1), [])

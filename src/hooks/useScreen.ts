@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { startTransition, useCallback, useEffect, useRef, useState } from 'react'
 import type { AccountPage } from '../components/Account'
 import { trackPageView } from '../lib/analytics'
 import { appShell } from '../lib/app'
@@ -60,6 +60,12 @@ export function useScreen() {
   const [page, setPage] = useState(initialPage)
   const loginReturn = useRef<LoginReturn | null>(null)
 
+  // 화면은 전환(startTransition)으로 바꿔요. 새 화면의 코드를 받는 동안 받는 칸으로 깜빡이지 않고, 보던 화면을 그대로 두었다가 바로 바꿔요.
+  const show = useCallback((next: Page | null) => {
+    startTransition(() => setPage(next))
+    trackPage(next)
+  }, [])
+
   // 주소에 맞는 화면을 준비해요. 처음 들어왔을 때와 뒤로 가기, 앞으로 가기에서 불러요.
   const openFromLocation = useCallback(() => {
     let next = pageFromPath()
@@ -68,9 +74,8 @@ export function useScreen() {
       window.history.replaceState(null, '', '/')
       next = null
     }
-    setPage(next)
-    trackPage(next)
-  }, [])
+    show(next)
+  }, [show])
 
   useEffect(() => {
     openFromLocation()
@@ -91,10 +96,9 @@ export function useScreen() {
       const path = localizePath(pathOf(next))
       if (replace) window.history.replaceState(null, '', path)
       else if (window.location.pathname !== path) window.history.pushState(null, '', path)
-      setPage(next)
-      trackPage(next)
+      show(next)
     },
-    [],
+    [show],
   )
 
   const goHome = useCallback(() => open(null), [open])

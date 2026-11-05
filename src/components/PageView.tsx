@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy } from 'react'
 import { LoadProgress, loadCenter } from './ui'
 import type { AccountPage } from './Account'
 import type { AdminTab } from './Admin'
@@ -41,7 +41,7 @@ export function preloadScreens() {
   idle(next)
 }
 
-/** 화면 코드를 받는 동안의 자리예요. 바이트를 알 수 없어서 미니 브라우저처럼 30%로 두고, 금방 오면 보이지 않아요. */
+/** 화면 코드를 받는 동안의 자리예요. 바이트를 알 수 없어서 미니 브라우저처럼 30%로 두고, 금방 오면 보이지 않아요. 처음 그릴 때만 보이고, 화면을 옮길 때는 보던 화면을 그대로 둬요(useScreen의 startTransition). */
 export const screenFallback = (
   <main className="flex min-w-0 flex-1 flex-col pt-[20vh]">
     <LoadProgress percent={30} className={loadCenter} />
@@ -49,7 +49,7 @@ export const screenFallback = (
 )
 
 /** 소개 화면 코드를 받는 동안의 자리예요. 첫 화면과 같은 검은 바탕이라, 흰 화면이 끼었다가 검게 바뀌며 깜빡이지 않아요. */
-const aboutFallback = <main className="h-[100svh] min-h-[540px] bg-[#0f1012]" />
+export const aboutFallback = <main className="h-[100svh] min-h-[540px] bg-[#0f1012]" />
 
 // 앱이 브라우저로 열어 주는 로그인 화면은 필요할 때만 받아요.
 const AppLogin = lazy(() => load.AppLogin().then((module) => ({ default: module.AppLogin })))
@@ -115,11 +115,9 @@ interface Props {
   feedback: boolean
 }
 
-/** 메인 화면(새 진단)을 뺀, 주소로 여는 화면을 그려요. 화면 코드는 열 때만 받아요. */
+/** 메인 화면(새 진단)을 뺀, 주소로 여는 화면을 그려요. 화면 코드는 열 때만 받아요. 받는 동안의 자리(Suspense)는 메인 화면과 같이 App이 한 번 둘러요. */
 export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExplore, onResume, onResumeAdd, onResumeList, onResumeDoc, onBlogs, onLabs, onCompany, onAdmin, onArticle, onAccount, onSignedIn, onOpenReport, loginNotice, loginReturnTo, adminApi, feedback }: Props) {
-  return (
-    <Suspense fallback={page.kind === 'about' ? aboutFallback : screenFallback}>
-      {page.kind === 'app-login' ? (
+  return page.kind === 'app-login' ? (
         <AppLogin onCancel={onHome} />
       ) : page.kind === 'explore' ? (
         <Jobs key={page.company ?? 'all'} onPick={onDiagnose} initialCompany={page.company ?? null} />
@@ -153,7 +151,5 @@ export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExp
         <Articles slug={page.slug} onOpen={onArticle} onHome={onHome} />
       ) : (
         <Account page={page.page} onNavigate={onAccount} onSignedIn={onSignedIn} notice={loginNotice} returnTo={loginReturnTo} onOpenReport={onOpenReport} onHome={onHome} />
-      )}
-    </Suspense>
-  )
+      )
 }
