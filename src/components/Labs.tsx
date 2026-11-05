@@ -1,4 +1,4 @@
-import { Suspense, lazy, type ComponentType, type LazyExoticComponent } from 'react'
+import { Suspense, lazy, type ComponentType, type LazyExoticComponent, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { followLink } from '../lib/links'
@@ -19,7 +19,9 @@ interface Experiment {
   /** 카드에 적는 한두 문장이에요. */
   summary: { ko: string; en: string }
   /** 실험 화면이에요. lazy로 넘겨서 열 때만 받아요. */
-  screen: LazyExoticComponent<ComponentType>
+  screen: LazyExoticComponent<ComponentType<{ header?: ReactNode }>>
+  /** 목록과 미니 브라우저를 나란히 놓는 실험은 화면 틀도 직접 그려요. */
+  fullPage?: boolean
 }
 
 /** 지금 올라와 있는 실험이에요. 위에 있을수록 먼저 보여요. */
@@ -35,6 +37,7 @@ const EXPERIMENTS: Experiment[] = [
   },
   {
     id: 'contests',
+    fullPage: true,
     title: { ko: '공모전', en: 'Contests' },
     summary: {
       ko: '어떤 공모전이 진행되고 있을까요?',
@@ -79,8 +82,16 @@ export function Labs({ id, onOpen }: { id: string | null; onOpen: (id: string | 
 
   if (id) {
     const Screen = experiment?.screen
+    const header = <PageHeader title={experiment ? pick(experiment.title) : L.title} onBack={() => onOpen(null)} backLabel={L.back} />
+    if (Screen && experiment?.fullPage) {
+      return (
+        <Suspense fallback={null}>
+          <Screen key={id} header={header} />
+        </Suspense>
+      )
+    }
     return (
-      <ScrollPage header={<PageHeader title={experiment ? pick(experiment.title) : L.title} onBack={() => onOpen(null)} backLabel={L.back} />}>
+      <ScrollPage header={header}>
         {Screen ? (
           <Suspense fallback={null}>
             <Screen />

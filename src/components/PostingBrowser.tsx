@@ -31,6 +31,8 @@ const TEXT = messages({
     preferred: '우대 역량',
     loading: '원문을 불러오고 있어요',
     resize: '원문 칸 크기 조절',
+    pageBlocked: '이 페이지를 앱 안에서 열 수 없어요.',
+    pageBlockedBody: '원문이 보이지 않으면 새 탭에서 열어 주세요.',
   },
   en: {
     title: (company: string) => `${company} original posting`,
@@ -47,6 +49,8 @@ const TEXT = messages({
     preferred: 'Preferred',
     loading: 'Loading the original',
     resize: 'Resize the original pane',
+    pageBlocked: 'This page cannot be opened inside the app.',
+    pageBlockedBody: 'Open it in a new tab if the original does not appear.',
   },
 })
 
@@ -70,11 +74,11 @@ export function SplitView({ children, side }: { children: ReactNode; side: React
   )
 }
 
-/** 공고나 기업이 아닌 글 하나예요. 기술 블로그의 글과 블로그 첫 화면을 열 때 써요. 앱 안에 띄울 수 있는 주소(`canEmbed`)만 넘겨요. 막힌 곳은 화면이 바로 새 탭으로 열어요. */
+/** 기술 블로그나 공모전 같은 외부 페이지예요. 기업에 속하지 않은 페이지는 companyId를 생략해요. */
 export interface BrowserPage {
   url: string
   title: string
-  companyId: string
+  companyId?: string
 }
 
 /**
@@ -88,9 +92,9 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
   onPosting?: (posting: JobPosting) => void
 }) {
   const L = useMessages(TEXT)
-  const company = posting ? companyOf(posting.companyId) : page ? companyOf(page.companyId) : about!
-  const url = posting ? posting.url : page ? page.url : company.site
-  const title = posting ? L.title(company.name) : page ? page.title : L.companyTitle(company.name)
+  const company = posting ? companyOf(posting.companyId) : page ? (page.companyId ? companyOf(page.companyId) : undefined) : about
+  const url = posting ? posting.url : page ? page.url : company!.site
+  const title = posting ? L.title(company!.name) : page ? page.title : L.companyTitle(company!.name)
   const embeddable = canEmbed(url)
   const [loaded, setLoaded] = useState(false)
   // 다른 사이트의 화면은 받은 바이트를 알 수 없어요. 주소를 열기 시작하면 30%, load 이벤트가 오면 100%로 보여줘요.
@@ -146,9 +150,9 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
 
   useEffect(() => {
     if (posting) track('posting_browser_open', { posting: posting.id, embedded: embeddable })
-    else if (page) track('blog_browser_open', { company: company.id, embedded: embeddable })
-    else track('company_browser_open', { company: company.id, embedded: embeddable })
-  }, [posting, page, company.id, embeddable])
+    else if (page && company) track('blog_browser_open', { company: company.id, embedded: embeddable })
+    else if (company) track('company_browser_open', { company: company.id, embedded: embeddable })
+  }, [posting, page, company?.id, embeddable])
 
   // 다른 창이나 메뉴가 열려 있으면 그쪽이 먼저 Esc를 받아요.
   useEffect(() => {
@@ -198,7 +202,7 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
       {/* 닫기는 다른 칸(갭 상세)처럼 오른쪽 끝에 둬요. */}
       <div className="flex h-14 shrink-0 items-center gap-2 border-b border-gray-200 px-3">
         <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg bg-gray-100 px-3">
-          <CompanyMark company={company} className="size-5 rounded-md! text-[9px]" />
+          {company && <CompanyMark company={company} className="size-5 rounded-md! text-[9px]" />}
           <span className="truncate text-[13px] text-gray-600">{host}</span>
         </div>
         {embeddable && (
@@ -241,15 +245,15 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 md:px-10">
           <div className="mx-auto max-w-[560px]">
-            <p className="text-[15px] font-semibold text-gray-900">{posting ? L.blocked : L.companyBlocked}</p>
-            <p className="mt-1.5 text-[13.5px] leading-relaxed text-gray-500">{posting ? L.blockedBody : L.companyBlockedBody}</p>
+            <p className="text-[15px] font-semibold text-gray-900">{posting ? L.blocked : page ? L.pageBlocked : L.companyBlocked}</p>
+            <p className="mt-1.5 text-[13.5px] leading-relaxed text-gray-500">{posting ? L.blockedBody : page ? L.pageBlockedBody : L.companyBlockedBody}</p>
 
             {posting ? (
               <section className="mt-6 rounded-2xl bg-gray-50 p-5">
                 <div className="flex items-center gap-3">
-                  <CompanyMark company={company} className="size-10 text-[15px]" />
+                  <CompanyMark company={company!} className="size-10 text-[15px]" />
                   <div className="min-w-0">
-                    <p className="truncate text-[13.5px] font-medium text-gray-900">{company.name}</p>
+                    <p className="truncate text-[13.5px] font-medium text-gray-900">{company!.name}</p>
                     <p className="truncate text-[12px] text-gray-400">{posting.location}</p>
                   </div>
                 </div>
@@ -273,8 +277,10 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
                   </>
                 )}
               </section>
-            ) : (
+            ) : company ? (
               <CompanySummary company={company} postings={POSTINGS.filter((item) => item.companyId === company.id)} onPosting={onPosting} />
+            ) : (
+              <h2 className="mt-6 text-[18px] font-semibold text-gray-900">{title}</h2>
             )}
 
             <a href={url} target="_blank" rel="noopener noreferrer" className={`${primaryButton} mt-6`}>

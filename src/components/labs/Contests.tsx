@@ -1,20 +1,22 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { track } from '../../lib/analytics'
 import { CONTEST_CATEGORIES, contestDaysLeft, fetchContests, type Contest, type ContestCategory } from '../../lib/contests'
 import { useLoadHold, useLoadProgress } from '../../lib/load'
 import { messages, useMessages } from '../../lib/i18n'
 import { readItem, writeItem } from '../../lib/storage'
 import { Dropdown } from '../Dropdown'
+import { ScrollPage } from '../AppPage'
 import { DeadlineTag, Failed, Notice, filterChip, filterRow } from '../GapParts'
 import { CalendarIcon, DocumentIcon, ExternalLinkIcon, SearchIcon } from '../Icons'
 import { jobsGrid, jobsList, NotchedFrame, onBlankClick, PostingCountBar, readLayout, useElementSize, type Layout } from '../JobCard'
 import { shortDate } from '../ScreenParts'
+import { PostingBrowser, SplitView, type BrowserPage } from '../PostingBrowser'
 import { Badge, LoadProgress, loadCenter, primaryButton, stagger, tag, useShowMore } from '../ui'
 
 /**
  * 잡아따 Labs의 공모전 (/labs/contests)이에요. 공모전 사이트 네 곳에서 모은 공모전을 분야로 골라 봐요.
  * 모양은 공고 탐색과 같아요. 맨 위에 검색창과 정렬, 그 아래 분야 버튼 줄(IT가 맨 앞), 공모전 수와 보기 방식, 카드(`ContestCard`)나 줄(`ContestRow`)이에요.
- * 어느 사이트에서 모았는지는 화면에 적지 않아요. 카드를 누르면 처음 모은 사이트의 공고를 새 탭으로 열어요.
+ * 어느 사이트에서 모았는지는 목록에 적지 않아요. 카드를 누르면 처음 모은 사이트의 공고를 미니 브라우저로 열어요.
  */
 
 type Sort = 'deadline' | 'recent'
@@ -71,15 +73,25 @@ function savedCategory(): ContestCategory | null {
   return CONTEST_CATEGORIES.includes(value as ContestCategory) ? (value as ContestCategory) : null
 }
 
-/** 처음 모은 사이트의 공고를 새 탭으로 열어요. */
-function openContest(contest: Contest) {
-  const main = contest.links[0]
-  if (!main) return
-  track('labs_contest_open', { site: main.site, category: contest.categories[0] ?? 'etc' })
-  window.open(main.url, '_blank', 'noopener,noreferrer')
+export function Contests({ header }: { header?: ReactNode }) {
+  const [viewing, setViewing] = useState<BrowserPage | null>(null)
+  const open = (contest: Contest) => {
+    const main = contest.links[0]
+    if (!main) return
+    track('labs_contest_open', { site: main.site, category: contest.categories[0] ?? 'etc' })
+    setViewing({ url: main.url, title: contest.title })
+  }
+
+  return (
+    <SplitView side={viewing && <PostingBrowser key={viewing.url} page={viewing} onClose={() => setViewing(null)} />}>
+      <ScrollPage header={header}>
+        <ContestList onOpen={open} />
+      </ScrollPage>
+    </SplitView>
+  )
 }
 
-export function Contests() {
+function ContestList({ onOpen }: { onOpen: (contest: Contest) => void }) {
   const L = useMessages(TEXT)
   const { percent, one } = useLoadProgress()
   const [contests, setContests] = useState<Contest[] | null>(null)
@@ -188,9 +200,9 @@ export function Contests() {
             <ul className={layout === 'gallery' ? jobsGrid : jobsList}>
               {shown.slice(0, count).map((contest, order) =>
                 layout === 'gallery' ? (
-                  <ContestCard key={`${layout}:${sort}:${contest.id}`} contest={contest} order={order} />
+                  <ContestCard key={`${layout}:${sort}:${contest.id}`} contest={contest} order={order} onOpen={onOpen} />
                 ) : (
-                  <ContestRow key={`${layout}:${sort}:${contest.id}`} contest={contest} order={order} />
+                  <ContestRow key={`${layout}:${sort}:${contest.id}`} contest={contest} order={order} onOpen={onOpen} />
                 ),
               )}
             </ul>
@@ -243,10 +255,10 @@ function Period({ contest }: { contest: Contest }) {
  * 갤러리형 카드예요. 공고 탐색의 카드(`JobCard`)와 같은 모양으로, 오른쪽 위 홈에 마감까지 남은 날을 적어요.
  * 왼쪽에 포스터를 크게(3:4) 두고, 오른쪽에 주최와 첫 분야, 제목, 접수 기간, 분야 이름표를 적어요. 맨 아래 줄에 상금과 공모전 보기가 있어요.
  */
-function ContestCard({ contest, order }: { contest: Contest; order: number }) {
+function ContestCard({ contest, order, onOpen }: { contest: Contest; order: number; onOpen: (contest: Contest) => void }) {
   const L = useMessages(TEXT)
   const [ref, size] = useElementSize<HTMLLIElement>()
-  const open = () => openContest(contest)
+  const open = () => onOpen(contest)
   return (
     <li ref={ref} onClick={onBlankClick(open)} className="group relative isolate flex animate-rise cursor-pointer flex-col p-4 sm:p-5" style={stagger(order)}>
       <NotchedFrame left={contestDaysLeft(contest)} card={size} />
@@ -286,9 +298,9 @@ function ContestCard({ contest, order }: { contest: Contest; order: number }) {
 }
 
 /** 리스트형 줄이에요. 공고 탐색의 줄(`JobRow`)과 같은 모양이고, 목록 폭이 좁으면 접수 기간, 분야, 상금, 버튼을 차례로 숨겨요. */
-function ContestRow({ contest, order }: { contest: Contest; order: number }) {
+function ContestRow({ contest, order, onOpen }: { contest: Contest; order: number; onOpen: (contest: Contest) => void }) {
   const L = useMessages(TEXT)
-  const open = () => openContest(contest)
+  const open = () => onOpen(contest)
   return (
     <li onClick={onBlankClick(open)} className="group flex animate-rise cursor-pointer items-center gap-4 rounded-2xl bg-gray-50 px-4 py-3.5 transition-colors hover:bg-gray-100" style={stagger(order)}>
       <Poster contest={contest} className="aspect-[3/4] w-12" />
