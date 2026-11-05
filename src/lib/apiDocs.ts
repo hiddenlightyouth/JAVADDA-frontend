@@ -755,3 +755,60 @@ export const RESPONSE_HEADERS: Field[] = [
   { name: 'X-RateLimit-Remaining', type: 'Integer', desc: '오늘(한국 시각) 남은 호출 수' },
   { name: 'Retry-After', type: 'Integer', desc: '한도를 넘었을 때(429) 다시 부를 수 있을 때까지의 초' },
 ]
+
+const fieldLine = (f: Field) => `- \`${f.name}\` (${f.type}${f.required ? ', 필수' : ''}): ${f.desc}`
+
+/**
+ * API 하나를 코딩 에이전트(Claude Code, Cursor 등)에게 그대로 붙여 넣는 프롬프트로 바꿔요.
+ * 주소, 인증, 파라미터, 응답 객체, 예제, 오류를 모두 담아서 에이전트가 문서를 따로 읽지 않아도 연동 코드를 쓸 수 있어요.
+ */
+export function endpointPrompt(e: EndpointDoc, base: string, scopeLabel: string): string {
+  const typeNames = new Set<string>()
+  const collect = (name: string) => {
+    const type = TYPES.find((t) => t.name === name.replace('[]', ''))
+    if (!type || typeNames.has(type.name)) return
+    typeNames.add(type.name)
+    type.fields.forEach((f) => collect(f.type))
+  }
+  e.types.forEach(collect)
+  const lines = [
+    `잡아따(Javadda) 공개 API의 "${e.title}" API를 호출하는 코드를 작성해 주세요.`,
+    '',
+    '## API',
+    `- 요청: ${e.method} ${base}${e.path}`,
+    `- 인증: 요청 헤더 \`X-API-Key\`에 API 키를 넣습니다. 키는 코드에 적지 말고 환경 변수 \`JAVADDA_API_KEY\`에서 읽어 주세요.`,
+    `- 권한: \`${e.scope}\`${scopeLabel && scopeLabel !== e.scope ? ` (${scopeLabel})` : ''}`,
+    ...e.desc.map((line) => `- ${line}`),
+  ]
+  if (e.pathParams?.length) lines.push('', '## 경로 파라미터', ...e.pathParams.map(fieldLine))
+  if (e.query?.length) lines.push('', '## 쿼리 파라미터 (모두 선택)', ...e.query.map(fieldLine))
+  lines.push(
+    '',
+    '## 응답',
+    '응답 본문은 늘 `{ "data": ..., "error": { "code": ..., "message": ... } }` 모양입니다. 성공하면 error의 값이 null이고, 실패하면 data가 null입니다.',
+    ...e.response.map(fieldLine),
+  )
+  for (const name of typeNames) {
+    const type = TYPES.find((t) => t.name === name)!
+    lines.push('', `### ${type.name}`, type.desc, ...type.fields.map(fieldLine))
+  }
+  lines.push(
+    '',
+    '## 예제',
+    `요청: ${e.method} ${base}${e.example.query}`,
+    '응답의 data:',
+    '```json',
+    JSON.stringify(e.example.response, null, 2),
+    '```',
+    '',
+    '## 오류',
+    ...e.errors.map(([code, desc]) => `- ${code}: ${desc}`),
+    ...COMMON_ERRORS.filter(([, code]) => !e.errors.some(([own]) => own === code)).map(([status, code, desc]) => `- ${code}: ${desc}(${status})`),
+    '',
+    '## 지켜 주세요',
+    '- 429를 받으면 Retry-After 헤더의 초만큼 기다린 뒤 다시 호출해 주세요. 응답 헤더 X-RateLimit-Remaining이 오늘 남은 호출 수입니다.',
+    ...(e.types.includes('Page') ? ['- 목록은 page(0부터)와 size(100까지)로 나눠 받고, hasNext가 false일 때까지 이어 받습니다.'] : []),
+    '- 날짜(Date)는 2026-11-05, 시각(Datetime)은 시간대 없는 한국 시각(2026-11-05T13:40:21)입니다.',
+  )
+  return lines.join('\n')
+}

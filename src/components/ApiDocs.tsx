@@ -8,12 +8,14 @@ import {
   HEADERS,
   RESPONSE_HEADERS,
   TYPES,
+  endpointPrompt,
   type EndpointDoc,
   type Field,
 } from '../lib/apiDocs'
 import { PUBLIC_API_BASE, type ScopeInfo } from '../lib/apiKeys'
 import { showToast } from '../lib/toast'
-import { Badge, ghostButton, Segmented } from './ui'
+import { CheckIcon, SparkleIcon } from './Icons'
+import { Badge, ghostButton, Segmented, toolButton } from './ui'
 
 type Lang = 'curl' | 'javascript' | 'python'
 const LANGS: [Lang, string][] = [
@@ -218,7 +220,12 @@ while (true) {
 
 function Endpoint({ doc: e, scopeLabel, lang, onLang }: { doc: EndpointDoc; scopeLabel: string; lang: Lang; onLang: (lang: Lang) => void }) {
   return (
-    <Section id={e.id} title={e.title} badge={<Badge tone="brand">{scopeLabel}</Badge>}>
+    <Section
+      id={e.id}
+      title={e.title}
+      badge={<Badge tone="brand">{scopeLabel}</Badge>}
+      action={<PromptCopy id={e.id} text={() => endpointPrompt(e, PUBLIC_API_BASE, scopeLabel)} />}
+    >
       {e.desc.map((line) => (
         <P key={line}>{line}</P>
       ))}
@@ -319,13 +326,16 @@ function NavItem({ active, onClick, children }: { active: boolean; onClick: () =
   )
 }
 
-function Section({ id, title, badge, children }: { id: string; title: string; badge?: ReactNode; children: ReactNode }) {
+function Section({ id, title, badge, action, children }: { id: string; title: string; badge?: ReactNode; action?: ReactNode; children: ReactNode }) {
   return (
     <section id={id} className="scroll-mt-4 border-t border-gray-100 pt-10 pb-4 first:border-0 first:pt-0">
-      <h2 className="flex flex-wrap items-center gap-2 text-[22px] font-semibold text-gray-900">
-        {title}
-        {badge}
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h2 className="flex flex-wrap items-center gap-2 text-[22px] font-semibold text-gray-900">
+          {title}
+          {badge}
+        </h2>
+        {action}
+      </div>
       <div className="mt-3">{children}</div>
     </section>
   )
@@ -411,6 +421,30 @@ function TypeTable({ name, anchor }: { name: string; anchor?: string }) {
       </H4>
       <FieldTable fields={type.fields} anchorPrefix={prefix} />
     </div>
+  )
+}
+
+/** API 하나를 코딩 에이전트에게 붙여 넣을 프롬프트로 복사해요. 복사하면 잠깐 체크와 "복사됨"으로 바뀌어요. */
+function PromptCopy({ id, text }: { id: string; text: () => string }) {
+  const [copied, setCopied] = useState(false)
+  async function copy() {
+    const ok = await navigator.clipboard.writeText(text()).then(
+      () => true,
+      () => false,
+    )
+    track('api_docs_prompt_copy', { endpoint: id, success: ok })
+    if (!ok) {
+      showToast('복사하지 못했습니다.')
+      return
+    }
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <button type="button" className={toolButton} onClick={() => void copy()} aria-live="polite">
+      {copied ? <CheckIcon /> : <SparkleIcon />}
+      {copied ? '복사됨' : '에이전트에게 말하기'}
+    </button>
   )
 }
 
