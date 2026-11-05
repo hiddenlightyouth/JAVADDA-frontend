@@ -11,7 +11,7 @@ import { Kbd } from './Shortcuts'
 import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { readJson, writeJson } from '../lib/storage'
-import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
+import { openPlans, percentOf, refreshUsage, useUsage } from '../lib/usage'
 import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, FlaskIcon, KeyIcon, ChristmasTreeIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon, TrophyIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { fitColor, Tip } from './GapParts'
@@ -596,7 +596,6 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
 
 const menuIcon = 'size-4 shrink-0 text-gray-500'
 
-const PLAN_NAMES: Record<PlanId, string> = { FREE: 'Free', LITE: 'Lite', PRO: 'Pro' }
 
 /**
  * 사이드바 맨 아래의 계정 버튼이에요. 누르면 위로 메뉴가 펼쳐져서 내 정보, 관리자 화면으로 가거나 로그아웃해요. 오른쪽에는 설정과 버그 신고 버튼이 있어요.
@@ -637,7 +636,6 @@ function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onApiK
     <div ref={ref} className="relative flex shrink-0 items-center gap-1 border-t border-gray-200 p-2">
       {open && (
         <div role="menu" className={`absolute bottom-full left-2 mb-1 w-[272px] origin-bottom-left ${menuPanel}`}>
-          {me?.email && <p className="truncate px-2.5 pt-1.5 pb-2 text-[12.5px] text-gray-500">{me.email}</p>}
           {usage && (
             <div className="px-2.5 pb-2.5">
               <div className="mb-1.5 flex items-center justify-between gap-3">
@@ -708,13 +706,14 @@ function AccountMenu({ me, page, onMe, onSettings, settingsOpen, onAdmin, onApiK
             if (!open) track('app_menu_open')
             setOpen((value) => !value)
           }}
-          className={`flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2 text-left transition-colors ${tone(open || page === 'me' || page === 'articles' || page === 'admin' || page === 'api-keys')}`}
+          className={`flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 text-left transition-colors ${tone(open || page === 'me' || page === 'articles' || page === 'admin' || page === 'api-keys')}`}
         >
           {/* 프로필 사진 대신 이름의 첫 글자를 동그라미에 넣어요. */}
           <Avatar name={me?.name ?? ''} />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[13.5px] font-semibold text-gray-900">{name}</span>
-            {usage?.plan && <span className="block truncate text-[12px] text-gray-500">{PLAN_NAMES[usage.plan]}</span>}
+            {/* 이름 아래에 로그인한 이메일을 적어요. 요금제는 메뉴의 사용량 칸에서 봐요. */}
+            {me?.email && <span className="block truncate text-[12px] text-gray-500">{me.email}</span>}
           </span>
           <ChevronUpDownIcon />
         </button>
