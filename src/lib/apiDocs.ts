@@ -127,9 +127,9 @@ export const CODE_VALUES: { name: string; values: [string, string][] }[] = [
   {
     name: '공모전 상태(status)',
     values: [
-      ['open', '접수 중. 접수 시작일이 지났거나 알 수 없고, 마감일이 지나지 않았습니다.'],
-      ['upcoming', '접수 예정. 접수 시작일이 오늘 뒤입니다.'],
-      ['closed', '마감. 마감일이 지났습니다. 개별 공모전과 새 공모전에서만 나옵니다.'],
+      ['open', '접수 중'],
+      ['upcoming', '접수 예정'],
+      ['closed', '마감. 개별 공모전과 새 공모전에서만 나옵니다.'],
     ],
   },
 ]
@@ -140,14 +140,14 @@ export const HEADERS: Field[] = [
 ]
 
 const pageQuery: Field[] = [
-  { name: 'page', type: 'Integer', desc: '가져올 페이지입니다. 0부터 시작하며 기본값은 0입니다.' },
-  { name: 'size', type: 'Integer', desc: '한 페이지의 항목 수입니다. 1부터 100까지이며 기본값은 20입니다.' },
+  { name: 'page', type: 'Integer', desc: '페이지(0부터, 기본 0)' },
+  { name: 'size', type: 'Integer', desc: '페이지 크기(최대 100, 기본 20)' },
 ]
 
 export const TYPES: TypeDoc[] = [
   {
     name: 'Page',
-    desc: '목록 응답입니다. items에 그 페이지의 항목이 들어 있습니다.',
+    desc: '',
     fields: [
       { name: 'items', type: 'Array', desc: '이 페이지의 항목' },
       { name: 'page', type: 'Integer', desc: '지금 페이지(0부터)' },
@@ -158,61 +158,61 @@ export const TYPES: TypeDoc[] = [
   },
   {
     name: 'Posting',
-    desc: '채용 공고 하나입니다.',
+    desc: '',
     fields: [
       { name: 'id', type: 'String', desc: '공고 아이디' },
       { name: 'company', type: 'CompanyRef', desc: '공고를 낸 기업' },
       { name: 'title', type: 'String', desc: '공고 제목' },
       { name: 'family', type: 'String', desc: `직군. ${FAMILY}` },
       { name: 'career', type: 'String', desc: `경력. ${CAREER}` },
-      { name: 'location', type: 'String', desc: '근무지. 공고에 적힌 글자 그대로입니다(예: 서울 송파, 경기 분당, 판교).' },
+      { name: 'location', type: 'String', desc: '근무지. 공고에 적힌 그대로(예: 서울 송파)' },
       { name: 'postedAt', type: 'Datetime', desc: '공고가 올라온 때' },
-      { name: 'deadline', type: 'Datetime', desc: '마감 시각. null이면 상시 채용입니다.' },
+      { name: 'deadline', type: 'Datetime', desc: '마감 시각. null이면 상시 채용' },
       { name: 'required', type: 'String[]', desc: '필수 역량' },
       { name: 'preferred', type: 'String[]', desc: '우대 역량' },
       { name: 'summary', type: 'String', desc: '공고를 요약한 한두 문장' },
       { name: 'url', type: 'String', desc: '공고 원문 주소' },
       { name: 'source', type: 'String', desc: '모은 곳. company(기업 채용 페이지), worknet(고용24), public(공공기관)' },
-      { name: 'closedAt', type: 'Datetime', desc: '채용이 닫힌 때. 열린 공고는 null입니다.' },
+      { name: 'closedAt', type: 'Datetime', desc: '채용이 닫힌 때. 열린 공고는 null' },
     ],
   },
   {
     name: 'CompanyRef',
-    desc: '공고 안에 들어 있는 기업 요약입니다.',
+    desc: '',
     fields: [
-      { name: 'id', type: 'String', desc: '기업 아이디입니다. 기업 API에 그대로 사용합니다.' },
+      { name: 'id', type: 'String', desc: '기업 아이디' },
       { name: 'name', type: 'String', desc: '기업 이름' },
     ],
   },
   {
     name: 'Company',
-    desc: '기업 하나입니다.',
+    desc: '',
     fields: [
       { name: 'id', type: 'String', desc: '기업 아이디' },
       { name: 'name', type: 'String', desc: '기업 이름' },
-      { name: 'logo', type: 'String', desc: '로고 이미지 주소. 없으면 null입니다.' },
+      { name: 'logo', type: 'String', desc: '로고 이미지 주소' },
       { name: 'industry', type: 'String', desc: '업종' },
-      { name: 'category', type: 'String', desc: `사업 분류. ${CATEGORY}. 모르면 null입니다.` },
+      { name: 'category', type: 'String', desc: `사업 분류. ${CATEGORY}` },
       { name: 'site', type: 'String', desc: '기업 소개 사이트 주소' },
-      { name: 'techBlog', type: 'String', desc: '기술 블로그 주소. 없으면 null입니다.' },
+      { name: 'techBlog', type: 'String', desc: '기술 블로그 주소' },
       { name: 'openPostings', type: 'Integer', desc: '지금 열려 있는 공고 수' },
     ],
   },
   {
     name: 'Skill',
-    desc: '스킬 사전의 스킬 하나입니다.',
+    desc: '',
     fields: [
       { name: 'name', type: 'String', desc: '스킬 이름(하나로 모은 표기, 예: Spring Boot)' },
       { name: 'axis', type: 'String', desc: '축. 언어, 프레임워크, 데이터베이스, 인프라, 협업, CS 기초' },
       { name: 'aliases', type: 'String[]', desc: '같은 스킬로 보는 다른 표기(예: 스프링, springboot)' },
-      { name: 'share', type: 'Double', desc: '같은 직군 공고 중 이 스킬을 적은 비율(0에서 1). 모르면 null입니다.' },
-      { name: 'change', type: 'Integer', desc: '최근 6개월 동안 비율이 변한 정도(%p). 모르면 null입니다.' },
-      { name: 'courses', type: 'Course[]', desc: '추천 강의입니다. 개별 스킬을 조회할 때만 있고, 목록에서는 null입니다.' },
+      { name: 'share', type: 'Double', desc: '같은 직군 공고 중 이 스킬을 적은 비율(0에서 1)' },
+      { name: 'change', type: 'Integer', desc: '최근 6개월 비율 변화(%p)' },
+      { name: 'courses', type: 'Course[]', desc: '추천 강의. 목록에서는 null' },
     ],
   },
   {
     name: 'Course',
-    desc: '스킬을 채울 때 볼 만한 강의입니다.',
+    desc: '',
     fields: [
       { name: 'id', type: 'String', desc: '강의 아이디' },
       { name: 'title', type: 'String', desc: '강의 제목' },
@@ -224,7 +224,7 @@ export const TYPES: TypeDoc[] = [
   },
   {
     name: 'Stats',
-    desc: '열린 공고의 통계입니다. 호출할 때마다 지금 열린 공고로 계산합니다.',
+    desc: '',
     fields: [
       { name: 'openPostings', type: 'Long', desc: '열린 공고 수' },
       { name: 'postedThisWeek', type: 'Long', desc: '최근 7일 안에 올라온 공고 수' },
@@ -232,17 +232,17 @@ export const TYPES: TypeDoc[] = [
       { name: 'rolling', type: 'Long', desc: '마감이 없는 상시 채용 공고 수' },
       { name: 'byFamily', type: 'Count[]', desc: '직군별 공고 수(많은 순서)' },
       { name: 'byCareer', type: 'Count[]', desc: '경력별 공고 수' },
-      { name: 'byCategory', type: 'Count[]', desc: '기업 분류별 공고 수. 분류를 모르는 기업은 unknown입니다.' },
+      { name: 'byCategory', type: 'Count[]', desc: '기업 분류별 공고 수. 모르면 unknown' },
       { name: 'topCompanies', type: 'CompanyCount[]', desc: '공고가 많은 기업 20곳' },
       { name: 'requiredSkills', type: 'SkillCount[]', desc: '필수 역량으로 많이 적힌 30개' },
       { name: 'preferredSkills', type: 'SkillCount[]', desc: '우대 역량으로 많이 적힌 30개' },
       { name: 'generatedAt', type: 'Datetime', desc: '계산한 때' },
     ],
   },
-  { name: 'Count', desc: '값 하나의 수입니다.', fields: [{ name: 'key', type: 'String', desc: '코드 값(예: backend)' }, { name: 'count', type: 'Long', desc: '공고 수' }] },
+  { name: 'Count', desc: '', fields: [{ name: 'key', type: 'String', desc: '코드 값(예: backend)' }, { name: 'count', type: 'Long', desc: '공고 수' }] },
   {
     name: 'CompanyCount',
-    desc: '기업 하나의 공고 수입니다.',
+    desc: '',
     fields: [
       { name: 'id', type: 'String', desc: '기업 아이디' },
       { name: 'name', type: 'String', desc: '기업 이름' },
@@ -251,7 +251,7 @@ export const TYPES: TypeDoc[] = [
   },
   {
     name: 'SkillCount',
-    desc: '역량 하나가 적힌 공고 수입니다.',
+    desc: '',
     fields: [
       { name: 'skill', type: 'String', desc: '역량(스킬 사전의 표기로 모은 이름)' },
       { name: 'count', type: 'Long', desc: '이 역량을 적은 공고 수' },
@@ -260,7 +260,7 @@ export const TYPES: TypeDoc[] = [
   },
   {
     name: 'BlogDigest',
-    desc: '기업 기술 블로그 한 곳의 요약입니다. AI가 최근 글을 읽고 작성합니다.',
+    desc: '',
     fields: [
       { name: 'companyId', type: 'String', desc: '기업 아이디' },
       { name: 'blog', type: 'String', desc: '블로그 주소' },
@@ -274,7 +274,7 @@ export const TYPES: TypeDoc[] = [
   },
   {
     name: 'BlogConcern',
-    desc: '기업의 요즘 고민 하나입니다.',
+    desc: '',
     fields: [
       { name: 'title', type: 'String', desc: '고민 제목' },
       { name: 'body', type: 'String', desc: '고민 설명' },
@@ -283,7 +283,7 @@ export const TYPES: TypeDoc[] = [
   },
   {
     name: 'BlogPost',
-    desc: '기술 블로그 글 하나입니다.',
+    desc: '',
     fields: [
       { name: 'id', type: 'String', desc: '글 아이디' },
       { name: 'title', type: 'String', desc: '글 제목' },
@@ -296,7 +296,7 @@ export const TYPES: TypeDoc[] = [
   },
   {
     name: 'BlogOutlook',
-    desc: '여러 기업의 최근 글을 함께 읽고 쓴 총정리입니다. 하루에 한 번 새로 작성합니다.',
+    desc: '',
     fields: [
       { name: 'headline', type: 'String', desc: '요즘 기업들의 고민 한 문장' },
       { name: 'summary', type: 'String', desc: '흐름과 채용 예측 한 문단' },
@@ -307,7 +307,7 @@ export const TYPES: TypeDoc[] = [
   },
   {
     name: 'OutlookTheme',
-    desc: '총정리의 주제 하나입니다.',
+    desc: '',
     fields: [
       { name: 'theme', type: 'String', desc: '주제 아이디' },
       { name: 'concern', type: 'String', desc: '기업들이 이 주제로 무엇을 고민하는지' },
@@ -318,7 +318,7 @@ export const TYPES: TypeDoc[] = [
   },
   {
     name: 'OutlookSkill',
-    desc: '총정리의 역량 하나입니다.',
+    desc: '',
     fields: [
       { name: 'skill', type: 'String', desc: '역량' },
       { name: 'reason', type: 'String', desc: '왜 필요한지 한 문장' },
@@ -327,25 +327,25 @@ export const TYPES: TypeDoc[] = [
   },
   {
     name: 'Contest',
-    desc: '공모전 하나입니다. 여러 사이트에 올라온 같은 공모전은 하나로 합칩니다.',
+    desc: '',
     fields: [
       { name: 'id', type: 'String', desc: '공모전 아이디' },
       { name: 'title', type: 'String', desc: '공모전 이름' },
       { name: 'organizer', type: 'String', desc: '주최' },
       { name: 'categories', type: 'String[]', desc: '분야(코드 값의 공모전 분야)' },
-      { name: 'startDate', type: 'Date', desc: '접수 시작일. 모르면 null입니다.' },
-      { name: 'deadline', type: 'Date', desc: '접수 마감일. 모르면 null입니다.' },
-      { name: 'daysLeft', type: 'Integer', desc: '오늘부터 마감까지 남은 날입니다. 오늘 마감이면 0, 마감했으면 음수, 마감일을 모르면 null입니다.' },
+      { name: 'startDate', type: 'Date', desc: '접수 시작일' },
+      { name: 'deadline', type: 'Date', desc: '접수 마감일' },
+      { name: 'daysLeft', type: 'Integer', desc: '마감까지 남은 날. 오늘 마감이면 0, 마감했으면 음수' },
       { name: 'status', type: 'String', desc: 'open(접수 중), upcoming(접수 예정), closed(마감)' },
-      { name: 'imageUrl', type: 'String', desc: '포스터 이미지 주소. 없으면 null입니다.' },
-      { name: 'prize', type: 'String', desc: '상금이나 혜택. 없으면 null입니다.' },
+      { name: 'imageUrl', type: 'String', desc: '포스터 이미지 주소' },
+      { name: 'prize', type: 'String', desc: '상금이나 혜택' },
       { name: 'links', type: 'ContestLink[]', desc: '공모전을 올린 사이트와 주소' },
       { name: 'firstSeenAt', type: 'Datetime', desc: '처음 모은 때' },
     ],
   },
   {
     name: 'ContestCategoryCount',
-    desc: '공모전 분야 하나의 수입니다.',
+    desc: '',
     fields: [
       { name: 'category', type: 'String', desc: '분야(코드 값의 공모전 분야)' },
       { name: 'count', type: 'Long', desc: '마감하지 않은 공모전 수(접수 예정 포함)' },
@@ -354,7 +354,7 @@ export const TYPES: TypeDoc[] = [
   },
   {
     name: 'ContestLink',
-    desc: '공모전을 올린 사이트 하나입니다.',
+    desc: '',
     fields: [
       { name: 'site', type: 'String', desc: 'linkareer, campuspick, wevity, thinkgood' },
       { name: 'url', type: 'String', desc: '그 사이트의 공모전 주소' },
@@ -406,7 +406,7 @@ const CONTEST_EXAMPLE = {
 }
 
 const NOT_FOUND: [string, string] = ['C404', '없는 아이디입니다(404).']
-const BAD_PARAM: [string, string] = ['C002', '파라미터 값이 잘못되었습니다. 코드 값과 범위를 확인하십시오(400).']
+const BAD_PARAM: [string, string] = ['C002', '파라미터 값이 잘못되었습니다(400).']
 
 export const ENDPOINTS: EndpointDoc[] = [
   {
@@ -415,16 +415,13 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'postings:read',
     method: 'GET',
     path: '/postings',
-    desc: [
-      '지금 열려 있는 채용 공고를 검색합니다. 닫힌 공고와 마감 시각이 지난 공고는 뺍니다.',
-      '검색어는 기업 이름, 공고 제목, 근무지, 필수와 우대 역량에서 찾습니다. 경력을 고르면 그 경력의 공고와 경력 무관 공고가 같이 나옵니다.',
-    ],
+    desc: ['열려 있는 공고를 검색합니다. 경력을 고르면 경력 무관 공고도 같이 나옵니다.'],
     query: [
-      { name: 'query', type: 'String', desc: '찾을 말(예: 토스, Kafka, 판교)' },
+      { name: 'query', type: 'String', desc: '기업, 제목, 근무지, 역량에서 찾을 말' },
       { name: 'family', type: 'String', desc: `직군. ${FAMILY}` },
       { name: 'career', type: 'String', desc: `경력. ${CAREER}` },
-      { name: 'company', type: 'String', desc: '기업 아이디입니다. 해당 기업의 공고만 조회합니다.' },
-      { name: 'sort', type: 'String', desc: 'recent(최근에 올라온 순서, 기본값), deadline(마감이 가까운 순서, 상시 채용은 맨 뒤)' },
+      { name: 'company', type: 'String', desc: '기업 아이디' },
+      { name: 'sort', type: 'String', desc: 'recent(최신순, 기본), deadline(마감순)' },
       ...pageQuery,
     ],
     response: [{ name: 'data', type: 'Page', desc: 'items가 Posting[]인 목록' }],
@@ -438,7 +435,7 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'postings:read',
     method: 'GET',
     path: '/postings/{id}',
-    desc: ['공고 한 건을 조회합니다. 닫힌 공고도 가져올 수 있고, 그때는 closedAt에 닫힌 때가 있습니다.'],
+    desc: ['닫힌 공고도 조회할 수 있습니다.'],
     pathParams: [{ name: 'id', type: 'String', desc: '공고 아이디', required: true }],
     response: [{ name: 'data', type: 'Posting', desc: '공고' }],
     types: ['Posting', 'CompanyRef'],
@@ -451,7 +448,7 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'companies:read',
     method: 'GET',
     path: '/companies',
-    desc: ['기업 목록과 지금 열려 있는 공고 수를 조회합니다. 순서는 잡아따가 정한 노출 순서입니다.'],
+    desc: [],
     query: [
       { name: 'query', type: 'String', desc: '기업 이름에서 찾을 말' },
       { name: 'category', type: 'String', desc: `사업 분류. ${CATEGORY}` },
@@ -468,7 +465,7 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'companies:read',
     method: 'GET',
     path: '/companies/{id}',
-    desc: ['기업 한 곳을 조회합니다. 공고의 company.id를 그대로 사용합니다.'],
+    desc: [],
     pathParams: [{ name: 'id', type: 'String', desc: '기업 아이디', required: true }],
     response: [{ name: 'data', type: 'Company', desc: '기업' }],
     types: ['Company'],
@@ -481,7 +478,7 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'skills:read',
     method: 'GET',
     path: '/skills',
-    desc: ['잡아따가 공고와 서류에서 역량을 읽을 때 쓰는 스킬 사전입니다. 이름순이고, 공고에 적힌 비중과 6개월 변화가 있습니다.'],
+    desc: [],
     query: [{ name: 'axis', type: 'String', desc: '축. 언어, 프레임워크, 데이터베이스, 인프라, 협업, CS 기초' }],
     response: [{ name: 'data', type: 'Skill[]', desc: '스킬 목록(courses는 null)' }],
     types: ['Skill'],
@@ -497,8 +494,8 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'skills:read',
     method: 'GET',
     path: '/skills/{name}',
-    desc: ['스킬 한 개와 추천 강의를 조회합니다. 별칭(스프링, k8s)으로 조회해도 대표 이름으로 응답합니다.'],
-    pathParams: [{ name: 'name', type: 'String', desc: '스킬 이름이나 별칭입니다. 주소에 넣을 때 URL 인코딩하십시오.', required: true }],
+    desc: ['별칭(스프링, k8s)으로도 조회할 수 있습니다.'],
+    pathParams: [{ name: 'name', type: 'String', desc: '스킬 이름이나 별칭(URL 인코딩)', required: true }],
     response: [{ name: 'data', type: 'Skill', desc: '스킬(courses 포함)' }],
     types: ['Skill', 'Course'],
     example: {
@@ -513,7 +510,7 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'stats:read',
     method: 'GET',
     path: '/stats/postings',
-    desc: ['지금 열린 공고를 직군, 경력, 기업 분류, 기업으로 센 수와, 필수와 우대로 많이 적힌 역량입니다.', '역량은 공고에 적힌 표기를 스킬 사전의 표기로 모아 셉니다. 공공기관 공고의 우대 조건(예: 장애인, 취업지원대상자)도 우대 역량에 들어갑니다.'],
+    desc: ['지금 열린 공고로 호출할 때마다 계산합니다.'],
     response: [{ name: 'data', type: 'Stats', desc: '통계' }],
     types: ['Stats', 'Count', 'CompanyCount', 'SkillCount'],
     example: {
@@ -540,7 +537,7 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'blogs:read',
     method: 'GET',
     path: '/blogs',
-    desc: ['기업 기술 블로그마다 최근 글의 요약, 요즘 고민, 면접에서 쓸 점입니다. 매일 새벽에 새 글을 모아 다시 작성합니다.'],
+    desc: ['매일 새벽 새 글을 모아 AI가 다시 작성합니다.'],
     response: [{ name: 'data', type: 'BlogDigest[]', desc: '기업마다 하나' }],
     types: ['BlogDigest', 'BlogConcern', 'BlogPost'],
     example: {
@@ -576,7 +573,7 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'blogs:read',
     method: 'GET',
     path: '/blogs/outlook',
-    desc: ['여러 기업의 최근 글을 함께 분석한 흐름과 채용 예측, 주제마다 고민과 준비, 필요한 역량입니다. 아직 작성되지 않았으면 data가 null입니다.'],
+    desc: ['아직 작성되지 않았으면 data가 null입니다.'],
     response: [{ name: 'data', type: 'BlogOutlook', desc: '총정리. 없으면 null' }],
     types: ['BlogOutlook', 'OutlookTheme', 'OutlookSkill'],
     example: {
@@ -605,15 +602,12 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'contests:read',
     method: 'GET',
     path: '/contests',
-    desc: [
-      '마감하지 않은 공모전 전체입니다. 링커리어, 캠퍼스픽, 위비티, 씽굿에서 매일 모아 같은 공모전은 하나로 합칩니다. 접수 예정인 공모전도 포함합니다.',
-      '검색어는 공모전 이름과 주최에서 찾습니다. 공모전이 여러 분야에 걸치면 그중 하나로 골라도 나옵니다.',
-    ],
+    desc: ['마감하지 않은 공모전입니다. 접수 예정도 포함합니다.'],
     query: [
-      { name: 'query', type: 'String', desc: '공모전 이름이나 주최에서 찾을 말(예: 해커톤, 한국관광공사)' },
-      { name: 'category', type: 'String', desc: '분야. 코드 값의 공모전 분야(it, idea, design 등)' },
-      { name: 'status', type: 'String', desc: 'all(전체, 기본값), open(접수 중), upcoming(접수 예정)' },
-      { name: 'sort', type: 'String', desc: 'deadline(마감이 가까운 순서, 마감일을 모르면 맨 뒤, 기본값), recent(최근에 모은 순서)' },
+      { name: 'query', type: 'String', desc: '공모전 이름이나 주최에서 찾을 말' },
+      { name: 'category', type: 'String', desc: '분야. 코드 값의 공모전 분야' },
+      { name: 'status', type: 'String', desc: 'all(기본), open, upcoming' },
+      { name: 'sort', type: 'String', desc: 'deadline(마감순, 기본), recent(최신순)' },
       ...pageQuery,
     ],
     response: [{ name: 'data', type: 'Page', desc: 'items가 Contest[]인 목록' }],
@@ -627,11 +621,11 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'contests:read',
     method: 'GET',
     path: '/contests/open',
-    desc: ['지금 바로 지원할 수 있는 공모전입니다. 접수 시작일이 지났거나 알 수 없고, 마감일이 지나지 않은 공모전입니다. 공모전 목록에 status=open을 준 것과 같습니다.'],
+    desc: ['공모전 목록에 status=open을 준 것과 같습니다.'],
     query: [
       { name: 'query', type: 'String', desc: '공모전 이름이나 주최에서 찾을 말' },
       { name: 'category', type: 'String', desc: '분야. 코드 값의 공모전 분야' },
-      { name: 'sort', type: 'String', desc: 'deadline(마감이 가까운 순서, 기본값), recent(최근에 모은 순서)' },
+      { name: 'sort', type: 'String', desc: 'deadline(마감순, 기본), recent(최신순)' },
       ...pageQuery,
     ],
     response: [{ name: 'data', type: 'Page', desc: 'items가 Contest[]인 목록' }],
@@ -645,7 +639,7 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'contests:read',
     method: 'GET',
     path: '/contests/upcoming',
-    desc: ['아직 접수를 시작하지 않은 공모전입니다. 접수 시작일이 가까운 순서입니다. 접수 시작일을 모르는 공모전은 접수 중으로 봅니다.'],
+    desc: ['접수 시작일이 가까운 순서입니다.'],
     query: [
       { name: 'query', type: 'String', desc: '공모전 이름이나 주최에서 찾을 말' },
       { name: 'category', type: 'String', desc: '분야. 코드 값의 공모전 분야' },
@@ -665,9 +659,9 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'contests:read',
     method: 'GET',
     path: '/contests/closing',
-    desc: ['오늘부터 정한 날 수 안에 마감하는 공모전입니다. 마감이 가까운 순서이고, 마감일을 모르는 공모전은 뺍니다.', 'days=0이면 오늘 마감, days=7이면 오늘부터 7일 뒤까지 마감하는 공모전입니다.'],
+    desc: ['마감일을 모르는 공모전은 뺍니다.'],
     query: [
-      { name: 'days', type: 'Integer', desc: '오늘부터 며칠 안에 마감하는지입니다. 0부터 90까지이며 기본값은 7입니다.' },
+      { name: 'days', type: 'Integer', desc: '오늘부터 며칠 안에 마감하는지(0에서 90, 기본 7). 0이면 오늘 마감' },
       { name: 'query', type: 'String', desc: '공모전 이름이나 주최에서 찾을 말' },
       { name: 'category', type: 'String', desc: '분야. 코드 값의 공모전 분야' },
       ...pageQuery,
@@ -686,21 +680,18 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'contests:read',
     method: 'GET',
     path: '/contests/new',
-    desc: [
-      '정한 날짜에 잡아따가 처음 모은 공모전입니다. 최근에 모은 순서입니다. 날짜를 주지 않으면 오늘 올라온 공모전입니다.',
-      'date로 하루를 고르거나 from과 to로 기간(31일까지)을 고릅니다. from만 주면 오늘까지입니다. 마감한 공모전도 마감 뒤 7일까지는 status가 closed로 나옵니다.',
-    ],
+    desc: ['날짜를 주지 않으면 오늘 모은 공모전입니다.'],
     query: [
-      { name: 'date', type: 'Date', desc: '하루(예: 2026-11-05). from, to와 같이 쓸 수 없습니다.' },
-      { name: 'from', type: 'Date', desc: '기간의 시작일(그날 포함)' },
-      { name: 'to', type: 'Date', desc: '기간의 끝일(그날 포함)' },
+      { name: 'date', type: 'Date', desc: '하루. from, to와 같이 쓸 수 없음' },
+      { name: 'from', type: 'Date', desc: '시작일(포함). to가 없으면 오늘까지' },
+      { name: 'to', type: 'Date', desc: '끝일(포함). 기간은 31일까지' },
       { name: 'category', type: 'String', desc: '분야. 코드 값의 공모전 분야' },
       ...pageQuery,
     ],
     response: [{ name: 'data', type: 'Page', desc: 'items가 Contest[]인 목록' }],
     types: ['Page', 'Contest', 'ContestLink'],
     example: { query: '/contests/new?date=2026-11-03&size=1', response: { items: [CONTEST_EXAMPLE], page: 0, size: 1, total: 14, hasNext: true } },
-    errors: [['C002', '날짜 형식이 잘못되었거나, date와 from, to를 같이 주었거나, 기간이 31일을 넘습니다(400).'], BAD_PARAM],
+    errors: [['C002', '날짜 형식, date와 기간을 같이 줌, 31일 초과(400).'], BAD_PARAM],
   },
   {
     id: 'contests-categories',
@@ -708,7 +699,7 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'contests:read',
     method: 'GET',
     path: '/contests/categories',
-    desc: ['공모전 분야 열두 가지마다 마감하지 않은 공모전 수와 그중 접수 중인 수입니다. 한 공모전이 여러 분야에 걸치면 분야마다 한 번씩 셉니다. 순서는 코드 값의 공모전 분야 순서로 늘 같습니다.'],
+    desc: ['여러 분야에 걸친 공모전은 분야마다 셉니다.'],
     response: [{ name: 'data', type: 'ContestCategoryCount[]', desc: '분야마다 하나' }],
     types: ['ContestCategoryCount'],
     example: {
@@ -727,7 +718,7 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'contests:read',
     method: 'GET',
     path: '/contests/{id}',
-    desc: ['공모전 한 건을 조회합니다. 마감한 공모전도 마감 뒤 7일까지는 가져올 수 있고, 그 뒤에는 지워져서 404입니다.'],
+    desc: ['마감 뒤 7일이 지나면 404입니다.'],
     pathParams: [{ name: 'id', type: 'String', desc: '공모전 아이디(c-로 시작)', required: true }],
     response: [{ name: 'data', type: 'Contest', desc: '공모전' }],
     types: ['Contest', 'ContestLink'],
@@ -739,14 +730,14 @@ export const ENDPOINTS: EndpointDoc[] = [
 /** 모든 API에 공통인 오류예요. [HTTP 상태, 코드, 뜻] */
 export const COMMON_ERRORS: [string, string, string][] = [
   ['401', 'C4014', 'X-API-Key 헤더가 없습니다.'],
-  ['401', 'C4015', '존재하지 않는 키입니다. 키를 다시 확인하십시오.'],
+  ['401', 'C4015', '존재하지 않는 키입니다.'],
   ['403', 'C4031', '아직 승인되지 않았거나 해지한 키입니다.'],
   ['403', 'C4032', '사용 기간이 끝난 키입니다.'],
-  ['403', 'C4033', '이 API의 권한이 없는 키입니다. 권한이 더 필요하면 새 키를 요청하십시오.'],
-  ['429', 'C429', '1분 또는 하루 호출 한도를 초과했습니다. Retry-After 헤더의 초만큼 기다린 뒤 다시 호출하십시오.'],
+  ['403', 'C4033', '이 API의 권한이 없는 키입니다.'],
+  ['429', 'C429', '호출 한도를 초과했습니다. Retry-After 초 뒤에 다시 호출하십시오.'],
   ['400', 'C002', '파라미터 값이 잘못되었습니다.'],
   ['404', 'C404, C4042', '찾는 자료가 없습니다.'],
-  ['500', 'C500', '서버에서 오류가 발생했습니다. 잠시 뒤에 다시 호출하십시오.'],
+  ['500', 'C500', '서버 오류입니다.'],
 ]
 
 /** 응답 헤더예요. */
@@ -790,7 +781,7 @@ export function endpointPrompt(e: EndpointDoc, base: string, scopeLabel: string)
   )
   for (const name of typeNames) {
     const type = TYPES.find((t) => t.name === name)!
-    lines.push('', `### ${type.name}`, type.desc, ...type.fields.map(fieldLine))
+    lines.push('', `### ${type.name}`, ...(type.desc ? [type.desc] : []), ...type.fields.map(fieldLine))
   }
   lines.push(
     '',

@@ -97,8 +97,7 @@ export function ApiDocs({ scopes }: { scopes: ScopeInfo[] }) {
 
       <div className="min-w-0 max-w-[860px] pb-24">
         <Section id="overview" title="개요">
-          <P>잡아따가 모으고 정리한 채용 자료를 외부 서비스에서 쓸 수 있도록 여는 REST API입니다. 고용24, 공공기관, 기업 채용 페이지에서 매일 모은 공고와 기업, 공고에서 읽은 역량 통계, AI가 정리한 기업 기술 블로그 요약, 공모전을 제공합니다.</P>
-          <P>API마다 권한이 있고, 키는 쓸 권한을 골라 요청한 뒤 관리자가 승인해야 쓸 수 있습니다. 관리자는 요청한 권한 중 일부만 승인할 수 있습니다.</P>
+          <P>잡아따가 매일 모은 채용 공고, 기업, 역량 통계, 기술 블로그 요약, 공모전을 제공하는 REST API입니다.</P>
           <DocTable
             head={['권한', '값', '제공하는 자료', 'API']}
             rows={scopes.map((s) => [
@@ -118,40 +117,32 @@ export function ApiDocs({ scopes }: { scopes: ScopeInfo[] }) {
 
         <Section id="start" title="시작하기">
           <ol className="list-decimal space-y-2 pl-5 text-[14px] leading-relaxed text-gray-800">
-            <li>내 키 탭에서 새 API 키를 누르고 키 이름, 사용할 API, 사용 목적과 사유를 입력해 요청하십시오.</li>
-            <li>요청하면 키가 한 번만 표시됩니다. 바로 복사해 안전한 곳에 보관하십시오. 잡아따는 키 원문을 저장하지 않으므로 다시 보여드릴 수 없습니다.</li>
-            <li>관리자가 승인하면 키 상태가 사용 중으로 바뀝니다. 관리자 메모, 승인된 권한, 호출 한도는 키 상세에서 확인하십시오.</li>
-            <li>요청 헤더 X-API-Key에 키를 넣어 호출하십시오. 호출량과 최근 호출은 키 상세에서 확인할 수 있습니다.</li>
+            <li>내 키 탭에서 새 API 키를 요청하십시오. 키는 한 번만 표시됩니다.</li>
+            <li>관리자가 승인하면 사용할 수 있습니다.</li>
+            <li>X-API-Key 헤더에 키를 넣어 호출하십시오.</li>
           </ol>
           <H3>기본 정보</H3>
           <DocTable
             head={['항목', '값']}
             rows={[
               ['기본 주소', <code className="font-mono text-[12.5px] break-all">{PUBLIC_API_BASE}</code>],
-              ['프로토콜', 'HTTPS'],
-              ['메서드', '모든 API가 GET입니다.'],
               ['응답 형식', 'JSON, UTF-8'],
-              ['시간대', '한국 시각(KST). 시각에는 시간대 표기가 없습니다.'],
+              ['시간대', '한국 시각(KST), 시간대 표기 없음'],
             ]}
           />
         </Section>
 
         <Section id="auth" title="인증">
-          <P>모든 요청에 API 키를 헤더로 보내십시오. 쿼리 파라미터로 보낸 키는 인정하지 않습니다.</P>
           <FieldTable fields={HEADERS} required />
-          <Code>{`X-API-Key: jvd_6INtnvo3t...`}</Code>
-          <Note>
-            키는 서버에서만 사용하고 브라우저나 앱 코드에 넣지 마십시오. 키가 노출되었다면 키 상세에서 즉시 해지하고 새 키를 요청하십시오. 해지한 키는 다시 사용할 수 없습니다.
-          </Note>
+          <Note>키는 서버에서만 사용하십시오. 노출되었다면 바로 해지하고 새 키를 요청하십시오.</Note>
         </Section>
 
         <Section id="format" title="응답 형식">
-          <P>모든 응답은 data와 error를 담은 같은 모양입니다. 성공하면 data에 결과가 있고 error의 값은 null입니다. 실패하면 data가 null이고 error에 코드와 이유가 있습니다. HTTP 상태 코드도 함께 확인합니다.</P>
           <FieldTable
             fields={[
-              { name: 'data', type: 'Object', desc: '결과. API마다 모양이 다릅니다. 실패하면 null입니다.' },
-              { name: 'error.code', type: 'String', desc: '오류 코드. 성공하면 null입니다.' },
-              { name: 'error.message', type: 'String', desc: '오류 이유. 성공하면 null입니다.' },
+              { name: 'data', type: 'Object', desc: '결과. 실패하면 null' },
+              { name: 'error.code', type: 'String', desc: '오류 코드. 성공하면 null' },
+              { name: 'error.message', type: 'String', desc: '오류 이유. 성공하면 null' },
             ]}
           />
           <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-2">
@@ -162,16 +153,15 @@ export function ApiDocs({ scopes }: { scopes: ScopeInfo[] }) {
           <DocTable
             head={['타입', '모양', '보기']}
             rows={[
-              ['Datetime', 'YYYY-MM-DDTHH:mm:ss(소수 초가 붙을 수 있습니다)', <code className="font-mono text-[12px]">2026-10-27T15:50:29</code>],
+              ['Datetime', 'YYYY-MM-DDTHH:mm:ss', <code className="font-mono text-[12px]">2026-10-27T15:50:29</code>],
               ['Date', 'YYYY-MM-DD', <code className="font-mono text-[12px]">2026-11-05</code>],
-              ['String[]', '글자 배열. 비어 있으면 []', <code className="font-mono text-[12px]">["Java", "Spring Boot"]</code>],
-              ['null', '값이 없거나 모르는 것', <code className="font-mono text-[12px]">"deadline": null</code>],
+              ['null', '값이 없거나 모름', <code className="font-mono text-[12px]">"deadline": null</code>],
             ]}
           />
         </Section>
 
         <Section id="paging" title="페이지">
-          <P>공고와 기업 목록은 page와 size로 나누어 조회합니다. page는 0부터 시작하고, size는 최대 100입니다. 다음 페이지가 있으면 hasNext가 true입니다.</P>
+          <P>목록은 page(0부터)와 size(최대 100)로 나누어 조회합니다.</P>
           <TypeTable name="Page" />
           <Code title="모든 페이지 받기 (JavaScript)">{`let page = 0
 const all = []
@@ -187,8 +177,7 @@ while (true) {
         </Section>
 
         <Section id="limits" title="호출 한도">
-          <P>키마다 1분 한도와 하루 한도(한국 시각 0시에 초기화)가 있습니다. 처음에는 1분 60번, 하루 10,000번이고, 관리자가 키마다 바꿀 수 있습니다. 내 키의 한도는 키 상세에서 확인하십시오.</P>
-          <P>한도를 초과하면 429 상태와 C429 코드로 응답하며, 이 호출도 호출량에 포함됩니다. Retry-After 헤더의 초만큼 기다린 뒤 다시 호출하십시오.</P>
+          <P>기본 1분 60번, 하루 10,000번(한국 시각 0시 초기화)입니다. 넘으면 429로 응답합니다.</P>
           <H3>응답 헤더</H3>
           <FieldTable fields={RESPONSE_HEADERS} />
         </Section>
@@ -201,7 +190,6 @@ while (true) {
         </Section>
 
         <Section id="values" title="코드 값">
-          <P>파라미터와 응답에 사용하는 값입니다. 소문자로 보내는 것을 권장하며, 대소문자는 구분하지 않습니다.</P>
           {CODE_VALUES.map((group) => (
             <div key={group.name}>
               <H3>{group.name}</H3>
@@ -246,20 +234,11 @@ function Endpoint({ doc: e, scopeLabel, lang, onLang }: { doc: EndpointDoc; scop
               {e.path}
             </code>,
           ],
-          ['인증 방식', '요청 헤더 X-API-Key에 승인된 API 키'],
-          [
-            '권한',
-            <span>
-              <code className="font-mono text-[12px]">{e.scope}</code>
-              <span className="ml-2 text-gray-500">{scopeLabel}</span>
-            </span>,
-          ],
+          ['권한', <code className="font-mono text-[12px]">{e.scope}</code>],
         ]}
       />
 
-      <H3>요청</H3>
-      <H4>헤더</H4>
-      <FieldTable fields={HEADERS} required />
+      {(e.pathParams || e.query) && <H3>요청</H3>}
       {e.pathParams && (
         <>
           <H4>경로 파라미터</H4>
@@ -274,7 +253,6 @@ function Endpoint({ doc: e, scopeLabel, lang, onLang }: { doc: EndpointDoc; scop
       )}
 
       <H3>응답</H3>
-      <H4>본문</H4>
       <FieldTable fields={e.response} anchorPrefix={e.id} />
       {e.types.map((name) => (
         <TypeTable key={name} name={name} anchor={`${e.id}-${name}`} />
@@ -286,13 +264,12 @@ function Endpoint({ doc: e, scopeLabel, lang, onLang }: { doc: EndpointDoc; scop
         <Segmented label="언어" options={LANGS} value={lang} onChange={onLang} />
       </div>
       <Code>{requestCode(lang, e.example.query)}</Code>
-      <H4>응답: 성공</H4>
+      <H4>응답</H4>
       <Code>{success(e.example.response)}</Code>
 
       {e.errors.length > 0 && (
         <>
-          <H3>이 API의 오류</H3>
-          <P>공통 오류(인증, 권한, 한도)는 오류 코드 절에 있습니다.</P>
+          <H3>오류</H3>
           <DocTable head={['코드', '뜻']} rows={e.errors.map(([code, desc]) => [<code className="font-mono text-[12px]">{code}</code>, desc])} />
         </>
       )}
@@ -417,7 +394,7 @@ function TypeTable({ name, anchor }: { name: string; anchor?: string }) {
     <div id={anchor} className="scroll-mt-4">
       <H4>
         <code className="font-mono">{type.name}</code>
-        <span className="ml-2 font-normal text-gray-500">{type.desc}</span>
+        {type.desc && <span className="ml-2 font-normal text-gray-500">{type.desc}</span>}
       </H4>
       <FieldTable fields={type.fields} anchorPrefix={prefix} />
     </div>
