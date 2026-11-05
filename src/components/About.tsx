@@ -192,12 +192,14 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 const section = 'mx-auto max-w-[1280px] px-4 pt-[88px] sm:px-10 md:pt-32'
 const sectionTitle = 'text-[clamp(28px,3.2vw,40px)] leading-[1.4] font-bold tracking-[-0.02em] text-gray-900'
 
-const primaryPill = 'inline-flex h-[52px] items-center justify-center rounded-full bg-brand px-7 text-[16px] font-bold text-white transition-[background-color,scale] duration-200 hover:bg-brand-hover active:scale-[.98]'
 /** 검은 첫 화면의 버튼이에요. 시작하기는 흰 바탕에 검은 글자, 앱 다운로드는 옅게 비치는 유리 같은 칸이에요. */
 const heroPrimary =
   'group inline-flex h-[52px] min-w-[clamp(168px,13vw,200px)] items-center justify-center gap-1.5 rounded-full bg-white pr-6 pl-7 text-[17px] font-bold text-[#0f1012] transition-[background-color,scale] duration-200 hover:bg-gray-200 active:scale-[.98]'
 const heroSecondary =
   'inline-flex h-[52px] items-center gap-2 rounded-full bg-white/[.08] px-6 text-[16px] font-bold text-white/85 ring-1 ring-white/15 backdrop-blur-md transition-[background-color,color,scale] duration-200 ring-inset hover:bg-white/[.14] hover:text-white active:scale-[.98]'
+/** 흰 본문 맨 끝의 시작하기예요. 첫 화면의 흰 버튼을 뒤집어 첫 화면과 같은 검은 바탕에 흰 글자와 꺾쇠예요. */
+const closingButton =
+  'group inline-flex h-[52px] min-w-[clamp(168px,13vw,200px)] items-center justify-center gap-1.5 rounded-full bg-[#0f1012] pr-6 pl-7 text-[17px] font-bold text-white transition-[background-color,scale] duration-200 hover:bg-gray-800 active:scale-[.98]'
 const outlinePill = 'inline-flex h-12 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-6 text-[15px] font-bold text-gray-900 transition-colors duration-150 hover:bg-gray-100'
 
 /** 기능의 미리보기예요. 실제 화면 부품에 보기 자료를 넣어 앱 창처럼 그려요. */
@@ -663,8 +665,9 @@ export function About({ onHome }: Props) {
         <section data-reveal className="mx-auto flex max-w-[1280px] flex-col items-center px-4 pt-[88px] pb-[88px] text-center sm:px-10 md:pt-32 md:pb-32">
           <h2 className="text-balance break-keep text-[clamp(24px,2.4vw,32px)] leading-[1.4] font-bold tracking-[-0.02em] text-gray-900">{text.closingTitle}</h2>
           <p className="mt-3 break-keep text-[17px] leading-[1.8] text-gray-500">{text.closingLead}</p>
-          <a href="/app" onClick={start} className={`${primaryPill} mt-8`}>
+          <a href="/app" onClick={start} className={`${closingButton} mt-8`}>
             {text.start}
+            <ChevronRightIcon className="size-[18px] transition-transform duration-200 group-hover:translate-x-0.5" />
           </a>
         </section>
 
