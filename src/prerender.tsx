@@ -9,6 +9,7 @@ import { About } from './components/About'
 import { Articles, ARTICLES_TEXT } from './components/Articles'
 import { Header } from './components/Header'
 import { articlesFor } from './lib/articles'
+import { heroDark } from './lib/hero'
 import { localizePath, setLang, LANGS, type Lang } from './lib/i18n'
 import { HOME_META, OG_IMAGES, OG_LOCALES, SITE_TITLE } from './lib/meta'
 
@@ -33,7 +34,9 @@ export interface PrerenderedPage {
 
 const noop = () => {}
 
-function render(screen: ReactNode): string {
+function render(screen: ReactNode, { dark = false } = {}): string {
+  // 소개 화면은 검은 첫 화면이 헤더 뒤에 있어서, 미리 그린 헤더도 처음부터 투명하게 그려요.
+  heroDark.set(dark)
   return renderToString(
     // App의 바깥 틀과 같은 모양이에요. 자바스크립트가 뜨기 전과 뒤의 화면이 달라 보이지 않게 맞춰요.
     <div className="relative flex h-dvh flex-col bg-white">
@@ -57,7 +60,7 @@ function pagesFor(lang: Lang): PrerenderedPage[] {
   const home = HOME_META[lang]
   return [
     // 브라우저의 메인 화면은 소개 화면이에요. 한국어는 index.html, 영어는 en.html에 그려요.
-    { ...base('/'), ...home, html: render(<About onHome={noop} />) },
+    { ...base('/'), ...home, html: render(<About onHome={noop} />, { dark: true }) },
     {
       ...base('/articles'),
       title: `${ARTICLES_TEXT[lang].title} | ${SITE_TITLE}`,
