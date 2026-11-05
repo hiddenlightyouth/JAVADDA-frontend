@@ -519,7 +519,7 @@ export function CategoryFilter({ postings, value, onChange, label, allLabel, com
     <div role="radiogroup" aria-label={label} className={`${filterRow} @2xl:overflow-visible`}>
       {company && (
         <button type="button" onClick={onClearCompany} className={`${filterChip(true)} ${filterLogoChip}`}>
-          <CompanyMark company={company} className="size-8 rounded-full! text-[12px]" />
+          <CompanyMark company={company} className="size-8 rounded-lg text-[12px]" />
           {company.name}
           <CloseIcon className="size-3" />
         </button>
@@ -565,7 +565,7 @@ export function CompanyFilter({ companies, value, onChange, label, allLabel, one
           onClick={() => onChange(value === item.id ? null : item.id)}
           className={`${filterChip(value === item.id)} ${filterLogoChip}`}
         >
-          <CompanyMark company={item} className="size-8 rounded-full! text-[12px]" />
+          <CompanyMark company={item} className="size-8 rounded-lg text-[12px]" />
           {item.name}
         </button>
       ))}
