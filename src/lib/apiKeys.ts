@@ -85,7 +85,7 @@ export interface ApiSummary {
 }
 
 export const STATUS_NAMES: Record<KeyStatus, string> = {
-  pending: '대기 중',
+  pending: '심사 중',
   approved: '사용 중',
   rejected: '거절',
   revoked: '해지',

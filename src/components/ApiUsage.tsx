@@ -1,13 +1,16 @@
 import type { ApiUsage, UsageGroup } from '../lib/apiKeys'
 import { formatDateTime } from '../lib/format'
 import { BarChart, compact, full, Stat, tableRow, td, th, type Bar } from './AdminParts'
-import { Panel } from './GapParts'
+import { Notice, Panel } from './GapParts'
 import { Badge } from './ui'
 
 const rate = (part: number, whole: number) => (whole > 0 ? `${((part / whole) * 100).toFixed(1)}%` : '0%')
 
-/** API 호출량이에요. 내 API 키 화면과 관리자 화면이 같이 써요. keys가 있으면(관리자) 키별 표도 보여줘요. */
-export function ApiUsageView({ usage, compactView = false }: { usage: ApiUsage; compactView?: boolean }) {
+/**
+ * API 호출량이에요. 내 API 키 화면과 관리자 화면이 같이 써요. keys가 있으면(관리자) 키별 표도 보여줘요.
+ * 호출이 하나도 없으면 안내 한 줄만 두고, 비어 있는 칸은 그리지 않아요. 한도 초과(429) 칸은 관리자만 봐요(showLimited).
+ */
+export function ApiUsageView({ usage, compactView = false, showLimited = true }: { usage: ApiUsage; compactView?: boolean; showLimited?: boolean }) {
   const { total } = usage
   const bars: Bar[] = usage.daily.map((d) => {
     const [, m, day] = d.date.split('-').map(Number)
@@ -17,12 +20,13 @@ export function ApiUsageView({ usage, compactView = false }: { usage: ApiUsage; 
     const [, m, day] = date.split('-').map(Number)
     return `${m}월 ${day}일`
   }
+  if (total.calls === 0) return <Notice className="mt-10" title="아직 호출 기록이 없습니다" />
   return (
     <>
-      <dl className={`grid grid-cols-2 gap-3 ${compactView ? '' : 'lg:grid-cols-4'}`}>
+      <dl className={`grid gap-3 ${showLimited ? `grid-cols-2 ${compactView ? '' : 'lg:grid-cols-4'}` : 'grid-cols-3'}`}>
         <Stat label="호출" value={full(total.calls)} note={`하루 ${(total.calls / Math.max(1, usage.daily.length)).toFixed(1)}번`} />
         <Stat label="오류" value={rate(total.errors, total.calls)} note={`${full(total.errors)}번`} />
-        <Stat label="한도 초과" value={full(total.limited)} note="429 응답" />
+        {showLimited && <Stat label="한도 초과" value={full(total.limited)} note="429 응답" />}
         <Stat label="평균 응답" value={`${Math.round(total.latencyMs / Math.max(1, total.calls))}ms`} />
       </dl>
       <Panel className="mt-3" title="날짜별 호출">
@@ -30,13 +34,12 @@ export function ApiUsageView({ usage, compactView = false }: { usage: ApiUsage; 
       </Panel>
       <div className={`mt-3 grid grid-cols-1 gap-3 ${compactView ? '' : 'xl:grid-cols-2'}`}>
         {usage.keys.length > 0 && <GroupTable title="키별" groups={usage.keys} />}
-        <GroupTable title="API별" groups={usage.paths} mono />
-        {!compactView && usage.keys.length === 0 && <GroupTable title="권한별" groups={usage.scopes} />}
+        {usage.paths.length > 0 && <GroupTable title="API별" groups={usage.paths} mono />}
+        {!compactView && usage.keys.length === 0 && usage.scopes.length > 0 && <GroupTable title="권한별" groups={usage.scopes} />}
       </div>
+      {usage.recent.length > 0 && (
       <Panel className="mt-3" title="최근 호출">
-        {!usage.recent.length ? (
-          <p className="text-[13px] text-gray-500">호출 기록이 없습니다.</p>
-        ) : (
+        {(
           <div className="-mx-4 overflow-x-auto sm:-mx-5">
             <table className="w-full min-w-[560px] text-[13px] text-gray-700 tabular-nums">
               <thead>
@@ -66,6 +69,7 @@ export function ApiUsageView({ usage, compactView = false }: { usage: ApiUsage; 
           </div>
         )}
       </Panel>
+      )}
     </>
   )
 }

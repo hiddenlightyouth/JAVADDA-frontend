@@ -39,6 +39,7 @@ import {
   textFieldSm,
   toolButton,
   toolDangerButton,
+  WaitingGlass,
 } from './ui'
 
 const STATUS_TONES: Record<KeyStatus, 'gray' | 'brand' | 'red' | 'muted'> = {
@@ -141,7 +142,7 @@ export function ApiKeys() {
               >
                 <div className="min-w-0 sm:w-56 sm:shrink-0">
                   <p className="truncate text-[15px] font-semibold text-gray-900">{k.name}</p>
-                  <p className={`mt-0.5 truncate text-[12.5px] text-gray-500 ${k.prefix ? 'font-mono' : ''}`}>{prefixText(k)}</p>
+                  {prefixText(k) && <p className={`mt-0.5 truncate text-[12.5px] text-gray-500 ${k.prefix ? 'font-mono' : ''}`}>{prefixText(k)}</p>}
                 </div>
                 <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
                   {(k.status === 'approved' ? k.scopes : k.requestedScopes).map((s) => (
@@ -201,6 +202,32 @@ function KeyDetail({ apiKey: k, onChanged }: { apiKey: ApiKeyView; onChanged: ()
     onChanged()
   }
 
+  const confirmDialog = confirm && (
+    <ConfirmDialog
+      title={k.status === 'pending' ? '요청을 철회하시겠습니까?' : '이 키를 해지하시겠습니까?'}
+      body={k.status === 'pending' ? '관리자에게 보낸 요청을 철회합니다.' : '이 키로 보내는 요청이 즉시 차단됩니다. 해지한 키는 다시 사용할 수 없습니다.'}
+      confirm={k.status === 'pending' ? '철회' : '해지'}
+      danger
+      working={working}
+      onCancel={() => setConfirm(false)}
+      onConfirm={() => void revoke()}
+    />
+  )
+
+  // 심사 중이면 가운데에 모래시계와 상태만 보여줘요.
+  if (k.status === 'pending')
+    return (
+      <>
+        <div className="flex min-h-[60dvh] flex-col items-center justify-center">
+          <Notice art={<WaitingGlass className="size-40" />} title="심사 중입니다" body="관리자가 승인하면 이 화면에서 키를 발급받을 수 있습니다." />
+          <button type="button" className={`${toolDangerButton} mt-5`} onClick={() => setConfirm(true)}>
+            요청 철회
+          </button>
+        </div>
+        {confirmDialog}
+      </>
+    )
+
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
@@ -219,7 +246,7 @@ function KeyDetail({ apiKey: k, onChanged }: { apiKey: ApiKeyView; onChanged: ()
             ))}
           {!closed && (
             <button type="button" className={toolDangerButton} onClick={() => setConfirm(true)}>
-              {k.status === 'pending' ? '요청 철회' : '해지'}
+              해지
             </button>
           )}
         </div>
@@ -230,7 +257,7 @@ function KeyDetail({ apiKey: k, onChanged }: { apiKey: ApiKeyView; onChanged: ()
           {k.note}
         </p>
       )}
-      {k.status !== 'pending' && k.status !== 'rejected' && (
+      {k.status !== 'rejected' && (
         <>
           <div className="mt-8 mb-3 flex items-center justify-between gap-3">
             <h2 className="text-[15px] font-semibold text-gray-900">호출량</h2>
@@ -246,7 +273,7 @@ function KeyDetail({ apiKey: k, onChanged }: { apiKey: ApiKeyView; onChanged: ()
             />
           </div>
           {usage.data ? (
-            <ApiUsageView usage={usage.data} />
+            <ApiUsageView usage={usage.data} showLimited={false} />
           ) : usage.error ? (
             <Failed message={usage.error} onRetry={usage.reload} className="mt-8" />
           ) : (
@@ -265,17 +292,7 @@ function KeyDetail({ apiKey: k, onChanged }: { apiKey: ApiKeyView; onChanged: ()
         />
       )}
       {issued && <IssuedDialog apiKey={issued} onClose={() => setIssued(null)} />}
-      {confirm && (
-        <ConfirmDialog
-          title={k.status === 'pending' ? '요청을 철회하시겠습니까?' : '이 키를 해지하시겠습니까?'}
-          body={k.status === 'pending' ? '관리자에게 보낸 요청을 철회합니다.' : '이 키로 보내는 요청이 즉시 차단됩니다. 해지한 키는 다시 사용할 수 없습니다.'}
-          confirm={k.status === 'pending' ? '철회' : '해지'}
-          danger
-          working={working}
-          onCancel={() => setConfirm(false)}
-          onConfirm={() => void revoke()}
-        />
-      )}
+      {confirmDialog}
     </>
   )
 }
