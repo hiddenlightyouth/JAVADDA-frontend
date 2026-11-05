@@ -58,7 +58,6 @@ const TEXT = messages({
     rising: '늘고 있어요',
     risingTip: '최근 두 달에 그 전 두 달보다 이 주제의 글이 더 많이 올라왔어요.',
     outlookSkills: '따라가려면 이런 역량이 필요해요',
-    outlookMissing: (count: number) => (count ? `내 대표 이력서에 아직 충분히 보이지 않는 역량이 ${count}개예요.` : '대표 이력서에 이 역량이 모두 보여요.'),
     outlookPrepare: '지금 해 볼 준비',
     skillDemand: (count: number) => (count ? `지금 열린 공고 ${count}개가 이 역량을 적었어요.` : '아직 이 역량을 적은 공고는 없어요.'),
   },
@@ -91,7 +90,6 @@ const TEXT = messages({
     rising: 'Rising',
     risingTip: 'More posts on this topic in the last two months than the two before.',
     outlookSkills: 'Skills to keep up',
-    outlookMissing: (count: number) => (count ? `${count} of these aren't clear on your main resume yet.` : 'Your main resume shows all of these.'),
     outlookPrepare: 'What to try now',
     skillDemand: (count: number) => (count ? `${count} open ${count === 1 ? 'posting lists' : 'postings list'} this skill.` : 'No open posting lists this skill yet.'),
   },
@@ -413,7 +411,6 @@ function OutlookCard({ outlook, onTheme }: { outlook: BlogOutlook; onTheme: (the
   const L = useMessages(TEXT)
   const resume = useResume()
   const [first, second] = outlook.themes.map((item) => THEME_NAMES[item.theme])
-  const missing = resume ? outlook.skills.filter((item) => skillTone(item.skill, resume) !== 'met').length : 0
   return (
     <section className="mb-4 animate-rise rounded-2xl bg-gray-50 p-4 sm:p-5 @2xl:p-6">
       {/* 서버의 총정리는 AI가 쓴 머리 문장과 흐름 문단이 있고, 화면이 계산한 총정리는 주제 이름으로 머리 문장을 만들어요. */}
@@ -432,7 +429,6 @@ function OutlookCard({ outlook, onTheme }: { outlook: BlogOutlook; onTheme: (the
           </>
         )}
       </h2>
-      {outlook.summary && <p className="mt-2 max-w-[72ch] line-clamp-2 text-[13.5px] leading-relaxed text-gray-600">{outlook.summary}</p>}
 
       <ul className="mt-5 grid gap-3 @3xl:grid-cols-3">
         {outlook.themes.map((item, index) => (
@@ -473,7 +469,6 @@ function OutlookCard({ outlook, onTheme }: { outlook: BlogOutlook; onTheme: (the
               <SkillChip key={item.skill} name={item.skill} tone={skillTone(item.skill, resume)} tip={[item.reason, L.skillDemand(item.postings)].filter(Boolean).join(' ')} />
             ))}
           </div>
-          {resume && <p className="mt-3 text-[13px] leading-relaxed text-gray-600">{L.outlookMissing(missing)}</p>}
         </div>
         <div>
           <h3 className={label}>{L.outlookPrepare}</h3>
