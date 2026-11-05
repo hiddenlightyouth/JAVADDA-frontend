@@ -14,15 +14,14 @@ import {
   type ScopeInfo,
 } from '../lib/apiKeys'
 import { useAuth } from '../lib/auth'
-import { formatDateTime } from '../lib/format'
 import { requestLogin } from '../lib/gap'
 import { showToast } from '../lib/toast'
-import { full, useAdminData } from './AdminParts'
+import { useAdminData } from './AdminParts'
 import { ScrollPage, PageHeader } from './AppPage'
 import { ApiDocs } from './ApiDocs'
 import { ApiUsageView } from './ApiUsage'
 import { ConfirmDialog, Modal } from './Dialog'
-import { Failed, Notice, Panel } from './GapParts'
+import { Failed, Notice } from './GapParts'
 import {
   Badge,
   Checkbox,
@@ -56,10 +55,8 @@ export function StatusBadge({ status }: { status: KeyStatus }) {
 /** 권한 값(postings:read)을 이름(채용 공고)으로 바꿔요. */
 export const scopeName = (scopes: ScopeInfo[], value: string) => scopes.find((s) => s.value === value)?.label ?? value
 
-const dateOf = (value: string | null) => (value ? formatDateTime(value) : '없음')
-
 /** 키 앞부분이에요. 발급 전이면 그 사정을 적어요. */
-const prefixText = (k: ApiKeyView) => k.prefix ?? (k.status === 'approved' ? '발급 대기' : k.status === 'pending' ? '승인 후 발급' : '발급하지 않음')
+const prefixText = (k: ApiKeyView) => k.prefix ?? (k.status === 'approved' ? '발급 대기' : null)
 
 type Tab = 'keys' | 'docs'
 
@@ -130,7 +127,7 @@ export function ApiKeys() {
           <LoadProgress percent={state.percent} className={loadCenter} />
         )
       ) : opened ? (
-        <KeyDetail apiKey={opened} scopes={state.data.scopes} onChanged={state.reload} />
+        <KeyDetail apiKey={opened} onChanged={state.reload} />
       ) : !state.data.keys.length ? (
         <Notice className="mt-16" title="API 키가 발견되지 않음" action="새 API 키" onAction={() => setAsking(true)} />
       ) : (
@@ -164,7 +161,7 @@ export function ApiKeys() {
   )
 }
 
-function KeyDetail({ apiKey: k, scopes, onChanged }: { apiKey: ApiKeyView; scopes: ScopeInfo[]; onChanged: () => void }) {
+function KeyDetail({ apiKey: k, onChanged }: { apiKey: ApiKeyView; onChanged: () => void }) {
   const [days, setDays] = useState<7 | 30 | 90>(30)
   const [confirm, setConfirm] = useState(false)
   const [working, setWorking] = useState(false)
@@ -172,7 +169,6 @@ function KeyDetail({ apiKey: k, scopes, onChanged }: { apiKey: ApiKeyView; scope
   const [issued, setIssued] = useState<string | null>(null)
   const usage = useAdminData(() => fetchKeyUsage(k.id, days), `${k.id}:${days}`, true)
   const closed = k.status === 'rejected' || k.status === 'revoked'
-  const narrowed = k.status === 'approved' && k.scopes.length < k.requestedScopes.length
 
   async function revoke() {
     setWorking(true)
@@ -232,48 +228,6 @@ function KeyDetail({ apiKey: k, scopes, onChanged }: { apiKey: ApiKeyView; scope
           {k.note}
         </p>
       )}
-      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 rounded-2xl bg-gray-50 p-4 text-[13px] sm:grid-cols-4 sm:p-5">
-        {(
-          [
-            ['한도', `1분 ${full(k.perMinute)}번, 하루 ${full(k.perDay)}번`],
-            ['기간', k.expiresAt ? `${dateOf(k.expiresAt)}까지` : '제한 없음'],
-            k.status === 'pending' ? ['요청', dateOf(k.createdAt)] : ['발급', dateOf(k.issuedAt)],
-            ['마지막 호출', dateOf(k.lastUsedAt)],
-          ] as const
-        ).map(([name, value]) => (
-          <div key={name}>
-            <dt className="text-[12px] text-gray-400">{name}</dt>
-            <dd className="mt-0.5 text-gray-900 tabular-nums">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <Panel className="mt-3" title="권한">
-        <ul className="space-y-2">
-          {(k.status === 'approved' ? k.scopes : k.requestedScopes).map((s) => (
-            <li key={s} className="text-[13.5px]">
-              <span className="font-medium text-gray-900">{scopeName(scopes, s)}</span>
-              <span className="ml-2 font-mono text-[12px] text-gray-400">{s}</span>
-            </li>
-          ))}
-        </ul>
-        {narrowed && (
-          <p className="mt-3 text-[12.5px] text-gray-500">
-            승인되지 않은 권한:{' '}
-            {k.requestedScopes
-              .filter((s) => !k.scopes.includes(s))
-              .map((s) => scopeName(scopes, s))
-              .join(', ')}
-          </p>
-        )}
-      </Panel>
-      <Panel className="mt-3" title="사유">
-        <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap text-gray-800">{k.purpose}</p>
-        {k.site && (
-          <a href={k.site} target="_blank" rel="noreferrer" className="mt-2 inline-block text-[13px] text-brand hover:text-brand-hover">
-            {k.site}
-          </a>
-        )}
-      </Panel>
       {k.status !== 'pending' && k.status !== 'rejected' && (
         <>
           <div className="mt-8 mb-3 flex items-center justify-between gap-3">

@@ -64,7 +64,7 @@ export function ManagementApi() {
       </div>
       {s && (
         <dl className="mt-3 grid grid-cols-2 gap-3">
-          <Stat label="심사 중" value={full(s.pending)} />
+          <Stat label="대기 중" value={full(s.pending)} />
           <Stat label="사용 중인 키" value={full(s.approved)} />
         </dl>
       )}
