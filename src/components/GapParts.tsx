@@ -658,9 +658,10 @@ export function Panel({ title, action, children, className = '' }: { title?: Rea
 }
 
 /** 비어 있거나 실패했을 때 가운데에 보여주는 안내예요. */
-export function Notice({ title, body, action, onAction, className = '' }: { title: string; body?: ReactNode; action?: string; onAction?: () => void; className?: string }) {
+export function Notice({ title, body, action, onAction, art, className = '' }: { title: string; body?: ReactNode; action?: string; onAction?: () => void; art?: ReactNode; className?: string }) {
   return (
     <div className={`flex flex-col items-center gap-4 text-center ${className}`}>
+      {art}
       <div>
         <p className="text-[15px] font-semibold text-gray-900">{title}</p>
         {body && <p className="mt-1.5 max-w-sm text-[13.5px] leading-relaxed text-gray-500">{body}</p>}

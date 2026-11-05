@@ -30,8 +30,8 @@ const EXPERIMENTS: Experiment[] = [
     id: 'tech-interview',
     title: { ko: '기술 면접', en: 'Tech interview' },
     summary: {
-      ko: '백엔드와 프론트엔드 기술 면접 질문 300개로 가상 면접을 봐요.',
-      en: 'Take a mock interview with 300 backend and frontend tech questions.',
+      ko: '다양한 기술 면접 질문에 미리 대비하세요',
+      en: 'Get ready for a wide range of tech interview questions.',
     },
     screen: lazy(() => import('./labs/TechInterview').then((module) => ({ default: module.TechInterview }))),
   },

@@ -31,8 +31,8 @@ const Home = lazy(() => import('./components/Home').then((module) => ({ default:
 const BugReport = lazy(() => import('./components/Feedback').then((module) => ({ default: module.BugReport })))
 
 const TEXT = messages({
-  ko: { loginToSave: '로그인하면 보던 리포트로 바로 돌아가요.', loginToContinue: '이력서와 리포트는 계정에 저장돼요. 로그인하면 하던 곳으로 바로 돌아가요.' },
-  en: { loginToSave: "Sign in and we'll bring you right back to your report.", loginToContinue: "Resumes and reports are saved to your account. Sign in and we'll bring you right back." },
+  ko: { loginToSave: '로그인하면 보던 리포트로 바로 돌아가요.', },
+  en: { loginToSave: "Sign in and we'll bring you right back to your report." },
 })
 
 export default function App() {
@@ -92,7 +92,7 @@ export default function App() {
   /** 로그인이 필요한 일을 하려 했어요. 로그인 화면으로 가고, 로그인하면 path(없으면 지금 화면)로 돌아와요. */
   const requireLogin = useCallback(
     (path: string = window.location.pathname + window.location.search) => {
-      loginReturn.current = { path, notice: pick(TEXT).loginToContinue }
+      loginReturn.current = { path }
       openAccount('login')
     },
     [loginReturn, openAccount],

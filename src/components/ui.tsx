@@ -7,6 +7,15 @@ import { Kbd } from './Shortcuts'
 /** 기다리는 동안만 보이는 로봇 애니메이션이라, 플레이어와 엔진은 그때 따로 받아요. */
 const AiLoader = lazy(() => import('./AiLoader'))
 
+/** 빈 서류 안내 위에 띄우는 펄럭이는 빈 종이예요. 로봇과 같은 플레이어로, 받는 동안은 같은 크기의 빈자리만 둬요. */
+export function EmptyPaper({ className = 'size-28' }: { className?: string }) {
+  return (
+    <Suspense fallback={<span aria-hidden className={`block ${className}`} />}>
+      <AiLoader src="/lottie/empty-document.lottie" className={className} />
+    </Suspense>
+  )
+}
+
 /**
  * 여러 화면이 같이 쓰는 기본 모양이에요. 버튼, 입력칸, 작은 제목, 고르는 칸, 탭, 목록, 오류 문구를 한 곳에서 정해요.
  * 새 화면은 여기 것을 쓰고 같은 모양을 다시 적지 않아요. 크기가 다르면 여기에 단계를 더해요.

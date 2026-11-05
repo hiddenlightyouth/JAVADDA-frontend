@@ -15,7 +15,7 @@ import { GithubResume } from './GithubResume'
 import { GitHubMark } from './Social'
 import { ChevronRightIcon, CloseIcon, PlusIcon, StarIcon, TrashIcon, UploadIcon } from './Icons'
 import { ResumeProjects } from './ResumeProjects'
-import { Badge, menuPanel, NumberedList, primaryButton, textFieldSm, toolButton, toolDangerButton, iconOnPhone, phoneHidden } from './ui'
+import { Badge, EmptyPaper, menuPanel, NumberedList, primaryButton, textFieldSm, toolButton, toolDangerButton, iconOnPhone, phoneHidden } from './ui'
 
 /**
  * 내 이력서 화면이에요. 이력서나 포트폴리오 PDF를 올리면 역량을 읽어 이름표로 보여주고, 잘못 읽은 것은 빼거나 더해요.
@@ -64,8 +64,8 @@ const TEXT = messages({
     start: '시작하기',
     otherWay: '다른 방법 고르기',
     addTitle: '서류 추가',
-    emptyTitle: '아직 올린 이력서가 없어요',
-    emptyBody: '이력서나 포트폴리오를 올려 두면 공고마다 얼마나 맞는지 보여줘요. 여러 개 올리고 하나를 대표로 정할 수 있어요.',
+    emptyTitle: '등록된 서류가 없습니다.',
+    emptyBody: '서류를 등록하고, 채용 공고 분석을 즉시 시작하세요',
     missingTitle: '서류를 찾을 수 없어요',
     missingBody: '지웠거나 다른 계정의 서류예요.',
     primary: '대표 이력서',
@@ -119,8 +119,8 @@ const TEXT = messages({
     start: 'Get started',
     otherWay: 'Choose another way',
     addTitle: 'Add a document',
-    emptyTitle: 'No resumes yet',
-    emptyBody: 'Upload a resume or portfolio to see how well you fit each posting. You can keep several and pick one as your main resume.',
+    emptyTitle: 'No documents yet.',
+    emptyBody: 'Add a document and start analyzing job postings right away.',
     missingTitle: 'Document not found',
     missingBody: 'It was deleted or belongs to another account.',
     primary: 'Main resume',
@@ -558,7 +558,7 @@ export function MyResume({ add, docId, onAdd, onList, onDoc, onExplore }: {
         {/* 공고 탐색처럼 제목 줄과 같은 폭으로 늘어놓고, 칸 수는 목록 폭을 보고 정해요. */}
         <div className={`@container min-h-0 flex-1 overflow-y-auto ${gutter} pt-4 pb-16`}>
           {shelf.list.length === 0 ? (
-            <Notice title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={addDocument} className="mt-16" />
+            <Notice art={<EmptyPaper />} title={L.emptyTitle} body={L.emptyBody} action={L.addDoc} onAction={addDocument} className="mt-16" />
           ) : (
             <ul className="grid grid-cols-1 gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3">
               {ordered.map((resume) => (
