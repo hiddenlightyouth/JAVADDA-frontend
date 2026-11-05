@@ -56,7 +56,7 @@ export function reportFromPath(): { id: string; tab: ReportTab | 'practice' } | 
   return match ? { id: match[1], tab: (match[2] as ReportTab | 'practice' | undefined) ?? 'summary' } : null
 }
 
-const ADMIN_PATH = /^\/admin(?:\/(users|chats|feedback|ai))?\/?$/
+const ADMIN_PATH = /^\/admin(?:\/(users|postings|companies|crawl|chats|feedback|ai))?\/?$/
 
 /** 관리자 화면 주소면 보고 있는 탭을 돌려줘요. */
 function adminFromPath(): AdminTab | null {

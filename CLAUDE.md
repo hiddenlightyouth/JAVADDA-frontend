@@ -118,7 +118,8 @@ src/
   components/Social.tsx      소셜 로그인 버튼과, 소셜 서비스에서 돌아온 화면 (/auth/github/callback, /auth/kakao/callback), 앱의 GitHub 연결에서 돌아와 앱을 다시 여는 화면 (/github/callback, GithubAppCallback)
   lib/usage.ts        이번 주 사용량과 요금제 받기(useUsage, refreshUsage), 플랜 변경 창 열고 닫기(openPlans, closePlans, usePlansOpen)
   lib/feedback.ts     평가와 버그 신고 보내기, 버그 신고 창 열기
-  lib/admin.ts        관리자 API 호출과 응답 타입, 한국 날짜 계산
+  lib/admin.ts        예전 채팅 관리자 API 타입과 한국 날짜 계산
+  lib/adminManage.ts  잡아따 운영 관리자 API와 DTO, 오류 처리
   lib/geo.ts          IP 주소의 대략적인 위치 알아내기(공개 서비스 ipwho.is)와 이 기기에 적어 두기
   lib/storage.ts      localStorage 읽고 쓰기. 막혀 있거나 가득 차도 오류 없이 넘어가요(readItem, writeItem, readJson, writeJson, readFlag, writeFlag)
   lib/hero.ts         소개 화면의 검은 첫 화면이 헤더 뒤에 있는지(heroDark). 이때 헤더가 투명해져요
@@ -183,7 +184,8 @@ src/
   components/AppLogin.tsx    앱이 브라우저로 열어 주는 앱 로그인 화면 (/app-login)
   components/CaptureShield.tsx  앱에서 화면 공유나 녹화가 감지되면 화면 전체를 가리는 막
   components/Admin.tsx       앱의 관리자 화면 (/admin). 관리자 계정만 보고, 탭으로 나눠요
-  components/AdminOverview.tsx, AdminUsers.tsx, AdminChats.tsx, AdminFeedback.tsx, AdminUsage.tsx  관리자 화면의 탭
+  components/AdminManage.tsx  운영 현황, 회원, 채용공고, 기업, 수집, AI 호출 탭
+  components/AdminOverview.tsx, AdminUsers.tsx, AdminChats.tsx, AdminFeedback.tsx, AdminUsage.tsx  연결하지 않는 예전 채팅 관리자 화면
   components/AdminParts.tsx  관리자 탭이 같이 쓰는 부품. 숫자 칸(Stat, StatsLoading), 막대 그래프(BarChart), 기기 태그(DeviceTags), 회원 칸(MemberCell), 검색창(SearchBox, useDebounced), 한 번에 받는 자료(useAdminData)와 더 보기로 받는 목록(usePaged), 표(PagedTable, th, td, 눌러 여는 줄 openableRow), 상세 칸의 이름과 값(InfoGrid)과 내용 자리(PanelContent)
   components/Plans.tsx       요금제 세 개만 보여주는 업그레이드 창(PlansModal)
   components/Feedback.tsx    버그 신고 창
@@ -595,8 +597,24 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 테스트 코드
 - 영어 화면의 목 자료 문구
 - 아티클과 `public/about` 스크린샷을 이 서비스에 맞게 바꾸기
-- 레포 분석 시절에 남은 것 정리: 로그인할 때 부르는 POST `/users/me/chats/claim`과 `X-Owner-Key`(`auth.ts`의 `startSession`, `http.ts`의 `ownerHeaders`), 앱 로그인 화면의 권한 문구(`PERMISSIONS`), 요금제 설명, 아티클 맨 아래 "레포 분석하러 가기", 버그 신고의 `chatId`, 관리자 화면의 채팅 탭과 채팅 수치(`PageView`가 넘기는 `onOpenChat`은 아무것도 하지 않아서 "채팅 열기" 버튼이 동작하지 않아요)
+- 레포 분석 시절에 남은 것 정리: 로그인할 때 부르는 POST `/users/me/chats/claim`과 `X-Owner-Key`(`auth.ts`의 `startSession`, `http.ts`의 `ownerHeaders`), 앱 로그인 화면의 권한 문구(`PERMISSIONS`), 요금제 설명, 아티클 맨 아래 "레포 분석하러 가기", 버그 신고의 `chatId`
 - 설정 창처럼 `Modal` 안에서 드롭다운을 연 채 Esc를 누르면 메뉴만 닫히지 않고 창이 닫혀요. `Modal`이 Esc를 먼저 받아요
 - 예전 주소(`/app`이 없는 주소)를 옮기는 `shell.ts`의 `APP_ROUTES`에 마감 달력, 채용 지도, 기술 블로그가 없어요(Labs는 있어요)
 - `npm run typecheck`가 `vite.config.ts`와 `scripts/`를 보지 않아요(tsconfig의 include)
 - `useServerConfig`는 `/config`를 처음 한 번만 받아서, 설정 창이 다시 받은 값(`refreshConfig`)을 따라가지 않아요
+
+
+## 운영 관리자 화면
+
+관리자 계정만 `/admin`과 계정 메뉴의 관리자 화면에 접근해요. `/config`의 admin이 true이면 운영 화면을 활성화해요. API는 `src/lib/adminManage.ts`에서 인증된 요청으로 호출하고 서버에서도 ADMIN 권한을 검사해요. 화면 구성과 접속 안내는 [ADMIN.md](ADMIN.md)에 있어요.
+
+1. 운영 현황: 회원, 관리자, 공개 공고와 전체 공고, 이력서, 진단 리포트, 기업, 공모전, 블로그 글, AI 호출 및 실패 누적 수예요.
+2. 회원(`/admin/users`): 이름과 이메일 검색, 권한 필터, 회원 상세, 관리자 지정과 해제, 현재 기기와 최근 로그인 20건 확인, 전체 및 개별 기기 로그아웃을 지원해요. 내 계정의 권한과 로그인은 변경할 수 없어요. 권한을 변경하면 대상 회원의 모든 로그인 기기를 해제해요.
+3. 채용공고(`/admin/postings`): 제목과 기업 검색, 공개 상태 필터, 제목과 직군, 경력, 지역, 마감일, 필수 및 우대 역량, 요약, 원문 주소를 수정해요. 공고 내리기는 closedAt만 변경해서 기존 리포트를 유지해요.
+4. 기업(`/admin/companies`): 기업명 검색, 기업명과 로고 대체 글자, 산업, 분류, 홈페이지와 기술 블로그, 노출 순서를 수정해요. 순서가 1000 이상이면 추천 기업에서 숨겨요.
+5. 데이터 수집(`/admin/crawl`): 대상별 즉시 수집과 기업 수집처 활성화 변경, 수집 결과와 오류 조회를 지원해요. 수집 중이면 5초마다 상태를 새로 받아요. 공모전 및 공공 채용 API의 전체 설정은 서버 환경 변수에서 관리해요.
+6. AI 호출(`/admin/ai`): 최신순 페이지 조회와 실패 필터, 모델과 용도, 입력 및 출력 토큰 수, 처리 시간, 오류를 확인해요. 서류 원문과 AI 응답은 저장하지 않아요.
+
+목록은 `/admin/manage/*`의 `{items, page, size, hasNext}`를 20개씩 조회해요. 검색어는 디바운스하고, 필터 변경 시 첫 페이지부터 받아요. 변경 작업은 중복 제출을 막고 실패 시 오류를 표시해요. 권한 변경, 로그아웃, 수집 실행과 활성화 변경은 확인 창을 거쳐요. 예전 `/admin/chats`와 `/admin/feedback` 주소는 운영 현황을 표시해요.
+
+최초 관리자 지정은 서버의 기존 user 테이블 role을 ADMIN으로 설정한 계정으로 로그인해요. 관리자 계정이나 기본 비밀번호를 자동 생성하지 않아요. 서버와 프론트엔드를 함께 배포해야 해요.

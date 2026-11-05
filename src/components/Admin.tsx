@@ -1,88 +1,67 @@
-import { track } from '../lib/analytics'
 import { isAdmin, useAuth } from '../lib/auth'
-import { useShortcuts } from '../lib/shortcuts'
-import { AdminChats } from './AdminChats'
-import { AdminFeedback } from './AdminFeedback'
-import { AdminOverview } from './AdminOverview'
-import { AdminUsage } from './AdminUsage'
-import { AdminUsers } from './AdminUsers'
 import { bleed, gutter, pageFrame, PageHeader } from './AppPage'
 import { Tabs } from './ui'
-import { messages, useMessages } from '../lib/i18n'
+import {
+  ManagementOverview,
+  ManagementUsers,
+  ManagementPostings,
+  ManagementCompanies,
+  ManagementCrawl,
+  ManagementAi,
+} from './AdminManage'
 
-export type AdminTab = 'overview' | 'users' | 'chats' | 'feedback' | 'ai'
-
-const ADMIN_TABS: AdminTab[] = ['overview', 'users', 'chats', 'feedback', 'ai']
-
-const TEXT = messages({
-  ko: {
-    tabs: { overview: '현황', users: '회원', chats: '채팅', feedback: '피드백', ai: 'AI 사용량' } as Record<AdminTab, string>,
-    denied: '관리자 계정만 볼 수 있는 화면이에요.',
-    title: '관리자',
-  },
-  en: {
-    tabs: { overview: 'Overview', users: 'Members', chats: 'Chats', feedback: 'Feedback', ai: 'AI usage' },
-    denied: 'Only admin accounts can see this page.',
-    title: 'Admin',
-  },
-})
+export type AdminTab = 'overview' | 'users' | 'postings' | 'companies' | 'crawl' | 'ai' | 'chats' | 'feedback'
+const tabs = [
+  { key: 'overview', label: '운영 현황' },
+  { key: 'users', label: '회원' },
+  { key: 'postings', label: '채용공고' },
+  { key: 'companies', label: '기업' },
+  { key: 'crawl', label: '데이터 수집' },
+  { key: 'ai', label: 'AI 호출' },
+] as const
 
 interface Props {
   tab: AdminTab
   onTab: (tab: AdminTab) => void
-  /** 서버에 관리자 API가 있는지. 없으면 예전부터 있던 AI 사용량만 보여줘요. */
   full: boolean
-  /** 서버가 피드백을 받는지. 없으면 피드백 탭을 숨겨요. */
   feedback: boolean
-  /** 공유된 채팅을 열어요. */
   onOpenChat: (id: string) => void
 }
-
-/** 앱에서 관리자 계정만 보는 화면이에요. 서비스 현황, 회원, 채팅, AI 사용량을 탭으로 나눠서 봐요. */
-export function Admin({ tab, onTab, full, feedback, onOpenChat }: Props) {
-  const L = useMessages(TEXT)
+export function Admin({ tab, onTab, full }: Props) {
   const { me } = useAuth()
-  const allowed = me === null || isAdmin(me)
-  const tabs = full ? ADMIN_TABS.filter((item) => feedback || item !== 'feedback') : (['ai'] as AdminTab[])
-  const current = tabs.includes(tab) ? tab : tabs[0]
-
-  const select = (next: AdminTab) => {
-    if (next === current) return
-    track('admin_tab_view', { tab: next })
-    onTab(next)
-  }
-
-  useShortcuts(Object.fromEntries(tabs.map((item, index) => [`Digit${index + 1}`, () => select(item)])), allowed && tabs.length > 1)
-
-  if (!allowed) {
+  const current = tab === 'chats' || tab === 'feedback' ? 'overview' : tab
+  if (!isAdmin(me))
     return (
-      <main className="flex min-h-0 flex-1 items-center justify-center px-6 text-center">
-        <p className="text-[14px] leading-relaxed text-gray-600">{L.denied}</p>
+      <main className={pageFrame}>
+        <PageHeader title="관리자" />
+        <p className="py-8 text-sm text-gray-500">관리자 계정으로 로그인해 주세요.</p>
       </main>
     )
-  }
-
   return (
     <main className={pageFrame}>
-      <PageHeader title={L.title} />
-
-      {tabs.length > 1 && (
-        <Tabs label={L.title} items={tabs.map((item, index) => ({ key: item, label: L.tabs[item], shortcut: String(index + 1) }))} current={current} onSelect={select} />
+      <PageHeader title="관리자" owner="Javadda, 서비스 운영" />
+      {!full ? (
+        <p className="py-8 text-sm text-gray-500">서버 연결과 관리자 API 지원 여부를 확인해 주세요.</p>
+      ) : (
+        <>
+          <Tabs label="관리 메뉴" items={[...tabs]} current={current} onSelect={onTab} />
+          <div role="tabpanel" className={`${bleed} ${gutter} min-h-0 flex-1 overflow-y-auto pt-6 pb-10`}>
+            {current === 'overview' ? (
+              <ManagementOverview onTab={onTab} />
+            ) : current === 'users' ? (
+              <ManagementUsers />
+            ) : current === 'postings' ? (
+              <ManagementPostings />
+            ) : current === 'companies' ? (
+              <ManagementCompanies />
+            ) : current === 'crawl' ? (
+              <ManagementCrawl />
+            ) : (
+              <ManagementAi />
+            )}
+          </div>
+        </>
       )}
-
-      <div role="tabpanel" className={`${bleed} ${gutter} min-h-0 flex-1 overflow-y-auto pt-6 pb-10`}>
-        {current === 'overview' ? (
-          <AdminOverview />
-        ) : current === 'users' ? (
-          <AdminUsers onOpenChat={onOpenChat} />
-        ) : current === 'chats' ? (
-          <AdminChats onOpenChat={onOpenChat} />
-        ) : current === 'feedback' ? (
-          <AdminFeedback onOpenChat={onOpenChat} />
-        ) : (
-          <AdminUsage calls={full} />
-        )}
-      </div>
     </main>
   )
 }
