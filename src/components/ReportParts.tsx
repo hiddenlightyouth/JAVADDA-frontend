@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { PracticeFeedback } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
-import { Bullets, label } from './ui'
+import { buttonRadius, Bullets, label } from './ui'
 
 /**
  * 리포트, 예상 질문, 면접 연습이 같이 쓰는 작은 부품이에요. 연한 메인 컬러 안내 칸, 모범 답변 칸, 답변 피드백 묶음이 있어요.
@@ -120,9 +120,9 @@ export function ResultCard({ order, question, meta, answer, feedback, note }: {
 }
 
 /** 검은 화면의 보조 버튼이에요. 옅은 흰 바탕이에요. */
-export const darkButton = 'h-11 rounded-full bg-[#fff]/10 px-5 text-[14px] font-medium text-white transition-colors hover:bg-[#fff]/20'
+export const darkButton = `h-11 ${buttonRadius} bg-[#fff]/10 px-5 text-[14px] font-medium text-white transition-colors hover:bg-[#fff]/20`
 /** 검은 화면의 주 버튼이에요. 흰 바탕에 검은 글자예요. */
-export const lightButton = 'h-11 rounded-full bg-[#fff] px-6 text-[14px] font-semibold text-[#000] transition-opacity hover:opacity-90 disabled:opacity-30'
+export const lightButton = `h-11 ${buttonRadius} bg-[#fff] px-6 text-[14px] font-semibold text-[#000] transition-opacity hover:opacity-90 disabled:opacity-30`
 
 /** 리포트 화면 안에서 다른 리포트로 주소를 바꿔요. replace면 뒤로 가기 기록을 남기지 않아요(재진단). 보던 탭은 그대로예요. */
 export function switchReport(from: string, to: string, replace = false) {

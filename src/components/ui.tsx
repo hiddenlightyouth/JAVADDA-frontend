@@ -73,20 +73,22 @@ export function useShowMore(total: number, reset: unknown, step = SHOW_STEP): { 
 
 // ── 버튼 ───────────────────────────────────────────────
 
+/** 모든 버튼의 모서리 둥글기예요. 관리자 API 심사 칸의 거절 버튼(도구 버튼) 기준이고, 새 버튼도 이것을 써요. */
+export const buttonRadius = 'rounded-lg'
+
 const brandFill = 'bg-brand font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-gray-200 disabled:text-gray-400'
 
 /** 메인 컬러의 알약 버튼이에요. 창과 줄 안의 기본 크기(36px)예요. 아이콘을 앞에 붙여도 가운데에 맞아요. */
-export const primaryButton = `inline-flex h-9 items-center justify-center gap-1.5 rounded-full px-4 text-[13px] ${brandFill}`
+export const primaryButton = `inline-flex h-9 items-center justify-center gap-1.5 ${buttonRadius} px-4 text-[13px] ${brandFill}`
 /** 안내 화면 가운데에 두는 한 단계 큰 메인 버튼(40px)이에요. */
-export const primaryButtonMd = `inline-flex h-10 items-center justify-center rounded-full px-5 text-[14px] ${brandFill}`
+export const primaryButtonMd = `inline-flex h-10 items-center justify-center ${buttonRadius} px-5 text-[14px] ${brandFill}`
 /** 로그인처럼 폭을 다 채우는 큰 메인 버튼(48px)이에요. */
-export const primaryButtonLg = `h-12 w-full rounded-full text-[15px] ${brandFill}`
+export const primaryButtonLg = `h-12 w-full ${buttonRadius} text-[15px] ${brandFill}`
 /** 취소처럼 바탕 없이 글자만 있는 버튼이에요. */
-export const quietButton = 'h-9 rounded-full px-3.5 text-[13px] font-medium text-gray-600 transition-colors hover:text-gray-900'
+export const quietButton = `h-9 ${buttonRadius} px-3.5 text-[13px] font-medium text-gray-600 transition-colors hover:text-gray-900`
 /** 지우기처럼 되돌리기 어려운 작업의 확인 버튼이에요. */
-export const dangerButton =
-  'h-9 rounded-full bg-red-500 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:bg-gray-200 disabled:text-gray-400'
-const softBase = 'h-9 shrink-0 rounded-full bg-gray-100 px-4 text-[13px] font-medium text-gray-700 transition-colors disabled:text-gray-400 disabled:hover:text-gray-400'
+export const dangerButton = `h-9 ${buttonRadius} bg-red-500 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:bg-gray-200 disabled:text-gray-400`
+const softBase = `h-9 shrink-0 ${buttonRadius} bg-gray-100 px-4 text-[13px] font-medium text-gray-700 transition-colors disabled:text-gray-400 disabled:hover:text-gray-400`
 /** 더 보기, 연결 끊기처럼 옅은 회색 알약 버튼이에요. */
 export const softButton = `${softBase} hover:text-brand`
 /** 연결 끊기, 기기 로그아웃처럼 지우는 쪽의 회색 알약 버튼이에요. 마우스를 올리면 빨개져요. */
@@ -96,14 +98,14 @@ export const softDangerButton = `${softBase} hover:text-red-500`
 const toolBase =
   'flex items-center gap-2 border border-gray-200 bg-white font-medium whitespace-nowrap transition-colors disabled:text-gray-400 disabled:hover:border-gray-200 disabled:hover:text-gray-400'
 /** 테두리를 두른 흰 도구 버튼이에요(36px). 드롭다운, 재진단, 복사 같은 보조 작업에 써요. */
-export const toolButton = `${toolBase} h-9 rounded-lg px-3.5 text-[13px] text-gray-800 hover:border-gray-300 hover:text-gray-950`
+export const toolButton = `${toolBase} h-9 ${buttonRadius} px-3.5 text-[13px] text-gray-800 hover:border-gray-300 hover:text-gray-950`
 /**
  * 화면 맨 위 거르는 줄(공고 탐색, 추천 공고, 기술 블로그)의 큰 도구 버튼(44px)이에요.
  * 같은 줄의 검색창과 기업 고르기 버튼이 44px이라 높이를 맞춰요. 드롭다운의 size="lg"가 이 모양이에요.
  */
-export const toolButtonLg = `${toolBase} h-11 rounded-xl px-4 text-[14px] text-gray-800 hover:border-gray-300 hover:text-gray-950`
+export const toolButtonLg = `${toolBase} h-11 ${buttonRadius} px-4 text-[14px] text-gray-800 hover:border-gray-300 hover:text-gray-950`
 /** 도구 버튼의 빨간 모양이에요. 삭제에 써요. */
-export const toolDangerButton = `${toolBase} h-9 rounded-lg px-3.5 text-[13px] text-red-500 hover:border-red-200 hover:text-red-600`
+export const toolDangerButton = `${toolBase} h-9 ${buttonRadius} px-3.5 text-[13px] text-red-500 hover:border-red-200 hover:text-red-600`
 /**
  * 제목 줄의 도구 버튼을 휴대폰(640px 미만)에서 아이콘만 남긴 36px 칸으로 줄여요. 버튼에 덧붙이고, 글자는 `phoneHidden`으로 감싸 화면 읽기 프로그램에는 남겨요.
  * 리포트처럼 제목 줄 버튼이 많아 두 줄로 넘치는 화면이 써요.
@@ -111,7 +113,7 @@ export const toolDangerButton = `${toolBase} h-9 rounded-lg px-3.5 text-[13px] t
 export const iconOnPhone = 'max-sm:w-9 max-sm:justify-center max-sm:px-0'
 export const phoneHidden = 'max-sm:sr-only'
 
-const ghostBase = 'h-8 shrink-0 rounded-md px-2 text-[12.5px] font-medium transition-colors disabled:text-gray-300 disabled:hover:bg-transparent'
+const ghostBase = `h-8 shrink-0 ${buttonRadius} px-2 text-[12.5px] font-medium transition-colors disabled:text-gray-300 disabled:hover:bg-transparent`
 /** 줄과 표 안에 두는 작은 글자 버튼이에요(32px). */
 export const ghostButton = `${ghostBase} text-gray-600 hover:bg-gray-100 hover:text-gray-900`
 /** 작은 글자 버튼의 빨간 모양이에요. */
@@ -119,8 +121,8 @@ export const ghostDangerButton = `${ghostBase} text-red-500 hover:bg-red-50 hove
 
 /** 아이콘만 있는 버튼이에요. sm은 떠 있는 작은 카드, md는 창과 칸의 도구 줄이에요. */
 export const iconButton = {
-  sm: 'flex size-7 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700',
-  md: 'flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:text-gray-300 disabled:hover:bg-transparent',
+  sm: `flex size-7 shrink-0 items-center justify-center ${buttonRadius} text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700`,
+  md: `flex size-8 shrink-0 items-center justify-center ${buttonRadius} text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:text-gray-300 disabled:hover:bg-transparent`,
 }
 
 // ── 메뉴 ───────────────────────────────────────────────

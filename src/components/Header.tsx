@@ -9,6 +9,7 @@ import { useStore } from '../lib/store'
 import { ChevronDownIcon } from './Icons'
 import type { AccountPage } from './Account'
 import { Logo } from './Logo'
+import { buttonRadius } from './ui'
 
 interface Props {
   onHome: () => void
@@ -78,7 +79,7 @@ function LangSwitch({ className, onSwitch }: { className: string; onSwitch?: () 
   )
 }
 
-const quiet = 'h-8 rounded-full px-3 text-[13px] font-medium transition-colors'
+const quiet = `h-8 ${buttonRadius} px-3 text-[13px] font-medium transition-colors`
 /** 넓은 화면 헤더의 글자 링크예요. */
 const navLink = `${quiet} inline-flex items-center text-gray-600 hover:text-gray-900`
 

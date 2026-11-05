@@ -14,7 +14,7 @@ import { ChevronRightIcon, CloseIcon, MicIcon, SpeakerIcon } from './Icons'
 import { Interviewer } from './Interviewer'
 import { InterviewerPicker } from './InterviewerPicker'
 import { darkButton, lightButton, ResultCard } from './ReportParts'
-import { loadCenter, LoadProgress } from './ui'
+import { buttonRadius, loadCenter, LoadProgress } from './ui'
 
 const TEXT = messages({
   ko: {
@@ -782,10 +782,10 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
             </h2>
             <p className="mt-1.5 text-[13px] leading-relaxed break-keep text-[#fff]/60">{L.exitBody}</p>
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" autoFocus onClick={() => setConfirming(false)} className="h-9 rounded-full px-4 text-[13px] font-medium text-[#fff]/80 transition-colors hover:bg-[#fff]/10">
+              <button type="button" autoFocus onClick={() => setConfirming(false)} className={`h-9 ${buttonRadius} px-4 text-[13px] font-medium text-[#fff]/80 transition-colors hover:bg-[#fff]/10`}>
                 {L.stay}
               </button>
-              <button type="button" onClick={finishHere} className="h-9 rounded-full bg-[#fff] px-4 text-[13px] font-semibold text-[#000] transition-opacity hover:opacity-90">
+              <button type="button" onClick={finishHere} className={`h-9 ${buttonRadius} bg-[#fff] px-4 text-[13px] font-semibold text-[#000] transition-opacity hover:opacity-90`}>
                 {L.leave}
               </button>
             </div>

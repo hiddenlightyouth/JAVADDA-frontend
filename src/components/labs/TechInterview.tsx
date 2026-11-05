@@ -13,7 +13,7 @@ import { Dropdown } from '../Dropdown'
 import { BackIcon, CheckIcon, ChevronRightIcon, ClockIcon, CloseButton, SearchIcon } from '../Icons'
 import { Practice, type LabSession } from '../Practice'
 import { PastScreen } from '../ReportQuestions'
-import { ghostButton, LoadProgress, loadCenter, primaryButton, primaryButtonMd, quietButton, Segmented, toolButtonLg, useShowMore } from '../ui'
+import { buttonRadius, ghostButton, LoadProgress, loadCenter, primaryButton, primaryButtonMd, quietButton, Segmented, toolButtonLg, useShowMore } from '../ui'
 
 /**
  * 잡아따 Labs의 기술 면접 (/labs/tech-interview)이에요. 모아 둔 백엔드와 프론트엔드 기술 면접 질문(`techQuestions.ts`)으로 가상 면접을 봐요.
@@ -312,7 +312,7 @@ export function TechInterview() {
             if (!isSignedIn()) return requestLogin()
             setChoosing(true)
           }}
-          className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-brand px-5 text-[14px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-gray-200 disabled:text-gray-400"
+          className={`inline-flex h-11 shrink-0 items-center gap-1.5 ${buttonRadius} bg-brand px-5 text-[14px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-gray-200 disabled:text-gray-400`}
         >
           {L.start}
           <ChevronRightIcon className="size-4" strokeWidth={2} />
