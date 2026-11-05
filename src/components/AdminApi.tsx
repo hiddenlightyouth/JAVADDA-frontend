@@ -58,7 +58,7 @@ export function ManagementApi() {
           active={status !== 'all'}
           groups={[{ items: STATUS_FILTERS.map(([key, name]) => ({ label: name, checked: key === status, onSelect: () => setStatus(key) })) }]}
         />
-        <button type="button" aria-label="새로고침" title="새로고침" className={`${iconButton.md} ml-auto size-9`} onClick={refresh}>
+        <button type="button" aria-label="새로고침" title="새로고침" className={`${iconButton.md} ml-auto size-10`} onClick={refresh}>
           <RefreshIcon />
         </button>
       </div>

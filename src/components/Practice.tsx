@@ -628,7 +628,7 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
             <span className="sm:hidden">{L.startNoteShort(pick(interviewer.name))}</span>
             <span className="hidden sm:inline">{L.startNote(pick(interviewer.name))}</span>
           </p>
-          <button type="button" onClick={begin} className="flex h-12 shrink-0 items-center gap-2 rounded-2xl bg-[#1c1c1e] px-6 text-[15px] font-semibold text-white transition-opacity hover:opacity-85">
+          <button type="button" onClick={begin} className="flex h-10 shrink-0 items-center gap-2 rounded-lg bg-[#1c1c1e] px-5 text-[14px] font-semibold text-white transition-opacity hover:opacity-85">
             {L.start}
             <ChevronRightIcon className="size-4 text-white" strokeWidth={2} />
           </button>
@@ -658,7 +658,7 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
                   readOnly={phase !== 'answering'}
                   onChange={(event) => setAnswer(event.target.value)}
                   placeholder={L.typePlaceholder}
-                  className="min-h-20 w-full flex-1 resize-none rounded-2xl border border-[#fff]/10 bg-[#fff]/[0.06] p-5 text-[18px] leading-relaxed text-white outline-none placeholder:text-[#fff]/30 focus:border-[#fff]/25"
+                  className="min-h-20 w-full flex-1 resize-none rounded-lg border border-[#fff]/10 bg-[#fff]/[0.06] p-5 text-[18px] leading-relaxed text-white outline-none placeholder:text-[#fff]/30 focus:border-[#fff]/25"
                 />
               ) : (
                 <div ref={transcript} className="max-h-[30svh] min-h-0 overflow-y-auto [mask-image:linear-gradient(to_bottom,transparent,#000_24px)] pt-6">
@@ -782,10 +782,10 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
             </h2>
             <p className="mt-1.5 text-[13px] leading-relaxed break-keep text-[#fff]/60">{L.exitBody}</p>
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" autoFocus onClick={() => setConfirming(false)} className={`h-9 ${buttonRadius} px-4 text-[13px] font-medium text-[#fff]/80 transition-colors hover:bg-[#fff]/10`}>
+              <button type="button" autoFocus onClick={() => setConfirming(false)} className={`h-10 ${buttonRadius} px-4 text-[13px] font-medium text-[#fff]/80 transition-colors hover:bg-[#fff]/10`}>
                 {L.stay}
               </button>
-              <button type="button" onClick={finishHere} className={`h-9 ${buttonRadius} bg-[#fff] px-4 text-[13px] font-semibold text-[#000] transition-opacity hover:opacity-90`}>
+              <button type="button" onClick={finishHere} className={`h-10 ${buttonRadius} bg-[#fff] px-4 text-[13px] font-semibold text-[#000] transition-opacity hover:opacity-90`}>
                 {L.leave}
               </button>
             </div>
@@ -862,7 +862,7 @@ function MicCheck({ state, level, onEnable }: { state: MicState; level: { curren
           type="button"
           onClick={onEnable}
           disabled={state === 'asking'}
-          className="flex h-10 shrink-0 items-center rounded-2xl bg-[#fff]/12 px-4 text-[14px] font-semibold text-white transition-colors hover:bg-[#fff]/20 disabled:opacity-50"
+          className="flex h-10 shrink-0 items-center rounded-lg bg-[#fff]/12 px-4 text-[14px] font-semibold text-white transition-colors hover:bg-[#fff]/20 disabled:opacity-50"
         >
           {action}
         </button>

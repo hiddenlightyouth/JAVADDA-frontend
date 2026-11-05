@@ -5,7 +5,7 @@ import { SocialButtons, useSocialClients } from './Social'
 import { currentPath, localizePath, messages, useMessages } from '../lib/i18n'
 import { appShell } from '../lib/app'
 import { followLink } from '../lib/links'
-import { fieldBase, FormError, primaryButtonLg } from './ui'
+import { FormError, primaryButtonLg, textField } from './ui'
 
 const TEXT = messages({
   ko: {
@@ -76,7 +76,7 @@ function Field({ label, ...input }: { label: string } & InputHTMLAttributes<HTML
       <span className="text-[13px] font-medium text-gray-600">{label}</span>
       <input
         {...input}
-        className={`mt-1.5 h-12 w-full rounded-2xl px-4 text-base sm:text-[14px] ${fieldBase}`}
+        className={`mt-1.5 ${textField}`}
       />
     </label>
   )

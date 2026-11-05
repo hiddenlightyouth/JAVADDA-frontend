@@ -146,7 +146,7 @@ function ContestList({ onOpen }: { onOpen: (contest: Contest) => void }) {
     <div className="@container">
       {/* 공고 탐색의 거르는 줄(PostingFilterBar)과 같은 모양이에요. 좁으면 검색창이 한 줄을 다 쓰고 정렬은 아래로 내려가요. */}
       <div className="flex flex-wrap items-center gap-2">
-        <label className="relative flex h-11 min-w-0 flex-1 basis-full items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-4 transition-colors focus-within:border-brand @2xl:basis-0">
+        <label className="relative flex h-10 min-w-0 flex-1 basis-full items-center gap-2.5 rounded-lg border border-gray-200 bg-white px-4 transition-colors focus-within:border-brand @2xl:basis-0">
           <SearchIcon />
           <input
             type="search"

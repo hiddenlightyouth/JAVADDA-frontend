@@ -408,7 +408,7 @@ export function QuestionsTab({ reportId, onPractice }: { reportId: string; onPra
                     track('questions_filter', { category: value ?? 'all' })
                     setCategory(value)
                   }}
-                  className={`flex h-8 items-center gap-1.5 ${buttonRadius} px-3 text-[13px] font-medium transition-colors disabled:opacity-40 ${on ? 'bg-brand-soft text-brand-hover' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                  className={`flex h-10 items-center gap-1.5 ${buttonRadius} px-3.5 text-[13px] font-medium transition-colors disabled:opacity-40 ${on ? 'bg-brand-soft text-brand-hover' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
                 >
                   {value ? L.categories[value] : L.all}
                   <span className="tabular-nums opacity-60">{count}</span>

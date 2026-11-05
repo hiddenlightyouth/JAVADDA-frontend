@@ -84,7 +84,7 @@ export function PostingFilterBar({ from, query, onQuery, family, onFamily, caree
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <label className="relative flex h-11 min-w-0 flex-1 basis-full items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-4 transition-colors focus-within:border-brand @2xl:basis-0">
+      <label className="relative flex h-10 min-w-0 flex-1 basis-full items-center gap-2.5 rounded-lg border border-gray-200 bg-white px-4 transition-colors focus-within:border-brand @2xl:basis-0">
         <SearchIcon />
         <input
           type="search"

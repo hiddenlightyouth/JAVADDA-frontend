@@ -100,7 +100,7 @@ export function PlansModal({ onClose }: { onClose: () => void }) {
               <button
                 type="button"
                 disabled
-                className={`mt-6 h-10 rounded-full text-[13px] font-semibold ${current ? 'bg-brand-soft text-brand' : 'bg-gray-200/70 text-gray-400'}`}
+                className={`mt-6 h-10 rounded-lg text-[13px] font-semibold ${current ? 'bg-brand-soft text-brand' : 'bg-gray-200/70 text-gray-400'}`}
               >
                 {current ? L.current : plan.id === 'FREE' ? L.base : L.soon}
               </button>

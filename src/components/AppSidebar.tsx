@@ -124,10 +124,10 @@ interface Props {
   onLogin?: () => void
 }
 
-const link = 'relative flex h-9 w-full items-center rounded-xl px-3 text-left text-[13px] font-medium transition-colors'
+const link = 'relative flex h-9 w-full items-center rounded-lg px-3 text-left text-[13px] font-medium transition-colors'
 const tone = (active: boolean) => (active ? 'bg-gray-200/70 text-gray-900' : 'text-gray-600 hover:bg-gray-200/50 hover:text-gray-900')
 /** 사이드바 아래의 아이콘 버튼이에요. 회색 사이드바 위라 한 단계 짙은 회색으로 깔려요. */
-const sideIconButton = 'flex size-9 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-gray-200/50 hover:text-gray-700'
+const sideIconButton = 'flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-gray-200/50 hover:text-gray-700'
 
 /** 리포트 줄을 끌어 옮길 때 놓일 자리예요. 위로 옮기면 그 줄의 위, 아래로 옮기면 아래에 메인 컬러 선이 생겨요. */
 type DropMark = 'before' | 'after' | null
@@ -225,7 +225,7 @@ function ResumeFolder({ group, open, onToggle }: { group: ResumeGroup; open: boo
       aria-expanded={open}
       aria-label={list.toggle(name)}
       onClick={onToggle}
-      className="flex h-8 w-full items-center gap-1.5 rounded-xl px-2 text-left text-[12.5px] font-medium text-gray-600 transition-colors hover:bg-gray-200/50 hover:text-gray-900"
+      className="flex h-8 w-full items-center gap-1.5 rounded-lg px-2 text-left text-[12.5px] font-medium text-gray-600 transition-colors hover:bg-gray-200/50 hover:text-gray-900"
     >
       <ChevronDownIcon className={`size-3 shrink-0 text-gray-400 transition-transform ${open ? '' : '-rotate-90'}`} />
       <DocumentIcon className="size-3.5 shrink-0 text-gray-400" />
@@ -370,7 +370,7 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
         <button
           type="button"
           onClick={onNew}
-          className="flex h-10 w-full items-center gap-2 rounded-xl bg-white px-3 text-[13px] font-semibold text-gray-900 ring-1 ring-gray-200 transition-colors hover:text-brand"
+          className="flex h-10 w-full items-center gap-2 rounded-lg bg-white px-3 text-[13px] font-semibold text-gray-900 ring-1 ring-gray-200 transition-colors hover:text-brand"
         >
           <PlusIcon className="size-4" />
           <span className="flex-1 text-left">{text.new}</span>

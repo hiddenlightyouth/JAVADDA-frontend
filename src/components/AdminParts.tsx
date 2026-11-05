@@ -121,7 +121,7 @@ export function MemberCell({ userId, userName, userEmail, className = 'max-w-[20
 
 export function SearchBox({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) {
   return (
-    <label className={`flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg px-3 focus-within:border-brand sm:max-w-xs sm:min-w-56 ${fieldBase}`}>
+    <label className={`flex h-10 min-w-0 flex-1 items-center gap-2 rounded-lg px-3 focus-within:border-brand sm:max-w-xs sm:min-w-56 ${fieldBase}`}>
       <SearchIcon className="size-3.5 shrink-0 text-gray-400" />
       <input
         type="search"

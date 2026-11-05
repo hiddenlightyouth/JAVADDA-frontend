@@ -483,12 +483,12 @@ export function PostingMeta({ posting, size = 'sm', careerClass = 'flex', locati
 }
 
 /**
- * 거르는 줄의 버튼 모양이에요(44px). 고른 것은 메인 컬러 테두리와 연한 바탕이에요. 기업 버튼 줄(`CompanyFilter`)과 분류 버튼 줄(`CategoryFilter`)이 같이 쓰고,
- * 같은 줄의 검색창, 드롭다운(size="lg")과 높이가 같아요. 기업을 고르는 일이 화면의 첫 동작이라 다른 도구 버튼(36px)보다 한 단계 크게 둬서 누르기 쉽게 해요.
+ * 거르는 줄의 버튼 모양이에요(40px). 고른 것은 메인 컬러 테두리와 연한 바탕이에요. 기업 버튼 줄(`CompanyFilter`)과 분류 버튼 줄(`CategoryFilter`)이 같이 쓰고,
+ * 높이와 모서리는 다른 버튼, 검색창, 드롭다운과 같아요(`ui`의 controlHeight, buttonRadius).
  * 글자만 있는 버튼은 px-5, 로고를 앞에 붙인 버튼은 `filterLogoChip`을 덧붙여요.
  */
 export const filterChip = (on: boolean) =>
-  `flex h-11 shrink-0 items-center rounded-full border text-[14.5px] font-medium transition-colors ${
+  `flex h-10 shrink-0 items-center rounded-lg border text-[14px] font-medium transition-colors ${
     on ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
   }`
 /** 로고(`CompanyMark`, size-8)를 앞에 붙인 거르는 버튼의 여백이에요. */

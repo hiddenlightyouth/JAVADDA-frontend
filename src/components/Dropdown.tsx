@@ -66,7 +66,7 @@ export function Dropdown({ label, value, active = false, groups, onOpen, align =
   onOpen?: () => void
   /** 메뉴를 버튼의 어느 쪽 끝에 맞출지. 오른쪽 끝에 놓인 버튼(설정 창)은 right예요. */
   align?: 'left' | 'right'
-  /** md는 줄 안의 기본 크기(36px), lg는 화면 맨 위 거르는 줄의 크기(44px)예요. */
+  /** 높이는 둘 다 40px이고, lg는 화면 맨 위 거르는 줄에서 글자가 조금 커요. */
   size?: 'md' | 'lg'
   /** 버튼 모양을 덧씌울 때 써요. 크기는 size로 정하고 여기서 바꾸지 않아요. */
   className?: string

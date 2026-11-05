@@ -278,7 +278,7 @@ export function TechInterview() {
   return (
     <div className="@container">
       <div className="flex flex-wrap items-center gap-2">
-        <label className="relative flex h-11 min-w-0 flex-1 basis-full items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-4 transition-colors focus-within:border-brand @2xl:basis-0">
+        <label className="relative flex h-10 min-w-0 flex-1 basis-full items-center gap-2.5 rounded-lg border border-gray-200 bg-white px-4 transition-colors focus-within:border-brand @2xl:basis-0">
           <SearchIcon />
           <input
             type="search"
@@ -312,7 +312,7 @@ export function TechInterview() {
             if (!isSignedIn()) return requestLogin()
             setChoosing(true)
           }}
-          className={`inline-flex h-11 shrink-0 items-center gap-1.5 ${buttonRadius} bg-brand px-5 text-[14px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-gray-200 disabled:text-gray-400`}
+          className={`inline-flex h-10 shrink-0 items-center gap-1.5 ${buttonRadius} bg-brand px-5 text-[14px] font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-gray-200 disabled:text-gray-400`}
         >
           {L.start}
           <ChevronRightIcon className="size-4" strokeWidth={2} />

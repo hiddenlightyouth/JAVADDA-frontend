@@ -89,9 +89,9 @@ function KakaoMark() {
   )
 }
 
-const base = 'flex w-full items-center justify-center gap-2.5 rounded-full font-semibold transition-colors disabled:opacity-60'
-/** 로그인 화면은 큰 버튼(48px), 내 정보의 연결 버튼은 줄 안의 버튼(36px)이에요. */
-const SIZES = { lg: 'h-12 text-[15px]', sm: 'h-9 text-[13px]' }
+const base = 'flex w-full items-center justify-center gap-2.5 rounded-lg font-semibold transition-colors disabled:opacity-60'
+/** 높이는 다른 버튼과 같은 40px이고, 로그인 화면(lg)은 글자만 조금 커요. */
+const SIZES = { lg: 'h-10 text-[14px]', sm: 'h-10 text-[13px]' }
 
 interface ButtonsProps {
   mode: SocialMode

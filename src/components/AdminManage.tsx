@@ -138,7 +138,7 @@ function Toolbar({ children, refresh }: { children?: ReactNode; refresh: () => v
   return (
     <div className="flex flex-wrap items-center gap-2">
       {children}
-      <button type="button" aria-label="새로고침" title="새로고침" className={`${iconButton.md} ml-auto size-9`} onClick={refresh}>
+      <button type="button" aria-label="새로고침" title="새로고침" className={`${iconButton.md} ml-auto size-10`} onClick={refresh}>
         <RefreshIcon />
       </button>
     </div>
@@ -227,7 +227,7 @@ export function ManagementOverview({ onTab }: { onTab: (tab: AdminTab) => void }
     <>
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-[15px] font-semibold text-gray-900">서비스</h2>
-        <button type="button" aria-label="새로고침" title="새로고침" className={`${iconButton.md} size-9`} onClick={state.reload}>
+        <button type="button" aria-label="새로고침" title="새로고침" className={`${iconButton.md} size-10`} onClick={state.reload}>
           <RefreshIcon />
         </button>
       </div>

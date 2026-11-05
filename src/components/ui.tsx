@@ -82,22 +82,27 @@ export function useShowMore(total: number, reset: unknown, step = SHOW_STEP): { 
 
 // ── 버튼 ───────────────────────────────────────────────
 
-/** 모든 버튼의 모서리 둥글기예요. 관리자 API 심사 칸의 거절 버튼(도구 버튼) 기준이고, 새 버튼도 이것을 써요. */
+/**
+ * 버튼, 드롭다운, 입력칸, 검색창, 거르는 버튼의 모서리 둥글기와 높이예요. 모두 이 둘 하나로 맞춰서, 어느 화면에서 나란히 놓여도 높이와 모서리가 같아요.
+ * 새 버튼과 입력칸도 이것을 써요. 표 안의 작은 글자 버튼(ghostButton)과 아이콘 버튼만 한 단계 작아요.
+ */
 export const buttonRadius = 'rounded-lg'
+/** 버튼, 드롭다운, 입력칸, 검색창의 높이(40px)예요. */
+export const controlHeight = 'h-10'
 
 const brandFill = 'bg-brand font-semibold text-white transition-colors hover:bg-brand-hover disabled:bg-gray-200 disabled:text-gray-400'
 
-/** 메인 컬러의 알약 버튼이에요. 창과 줄 안의 기본 크기(36px)예요. 아이콘을 앞에 붙여도 가운데에 맞아요. */
-export const primaryButton = `inline-flex h-9 items-center justify-center gap-1.5 ${buttonRadius} px-4 text-[13px] ${brandFill}`
-/** 안내 화면 가운데에 두는 한 단계 큰 메인 버튼(40px)이에요. */
-export const primaryButtonMd = `inline-flex h-10 items-center justify-center ${buttonRadius} px-5 text-[14px] ${brandFill}`
-/** 로그인처럼 폭을 다 채우는 큰 메인 버튼(48px)이에요. */
-export const primaryButtonLg = `h-12 w-full ${buttonRadius} text-[15px] ${brandFill}`
+/** 메인 컬러 버튼이에요(40px). 아이콘을 앞에 붙여도 가운데에 맞아요. */
+export const primaryButton = `inline-flex ${controlHeight} items-center justify-center gap-1.5 ${buttonRadius} px-4 text-[13px] ${brandFill}`
+/** 안내 화면 가운데에 두는 메인 버튼이에요. 높이는 같고 옆 여백과 글자만 조금 커요. */
+export const primaryButtonMd = `inline-flex ${controlHeight} items-center justify-center ${buttonRadius} px-5 text-[14px] ${brandFill}`
+/** 로그인처럼 폭을 다 채우는 메인 버튼이에요. 높이는 다른 버튼과 같아요. */
+export const primaryButtonLg = `${controlHeight} w-full ${buttonRadius} text-[15px] ${brandFill}`
 /** 취소처럼 바탕 없이 글자만 있는 버튼이에요. */
-export const quietButton = `h-9 ${buttonRadius} px-3.5 text-[13px] font-medium text-gray-600 transition-colors hover:text-gray-900`
+export const quietButton = `${controlHeight} ${buttonRadius} px-3.5 text-[13px] font-medium text-gray-600 transition-colors hover:text-gray-900`
 /** 지우기처럼 되돌리기 어려운 작업의 확인 버튼이에요. */
-export const dangerButton = `h-9 ${buttonRadius} bg-red-500 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:bg-gray-200 disabled:text-gray-400`
-const softBase = `h-9 shrink-0 ${buttonRadius} bg-gray-100 px-4 text-[13px] font-medium text-gray-700 transition-colors disabled:text-gray-400 disabled:hover:text-gray-400`
+export const dangerButton = `${controlHeight} ${buttonRadius} bg-red-500 px-4 text-[13px] font-semibold text-white transition-colors hover:bg-red-600 disabled:bg-gray-200 disabled:text-gray-400`
+const softBase = `${controlHeight} shrink-0 ${buttonRadius} bg-gray-100 px-4 text-[13px] font-medium text-gray-700 transition-colors disabled:text-gray-400 disabled:hover:text-gray-400`
 /** 더 보기, 연결 끊기처럼 옅은 회색 알약 버튼이에요. */
 export const softButton = `${softBase} hover:text-brand`
 /** 연결 끊기, 기기 로그아웃처럼 지우는 쪽의 회색 알약 버튼이에요. 마우스를 올리면 빨개져요. */
@@ -106,20 +111,20 @@ export const softDangerButton = `${softBase} hover:text-red-500`
 // 누를 수 없을 때는 글자만 흐려지고, 마우스를 올려도 테두리와 글자가 바뀌지 않아요.
 const toolBase =
   'flex items-center gap-2 border border-gray-200 bg-white font-medium whitespace-nowrap transition-colors disabled:text-gray-400 disabled:hover:border-gray-200 disabled:hover:text-gray-400'
-/** 테두리를 두른 흰 도구 버튼이에요(36px). 드롭다운, 재진단, 복사 같은 보조 작업에 써요. */
-export const toolButton = `${toolBase} h-9 ${buttonRadius} px-3.5 text-[13px] text-gray-800 hover:border-gray-300 hover:text-gray-950`
+/** 테두리를 두른 흰 도구 버튼이에요(40px). 드롭다운, 재진단, 복사 같은 보조 작업에 써요. */
+export const toolButton = `${toolBase} ${controlHeight} ${buttonRadius} px-3.5 text-[13px] text-gray-800 hover:border-gray-300 hover:text-gray-950`
 /**
- * 화면 맨 위 거르는 줄(공고 탐색, 추천 공고, 기술 블로그)의 큰 도구 버튼(44px)이에요.
- * 같은 줄의 검색창과 기업 고르기 버튼이 44px이라 높이를 맞춰요. 드롭다운의 size="lg"가 이 모양이에요.
+ * 화면 맨 위 거르는 줄(공고 탐색, 추천 공고, 기술 블로그)의 도구 버튼이에요. 높이는 다른 버튼과 같고(40px) 글자만 조금 커요.
+ * 드롭다운의 size="lg"가 이 모양이에요.
  */
-export const toolButtonLg = `${toolBase} h-11 ${buttonRadius} px-4 text-[14px] text-gray-800 hover:border-gray-300 hover:text-gray-950`
+export const toolButtonLg = `${toolBase} ${controlHeight} ${buttonRadius} px-4 text-[14px] text-gray-800 hover:border-gray-300 hover:text-gray-950`
 /** 도구 버튼의 빨간 모양이에요. 삭제에 써요. */
-export const toolDangerButton = `${toolBase} h-9 ${buttonRadius} px-3.5 text-[13px] text-red-500 hover:border-red-200 hover:text-red-600`
+export const toolDangerButton = `${toolBase} ${controlHeight} ${buttonRadius} px-3.5 text-[13px] text-red-500 hover:border-red-200 hover:text-red-600`
 /**
- * 제목 줄의 도구 버튼을 휴대폰(640px 미만)에서 아이콘만 남긴 36px 칸으로 줄여요. 버튼에 덧붙이고, 글자는 `phoneHidden`으로 감싸 화면 읽기 프로그램에는 남겨요.
+ * 제목 줄의 도구 버튼을 휴대폰(640px 미만)에서 아이콘만 남긴 40px 칸으로 줄여요. 버튼에 덧붙이고, 글자는 `phoneHidden`으로 감싸 화면 읽기 프로그램에는 남겨요.
  * 리포트처럼 제목 줄 버튼이 많아 두 줄로 넘치는 화면이 써요.
  */
-export const iconOnPhone = 'max-sm:w-9 max-sm:justify-center max-sm:px-0'
+export const iconOnPhone = 'max-sm:w-10 max-sm:justify-center max-sm:px-0'
 export const phoneHidden = 'max-sm:sr-only'
 
 const ghostBase = `h-8 shrink-0 ${buttonRadius} px-2 text-[12.5px] font-medium transition-colors disabled:text-gray-300 disabled:hover:bg-transparent`
@@ -150,11 +155,11 @@ export const menuDangerItem = `${menuBase} font-medium text-red-500 hover:bg-red
 export const fieldBase = 'border border-gray-200 bg-white text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-brand'
 // 모바일에서 글자가 16px보다 작으면 입력칸을 누를 때 화면이 확대돼서, 좁은 화면에서는 16px로 둬요.
 /** 한 줄 입력칸(40px)이에요. */
-export const textField = `h-10 w-full rounded-lg px-3 text-base sm:text-[13.5px] ${fieldBase}`
-/** 줄 안에 두는 작은 한 줄 입력칸(36px)이에요. 도구 버튼과 높이가 같아요. */
-export const textFieldSm = `h-9 w-full rounded-lg px-3 text-base sm:text-[13px] ${fieldBase}`
+export const textField = `${controlHeight} w-full ${buttonRadius} px-3 text-base sm:text-[13.5px] ${fieldBase}`
+/** 창과 칸 안의 한 줄 입력칸이에요. 높이(40px)는 textField와 같고 글자만 조금 작아요. */
+export const textFieldSm = `${controlHeight} w-full ${buttonRadius} px-3 text-base sm:text-[13px] ${fieldBase}`
 /** 여러 줄 입력칸이에요. 높이는 덧붙여서 정해요. */
-export const textArea = `w-full resize-none rounded-xl p-4 text-base leading-relaxed sm:text-[14px] ${fieldBase}`
+export const textArea = `w-full resize-none ${buttonRadius} p-4 text-base leading-relaxed sm:text-[14px] ${fieldBase}`
 
 // ── 글자 ───────────────────────────────────────────────
 
@@ -208,8 +213,8 @@ export function FormError({ children, className = '' }: { children: ReactNode; c
 
 const SEGMENTED = {
   sm: { box: 'rounded-lg p-0.5', item: 'h-7 rounded-md px-2.5 text-[12.5px]', icon: 'size-7 rounded-md' },
-  // md는 바깥 높이가 36px라 같은 줄의 도구 버튼, 드롭다운과 높이가 같아요.
-  md: { box: 'rounded-lg p-0.5', item: 'h-8 rounded-md px-3.5 text-[13px]', icon: 'size-8 rounded-md' },
+  // md는 바깥 높이가 40px라 같은 줄의 버튼, 드롭다운, 입력칸과 높이가 같아요.
+  md: { box: 'rounded-lg p-0.5', item: 'h-9 rounded-md px-3.5 text-[13px]', icon: 'size-9 rounded-md' },
 }
 
 /** 켜고 끄는 작은 체크 칸과 이름이에요. 켜면 메인 컬러 칸에 흰 체크가 들어가요. */

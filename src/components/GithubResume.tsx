@@ -345,7 +345,7 @@ function RepoPicker({ connection, addTo, onDone, onWorking, onDisconnected }: {
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <label className="flex h-11 min-w-0 flex-1 basis-64 items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-4 transition-colors focus-within:border-brand">
+        <label className="flex h-10 min-w-0 flex-1 basis-64 items-center gap-2.5 rounded-lg border border-gray-200 bg-white px-4 transition-colors focus-within:border-brand">
           <SearchIcon />
           <input
             type="search"
