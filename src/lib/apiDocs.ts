@@ -718,7 +718,7 @@ export const ENDPOINTS: EndpointDoc[] = [
     scope: 'contests:read',
     method: 'GET',
     path: '/contests/{id}',
-    desc: ['마감 뒤 7일이 지나면 404입니다.'],
+    desc: ['마감한 공모전도 지우지 않아 계속 조회되며, status가 closed입니다.'],
     pathParams: [{ name: 'id', type: 'String', desc: '공모전 아이디(c-로 시작)', required: true }],
     response: [{ name: 'data', type: 'Contest', desc: '공모전' }],
     types: ['Contest', 'ContestLink'],
