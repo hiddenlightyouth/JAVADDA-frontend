@@ -194,6 +194,7 @@ src/
   lib/apiKeys.ts      API 키 타입과 요청(fetchMyKeys, requestKey, revokeKey, fetchKeyUsage, fetchScopes), 공개 API 주소(PUBLIC_API_BASE)
   components/AdminOverview.tsx, AdminUsers.tsx, AdminChats.tsx, AdminFeedback.tsx, AdminUsage.tsx  연결하지 않는 예전 채팅 관리자 화면
   components/AdminParts.tsx  관리자 탭이 같이 쓰는 부품. 숫자 칸(Stat, StatsLoading), 막대 그래프(BarChart), 기기 태그(DeviceTags), 회원 칸(MemberCell), 검색창(SearchBox, useDebounced), 한 번에 받는 자료(useAdminData)와 더 보기로 받는 목록(usePaged), 표(PagedTable, th, td, 눌러 여는 줄 openableRow), 상세 칸의 이름과 값(InfoGrid)과 내용 자리(PanelContent)
+  components/PasswordChange.tsx 비밀번호 바꾸는 칸(PasswordForm), 내 정보의 비밀번호 변경 창(PasswordChangeDialog), 관리자가 초기화한 계정이 새 비밀번호를 정하는 화면(PasswordChangeRequired)
   components/Plans.tsx       요금제 세 개만 보여주는 업그레이드 창(PlansModal)
   components/Feedback.tsx    버그 신고 창
   components/Dialog.tsx      화면을 덮고 가운데에 뜨는 창(Modal), 한 번 더 묻는 확인 창(ConfirmDialog), 오른쪽에서 여는 칸(SidePanel, 갭 상세, 관리자의 회원과 호출 상세가 같이 써요. body에 그리고 바깥이나 Esc로 닫아요)
@@ -280,8 +281,11 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 - GitHub로 로그인: 로그인과 회원가입 화면(`AuthForm`)에 "GitHub로 계속하기" 버튼(`Social`의 `SocialButtons`)이 있어요. 서버의 `/config`에 `githubClientId`가 있을 때만 보여요(서버에 GitHub OAuth App이 있을 때). 누르면 GitHub 권한 화면(`read:user user:email`)으로 가고, `/auth/github/callback`(`/app` 밖, `SocialCallback`)으로 돌아와 이 탭에 적어 둔 state를 확인한 뒤 코드를 서버(`POST /auth/social/github`)로 보내 로그인하고, 원래 화면으로 돌아가요(잃었으면 `/app`). 처음이면 GitHub의 인증된 대표 이메일로 가입돼요.
 - 같은 이메일로 이미 이메일 가입한 계정이 있으면 로그인하지 않고 "이미 이메일로 가입한 계정이에요. 이메일로 로그인한 뒤, 내 정보에서 GitHub를 연결해 주세요."라고 알려요(서버가 계정을 합치지 않아요).
+- 내 정보(`/app/me`)의 비밀번호 칸에서 "비밀번호 변경" 창(`PasswordChange`의 `PasswordChangeDialog`)을 열어 지금 비밀번호, 새 비밀번호(8자에서 64자), 확인을 적고 바꿔요(`changePassword`, PUT /users/me/password). 바꾸면 지금 기기만 남기고 다른 기기는 로그아웃돼요. GitHub로만 가입한 계정(`passwordSet`이 false)에는 이 칸이 없어요.
+- 관리자가 비밀번호를 초기화한 계정은 내 정보에 `passwordChangeRequired`가 붙어요. 그 계정으로 로그인하면 `App`이 다른 화면 대신 "새 비밀번호를 정해 주세요" 화면(`PasswordChangeRequired`)만 보여줘요. 임시 비밀번호와 새 비밀번호를 적어 바꾸면 내 정보를 다시 받아 원래 화면으로 가요. 바꾸지 않으려면 로그아웃만 할 수 있어요. 화면에서만 막고 서버는 다른 API를 막지 않아요.
+- 관리자가 이용을 정지한 계정은 로그인과 토큰 재발급이 막혀요(C4034, "이용이 정지된 계정이에요."). 재발급이 C4034면 이 기기의 로그인을 지워요.
 - 내 정보(`/app/me`)의 소셜 로그인 줄에서 GitHub를 연결하고 해제해요. 연결하면 GitHub 아이디를 적어요. GitHub로만 가입한 계정은 해제할 수 없어요. 실패하면 돌아온 화면이 이유와 "내 정보로 돌아가기"(로그인이면 `/app/login`)를 보여줘요.
-- 카카오 로그인과 앱에서 시작하는 계정 연결(`socialAppLink`)은 서버에 아직 없어서 꺼져 있어요. 오류 코드는 `auth.ts`의 `ERROR_MESSAGES`(C4006, C4016, C4018, C4096, C4097, C4098)예요.
+- 카카오 로그인과 앱에서 시작하는 계정 연결(`socialAppLink`)은 서버에 아직 없어서 꺼져 있어요. 오류 코드는 `auth.ts`의 `ERROR_MESSAGES`(C4006, C4016, C4018, C4096, C4097, C4098, 비밀번호 바꾸기의 C4008, C4009, 정지된 계정 C4034)예요.
 
 ## 자료와 API
 
@@ -593,6 +597,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `language_change` | 헤더나 앱의 설정 창에서 언어를 바꿨을 때 | `lang`(ko, en), `from`(header, settings) |
 | `about_faq_open` | 소개 화면에서 자주 묻는 질문을 펼쳤을 때 | `id` |
 | `team_link_click`, `article_nav_click`, `article_cta_click`, `team_articles_click`, `about_nav_click`, `about_cta_click`, `try_app_click`, `app_download_click` | 소개와 아티클, 헤더의 링크, 웹 앱 사이드바의 앱 다운로드 | `from`(앱 다운로드는 header, about, sidebar) |
+| `auth_password_change` | 내 정보나 초기화된 계정의 화면에서 비밀번호를 바꿨을 때 | `forced`, `success` |
 | `account_nav_click`, `auth_login`, `auth_signup`, `auth_social_click`, `auth_social`, `auth_logout`, `auth_social_unlink`, `auth_withdraw`, `session_revoke` | 계정 | 전과 같아요 |
 | `app_login_browser_click`, `app_login_approve`, `app_login_cancel`, `app_login` | 앱 로그인 | `success` |
 | `settings_open`, `app_theme_change`, `app_update_check`, `app_shield_change`, `capture_shield_view`, `capture_shield_allow`, `app_shortcut_hints_change`, `app_ai_model_change`(`model`), `app_menu_open`, `plans_open` | 앱의 설정과 메뉴 | 전과 같아요 |

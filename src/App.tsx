@@ -28,6 +28,7 @@ const SocialCallback = lazy(() => import('./components/Social').then((module) =>
 const GithubAppCallback = lazy(() => import('./components/Social').then((module) => ({ default: module.GithubAppCallback })))
 const PlansModal = lazy(() => import('./components/Plans').then((module) => ({ default: module.PlansModal })))
 const Home = lazy(() => import('./components/Home').then((module) => ({ default: module.Home })))
+const PasswordChangeRequired = lazy(() => import('./components/PasswordChange').then((module) => ({ default: module.PasswordChangeRequired })))
 const BugReport = lazy(() => import('./components/Feedback').then((module) => ({ default: module.BugReport })))
 
 const TEXT = messages({
@@ -206,6 +207,16 @@ export default function App() {
   }
 
   if (isApp && tokens === null) return <AppSignedOut />
+
+  // 관리자가 비밀번호를 초기화한 계정은 새 비밀번호를 정하기 전까지 다른 화면을 열지 않아요.
+  if (tokens !== null && me?.passwordChangeRequired) {
+    return (
+      <Suspense fallback={<div data-app-drag className="h-dvh bg-white" />}>
+        <PasswordChangeRequired />
+        <Toast />
+      </Suspense>
+    )
+  }
 
   const navFrom = account ?? (article ? 'articles' : page?.kind ?? 'home')
 

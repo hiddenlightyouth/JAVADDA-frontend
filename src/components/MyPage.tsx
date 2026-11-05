@@ -28,6 +28,7 @@ import { SocialButtons, useSocialClients } from './Social'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { CheckIcon } from './Icons'
+import { PasswordChangeDialog } from './PasswordChange'
 import { FormError, LoadProgress, softButton, softDangerButton } from './ui'
 
 const TEXT = messages({
@@ -55,6 +56,9 @@ const TEXT = messages({
     devices: '로그인한 기기',
     history: '로그인 기록',
     withdraw: '회원탈퇴',
+    password: '비밀번호',
+    passwordBody: '로그인할 때 쓰는 비밀번호를 바꿔요.',
+    changePassword: '비밀번호 변경',
     // 사용자가 정한 문구라 격식체 그대로 둬요.
     withdrawTitle: '정말 탈퇴할까요?',
     withdrawBody: '계속하면 계정에 대한 모든 정보가 유실되며, 이 작업은 되돌릴 수 없습니다.',
@@ -84,6 +88,9 @@ const TEXT = messages({
     devices: 'Signed-in devices',
     history: 'Sign-in history',
     withdraw: 'Delete account',
+    password: 'Password',
+    passwordBody: 'Change the password you use to sign in.',
+    changePassword: 'Change password',
     withdrawTitle: 'Delete your account?',
     withdrawBody: 'All information associated with your account will be permanently lost. This cannot be undone.',
     withdrawConfirm: 'Delete account',
@@ -350,6 +357,8 @@ export function MyPage({ onSignedOut }: Props) {
   /** 탈퇴할지 물어보고 있는지 */
   const [askingWithdraw, setAskingWithdraw] = useState(false)
   const [withdrawing, setWithdrawing] = useState(false)
+  /** 비밀번호 변경 창이 떠 있는지 */
+  const [changingPassword, setChangingPassword] = useState(false)
   const meLoad = useLoadProgress()
   const { one: oneMe } = meLoad
   const waitingMe = useLoadHold(!me)
@@ -414,6 +423,19 @@ export function MyPage({ onSignedOut }: Props) {
             </button>
           </div>
         </Section>
+
+        {/* GitHub로만 가입한 계정은 비밀번호가 없어서 두지 않아요. */}
+        {me && me.passwordSet !== false && (
+          <Section title={text.password}>
+            <div className="flex items-center justify-between gap-4 border-y border-gray-100 py-3.5 text-[14px]">
+              <p className="text-gray-500">{text.passwordBody}</p>
+              <button type="button" onClick={() => setChangingPassword(true)} className={softButton}>
+                {text.changePassword}
+              </button>
+            </div>
+          </Section>
+        )}
+        {changingPassword && <PasswordChangeDialog onClose={() => setChangingPassword(false)} />}
 
         {/* 설정 창(사이드바 아래 톱니바퀴)과 같은 AI 모델 고르기예요. */}
         <Section title={text.ai}>

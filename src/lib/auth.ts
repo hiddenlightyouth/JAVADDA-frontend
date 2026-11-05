@@ -25,6 +25,8 @@ export interface Me {
   kakao?: boolean
   /** 이메일과 비밀번호로 로그인할 수 있는지. 소셜 로그인으로 가입했으면 false예요. */
   passwordSet?: boolean
+  /** 관리자가 비밀번호를 초기화해서, 새 비밀번호를 정하기 전까지 다른 화면을 쓸 수 없어요(`PasswordChangeRequired`). */
+  passwordChangeRequired?: boolean
 }
 
 interface AuthState {
@@ -68,7 +70,9 @@ const ERROR_MESSAGES = messages<Record<string, string>>({
     C4096: '이미 이메일로 가입한 계정이에요. 이메일로 로그인한 뒤, 내 정보에서 GitHub를 연결해 주세요.',
     C4097: '이미 다른 계정에 연결된 GitHub 계정이에요.',
     C4098: 'GitHub로만 가입한 계정이라 연결을 해제할 수 없어요.',
-    C4034: '정지된 계정이에요. 관리자에게 문의해 주세요.',
+    C4034: '이용이 정지된 계정이에요. 관리자에게 문의해 주세요.',
+    C4008: '새 비밀번호가 지금 비밀번호와 같아요. 다른 비밀번호로 정해 주세요.',
+    C4009: 'GitHub로만 가입한 계정이라 비밀번호가 없어요.',
     C4041: '가입하지 않은 이메일이에요.',
     C4091: '이미 가입한 이메일이에요.',
     C002: '입력한 내용을 다시 확인해 주세요.',
@@ -84,6 +88,8 @@ const ERROR_MESSAGES = messages<Record<string, string>>({
     C4097: 'This GitHub account is already connected to another account.',
     C4098: "This account was created with GitHub, so GitHub can't be disconnected.",
     C4034: 'This account is suspended. Please contact an administrator.',
+    C4008: 'Your new password is the same as the current one. Please choose another.',
+    C4009: 'This account was created with GitHub, so it has no password.',
     C4041: "There's no account with this email.",
     C4091: 'This email is already registered.',
     C002: 'Please check what you entered.',
@@ -180,7 +186,8 @@ function reissue(): Promise<boolean> {
         setState({ ...auth.get(), tokens: result.data })
         return true
       }
-      if (res.status === 400 || res.status === 401) clearAuth()
+      // 이용이 정지된 계정(C4034)도 로그인을 지워요.
+      if (res.status === 400 || res.status === 401 || result.code === 'C4034') clearAuth()
       return false
     } catch {
       return false
@@ -306,6 +313,17 @@ export const linkSocial = (provider: string, code: string, redirectUri: string):
   accountChange(
     `/auth/social/${provider}/link`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, redirectUri }) },
+    () => loadMe(),
+  )
+
+/**
+ * 내 비밀번호를 바꿔요. 관리자가 초기화한 계정은 지금 비밀번호 자리에 임시 비밀번호를 넣어요.
+ * 서버는 지금 쓰는 기기만 남기고 다른 기기를 로그아웃시켜요. 바꾸면 내 정보를 다시 받아 초기화 표시를 지워요.
+ */
+export const changePassword = (currentPassword: string, newPassword: string): Promise<AuthOutcome> =>
+  accountChange(
+    '/users/me/password',
+    { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ currentPassword, newPassword }) },
     () => loadMe(),
   )
 
