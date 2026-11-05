@@ -48,6 +48,9 @@ type AppMessage =
   | { type: 'shield'; on: boolean }
   | { type: 'update' }
   | { type: 'open'; url: string }
+  | { type: 'mic'; action: 'prepare'; recognize: boolean }
+  | { type: 'mic'; action: 'open'; lang: string | null }
+  | { type: 'mic'; action: 'close' }
 
 /** 화면 공유나 녹화가 시작되거나 끝나면 앱이 웹뷰에 보내는 이벤트예요(앱 1.2부터). */
 const APP_CAPTURE_EVENT = 'javadda:app-capture'

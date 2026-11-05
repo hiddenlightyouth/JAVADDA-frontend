@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { track } from './analytics'
 import { charPose, REST, withLoudness, type MouthPose } from './lipsync'
+import { appAtLeast, postToApp } from './app'
 import { isApp } from './shell'
 import { readItem, writeItem } from './storage'
 import { createStore, useStore } from './store'
@@ -41,8 +42,65 @@ const recognitionClass = (): RecognitionClass | null => {
   return scope.SpeechRecognition ?? scope.webkitSpeechRecognition ?? null
 }
 
+/**
+ * macOS 앱 2.7부터는 마이크와 음성 인식을 앱이 직접 열어요(앱 레포의 `MicCapture`).
+ * 웹뷰의 음성 인식과 getUserMedia는 마이크를 에코 제거 모드로 열어서, 그동안 다른 소리가 줄고 블루투스 이어폰이 통화 모드로 바뀌며 띠릭 소리가 났어요.
+ * 답할 때마다 마이크를 따로 두 번 열고 닫아서 그 소리가 되풀이됐고, 쓰고 난 뒤 디스코드 같은 다른 앱의 마이크가 먹통이 되기도 했어요.
+ * 앱은 마이크를 하나만, 에코 제거 없이 열고 다 쓰면 놓아요. 소리 막대와 음성 인식이 같은 마이크를 나눠 써요.
+ */
+const nativeMic = isApp && appAtLeast('2.7')
+const APP_MIC_EVENT = 'javadda:app-mic'
+
+type NativeMicDetail =
+  | { type: 'level'; value: number }
+  | { type: 'interim'; text: string }
+  | { type: 'final'; text: string }
+  | { type: 'error'; code: string }
+  | { type: 'prepared'; result: MicResult }
+
+const nativeListeners = new Set<(detail: NativeMicDetail) => void>()
+
+if (nativeMic) {
+  window.addEventListener(APP_MIC_EVENT, (event) => {
+    const detail = (event as CustomEvent<NativeMicDetail | undefined>).detail
+    if (detail) nativeListeners.forEach((listener) => listener(detail))
+  })
+}
+
+function onNativeMic(listener: (detail: NativeMicDetail) => void) {
+  nativeListeners.add(listener)
+  return () => void nativeListeners.delete(listener)
+}
+
+/** 앱 마이크를 쓰는 곳이에요. 소리 막대(level)나 음성 인식(lang) 중 하나라도 쓰면 켜 두고, 아무도 쓰지 않으면 닫아요. */
+const nativeUse = { level: 0, lang: null as string | null }
+
+function syncNativeMic() {
+  if (nativeUse.lang || nativeUse.level > 0) postToApp({ type: 'mic', action: 'open', lang: nativeUse.lang })
+  else postToApp({ type: 'mic', action: 'close' })
+}
+
+/** 앱의 허락 창에 답하기를 기다리는 가장 긴 시간이에요. */
+const NATIVE_PREPARE_TIMEOUT_MS = 60000
+
+/** 앱에 마이크와 음성 인식 허락을 받아 달라고 해요. macOS가 처음 한 번만 물어요. */
+function prepareNativeMic(): Promise<MicResult> {
+  return new Promise((resolve) => {
+    const done = (result: MicResult) => {
+      clearTimeout(timer)
+      off()
+      resolve(result)
+    }
+    const off = onNativeMic((detail) => {
+      if (detail.type === 'prepared') done(detail.result)
+    })
+    const timer = setTimeout(() => done('ready'), NATIVE_PREPARE_TIMEOUT_MS)
+    postToApp({ type: 'mic', action: 'prepare', recognize: true })
+  })
+}
+
 /** 말로 답하기를 쓸 수 있는 브라우저인지예요. */
-export const canDictate = () => recognitionClass() !== null
+export const canDictate = () => nativeMic || recognitionClass() !== null
 
 /** 마이크를 미리 받은 결과예요. 'denied'는 권한이 없고, 'missing'은 마이크를 찾지 못한 거예요. */
 export type MicResult = 'ready' | 'denied' | 'missing'
@@ -57,6 +115,7 @@ const PRIME_TIMEOUT_MS = 15000
  * 시작 화면의 "마이크 켜기"를 누른 순간에 불러야 브라우저가 허락 창을 띄워요.
  */
 export async function prepareMic(lang: string): Promise<MicResult> {
+  if (nativeMic) return prepareNativeMic()
   if (!navigator.mediaDevices?.getUserMedia) return 'ready'
   try {
     const media = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -122,6 +181,13 @@ export const joinSpeech = (text: string, more: string) => (text && more ? `${tex
 /** 잠깐 말이 없거나 멈춘 것은 오류로 치지 않아요. */
 const QUIET_ERRORS = new Set(['no-speech', 'aborted'])
 
+interface DictationSession {
+  recognition: Recognition | null
+  stopped: boolean
+  /** 앱 마이크를 놓아요. 앱이 연 마이크로 들을 때만 있어요. */
+  release?: () => void
+}
+
 /**
  * 말을 글자로 받아요. 확정된 글자는 onText로, 아직 바뀔 수 있는 글자는 interim으로 줘요.
  * 브라우저는 조용해지면 알아서 듣기를 끝내서, 사용자가 멈추기 전까지는 다시 켜요.
@@ -130,7 +196,7 @@ const QUIET_ERRORS = new Set(['no-speech', 'aborted'])
 export function useDictation(lang: string, onText: (text: string) => void, onError: (code: string) => void) {
   const [listening, setListening] = useState(false)
   const [interim, setInterim] = useState('')
-  const session = useRef<{ recognition: Recognition | null; stopped: boolean } | null>(null)
+  const session = useRef<DictationSession | null>(null)
   const pending = useRef('')
   const handlers = useRef({ onText, onError })
 
@@ -152,14 +218,15 @@ export function useDictation(lang: string, onText: (text: string) => void, onErr
     if (current) {
       current.stopped = true
       current.recognition?.abort()
+      current.release?.()
     }
     return rest
   }, [])
 
   const start = useCallback(() => {
     const Class = recognitionClass()
-    if (!Class || session.current) return
-    const current: { recognition: Recognition | null; stopped: boolean } = { recognition: null, stopped: false }
+    if ((!Class && !nativeMic) || session.current) return
+    const current: DictationSession = { recognition: null, stopped: false }
     session.current = current
 
     const fail = (code: string) => {
@@ -168,6 +235,28 @@ export function useDictation(lang: string, onText: (text: string) => void, onErr
       if (rest) handlers.current.onText(rest)
       handlers.current.onError(code)
     }
+
+    if (nativeMic) {
+      // 앱이 들은 글자를 보내요. 한 번 듣는 동안의 글자는 interim으로 쌓이다가, 끝나면 final로 한 번에 와요.
+      const off = onNativeMic((detail) => {
+        if (current.stopped) return
+        if (detail.type === 'interim') setPending(detail.text)
+        else if (detail.type === 'final') {
+          setPending('')
+          if (detail.text) handlers.current.onText(detail.text)
+        } else if (detail.type === 'error') fail(detail.code)
+      })
+      current.release = () => {
+        off()
+        nativeUse.lang = null
+        syncNativeMic()
+      }
+      nativeUse.lang = lang
+      syncNativeMic()
+      setListening(true)
+      return
+    }
+    if (!Class) return
 
     const listen = () => {
       const recognition = new Class()
@@ -646,7 +735,22 @@ export function chime() {
 export function useMicLevel(active: boolean) {
   const level = useRef(0)
   useEffect(() => {
-    if (!active || !navigator.mediaDevices?.getUserMedia) return
+    if (!active) return
+    if (nativeMic) {
+      // 앱은 음성 인식과 같은 마이크로 소리 크기를 재서, 마이크를 하나 더 열지 않아요.
+      nativeUse.level += 1
+      syncNativeMic()
+      const off = onNativeMic((detail) => {
+        if (detail.type === 'level') level.current = detail.value
+      })
+      return () => {
+        off()
+        nativeUse.level -= 1
+        syncNativeMic()
+        level.current = 0
+      }
+    }
+    if (!navigator.mediaDevices?.getUserMedia) return
     let stopped = false
     let stream: MediaStream | null = null
     let context: AudioContext | null = null
