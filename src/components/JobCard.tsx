@@ -155,7 +155,7 @@ function ViewButton({ onClick, className = 'inline-flex' }: { onClick: () => voi
   const L = useMessages(TEXT)
   return (
     <Tip text={L.view} className={className}>
-      <button type="button" onClick={onClick} aria-label={L.view} className={`${iconButton.md} hover:bg-gray-200/70`}>
+      <button type="button" onClick={onClick} aria-label={L.view} className={`${iconButton.lg} hover:bg-gray-200/70`}>
         <ExternalLinkIcon />
       </button>
     </Tip>

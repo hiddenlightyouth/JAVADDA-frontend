@@ -133,10 +133,12 @@ export const ghostButton = `${ghostBase} text-gray-600 hover:bg-gray-100 hover:t
 /** 작은 글자 버튼의 빨간 모양이에요. */
 export const ghostDangerButton = `${ghostBase} text-red-500 hover:bg-red-50 hover:text-red-600`
 
-/** 아이콘만 있는 버튼이에요. sm은 떠 있는 작은 카드, md는 창과 칸의 도구 줄이에요. */
+/** 아이콘만 있는 버튼이에요. sm은 떠 있는 작은 카드, md는 창과 칸의 도구 줄, lg는 40px 버튼과 나란히 놓일 때예요. */
+const iconMd = `flex shrink-0 items-center justify-center ${buttonRadius} text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:text-gray-300 disabled:hover:bg-transparent`
 export const iconButton = {
   sm: `flex size-7 shrink-0 items-center justify-center ${buttonRadius} text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700`,
-  md: `flex size-8 shrink-0 items-center justify-center ${buttonRadius} text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 disabled:text-gray-300 disabled:hover:bg-transparent`,
+  md: `size-8 ${iconMd}`,
+  lg: `size-10 ${iconMd}`,
 }
 
 // ── 메뉴 ───────────────────────────────────────────────
