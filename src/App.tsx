@@ -136,6 +136,7 @@ export default function App() {
   const openResumeList = useCallback(() => open({ kind: 'resume' }, true), [open])
   const openResumeDoc = useCallback((id: string, replace = false) => open({ kind: 'resume', id }, replace), [open])
   const openBlogs = useCallback((company: string | null = null) => open({ kind: 'blogs', company: company ?? undefined }), [open])
+  const openContests = useCallback(() => open({ kind: 'contests' }), [open])
   const openLabs = useCallback((id: string | null = null) => open({ kind: 'labs', id: id ?? undefined }), [open])
   const openAdmin = useCallback((tab: AdminTab = 'overview') => open({ kind: 'admin', tab }), [open])
   const openApiKeys = useCallback(() => open({ kind: 'api-keys' }), [open])
@@ -287,7 +288,7 @@ export default function App() {
       sidebar={{
         activeReportId,
         page:
-          page?.kind === 'explore' || page?.kind === 'recommend' || page?.kind === 'calendar' || page?.kind === 'map' || page?.kind === 'resume' || page?.kind === 'blogs' || page?.kind === 'labs' || page?.kind === 'admin' || page?.kind === 'api-keys'
+          page?.kind === 'explore' || page?.kind === 'recommend' || page?.kind === 'calendar' || page?.kind === 'map' || page?.kind === 'resume' || page?.kind === 'blogs' || page?.kind === 'contests' || page?.kind === 'labs' || page?.kind === 'admin' || page?.kind === 'api-keys'
             ? page.kind
             : account === 'me' || account === 'history'
               ? account
@@ -301,6 +302,7 @@ export default function App() {
         onMap: openMap,
         onResume: openResume,
         onBlogs: () => openBlogs(),
+        onContests: openContests,
         onLabs: () => openLabs(),
         onOpenReport: (id) => {
           track('history_report_open', { from: 'sidebar' })

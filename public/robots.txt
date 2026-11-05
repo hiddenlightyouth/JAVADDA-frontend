@@ -13,6 +13,7 @@ Disallow: /company
 Disallow: /explore
 Disallow: /admin
 Disallow: /labs
+Disallow: /contests
 Disallow: /app/
 
 Sitemap: https://javadda.hidly.dev/sitemap.xml

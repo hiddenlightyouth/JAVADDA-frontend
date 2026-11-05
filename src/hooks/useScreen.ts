@@ -27,6 +27,7 @@ function trackPage(page: Page | null) {
     case 'calendar':
     case 'map':
     case 'resume':
+    case 'contests':
       return trackPageView(page.kind)
     case 'labs':
       return trackPageView('labs', { experiment: page.id ?? 'all' })

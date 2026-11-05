@@ -342,6 +342,17 @@ export function SparkleIcon({ className = 'size-3.5 shrink-0', strokeWidth = 1.4
   )
 }
 
+/** 사이드바의 공모전 트로피예요. */
+export function TrophyIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <path d="M5 2.5h6v3.5a3 3 0 0 1-6 0z" />
+      <path d="M5 3.5H3a2 2 0 0 0 2 3M11 3.5h2a2 2 0 0 1-2 3" />
+      <path d="M8 9v2.5M5.5 13.5h5M6.5 11.5h3v2h-3z" />
+    </Icon>
+  )
+}
+
 /** 잡아따 Labs의 실험실 플라스크예요. */
 export function FlaskIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
   return (

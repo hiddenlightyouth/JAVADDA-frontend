@@ -1,5 +1,7 @@
 import { lazy } from 'react'
 import { LoadProgress, loadCenter } from './ui'
+import { PageHeader } from './AppPage'
+import { pick } from '../lib/i18n'
 import type { AccountPage } from './Account'
 import type { AdminTab } from './Admin'
 import type { ReportTab } from './Report'
@@ -14,6 +16,7 @@ const load = {
   DeadlineCalendar: () => import('./DeadlineCalendar'),
   Blogs: () => import('./Blogs'),
   Labs: () => import('./Labs'),
+  Contests: () => import('./labs/Contests'),
   MyResume: () => import('./MyResume'),
   Company: () => import('./Company'),
   Diagnose: () => import('./Diagnose'),
@@ -28,7 +31,7 @@ const load = {
 
 /** 처음 그린 뒤에 자주 여는 화면 코드를 쉬는 틈에 하나씩 미리 받아 둬요. 앱에서 화면을 처음 열 때 빈 화면으로 기다리지 않아요. */
 export function preloadScreens() {
-  const queue = [load.Jobs, load.Report, load.Practice, load.MyResume, load.Recommend, load.Company, load.Diagnose, load.DeadlineCalendar, load.Blogs, load.Labs, load.JobMap, load.Account]
+  const queue = [load.Jobs, load.Report, load.Practice, load.MyResume, load.Recommend, load.Company, load.Diagnose, load.DeadlineCalendar, load.Blogs, load.Contests, load.Labs, load.JobMap, load.Account]
   const idle = (run: () => void) => (typeof window.requestIdleCallback === 'function' ? window.requestIdleCallback(run, { timeout: 2000 }) : window.setTimeout(run, 300))
   const next = () => {
     const task = queue.shift()
@@ -60,6 +63,7 @@ const Recommend = lazy(() => load.Recommend().then((module) => ({ default: modul
 const JobMap = lazy(() => load.JobMap().then((module) => ({ default: module.JobMap })))
 const DeadlineCalendar = lazy(() => load.DeadlineCalendar().then((module) => ({ default: module.DeadlineCalendar })))
 const Blogs = lazy(() => load.Blogs().then((module) => ({ default: module.Blogs })))
+const Contests = lazy(() => load.Contests().then((module) => ({ default: module.Contests })))
 const Labs = lazy(() => load.Labs().then((module) => ({ default: module.Labs })))
 const MyResume = lazy(() => load.MyResume().then((module) => ({ default: module.MyResume })))
 const Company = lazy(() => load.Company().then((module) => ({ default: module.Company })))
@@ -131,6 +135,8 @@ export function PageView({ page, onHome, onDiagnose, onReport, onPractice, onExp
         <MyResume add={page.add ?? false} docId={page.id ?? null} onAdd={onResumeAdd} onList={onResumeList} onDoc={onResumeDoc} onExplore={onExplore} />
       ) : page.kind === 'blogs' ? (
         <Blogs company={page.company ?? null} onCompany={onBlogs} onJobs={onCompany} />
+      ) : page.kind === 'contests' ? (
+        <Contests header={<PageHeader title={pick({ ko: '공모전', en: 'Contests' })} />} />
       ) : page.kind === 'labs' ? (
         <Labs id={page.id ?? null} onOpen={onLabs} />
       ) : page.kind === 'company' ? (

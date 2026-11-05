@@ -12,7 +12,7 @@ import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { readJson, writeJson } from '../lib/storage'
 import { openPlans, percentOf, refreshUsage, useUsage, type PlanId } from '../lib/usage'
-import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, FlaskIcon, KeyIcon, ChristmasTreeIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon } from './Icons'
+import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, FlaskIcon, KeyIcon, ChristmasTreeIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon, TrophyIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { fitColor, Tip } from './GapParts'
 import { Avatar } from './Avatar'
@@ -28,6 +28,7 @@ const TEXT = messages({
     resume: '내 이력서',
     resumeReady: '이력서 등록됨',
     blogs: '기술 블로그',
+    contests: '공모전',
     labs: '잡아따 Labs',
     me: '내 정보',
     admin: '관리자',
@@ -51,6 +52,7 @@ const TEXT = messages({
     resume: 'My resume',
     resumeReady: 'Resume added',
     blogs: 'Tech blogs',
+    contests: 'Contests',
     labs: 'Javadda Labs',
     me: 'Account',
     admin: 'Admin',
@@ -75,7 +77,7 @@ function resetLeft(value: string): { days: number; hours: number } | null {
   return { days: hours >= 24 ? Math.ceil(ms / 86_400_000) : 0, hours }
 }
 
-type SidebarPage = 'explore' | 'recommend' | 'calendar' | 'map' | 'resume' | 'blogs' | 'labs' | 'articles' | 'me' | 'history' | 'admin' | 'api-keys' | null
+type SidebarPage = 'explore' | 'recommend' | 'calendar' | 'map' | 'resume' | 'blogs' | 'contests' | 'labs' | 'articles' | 'me' | 'history' | 'admin' | 'api-keys' | null
 
 /** 접어 둔 이력서 폴더의 아이디예요. 이 기기에 기억해요. */
 const CLOSED_FOLDERS_KEY = 'javadda:sidebar-closed-resumes'
@@ -99,6 +101,8 @@ interface Props {
   onResume: () => void
   /** 기술 블로그 요약을 열어요. */
   onBlogs: () => void
+  /** 공모전 모아 보기를 열어요. */
+  onContests: () => void
   /** 재미로 넣는 실험 기능을 모은 잡아따 Labs를 열어요. */
   onLabs: () => void
   onOpenReport: (id: string) => void
@@ -292,8 +296,8 @@ function NavLink({ href, active, onClick, icon, label, shortcut, trailing, locke
   )
 }
 
-/** 앱 화면 왼쪽의 사이드바예요. 새 진단, 공고 탐색, 추천 공고, 기술 블로그, 내 이력서, 잡아따 Labs, 내 리포트 목록과 관리, 내 정보로 가는 링크가 있어요. */
-export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onCalendar, onMap, onResume, onBlogs, onLabs, onOpenReport, onHistory, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, onApiKeys, signedIn, onLogin }: Props) {
+/** 앱 화면 왼쪽의 사이드바예요. 새 진단, 공고 탐색, 추천 공고, 마감 달력, 채용 지도, 기술 블로그, 공모전, 내 이력서, 잡아따 Labs, 내 리포트 목록과 관리, 내 정보로 가는 링크가 있어요. */
+export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onCalendar, onMap, onResume, onBlogs, onContests, onLabs, onOpenReport, onHistory, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, onApiKeys, signedIn, onLogin }: Props) {
   const { me } = useAuth()
   const list = useMessages(REPORT_LIST_TEXT)
   const text = useMessages(TEXT)
@@ -427,6 +431,16 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
           label={text.blogs}
           shortcut="G"
           icon={<BookIcon className="size-4 shrink-0" />}
+        />
+        <NavLink
+          href="/contests"
+          active={page === 'contests'}
+          onClick={() => {
+            track('contests_open', { from: 'sidebar' })
+            onContests()
+          }}
+          label={text.contests}
+          icon={<TrophyIcon className="size-4 shrink-0" />}
         />
         {/* 대표 이력서가 있으면 오른쪽 끝에 체크를 붙여서, 진단과 추천을 바로 쓸 수 있다는 걸 알려요. 서류 이름은 적지 않아요. */}
         <NavLink

@@ -14,7 +14,7 @@ import { PostingBrowser, SplitView, type BrowserPage } from '../PostingBrowser'
 import { Badge, LoadProgress, loadCenter, primaryButton, stagger, tag, useShowMore } from '../ui'
 
 /**
- * 잡아따 Labs의 공모전 (/labs/contests)이에요. 공모전 사이트 네 곳에서 모은 공모전을 분야로 골라 봐요.
+ * 사이드바의 공모전 (/contests)이에요. 예전에는 잡아따 Labs의 실험이었어요. 공모전 사이트 네 곳에서 모은 공모전을 분야로 골라 봐요.
  * 모양은 공고 탐색과 같아요. 맨 위에 검색창과 정렬, 그 아래 분야 버튼 줄(IT가 맨 앞), 공모전 수와 보기 방식, 카드(`ContestCard`)나 줄(`ContestRow`)이에요.
  * 어느 사이트에서 모았는지는 목록에 적지 않아요. 카드를 누르면 처음 모은 사이트의 공고를 미니 브라우저로 열어요.
  */

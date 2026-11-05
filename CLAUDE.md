@@ -78,7 +78,7 @@ public/download/appcast.xml  예전 Lofy 앱이 새 버전이 있는지 읽어 �
 public/download/WhoIsLoafing.dmg  예전 Lofy 앱 설치 파일.
 public/download/javadda/  Javadda 앱의 설치 파일(Javadda.dmg), 업데이트 파일, 업데이트 목록(appcast.xml). JAVADDA-app 레포의 `PUBLISH=1 ./scripts/make-dmg.sh`가 만들어 넣어요.
 public/labs/tech-interview/  잡아따 Labs 기술 면접의 답변 원문(be-1.md, fe-1.md 등 302개). 매일메일 레포의 답변 마크다운을 이모지만 빼고 옮겼어요
-public/robots.txt     검색 로봇 안내 (API, /app 아래 주소, 리포트, 진단, 추천, 이력서, 기업 상세, 탐색, Labs, 내 정보와 내 리포트, 앱 로그인 화면, 관리자 화면은 막고, 사이트맵 위치를 알려줘요)
+public/robots.txt     검색 로봇 안내 (API, /app 아래 주소, 리포트, 진단, 추천, 이력서, 기업 상세, 탐색, Labs, 공모전, 내 정보와 내 리포트, 앱 로그인 화면, 관리자 화면은 막고, 사이트맵 위치를 알려줘요)
 scripts/korea-map.mjs 채용 지도의 경계선(`src/lib/koreaMap.ts`)을 만들어요. 통계청 행정구역 경계를 줄인 southkorea-maps(kostat 2013)와 Natural Earth의 강(퍼블릭 도메인, 한강, 남한강, 낙동강)을 받아 돌리고, 자료에 없는 독도를 더해요. 강은 점이 드물어서 곡선으로 이어요. 한 번 만들어 커밋해 두고 경계가 바뀔 때만 다시 돌려요
 scripts/prerender.mjs 빌드 마지막에 소개 화면(메인 주소 `index.html`, 영어 `en.html`)과 아티클 화면을 언어별, 페이지별 HTML 파일로 만들고 사이트맵을 만들어요
 .env.production       배포용 빌드에 들어가는 공개 값 (백엔드 서버 주소, GA 측정 ID)
@@ -100,7 +100,7 @@ src/
   components/labs/TechInterview.tsx 잡아따 Labs의 기술 면접 화면. 질문 검색, 파트 메뉴, 기술 면접 시작하기와 그 창(StartDialog, 파트 고르기와 랜덤 질문, 직접 선택), 분야 버튼 줄, 질문 목록. 가상 면접은 `Practice`의 lab으로 열어요
   lib/techQuestions.ts 잡아따 Labs의 기술 면접 질문(TECH_QUESTIONS). 매일메일(maeil-mail-contents)이 모아 둔 백엔드 152개, 프론트엔드 150개 질문의 제목과 분야예요. 답변 원문은 `public/labs/tech-interview`에 따로 있어요
   lib/techAnswer.ts   잡아따 Labs 기술 면접의 답변 원문 받기(fetchTechAnswer). 질문을 열 때 `public/labs/tech-interview/아이디.md`를 받아 marked로 바꾸고, 허용한 태그와 속성(http와 https 링크와 그림)만 남겨요. 출처 주소(TECH_ANSWER_SOURCE)
-  components/labs/Contests.tsx 잡아따 Labs의 공모전 화면. 검색, 정렬, 분야 버튼 줄, 공모전 카드(ContestCard)와 줄(ContestRow). 공고 탐색의 `JobCard`에서 홈 모양 바깥선(NotchedFrame), 크기 재기(useElementSize), 공고 수와 보기 방식 줄(PostingCountBar의 items)을 같이 써요
+  components/labs/Contests.tsx 공모전 화면(/contests, 사이드바의 기술 블로그 아래). 예전에는 Labs의 실험이었어요. 검색, 정렬, 분야 버튼 줄, 공모전 카드(ContestCard)와 줄(ContestRow). 공고 탐색의 `JobCard`에서 홈 모양 바깥선(NotchedFrame), 크기 재기(useElementSize), 공고 수와 보기 방식 줄(PostingCountBar의 items)을 같이 써요
   lib/blogs.ts        기업 기술 블로그 요약. 서버에서 받기(fetchBlogDigests, GET /blogs), 요약이 있는 기업(blogCompaniesOf), 자주 나온 기술(topSkills), 여러 기업에 걸친 흐름(themeTrends), 서버가 AI로 써 둔 총정리 받기(fetchBlogOutlook, GET /blogs/outlook)와 그것이 없을 때 글에서 계산하는 총정리(blogOutlook, 주제마다 고민과 필요한 역량과 준비를 적은 THEME_OUTLOOK), 서버에 닿지 못할 때 보여줄 기업 열한 곳의 글(DIGESTS)
   lib/gap.ts          진단의 자료와 API. 타입(기업, 공고, 이력서, 리포트, 갭, 서류 검증, 면접 질문, 연습 피드백), 기업과 공고 받기(loadCatalog, COMPANIES, POSTINGS, 서버에 닿지 못할 때의 목록), 서버 API(fetchPostings, uploadResume, saveResumeSkills, setPrimaryResume, removeResume, startDiagnosis, rerunReport, deleteReport, fetchReview, fetchQuestions, submitAnswer, togglePlan, saveNote), AI 진행 상황 묻기(withProgress, ProgressState, PROGRESS_START), 계정 자료 받기와 비우기(startAccountSync), 저장소(useResume는 대표 이력서, useResumeShelf는 올린 서류 전부, useReports, useReport, usePlans, useNotes, 공고를 진단한 최근 리포트 useDiagnosed), 로그인 화면 열기(setLoginHandler, requestLogin), 적합도 계산(fitOf, levelOf), 스킬 이름 정규화(canonical)
   lib/speech.ts       면접 연습의 음성 기능. 말을 글자로 바꾸기(useDictation), 사람 목소리로 읽고 안 되면 브라우저 음성으로 읽기(useSpeak, 읽는 동안의 입 모양 pose), 지원 여부(canDictate, canSpeak)
@@ -138,7 +138,7 @@ src/
   components/AppGate.tsx     앱에서 로그인하지 않았을 때 보여주는 로그인 화면
   components/AppFrame.tsx    앱의 배치. 왼쪽 사이드바와 접기 버튼, 설정 창, 화면 공유 중 가리는 막을 두르고, 로그인하지 않았을 때의 화면(`AppSignedOut`)도 여기 있어요
   components/PageView.tsx    주소로 여는 화면(공고 탐색, 추천 공고, 내 이력서, 기술 블로그, 기업 상세, 진단 시작, 리포트, 면접 연습, 관리자, 소개, 아티클, 계정, 앱 로그인)을 고르고, 화면 코드는 열 때만 받아요. 앱 화면은 처음 그린 뒤 쉬는 틈에 화면 코드를 하나씩 미리 받아 두고(`preloadScreens`), 처음 열 때 아직 받는 중이면 가운데에 받는 칸(`screenFallback`, 바이트를 몰라서 30%)을 보여줘요. 받는 자리(Suspense)는 메인 화면과 같이 `App`이 한 번 두르고, 화면은 전환(`useScreen`의 startTransition)으로 바꿔서 화면을 옮길 때는 받는 칸이 끼지 않고 보던 화면이 그대로 있다가 바뀌어요
-  components/AppSidebar.tsx  앱 화면 왼쪽의 사이드바 (새 진단, 공고 탐색, 추천 공고, 마감 달력, 채용 지도, 기술 블로그, 내 이력서, 잡아따 Labs, 내 리포트 목록, 앱 다운로드, 계정 메뉴)
+  components/AppSidebar.tsx  앱 화면 왼쪽의 사이드바 (새 진단, 공고 탐색, 추천 공고, 마감 달력, 채용 지도, 기술 블로그, 공모전, 내 이력서, 잡아따 Labs, 내 리포트 목록, 앱 다운로드, 계정 메뉴)
   components/Home.tsx        새 진단 화면 (앱의 메인). 손글씨 Javadda, 타이틀, 기업과 공고 검색창, 그 아래 공고 줄(나와 잘 맞는 공고, 따끈따끈 공고, 마감이 가까운 공고, 다시 볼 공고)
   components/Jobs.tsx        공고 탐색 (/explore). 검색창과 직군, 경력, 정렬 드롭다운 한 줄, 기업 분류 버튼 줄(CategoryFilter), 갤러리형 카드(JobCard)와 리스트형 줄(JobRow)
   components/Blogs.tsx       기술 블로그 (/blogs, /blogs/기업). 모든 기업의 글을 기업과 주제로 걸러 보는 갤러리, 많이 다룬 주제 칸, 기업을 고르면 그 기업의 요즘 고민과 면접에서 쓸 점. 글은 미니 브라우저로 열어요
@@ -349,7 +349,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 - 진단과 상관없이 재미로 넣는 실험 기능을 모아 두는 곳이에요. 사이드바의 내 이력서 아래에 플라스크 아이콘과 "잡아따 Labs"(영어는 Javadda Labs)가 흰 글자로 있고, 이 줄만 계절 색 바탕이에요. 지금은 크리스마스라 빨강에서 초록으로 넘어가는 바탕이고(`labs-season`), 줄 안에 작은 흰 눈송이 열한 개가 자리와 빠르기, 흔들리는 폭을 달리해 좌우로 날리며 내려요(`AppSidebar`의 `Snowfall`, `labs-snow`). 오른쪽 아래에는 흰 트리 세 그루(`Icons`의 `ChristmasTreeIcon`, 가운데 큰 트리만 금색 별)가 서 있어요. 계절이 바뀌면 바탕색, 눈, 트리를 바꿔요. 움직임 줄이기 설정이면 눈을 숨겨요. 화면 제목은 "실험실"(영어는 Lab)이고, 화면 안의 색은 다른 화면과 같아요. 브랜딩의 서비스명 규칙과 달리 화면에 "잡아따"를 그대로 써요.
 - 화면에는 설명 문구 없이 실험 카드(회색 칸에 이름과 한두 문장)가 있어요. 실험이 없으면 회색 플라스크 칸과 "실험실에 오신 것을 환영합니다!", "어떤 기능이 준비될까요?"를 보여줘요. 카드를 누르면 `/labs/아이디`로 그 실험을 열고, 제목 줄의 뒤로 가기는 실험실로 가요. 없는 실험이면 안내와 실험실로 돌아가는 버튼이에요.
-- 공모전 (`labs/Contests`, `/labs/contests`): 서버가 매일 새벽 모으기 때 링커리어, 캠퍼스픽, 위비티, 씽굿의 공모전 목록을 읽어 같은 공모전은 한 줄로 합쳐 두고(GET /contests, `src/lib/contests.ts`의 `fetchContests`), 화면은 마감하지 않은 것을 받아요. 모양은 공고 탐색과 같아요. 설명 문구 없이 맨 위에 테두리를 두른 검색창(공모전 이름과 주최)과 정렬 드롭다운(마감 임박순, 최신순), 그 아래 분야 버튼 줄(`CONTEST_CATEGORIES`: IT와 소프트웨어가 맨 앞, 기획과 아이디어, 창업과 취업, 과학과 공학, 디자인, 광고와 마케팅, 영상과 사진, 네이밍과 슬로건, 문학과 글, 논문과 학술, 예체능, 기타. 있는 분야만 보여요. 공고 탐색의 분야 버튼과 같은 `filterChip`), 공모전 수와 보기 방식 버튼(`PostingCountBar`, 공고 탐색과 같은 `javadda:jobs-layout`)이 있어요. 고른 분야는 `javadda:contests-category`에 기억해요. 갤러리형 카드(`ContestCard`)는 공고 탐색의 카드처럼 오른쪽 위 홈(`NotchedFrame`)에 마감까지 남은 날을 적어요. 공모전은 포스터로 알아보는 경우가 많아서 왼쪽에 포스터를 크게(3:4, 112px, 휴대폰은 96px, 아주 넓으면 128px) 두고, 오른쪽에 주최와 첫 분야, 제목(세 줄까지), 접수 기간(달력 아이콘), 분야 이름표 셋까지, 맨 아래 줄에 상금과 "공모전 보기" 버튼이 있어요. 포스터가 없거나 못 불러오면 같은 크기의 흰 칸에 옅은 서류 아이콘이에요. 리스트형 줄(`ContestRow`)은 `JobRow`와 같은 모양이고 로고 자리에 작은 포스터(3:4)가 있어요. 어느 사이트에서 모았는지는 화면에 적지 않아요(서버에는 남겨 둬요). 카드와 리스트의 제목이나 공모전 보기, 빈 자리를 누르면 처음 모은 사이트의 공고를 오른쪽 미니 브라우저(`PostingBrowser`의 `page`, 기업 없는 외부 페이지)로 열어요. `Labs`는 이 실험에 제목 줄을 넘기고, 공모전 화면이 `SplitView`와 `ScrollPage`를 직접 그려서 목록과 원문을 따로 스크롤해요. 폭 조절, 새로 고침, 새 탭 열기, 닫기와 Esc는 공고 탐색과 같고, 휴대폰에서는 전체 화면으로 열려요. 미니 브라우저를 열거나 다른 공모전으로 바꿔도 검색과 분야, 정렬, 더 본 개수는 유지돼요. 24개씩 그려요(`useShowMore`). 분야는 서버가 사이트의 분야 이름을 열두 가지로 모아 정해요(서버의 `ContestCategory`).
+- 공모전 (`labs/Contests`, `/contests`): Labs의 실험이었다가 사이드바의 기술 블로그 아래(트로피 아이콘 `TrophyIcon`)로 나왔어요. 실험 목록에는 없고, 예전 주소(`/labs/contests`)로 들어와도 공모전 화면을 열어요. 제목 줄은 `PageView`가 "공모전"으로 넘겨요. 서버가 매일 새벽 모으기 때 링커리어, 캠퍼스픽, 위비티, 씽굿의 공모전 목록을 읽어 같은 공모전은 한 줄로 합쳐 두고(GET /contests, `src/lib/contests.ts`의 `fetchContests`), 화면은 마감하지 않은 것을 받아요. 모양은 공고 탐색과 같아요. 설명 문구 없이 맨 위에 테두리를 두른 검색창(공모전 이름과 주최)과 정렬 드롭다운(마감 임박순, 최신순), 그 아래 분야 버튼 줄(`CONTEST_CATEGORIES`: IT와 소프트웨어가 맨 앞, 기획과 아이디어, 창업과 취업, 과학과 공학, 디자인, 광고와 마케팅, 영상과 사진, 네이밍과 슬로건, 문학과 글, 논문과 학술, 예체능, 기타. 있는 분야만 보여요. 공고 탐색의 분야 버튼과 같은 `filterChip`), 공모전 수와 보기 방식 버튼(`PostingCountBar`, 공고 탐색과 같은 `javadda:jobs-layout`)이 있어요. 고른 분야는 `javadda:contests-category`에 기억해요. 갤러리형 카드(`ContestCard`)는 공고 탐색의 카드처럼 오른쪽 위 홈(`NotchedFrame`)에 마감까지 남은 날을 적어요. 공모전은 포스터로 알아보는 경우가 많아서 왼쪽에 포스터를 크게(3:4, 112px, 휴대폰은 96px, 아주 넓으면 128px) 두고, 오른쪽에 주최와 첫 분야, 제목(세 줄까지), 접수 기간(달력 아이콘), 분야 이름표 셋까지, 맨 아래 줄에 상금과 "공모전 보기" 버튼이 있어요. 포스터가 없거나 못 불러오면 같은 크기의 흰 칸에 옅은 서류 아이콘이에요. 리스트형 줄(`ContestRow`)은 `JobRow`와 같은 모양이고 로고 자리에 작은 포스터(3:4)가 있어요. 어느 사이트에서 모았는지는 화면에 적지 않아요(서버에는 남겨 둬요). 카드와 리스트의 제목이나 공모전 보기, 빈 자리를 누르면 처음 모은 사이트의 공고를 오른쪽 미니 브라우저(`PostingBrowser`의 `page`, 기업 없는 외부 페이지)로 열어요. 공모전 화면이 `SplitView`와 `ScrollPage`를 직접 그려서 목록과 원문을 따로 스크롤해요. 폭 조절, 새로 고침, 새 탭 열기, 닫기와 Esc는 공고 탐색과 같고, 휴대폰에서는 전체 화면으로 열려요. 미니 브라우저를 열거나 다른 공모전으로 바꿔도 검색과 분야, 정렬, 더 본 개수는 유지돼요. 24개씩 그려요(`useShowMore`). 분야는 서버가 사이트의 분야 이름을 열두 가지로 모아 정해요(서버의 `ContestCategory`).
 - 기술 면접 (`labs/TechInterview`, `/labs/tech-interview`): 매일메일이 모아 둔 기술 면접 질문(`src/lib/techQuestions.ts`, 백엔드 152개와 프론트엔드 150개, 분야 여덟 개씩)으로 면접 연습과 같은 가상 면접을 봐요. 실험 목록의 맨 앞이에요. 맨 위 한 줄에 테두리를 두른 검색창, 파트(백엔드, 프론트엔드) 드롭다운, 메인 컬러의 "기술 면접 시작하기"(44px), 지난 기록이 있고, 그 아래 분야 버튼 줄(`filterChip`), 질문 수, 회색 판에 옅은 선으로 나눈 질문 줄(번호, 질문, 전체를 볼 때는 그 아래 작게 분야, 오른쪽에 꺾쇠)이 와요. 파트는 시작 창에서도 고르고, 두 곳이 같은 값(`changeTrack`)이에요. 24개씩 그려요. 고른 파트, 분야, 질문 수는 `javadda:labs-interview`에 기억해요. 기술 면접 시작하기를 누르면 창(`StartDialog`)에 제목 "기술 면접 시작하기", 그 아래 파트(백엔드, 프론트엔드, `Segmented`), 그 아래 회색 칸 두 개가 나란히 떠요. 파트를 바꾸면 뒤의 목록과 분야 줄도 그 파트로 바뀌고 분야는 풀려요. "랜덤 질문" 칸은 질문 수(3개, 5개, 10개, `Segmented`)와 "5개로 시작하기"이고, 고른 파트에서 지금 고른 분야와 검색어 안의 질문을 섞어 뽑아 바로 시작해요. "직접 선택" 칸은 "가상 면접을 원하는 질문을 직접 선택합니다."와 "선택하기"이고, 누르면 목록의 번호 자리가 체크 칸으로 바뀌어 10개(`MAX_PICK`)까지 골라요. 고른 줄은 연한 메인 컬러이고 오른쪽에 고른 순서가 붙고, 다 고르면 나머지 줄은 흐려져요. 고르는 동안 화면 맨 아래에 붙은 줄에 "3개 골랐어요", 취소, "면접 시작하기"가 있고, 고른 순서대로 물어요. 평소에는 질문 줄을 누르면 그 질문의 상세(`AnswerView`)로 가요. 위에 "질문 목록" 버튼, 분야와 최근 점수, 질문, 그 아래 매일메일의 답변 원문(`fetchTechAnswer`, 아티클과 같은 `.article`에 그림과 접는 칸을 더한 `.tech-answer`), 맨 아래 작게 "출처 매일메일"(원문 레포로)이 있고, 오른쪽 아래에 늘 붙어 있는 메인 컬러의 "가상 면접 시작하기"로 그 질문 하나만 연습해요(답하자마자 피드백). 면접을 닫으면 상세로 돌아와요. 면접 화면은 `Practice`에 `lab`(제목, 질문, 채점 함수, 돌아가기 글자)을 넘긴 것이라 리포트를 받지 않고, 면접관 고르기와 목소리, 음성 답변, 결과 화면이 모두 같아요. 면접관이 달라도 질문은 같고 채점과 꼬리 질문만 달라서 시작 화면 안내도 그렇게 적어요. 결과 화면의 돌아가기는 "질문 목록으로"예요. 채점은 서버가 리포트 없이 질문 글과 분야로 해요(`gradeLabAnswer`, POST /labs/interview/answers). 의도와 답변 포인트가 없어서 AI가 그 질문에 좋은 답의 요소를 스스로 떠올려 채점해요. 서버는 답과 피드백을 질문 아이디, 질문 글, 분야, 면접관과 함께 계정에 저장해요. 로그인했으면 거르는 줄 끝에 "지난 기록"(시계 아이콘과 답변 수)이 있어서, 예상 질문 탭과 같은 검은 화면(`ReportQuestions`의 `PastScreen`, 예전 질문 고르기 없이 분야와 면접관 이름표를 붙여요)으로 날짜별 답변을 봐요(`fetchLabAnswers`, GET /labs/interview/answers). 연습한 질문 줄은 번호 대신 메인 컬러 체크와 가장 최근 점수이고, 질문 수 오른쪽에 "152개 중 3개 연습했어요"를 적어요. 면접을 마치고 목록으로 돌아올 때마다 기록을 다시 받아요. 목록은 로그인 없이 보고, 면접을 시작하려면 로그인해야 해요(로그인하면 이 화면으로 돌아와요).
 - 실험을 더할 때는 컴포넌트를 따로 만들고(`components/labs/` 아래) `Labs.tsx`의 `EXPERIMENTS`에 아이디, 이름, 설명, lazy로 감싼 화면을 한 줄 더해요. 실험 코드는 열 때만 받아요. 로그인 없이 볼 수 있어요.
 
@@ -509,7 +509,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 | 이벤트 | 언제 | 주요 값 |
 | --- | --- | --- |
-| `page_view` | 화면이 바뀔 때 | `screen`(home, explore, recommend, calendar, map, resume, blogs, labs, company, diagnose, report, practice, about, articles, article, login, signup, me, history, app-login, admin), `posting`, `tab`, `slug`, `experiment`(Labs의 실험, 목록이면 all) |
+| `page_view` | 화면이 바뀔 때 | `screen`(home, explore, recommend, calendar, map, resume, blogs, contests, labs, company, diagnose, report, practice, about, articles, article, login, signup, me, history, app-login, admin), `posting`, `tab`, `slug`, `experiment`(Labs의 실험, 목록이면 all) |
 | `posting_select` | 공고 카드나 검색 결과를 눌러 진단 시작으로 갔을 때 | `posting`, `from`(home, explore, recommend, company, map, calendar-cell, calendar-list), `query` |
 | `home_more_click` | 새 진단 화면의 공고 줄에서 전체 보기를 눌렀을 때 | `row`(fit, companies, recent, closing) |
 | `home_company_select` | 새 진단 화면의 요즘 뜨는 기업이나 기업으로 둘러보기에서 기업을 눌렀을 때 | `company`, `from`(hot, browse) |
@@ -524,7 +524,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `map_company_select` | 채용 지도에서 기업 이름표를 누르거나 풀었을 때 | `company` |
 | `company_map_open` | 기업 상세의 위치 칸에서 네이버 지도를 열었을 때 | `company` |
 | `explore_open`, `recommend_open`, `resume_open`, `blogs_open` | 사이드바에서 공고 탐색, 추천 공고, 내 이력서, 기술 블로그를 눌렀을 때 | `from`(sidebar) |
-| `labs_open` | 사이드바에서 잡아따 Labs를 눌렀을 때 | `from`(sidebar) |
+| `labs_open`, `contests_open` | 사이드바에서 잡아따 Labs, 공모전을 눌렀을 때 | `from`(sidebar) |
 | `labs_experiment_open` | Labs에서 실험 카드를 눌렀을 때 | `experiment` |
 | `labs_interview_start`, `labs_interview_track`, `labs_interview_topic`, `labs_interview_history_open`, `labs_interview_pick_open` | 기술 면접에서 가상 면접을 시작하거나 파트, 분야를 바꾸거나 지난 기록을 열거나 직접 고르기를 시작했을 때 | `track`, `topic`(풀면 all), `count`, `from`(random, pick, question) |
 | `labs_contest_category`, `labs_contest_open` | 공모전에서 분야를 고르거나 공모전을 열었을 때 | `category`(풀면 all), `site` |
@@ -602,7 +602,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 소개 화면을 메인 주소로, 웹의 /app에서 앱과 같은 화면으로 진단하기 (위의 웹 앱 절 참고)
 - 새 진단 화면 (손글씨 Javadda, 타이틀, 기업과 공고 검색, 공고 줄)
 - 기업 기술 블로그 요약과 요즘 고민 분석 (위의 진단 흐름 절 참고)
-- 잡아따 Labs와 실험인 공모전 모아 보기, 기술 면접 질문으로 보는 가상 면접 (위의 진단 흐름 절 참고)
+- 공모전 모아 보기, 잡아따 Labs와 실험인 기술 면접 질문으로 보는 가상 면접 (위의 진단 흐름 절 참고)
 - 채용 지도와 기업 상세의 위치 (위의 진단 흐름 절 참고)
 - 공고 탐색, 추천 공고, 기업 상세, 내 이력서, 진단 시작, 리포트(네 탭과 갭 상세), 면접 연습, 내 리포트 (위의 진단 흐름 절 참고)
 - 소개 화면과 아티클, 한국어와 영어 화면 (위의 각 절 참고)
