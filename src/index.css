@@ -420,6 +420,58 @@
   fill: #fff;
 }
 
+/*
+  첫 화면 배경의 지지직거리는 잡음이에요. 회색 잡음 그림을 깔고 자리를 몇 칸씩 뚝뚝 옮겨서 옛 TV 화면처럼 떨리게 하고,
+  가는 가로줄(주사선)을 옅게 겹쳐요. 글자와 틀보다 뒤에 있고, 움직임 줄이기 설정에서는 멈춰 있어요.
+*/
+.kv-noise {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.kv-noise::before {
+  content: '';
+  position: absolute;
+  inset: -100px;
+  opacity: 0.16;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.6 -0.45'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+  animation: kv-static 0.5s steps(1) infinite;
+}
+
+.kv-noise::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0.35;
+  background: repeating-linear-gradient(#0000 0 2px, #00000059 2px 3px);
+  animation: kv-flicker 3.2s steps(1) infinite;
+}
+
+@keyframes kv-static {
+  0% { transform: translate(0, 0); }
+  10% { transform: translate(-37px, 21px); }
+  20% { transform: translate(53px, -44px); }
+  30% { transform: translate(-71px, -12px); }
+  40% { transform: translate(18px, 66px); }
+  50% { transform: translate(-24px, -58px); }
+  60% { transform: translate(77px, 9px); }
+  70% { transform: translate(-49px, 40px); }
+  80% { transform: translate(31px, -27px); }
+  90% { transform: translate(-63px, 72px); }
+}
+
+@keyframes kv-flicker {
+  0% { opacity: 0.35; }
+  37% { opacity: 0.22; }
+  39% { opacity: 0.45; }
+  41% { opacity: 0.3; }
+  78% { opacity: 0.4; }
+  80% { opacity: 0.2; }
+}
+
 /* 굴러가는 낱말. 위로 한 칸씩 올라가고, 감싼 칸의 폭도 낱말에 맞춰 바뀌어요. */
 .kv-roll {
   display: inline-flex;
@@ -548,6 +600,13 @@ header[data-on-dark] :is(nav > a, nav > button, nav > div > button, header > div
 
 header[data-on-dark] .logo-mark {
   fill: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kv-noise::before,
+  .kv-noise::after {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

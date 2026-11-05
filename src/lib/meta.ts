@@ -27,7 +27,7 @@ export const HOME_META = messages<PageMeta>({
   ko: {
     title: SITE_TITLE,
     description: '기업이나 공고를 기준으로 이력서를 진단하고, 부족한 역량과 채우는 방법, 맞는 공고까지 한 리포트로 받아요.',
-    ogTitle: 'Javadda, 내 역량과 공고 사이 얼마나 멀까요?',
+    ogTitle: 'Javadda, 나와 채용 공고 얼마나 적합할까요?',
   },
   en: {
     title: `${SITE_TITLE} - How far are you from the job you want?`,

@@ -47,7 +47,7 @@ const ABOUT_TEXT = messages({
     roll: ['필수 역량', '우대 역량', '자기소개서', '면접 질문', '필수 역량'],
     rollAfter: '까지 진단해요',
     rollLabel: '공고 하나를 기준으로 필수 역량, 우대 역량, 자기소개서, 면접 질문까지 진단해요',
-    title: '내 역량과 공고 사이, 얼마나 멀까요?',
+    title: '나와 채용 공고, 얼마나 적합할까요?',
     start: '시작하기',
     download: 'macOS 앱 다운로드',
     featuresTitle: '지원하기 전,\n다시 한 번 체크.',
@@ -76,8 +76,8 @@ const ABOUT_TEXT = messages({
       { q: '어떤 공고를 볼 수 있나요?', a: '신입과 주니어 개발자 공고를 백엔드, 프론트엔드, 모바일, 데이터, DevOps 직군으로 나눠 보여줘요.' },
       { q: 'macOS 앱도 있나요?', a: '네. 웹과 같은 화면을 macOS 앱으로도 쓸 수 있어요. 위의 macOS 앱 다운로드 버튼으로 받아요.', app: true },
     ],
-    closingTitle: '가고 싶은 회사부터 재 볼까요?',
-    closingLead: '공고 하나만 고르면 바로 시작해요.',
+    closingTitle: '가고 싶은 회사부터 알아볼까요?',
+    closingLead: '공고를 고르고 즉시 분석하세요.',
   },
   en: {
     intro: ['Pick one posting and'],
@@ -193,6 +193,11 @@ const section = 'mx-auto max-w-[1280px] px-4 pt-[88px] sm:px-10 md:pt-32'
 const sectionTitle = 'text-[clamp(28px,3.2vw,40px)] leading-[1.4] font-bold tracking-[-0.02em] text-gray-900'
 
 const primaryPill = 'inline-flex h-[52px] items-center justify-center rounded-full bg-brand px-7 text-[16px] font-bold text-white transition-[background-color,scale] duration-200 hover:bg-brand-hover active:scale-[.98]'
+/** 검은 첫 화면의 버튼이에요. 시작하기는 흰 바탕에 검은 글자, 앱 다운로드는 옅게 비치는 유리 같은 칸이에요. */
+const heroPrimary =
+  'group inline-flex h-[52px] min-w-[clamp(168px,13vw,200px)] items-center justify-center gap-1.5 rounded-full bg-white pr-6 pl-7 text-[17px] font-bold text-[#0f1012] transition-[background-color,scale] duration-200 hover:bg-gray-200 active:scale-[.98]'
+const heroSecondary =
+  'inline-flex h-[52px] items-center gap-2 rounded-full bg-white/[.08] px-6 text-[16px] font-bold text-white/85 ring-1 ring-white/15 backdrop-blur-md transition-[background-color,color,scale] duration-200 ring-inset hover:bg-white/[.14] hover:text-white active:scale-[.98]'
 const outlinePill = 'inline-flex h-12 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-6 text-[15px] font-bold text-gray-900 transition-colors duration-150 hover:bg-gray-100'
 
 /** 기능의 미리보기예요. 실제 화면 부품에 보기 자료를 넣어 앱 창처럼 그려요. */
@@ -458,6 +463,7 @@ function Hero({ onStart }: { onStart: (event: MouseEvent) => void }) {
 
   return (
     <section data-phase={phase} className="kv sticky top-0 z-0 flex h-[100svh] min-h-[540px] items-center justify-center overflow-hidden bg-[#0f1012] px-4 text-white">
+      <span className="kv-noise" aria-hidden />
       <noscript dangerouslySetInnerHTML={{ __html: '<style>.kv-final{clip-path:none!important}.kv-intro{display:none}</style>' }} />
       <div ref={frameRef} className="kv-frame relative h-[min(clamp(360px,54vh,560px),100svh-140px)] w-[clamp(300px,64vw,1080px)] max-w-full">
         <div ref={introRef} className="kv-intro absolute inset-0 flex flex-col items-center justify-center px-6 text-center" aria-hidden={phase === 'final'}>
@@ -479,15 +485,16 @@ function Hero({ onStart }: { onStart: (event: MouseEvent) => void }) {
           {!revealed && <span className="h-[clamp(64px,8vw,104px)]" aria-hidden />}
           <h1 className="mt-6 text-balance break-keep text-[clamp(26px,3.6vw,48px)] leading-[1.35] font-bold tracking-[-0.04em]">{text.title}</h1>
           <div className="mt-9 flex flex-wrap justify-center gap-2.5">
-            <a href="/app" onClick={onStart} className={`${primaryPill} min-w-[clamp(180px,15vw,220px)] text-[18px]`}>
+            <a href="/app" onClick={onStart} className={heroPrimary}>
               {text.start}
+              <ChevronRightIcon className="size-[18px] transition-transform duration-200 group-hover:translate-x-0.5" />
             </a>
             {MAC_DOWNLOAD_OPEN && (
               <a
                 href={MAC_DOWNLOAD}
                 download
                 onClick={() => track('app_download_click', { os: 'macos', from: 'about' })}
-                className="inline-flex h-[52px] items-center gap-2 rounded-full border border-white/25 px-6 text-[16px] font-bold text-white transition-colors duration-200 hover:bg-white/10"
+                className={heroSecondary}
               >
                 <AppleLogo />
                 {text.download}
