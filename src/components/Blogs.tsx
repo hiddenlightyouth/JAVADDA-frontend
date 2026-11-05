@@ -417,7 +417,7 @@ function OutlookCard({ outlook, onTheme }: { outlook: BlogOutlook; onTheme: (the
   return (
     <section className="mb-4 animate-rise rounded-2xl bg-gray-50 p-4 sm:p-5 @2xl:p-6">
       {/* 서버의 총정리는 AI가 쓴 머리 문장과 흐름 문단이 있고, 화면이 계산한 총정리는 주제 이름으로 머리 문장을 만들어요. */}
-      <h2 className="text-[19px] leading-snug font-semibold text-gray-900 @2xl:text-[21px]">
+      <h2 className="line-clamp-2 text-[19px] leading-snug font-semibold text-gray-900 @2xl:text-[21px]">
         {outlook.headline ?? (
           <>
             {L.outlookLead}
@@ -432,7 +432,7 @@ function OutlookCard({ outlook, onTheme }: { outlook: BlogOutlook; onTheme: (the
           </>
         )}
       </h2>
-      {outlook.summary && <p className="mt-2.5 max-w-[72ch] text-[13.5px] leading-relaxed text-gray-600">{outlook.summary}</p>}
+      {outlook.summary && <p className="mt-2 max-w-[72ch] line-clamp-2 text-[13.5px] leading-relaxed text-gray-600">{outlook.summary}</p>}
 
       <ul className="mt-5 grid gap-3 @3xl:grid-cols-3">
         {outlook.themes.map((item, index) => (
