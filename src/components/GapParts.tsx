@@ -491,10 +491,8 @@ export const filterChip = (on: boolean) =>
   `flex h-10 shrink-0 items-center rounded-lg border text-[14px] font-medium transition-colors ${
     on ? 'border-brand bg-brand-soft text-brand-hover' : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:text-gray-950'
   }`
-/** 로고를 앞에 붙인 거르는 버튼의 여백이에요. 로고는 왼쪽 끝에 꽉 붙은 정사각형이고 이름과는 세로선으로 나눠요(`filterLogo`). */
-const filterLogoChip = 'gap-3 overflow-hidden pr-4.5'
-/** 거르는 버튼 왼쪽에 꽉 붙는 정사각형 로고예요. 나누는 선은 버튼 테두리 색을 그대로 따라가요. */
-const filterLogo = 'h-full w-auto aspect-square rounded-none! border-y-0! border-l-0! border-r border-inherit! text-[12px]'
+/** 로고(`CompanyMark`, size-8)를 앞에 붙인 거르는 버튼의 여백이에요. */
+const filterLogoChip = 'gap-2.5 py-1 pr-4.5 pl-1.5'
 /** 거르는 버튼 줄의 바깥이에요. 넓은 목록에서는 여러 줄로, 좁으면 옆으로 넘겨요. 휴대폰에서는 화면 가장자리까지 넘겨요. */
 export const filterRow = '-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] max-sm:-mx-4 max-sm:px-4 @2xl:flex-wrap'
 /** 드롭다운을 나란히 놓는 줄이에요. 좁으면 여러 줄로 쌓지 않고 한 줄로 옆으로 넘겨요. 휴대폰에서는 화면 가장자리까지 넘겨요. 메뉴는 body에 그려서 잘리지 않아요. */
@@ -521,7 +519,7 @@ export function CategoryFilter({ postings, value, onChange, label, allLabel, com
     <div role="radiogroup" aria-label={label} className={`${filterRow} @2xl:overflow-visible`}>
       {company && (
         <button type="button" onClick={onClearCompany} className={`${filterChip(true)} ${filterLogoChip}`}>
-          <CompanyMark company={company} className={filterLogo} />
+          <CompanyMark company={company} className="size-8 rounded-full! text-[12px]" />
           {company.name}
           <CloseIcon className="size-3" />
         </button>
@@ -567,7 +565,7 @@ export function CompanyFilter({ companies, value, onChange, label, allLabel, one
           onClick={() => onChange(value === item.id ? null : item.id)}
           className={`${filterChip(value === item.id)} ${filterLogoChip}`}
         >
-          <CompanyMark company={item} className={filterLogo} />
+          <CompanyMark company={item} className="size-8 rounded-full! text-[12px]" />
           {item.name}
         </button>
       ))}
