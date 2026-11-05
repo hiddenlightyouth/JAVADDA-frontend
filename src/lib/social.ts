@@ -104,7 +104,8 @@ export interface SocialResult {
   returnTo: string
 }
 
-const FALLBACK_RETURN = '/history'
+/** 돌아갈 주소를 잃었으면 웹 앱의 새 진단 화면으로 가요. */
+const FALLBACK_RETURN = '/app'
 
 /** 소셜 서비스에서 돌아온 뒤에 불러요. 보낸 요청이 맞는지 확인하고, 받은 코드로 로그인하거나 계정에 연결해요. */
 export async function finishSocial(provider: SocialProvider): Promise<SocialResult> {

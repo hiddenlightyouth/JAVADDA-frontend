@@ -271,7 +271,7 @@ function BrowserCallback({ provider }: { provider: SocialProvider }) {
   if (!failed) return <Checking label={SOCIAL_LABELS[provider]} />
 
   // 앱 로그인을 하던 중이었으면 그 화면으로, 계정에 연결하던 중이었으면 내 정보로 돌아가요.
-  const back = failed.mode === 'link' ? '/me' : failed.returnTo.startsWith('/app-login') ? failed.returnTo : '/login'
+  const back = failed.mode === 'link' ? '/app/me' : failed.returnTo.startsWith('/app-login') ? failed.returnTo : '/app/login'
 
   return (
     <main className={shell}>
