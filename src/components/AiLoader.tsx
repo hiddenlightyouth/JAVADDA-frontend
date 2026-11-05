@@ -10,7 +10,7 @@ import wasmUrl from '@lottiefiles/dotlottie-web/dotlottie-player.wasm?url'
  */
 setWasmUrl(wasmUrl)
 
-export default function AiLoader({ className = '', src = '/lottie/ai-loading.lottie' }: { className?: string; src?: string }) {
+export default function AiLoader({ className = '', src = '/lottie/ai-loading.lottie', loop = true }: { className?: string; src?: string; loop?: boolean }) {
   const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  return <DotLottieReact src={src} loop autoplay={!still} className={className} />
+  return <DotLottieReact src={src} loop={loop} autoplay={!still} className={className} />
 }

@@ -25,11 +25,11 @@ export function WaitingGlass({ className = 'size-28' }: { className?: string }) 
   )
 }
 
-/** 거절을 알리는 빨간 엑스 애니메이션이에요(`public/lottie/review-rejected.json`, 직접 그렸어요). 거절된 API 키가 써요. */
+/** 거절을 알리는 빨간 엑스 애니메이션이에요(`public/lottie/review-rejected.json`, 직접 그렸어요). 거절된 API 키가 써요. 한 번만 재생하고 엑스가 그려진 채로 멈춰요. */
 export function RejectedMark({ className = 'size-28' }: { className?: string }) {
   return (
     <Suspense fallback={<span aria-hidden className={`block ${className}`} />}>
-      <AiLoader src="/lottie/review-rejected.json" className={className} />
+      <AiLoader src="/lottie/review-rejected.json" className={className} loop={false} />
     </Suspense>
   )
 }
