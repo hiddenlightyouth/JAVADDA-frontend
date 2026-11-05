@@ -25,6 +25,15 @@ export function WaitingGlass({ className = 'size-28' }: { className?: string }) 
   )
 }
 
+/** 거절을 알리는 빨간 엑스 애니메이션이에요(`public/lottie/review-rejected.json`, 직접 그렸어요). 거절된 API 키가 써요. */
+export function RejectedMark({ className = 'size-28' }: { className?: string }) {
+  return (
+    <Suspense fallback={<span aria-hidden className={`block ${className}`} />}>
+      <AiLoader src="/lottie/review-rejected.json" className={className} />
+    </Suspense>
+  )
+}
+
 /**
  * 여러 화면이 같이 쓰는 기본 모양이에요. 버튼, 입력칸, 작은 제목, 고르는 칸, 탭, 목록, 오류 문구를 한 곳에서 정해요.
  * 새 화면은 여기 것을 쓰고 같은 모양을 다시 적지 않아요. 크기가 다르면 여기에 단계를 더해요.
