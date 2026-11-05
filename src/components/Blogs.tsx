@@ -55,10 +55,10 @@ const TEXT = messages({
     outlookLead: '요즘 기업들은 ',
     outlookAnd: (name: string) => `${hasBatchim(name) ? '과' : '와'} `,
     outlookTail: (name: string) => `${hasBatchim(name) ? '을' : '를'} 가장 많이 고민하고 있어요`,
-    rising: '늘고 있어요',
+    rising: '요즘 뜨는',
     risingTip: '최근 두 달에 그 전 두 달보다 이 주제의 글이 더 많이 올라왔어요.',
-    outlookSkills: '따라가려면 이런 역량이 필요해요',
-    outlookPrepare: '지금 해 볼 준비',
+    outlookSkills: '필요한 역량',
+    outlookPrepare: '대비 방법',
     skillDemand: (count: number) => (count ? `지금 열린 공고 ${count}개가 이 역량을 적었어요.` : '아직 이 역량을 적은 공고는 없어요.'),
   },
   en: {
