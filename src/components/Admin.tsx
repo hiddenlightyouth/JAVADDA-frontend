@@ -17,7 +17,7 @@ const tabs = [
   { key: 'postings', label: '채용공고' },
   { key: 'companies', label: '기업' },
   { key: 'crawl', label: '데이터 수집' },
-  { key: 'ai', label: 'AI 호출' },
+  { key: 'ai', label: 'AI 사용량' },
 ] as const
 
 interface Props {
@@ -39,13 +39,13 @@ export function Admin({ tab, onTab, full }: Props) {
     )
   return (
     <main className={pageFrame}>
-      <PageHeader title="관리자" owner="Javadda, 서비스 운영" />
+      <PageHeader title="관리자" />
       {!full ? (
-        <p className="py-8 text-sm text-gray-500">서버 연결과 관리자 API 지원 여부를 확인해 주세요.</p>
+        <p className="py-8 text-sm text-gray-500">서버에 연결하지 못했어요.</p>
       ) : (
         <>
           <Tabs label="관리 메뉴" items={[...tabs]} current={current} onSelect={onTab} />
-          <div role="tabpanel" className={`${bleed} ${gutter} min-h-0 flex-1 overflow-y-auto pt-6 pb-10`}>
+          <div role="tabpanel" className={`${bleed} ${gutter} min-h-0 flex-1 overflow-y-auto pt-5 pb-16`}>
             {current === 'overview' ? (
               <ManagementOverview onTab={onTab} />
             ) : current === 'users' ? (

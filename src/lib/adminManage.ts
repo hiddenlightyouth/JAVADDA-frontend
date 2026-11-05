@@ -50,6 +50,7 @@ export interface Business {
 }
 export interface Call {
   id: number
+  provider: string
   model: string
   purpose: string
   inputTokens: number
@@ -58,6 +59,38 @@ export interface Call {
   success: boolean
   error: string | null
   createdAt: string
+  /** 설정한 단가로 어림한 달러. 단가를 모르면 null */
+  cost: number | null
+}
+/** 합계예요. cost는 단가를 아는 호출만 더한 달러이고, latencyMs는 합이에요. */
+export interface AiTotals {
+  calls: number
+  failures: number
+  inputTokens: number
+  outputTokens: number
+  cost: number
+  unpricedCalls: number
+  latencyMs: number
+}
+export interface AiGroup {
+  key: string
+  label: string
+  provider: string | null
+  total: AiTotals
+  /** 토큰 100만 개당 달러. 모델 묶음에만 있어요. */
+  inputPrice: number | null
+  outputPrice: number | null
+}
+export interface AiUsage {
+  days: number
+  from: string
+  to: string
+  krwPerUsd: number
+  total: AiTotals
+  previous: AiTotals | null
+  daily: { date: string; calls: number; failures: number; inputTokens: number; outputTokens: number; cost: number }[]
+  models: AiGroup[]
+  purposes: AiGroup[]
 }
 export interface Source {
   id: number

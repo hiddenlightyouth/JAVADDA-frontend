@@ -121,7 +121,7 @@ export function MemberCell({ userId, userName, userEmail, className = 'max-w-[20
 
 export function SearchBox({ value, onChange, placeholder }: { value: string; onChange: (value: string) => void; placeholder: string }) {
   return (
-    <label className={`flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg px-3 focus-within:border-brand sm:max-w-xs ${fieldBase}`}>
+    <label className={`flex h-9 min-w-0 flex-1 items-center gap-2 rounded-lg px-3 focus-within:border-brand sm:max-w-xs sm:min-w-56 ${fieldBase}`}>
       <SearchIcon className="size-3.5 shrink-0 text-gray-400" />
       <input
         type="search"
@@ -257,8 +257,10 @@ export function Empty({ children }: { children: ReactNode }) {
   return <p className="mt-16 text-center text-[13.5px] leading-relaxed text-gray-500">{children}</p>
 }
 
-export const th = 'px-4 py-2.5 text-left text-[12px] font-medium whitespace-nowrap text-gray-500'
-export const td = 'px-4 py-2.5 align-middle'
+export const th = 'px-4 pt-3.5 pb-2.5 text-left text-[12px] font-medium whitespace-nowrap text-gray-500'
+export const td = 'px-4 py-3 align-middle'
+/** 회색 표의 줄이에요. 옅은 선으로 나눠요. */
+export const tableRow = 'border-t border-gray-200/60'
 
 /**
  * 더 보기로 받는 목록을 표로 그려요(회원, 채팅, 피드백, AI 호출). 첫 쪽을 받는 동안은 표와 같은 테두리 안에 진행 막대,
@@ -275,7 +277,7 @@ export function PagedTable<T>({ list, empty, head, minWidth = 'min-w-[760px]', c
 }) {
   if (list.waiting) {
     return (
-      <div className="mt-3 rounded-2xl border border-gray-200 bg-white px-4 py-6">
+      <div className="mt-3 rounded-2xl bg-gray-50 px-4 py-6">
         <LoadProgress percent={list.percent} compact />
       </div>
     )
@@ -284,7 +286,7 @@ export function PagedTable<T>({ list, empty, head, minWidth = 'min-w-[760px]', c
   if (list.items.length === 0) return <Empty>{empty}</Empty>
   return (
     <>
-      <div className="mt-3 overflow-x-auto rounded-2xl border border-gray-200 bg-white">
+      <div className="mt-3 overflow-x-auto rounded-2xl bg-gray-50">
         <table className={`w-full ${minWidth} text-[13px] text-gray-700 tabular-nums`}>
           <thead>
             <tr>{head}</tr>
@@ -298,7 +300,7 @@ export function PagedTable<T>({ list, empty, head, minWidth = 'min-w-[760px]', c
 }
 
 /** 표에서 눌러 상세 칸을 여는 줄의 모양이에요. 열려 있는 줄은 한 단계 짙어요. */
-export const openableRow = (open: boolean) => `cursor-pointer border-t border-gray-100 transition-colors hover:bg-gray-50 ${open ? 'bg-gray-50' : ''}`
+export const openableRow = (open: boolean) => `cursor-pointer border-t border-gray-200/60 transition-colors hover:bg-gray-100 ${open ? 'bg-gray-100' : ''}`
 
 /** 상세 칸 맨 위의 이름과 값 칸이에요. 넓으면 한 줄에 둘(wide면 넷)씩 놓여요. */
 export function InfoGrid({ rows, wide = false }: { rows: readonly (readonly [string, ReactNode])[]; wide?: boolean }) {

@@ -184,7 +184,7 @@ src/
   components/AppLogin.tsx    앱이 브라우저로 열어 주는 앱 로그인 화면 (/app-login)
   components/CaptureShield.tsx  앱에서 화면 공유나 녹화가 감지되면 화면 전체를 가리는 막
   components/Admin.tsx       앱의 관리자 화면 (/admin). 관리자 계정만 보고, 탭으로 나눠요
-  components/AdminManage.tsx  운영 현황, 회원, 채용공고, 기업, 수집, AI 호출 탭
+  components/AdminManage.tsx  운영 현황, 회원, 채용공고, 기업, 수집, AI 사용량 탭
   components/AdminOverview.tsx, AdminUsers.tsx, AdminChats.tsx, AdminFeedback.tsx, AdminUsage.tsx  연결하지 않는 예전 채팅 관리자 화면
   components/AdminParts.tsx  관리자 탭이 같이 쓰는 부품. 숫자 칸(Stat, StatsLoading), 막대 그래프(BarChart), 기기 태그(DeviceTags), 회원 칸(MemberCell), 검색창(SearchBox, useDebounced), 한 번에 받는 자료(useAdminData)와 더 보기로 받는 목록(usePaged), 표(PagedTable, th, td, 눌러 여는 줄 openableRow), 상세 칸의 이름과 값(InfoGrid)과 내용 자리(PanelContent)
   components/Plans.tsx       요금제 세 개만 보여주는 업그레이드 창(PlansModal)
@@ -608,12 +608,14 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 관리자 계정만 `/admin`과 계정 메뉴의 관리자 화면에 접근해요. `/config`의 admin이 true이면 운영 화면을 활성화해요. API는 `src/lib/adminManage.ts`에서 인증된 요청으로 호출하고 서버에서도 ADMIN 권한을 검사해요. 화면 구성과 접속 안내는 [ADMIN.md](ADMIN.md)에 있어요.
 
-1. 운영 현황: 회원, 관리자, 공개 공고와 전체 공고, 이력서, 진단 리포트, 기업, 공모전, 블로그 글, AI 호출 및 실패 누적 수예요.
+1. 운영 현황: 회원, 관리자, 공개 공고와 전체 공고, 이력서, 진단 리포트, 기업, 공모전, 블로그 글 수와, 그 아래 줄에 최근 30일 AI 비용, 호출, 토큰과 전체 기간 호출 수예요. 자세히는 AI 사용량 탭으로 가요.
 2. 회원(`/admin/users`): 이름과 이메일 검색, 권한 필터, 회원 상세, 관리자 지정과 해제, 현재 기기와 최근 로그인 20건 확인, 전체 및 개별 기기 로그아웃을 지원해요. 내 계정의 권한과 로그인은 변경할 수 없어요. 권한을 변경하면 대상 회원의 모든 로그인 기기를 해제해요.
 3. 채용공고(`/admin/postings`): 제목과 기업 검색, 공개 상태 필터, 제목과 직군, 경력, 지역, 마감일, 필수 및 우대 역량, 요약, 원문 주소를 수정해요. 공고 내리기는 closedAt만 변경해서 기존 리포트를 유지해요.
 4. 기업(`/admin/companies`): 기업명 검색, 기업명과 로고 대체 글자, 산업, 분류, 홈페이지와 기술 블로그, 노출 순서를 수정해요. 순서가 1000 이상이면 추천 기업에서 숨겨요.
 5. 데이터 수집(`/admin/crawl`): 대상별 즉시 수집과 기업 수집처 활성화 변경, 수집 결과와 오류 조회를 지원해요. 수집 중이면 5초마다 상태를 새로 받아요. 공모전 및 공공 채용 API의 전체 설정은 서버 환경 변수에서 관리해요.
-6. AI 호출(`/admin/ai`): 최신순 페이지 조회와 실패 필터, 모델과 용도, 입력 및 출력 토큰 수, 처리 시간, 오류를 확인해요. 서류 원문과 AI 응답은 저장하지 않아요.
+6. AI 사용량(`/admin/ai`): 기간(7일, 30일, 90일, 1년, 전체, `Segmented`)을 고르면 GET /admin/manage/ai-usage?days=로 집계를 받아요(전체는 0). 맨 위 숫자 칸 여섯 개는 비용(달러와 원 어림, 단가를 모르는 호출이 있으면 별표에 말풍선), 호출(하루 평균), 호출당 비용, 입력 토큰, 출력 토큰(호출당), 실패율(평균 처리 시간)이고, 직전 같은 길이 기간보다 비용과 호출이 얼마나 변했는지 한 줄로 적어요. 그 아래 날짜별 막대 그래프(비용, 호출, 토큰을 고르고, 120일이 넘으면 달별), 모델별과 용도별 표(호출, 실패, 입력과 출력 토큰, 평균 시간, 비용과 전체 중 비중 막대. 모델은 공급자와 100만 토큰당 단가)가 있어요. 맨 아래 최근 호출 표(전체와 실패만)는 호출마다 어림 비용을 적고, 실패한 호출은 이름표와 오류를 붙여요. 용도 이름(`PURPOSES`)은 화면 말로 바꿔요(posting은 공고 정리 등). 비용은 서버가 모델 단가(서버 `application.yml`의 `input-price`, `output-price`, 토큰 100만 개당 달러)로 어림하고, 원은 `ai.krw-per-usd`(기본 1400)로 바꿔요. 서류 원문과 AI 응답은 저장하지 않아요.
+
+관리자 탭은 앱의 다른 화면과 같은 부품을 써요. 거르는 줄은 검색창, 드롭다운(`Dropdown`), 오른쪽 끝 새로고침 아이콘이고, 표는 테두리 없는 회색 칸에 옅은 선으로 줄을 나눠요. 회원, 공고, 기업은 줄을 누르면 오른쪽 칸(`SidePanel`)에서 고치고, 칸 안의 입력칸, 드롭다운, 체크 칸(`Checkbox`)도 공통 부품이에요. 상태와 권한은 `Badge`로 적어요. 설명 문구는 두지 않아요.
 
 목록은 `/admin/manage/*`의 `{items, page, size, hasNext}`를 20개씩 조회해요. 검색어는 디바운스하고, 필터 변경 시 첫 페이지부터 받아요. 변경 작업은 중복 제출을 막고 실패 시 오류를 표시해요. 권한 변경, 로그아웃, 수집 실행과 활성화 변경은 확인 창을 거쳐요. 예전 `/admin/chats`와 `/admin/feedback` 주소는 운영 현황을 표시해요.
 
