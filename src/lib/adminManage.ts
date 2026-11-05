@@ -8,6 +8,11 @@ export interface Member {
   role: 'USER' | 'ADMIN'
   /** GitHub로만 가입해서 비밀번호가 없는 계정이에요. */
   socialOnly?: boolean
+  /** 관리자가 비밀번호를 초기화해서 다음 로그인 때 새 비밀번호를 정해야 해요. */
+  passwordChangeRequired?: boolean
+  /** 이용을 정지한 때예요. 없으면 정지되지 않은 계정이에요. */
+  suspendedAt?: string | null
+  suspendReason?: string | null
   registeredAt: string | null
 }
 export interface MemberDetail {

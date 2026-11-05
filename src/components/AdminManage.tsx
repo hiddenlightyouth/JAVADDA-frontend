@@ -58,6 +58,8 @@ import {
   loadCenter,
   LoadProgress,
   primaryButton,
+  quietButton,
+  dangerButton,
   Segmented,
   textArea,
   textFieldSm,
@@ -262,9 +264,10 @@ export function ManagementOverview({ onTab }: { onTab: (tab: AdminTab) => void }
 export function ManagementUsers() {
   const [query, setQuery] = useState('')
   const [role, setRole] = useState('ALL')
+  const [status, setStatus] = useState('ALL')
   const [selected, setSelected] = useState<Member | null>(null)
   const keyword = useDebounced(query)
-  const list = usePaged((page) => listManage<Member>('/users', keyword, { role }, page), `${keyword}:${role}`)
+  const list = usePaged((page) => listManage<Member>('/users', keyword, { role, status }, page), `${keyword}:${role}:${status}`)
   return (
     <>
       <Toolbar refresh={list.refresh}>
@@ -279,9 +282,19 @@ export function ManagementUsers() {
             ['ADMIN', '관리자'],
           ]}
         />
+        <Pick
+          value={status}
+          onChange={setStatus}
+          active={status !== 'ALL'}
+          options={[
+            ['ALL', '전체 상태'],
+            ['ACTIVE', '이용 중'],
+            ['SUSPENDED', '정지'],
+          ]}
+        />
       </Toolbar>
       {list.error && list.items !== null && <Failed message={list.error} onRetry={list.retry} />}
-      <PagedTable list={list} empty="조건에 맞는 회원이 없어요." head={<Head columns={['회원', '권한', '가입일']} />}>
+      <PagedTable list={list} empty="조건에 맞는 회원이 없어요." head={<Head columns={['회원', '권한', '상태', '가입일']} />}>
         {(u) => (
           <tr key={u.id} className={openableRow(selected?.id === u.id)} onClick={() => setSelected(u)}>
             <td className={td}>
@@ -289,6 +302,9 @@ export function ManagementUsers() {
               <p className="text-[12px] text-gray-500">{u.email}</p>
             </td>
             <td className={td}>{u.role === 'ADMIN' ? <Badge tone="brand">관리자</Badge> : <Badge tone="white">일반</Badge>}</td>
+            <td className={td}>
+              {u.suspendedAt ? <Badge tone="red">정지</Badge> : u.passwordChangeRequired ? <Badge tone="amber">비밀번호 변경 대기</Badge> : <Badge tone="white">이용 중</Badge>}
+            </td>
             <td className={`${td} whitespace-nowrap`}>{date(u.registeredAt)}</td>
           </tr>
         )}
@@ -303,6 +319,8 @@ function MemberPanel({ member, close, changed }: { member: Member; close: () => 
   const state = useAdminData(() => getManage<MemberDetail>(`/users/${member.id}`), member.id, true)
   const mutation = useMutation()
   const [tempPassword, setTempPassword] = useState('')
+  /** 정지 사유를 적는 창이 떠 있는지 */
+  const [suspending, setSuspending] = useState(false)
   const self = member.id === me?.id
   const reload = () => {
     state.reload()
@@ -326,6 +344,8 @@ function MemberPanel({ member, close, changed }: { member: Member; close: () => 
                   ['권한', user.role === 'ADMIN' ? '관리자' : '일반 회원'],
                   ['가입일', date(user.registeredAt)],
                   ['로그인 기기', `${sessions.length}개`],
+                  ['상태', user.suspendedAt ? `정지 (${date(user.suspendedAt)})` : user.passwordChangeRequired ? '비밀번호 변경 대기' : '이용 중'],
+                  ...(user.suspendedAt && user.suspendReason ? [['정지 사유', user.suspendReason] as [string, string]] : []),
                 ]}
               />
               {!self && (
@@ -376,6 +396,28 @@ function MemberPanel({ member, close, changed }: { member: Member; close: () => 
                       }
                     >
                       비밀번호 초기화
+                    </button>
+                  )}
+                  {user.suspendedAt ? (
+                    <button
+                      type="button"
+                      disabled={mutation.busy}
+                      className={toolButton}
+                      onClick={() =>
+                        mutation.ask(
+                          '이용 정지를 풀까요?',
+                          `${user.name} 님이 다시 로그인해서 서비스를 쓸 수 있어요.`,
+                          () => updateManage(`/users/${user.id}/suspension`, 'PATCH', { suspended: false }),
+                          reload,
+                          '이용 정지를 풀었어요.',
+                        )
+                      }
+                    >
+                      정지 해제
+                    </button>
+                  ) : (
+                    <button type="button" disabled={mutation.busy} className={toolDangerButton} onClick={() => setSuspending(true)}>
+                      이용 정지
                     </button>
                   )}
                 </div>
@@ -430,7 +472,58 @@ function MemberPanel({ member, close, changed }: { member: Member; close: () => 
       </EditPanel>
       {mutation.dialog}
       {tempPassword && <TempPasswordDialog password={tempPassword} onClose={() => setTempPassword('')} />}
+      {suspending && (
+        <SuspendDialog
+          name={member.name}
+          working={mutation.busy}
+          onCancel={() => setSuspending(false)}
+          onConfirm={(reason) =>
+            void mutation.execute(
+              () => updateManage(`/users/${member.id}/suspension`, 'PATCH', { suspended: true, reason }),
+              () => {
+                setSuspending(false)
+                reload()
+              },
+              '이용을 정지했어요.',
+            )
+          }
+        />
+      )}
     </>
+  )
+}
+
+/** 이용 정지를 묻는 창이에요. 사유는 적지 않아도 되고, 회원에게는 보이지 않아요. */
+function SuspendDialog({ name, working, onCancel, onConfirm }: { name: string; working: boolean; onCancel: () => void; onConfirm: (reason: string) => void }) {
+  const titleId = useId()
+  const [reason, setReason] = useState('')
+  return (
+    <Modal onClose={onCancel} labelledBy={titleId} alert className="w-full max-w-sm p-5">
+      <h2 id={titleId} className="text-[15px] font-semibold text-gray-900">
+        이용을 정지할까요?
+      </h2>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">
+        {name} 님을 모든 기기에서 로그아웃하고, 정지를 풀 때까지 로그인할 수 없게 해요.
+      </p>
+      <label className="mt-4 block">
+        <span className={labelText}>사유 (선택)</span>
+        <input
+          value={reason}
+          maxLength={200}
+          onChange={(event) => setReason(event.target.value)}
+          placeholder="관리자만 볼 수 있어요"
+          className={`mt-1.5 ${textFieldSm}`}
+        />
+      </label>
+      <div className="mt-5 flex justify-end gap-2">
+        <button type="button" onClick={onCancel} className={quietButton}>
+          취소
+        </button>
+        <button type="button" disabled={working} onClick={() => onConfirm(reason.trim())} className={dangerButton}>
+          {working ? '처리 중' : '정지하기'}
+        </button>
+      </div>
+    </Modal>
   )
 }
 
