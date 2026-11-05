@@ -326,11 +326,11 @@ function RequestDialog({ scopes, onClose, onCreated }: { scopes: ScopeInfo[]; on
         }}
       >
         <label className="block">
-          <span className={`mb-1.5 block ${labelText}`}>키 이름</span>
+          <span className={`mb-1.5 block ${labelText}`}>이름</span>
           <input className={textFieldSm} maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 공고 알림 봇" autoFocus />
         </label>
         <fieldset>
-          <legend className={`mb-2 ${labelText}`}>사용할 API</legend>
+          <legend className={`mb-2 ${labelText}`}>권한 요청</legend>
           <ul className="space-y-2.5">
             {scopes.map((s) => (
               <li key={s.value}>
@@ -353,7 +353,7 @@ function RequestDialog({ scopes, onClose, onCreated }: { scopes: ScopeInfo[]; on
             maxLength={2000}
             value={purpose}
             onChange={(e) => setPurpose(e.target.value)}
-            placeholder="어떤 서비스에서 어떻게 사용할지 입력하십시오."
+            placeholder="API 키를 발급하려는 사유를 입력하십시오."
           />
         </label>
         <label className="block">
@@ -366,7 +366,7 @@ function RequestDialog({ scopes, onClose, onCreated }: { scopes: ScopeInfo[]; on
             취소
           </button>
           <button type="submit" className={primaryButton} disabled={!ready || working}>
-            {working ? '요청 중' : '요청 보내기'}
+            {working ? '요청 중' : '요청하기'}
           </button>
         </div>
       </form>
