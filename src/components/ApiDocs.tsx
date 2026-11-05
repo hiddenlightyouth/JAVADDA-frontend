@@ -147,7 +147,7 @@ export function ApiDocs({ scopes }: { scopes: ScopeInfo[] }) {
           />
           <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-2">
             <Code title="성공">{success({ id: 'toss', name: '토스' })}</Code>
-            <Code title="실패">{JSON.stringify({ data: null, error: { code: 'C4033', message: '이 API를 부를 권한이 없는 키입니다.' } }, null, 2)}</Code>
+            <Code title="실패">{JSON.stringify({ data: null, error: { code: 'C4033', message: '이 API를 사용할 권한이 없습니다.' } }, null, 2)}</Code>
           </div>
           <H3>값의 모양</H3>
           <DocTable
