@@ -131,25 +131,27 @@ export function ApiKeys() {
       ) : !state.data.keys.length ? (
         <Notice className="mt-16" title="API 키가 발견되지 않음" action="새 API 키" onAction={() => setAsking(true)} />
       ) : (
-        <ul className="grid grid-cols-1 gap-3 @container lg:grid-cols-2">
+        <ul className="divide-y divide-gray-200/70 overflow-hidden rounded-2xl bg-gray-50">
           {state.data.keys.map((k, order) => (
             <li key={k.id} className="animate-rise" style={stagger(order)}>
               <button
                 type="button"
                 onClick={() => setOpenId(k.id)}
-                className="block w-full rounded-2xl bg-gray-50 p-4 text-left transition-colors hover:bg-gray-100 sm:p-5"
+                className="flex w-full flex-col gap-2 px-4 py-3.5 text-left transition-colors hover:bg-gray-100 sm:flex-row sm:items-center sm:gap-4 sm:px-5"
               >
-                <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 sm:w-56 sm:shrink-0">
                   <p className="truncate text-[15px] font-semibold text-gray-900">{k.name}</p>
-                  <StatusBadge status={k.status} />
+                  <p className={`mt-0.5 truncate text-[12.5px] text-gray-500 ${k.prefix ? 'font-mono' : ''}`}>{prefixText(k)}</p>
                 </div>
-                <p className={`mt-1 text-[12.5px] text-gray-500 ${k.prefix ? 'font-mono' : ''}`}>{prefixText(k)}</p>
-                <div className="mt-3 flex flex-wrap gap-1.5">
+                <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
                   {(k.status === 'approved' ? k.scopes : k.requestedScopes).map((s) => (
                     <Badge key={s} tone="white">
                       {scopeName(state.data!.scopes, s)}
                     </Badge>
                   ))}
+                </div>
+                <div className="shrink-0">
+                  <StatusBadge status={k.status} />
                 </div>
               </button>
             </li>
