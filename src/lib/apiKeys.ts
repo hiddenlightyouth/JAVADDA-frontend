@@ -93,12 +93,12 @@ export const STATUS_NAMES: Record<KeyStatus, string> = {
 export const MAX_KEYS = 5
 
 const errors: Record<string, string> = {
-  C4094: `API 키는 ${MAX_KEYS}개까지 요청할 수 있어요. 쓰지 않는 키를 해지해 주세요.`,
-  C4095: '해지한 키는 바꿀 수 없어요.',
-  C404: '키를 찾을 수 없어요.',
-  C002: '입력한 값을 확인해 주세요.',
-  C001: '사유는 10자 넘게, 권한은 하나 이상 골라 주세요.',
-  C403: '권한이 없어요.',
+  C4094: `API 키는 ${MAX_KEYS}개까지 요청할 수 있습니다. 사용하지 않는 키를 해지하십시오.`,
+  C4095: '해지한 키는 변경할 수 없습니다.',
+  C404: '키를 찾을 수 없습니다.',
+  C002: '입력한 값을 확인하십시오.',
+  C001: '사유는 10자 이상 입력하고, 권한은 하나 이상 선택하십시오.',
+  C403: '권한이 없습니다.',
 }
 
 /** 로그인한 요청을 보내고 서버의 오류 코드를 쉬운 말로 바꿔요. */
@@ -111,10 +111,10 @@ export async function keyRequest<T>(path: string, method = 'GET', body?: unknown
     if (result.ok) return { ok: true, data: result.data as T }
     return {
       ok: false,
-      message: errors[result.code ?? ''] ?? (result.status === 401 ? '로그인이 필요해요.' : '요청을 처리하지 못했어요. 잠시 뒤에 다시 시도해 주세요.'),
+      message: errors[result.code ?? ''] ?? (result.status === 401 ? '로그인이 필요합니다.' : '요청을 처리하지 못했습니다. 잠시 뒤에 다시 시도하십시오.'),
     }
   } catch {
-    return { ok: false, message: '서버와 연결하지 못했어요. 연결 상태를 확인해 주세요.' }
+    return { ok: false, message: '서버와 연결하지 못했습니다. 연결 상태를 확인하십시오.' }
   }
 }
 
@@ -127,56 +127,3 @@ export const fetchKeyUsage = (id: number, days: number) => keyRequest<ApiUsage>(
 
 /** 공개 API의 주소예요. 개발 서버는 서버 주소가 비어 있어서 운영 주소를 적어요. */
 export const PUBLIC_API_BASE = `${((import.meta.env.VITE_API_BASE_URL as string | undefined) || 'https://javadda-api.hidly.dev').replace(/\/+$/, '')}/api/public/v1`
-
-export interface EndpointDoc {
-  scope: string
-  path: string
-  summary: string
-  params: [string, string][]
-}
-
-/** 공개 API의 문서예요. 서버의 PublicApiController와 같이 고쳐요. */
-export const ENDPOINTS: EndpointDoc[] = [
-  {
-    scope: 'postings:read',
-    path: '/postings',
-    summary: '열린 채용 공고를 찾아요.',
-    params: [
-      ['query', '기업 이름, 제목, 지역, 역량에서 찾을 말'],
-      ['family', 'backend, frontend, mobile, data, devops, other'],
-      ['career', 'entry, junior, any (고른 경력과 경력 무관 공고)'],
-      ['company', '기업 아이디'],
-      ['sort', 'recent(기본), deadline'],
-      ['page, size', '0부터, size는 100까지(기본 20)'],
-    ],
-  },
-  { scope: 'postings:read', path: '/postings/{id}', summary: '공고 하나예요. 마감된 공고는 closedAt이 있어요.', params: [] },
-  {
-    scope: 'companies:read',
-    path: '/companies',
-    summary: '기업 목록과 채용 중인 공고 수예요.',
-    params: [
-      ['query', '기업 이름에서 찾을 말'],
-      ['category', 'service, saas, commerce, finance, ai, it-service, manufacturing, public, other'],
-      ['page, size', '0부터, size는 100까지(기본 20)'],
-    ],
-  },
-  { scope: 'companies:read', path: '/companies/{id}', summary: '기업 하나예요.', params: [] },
-  { scope: 'skills:read', path: '/skills', summary: '스킬 사전이에요. 공고에 적힌 비중(share)과 6개월 변화(change)가 있어요.', params: [['axis', '언어, 프레임워크, 데이터베이스, 인프라, 협업, CS 기초']] },
-  { scope: 'skills:read', path: '/skills/{name}', summary: '스킬 하나와 추천 강의예요. 별칭(스프링, k8s)으로도 찾아요.', params: [] },
-  { scope: 'stats:read', path: '/stats/postings', summary: '열린 공고를 직군, 경력, 분류, 기업으로 센 수와 많이 찾는 필수, 우대 역량이에요.', params: [] },
-  { scope: 'blogs:read', path: '/blogs', summary: '기업 기술 블로그의 글 요약과 주제예요.', params: [] },
-  { scope: 'blogs:read', path: '/blogs/outlook', summary: '여러 기업 블로그의 흐름을 정리한 총정리예요.', params: [] },
-  { scope: 'contests:read', path: '/contests', summary: '마감하지 않은 공모전이에요.', params: [] },
-]
-
-export const ERROR_DOCS: [string, string, string][] = [
-  ['401', 'C4014', 'X-API-Key 헤더가 없어요.'],
-  ['401', 'C4015', '없는 키예요.'],
-  ['403', 'C4031', '아직 승인되지 않았거나 해지한 키예요.'],
-  ['403', 'C4032', '사용 기간이 끝났어요.'],
-  ['403', 'C4033', '이 API의 권한이 없는 키예요.'],
-  ['429', 'C429', '1분이나 하루 한도를 넘었어요. Retry-After 헤더의 초만큼 기다려요.'],
-  ['400', 'C002', '파라미터가 잘못됐어요.'],
-  ['404', 'C4042, C404', '공고나 기업을 찾을 수 없어요.'],
-]

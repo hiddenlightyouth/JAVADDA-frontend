@@ -1,10 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { track } from '../lib/analytics'
 import {
-  ENDPOINTS,
-  ERROR_DOCS,
   MAX_KEYS,
-  PUBLIC_API_BASE,
   STATUS_NAMES,
   fetchKeyUsage,
   fetchMyKeys,
@@ -21,6 +18,7 @@ import { requestLogin } from '../lib/gap'
 import { showToast } from '../lib/toast'
 import { full, useAdminData } from './AdminParts'
 import { ScrollPage, PageHeader } from './AppPage'
+import { ApiDocs } from './ApiDocs'
 import { ApiUsageView } from './ApiUsage'
 import { ConfirmDialog, Modal } from './Dialog'
 import { Failed, Notice, Panel } from './GapParts'
@@ -72,6 +70,8 @@ export function ApiKeys() {
     if (!scopes.ok) return scopes
     return { ok: true as const, data: { keys: keys.data, scopes: scopes.data } }
   }, me?.email ?? 'guest', true)
+  // 문서는 로그인하지 않아도 봐서 권한 이름을 따로 받아요.
+  const publicScopes = useAdminData(() => fetchScopes(), 'scopes')
   const opened = state.data?.keys.find((k) => k.id === openId) ?? null
   const active = state.data?.keys.filter((k) => k.status === 'pending' || k.status === 'approved').length ?? 0
 
@@ -83,7 +83,7 @@ export function ApiKeys() {
         actions={
           me && tab === 'keys' && !opened ? (
             <button type="button" className={primaryButton} disabled={active >= MAX_KEYS} onClick={() => setAsking(true)}>
-              키 요청
+              새 API 키
             </button>
           ) : undefined
         }
@@ -108,9 +108,9 @@ export function ApiKeys() {
   return (
     <ScrollPage header={header}>
       {tab === 'docs' && !opened ? (
-        <Docs scopes={state.data?.scopes ?? []} />
+        <ApiDocs scopes={publicScopes.data ?? state.data?.scopes ?? []} />
       ) : !me ? (
-        <Notice className="mt-16" title="로그인하면 API 키를 요청할 수 있어요" action="로그인" onAction={requestLogin} />
+        <Notice className="mt-16" title="로그인하면 API 키를 요청할 수 있습니다" action="로그인" onAction={requestLogin} />
       ) : !state.data ? (
         state.error ? (
           <Failed message={state.error} onRetry={state.reload} className="mt-16" />
@@ -120,7 +120,7 @@ export function ApiKeys() {
       ) : opened ? (
         <KeyDetail apiKey={opened} scopes={state.data.scopes} onChanged={state.reload} />
       ) : !state.data.keys.length ? (
-        <Notice className="mt-16" title="아직 API 키가 없어요" body="쓸 API와 사유를 적어 요청하면 관리자가 확인한 뒤 열어 드려요." action="키 요청" onAction={() => setAsking(true)} />
+        <Notice className="mt-16" title="API 키가 발견되지 않음" action="새 API 키" onAction={() => setAsking(true)} />
       ) : (
         <ul className="grid grid-cols-1 gap-3 @container lg:grid-cols-2">
           {state.data.keys.map((k, order) => (
@@ -142,7 +142,7 @@ export function ApiKeys() {
                   {k.status === 'approved'
                     ? `오늘 ${full(k.callsToday)}번, 하루 ${full(k.perDay)}번까지`
                     : k.status === 'pending'
-                      ? `${dateOf(k.createdAt)}에 요청했어요`
+                      ? `${dateOf(k.createdAt)} 요청`
                       : dateOf(k.reviewedAt ?? k.createdAt)}
                 </p>
               </button>
@@ -179,7 +179,7 @@ function KeyDetail({ apiKey: k, scopes, onChanged }: { apiKey: ApiKeyView; scope
     }
     setConfirm(false)
     track('api_key_revoke', { status: k.status })
-    showToast(k.status === 'pending' ? '요청을 거뒀어요.' : '키를 해지했어요.')
+    showToast(k.status === 'pending' ? '요청을 철회했습니다.' : '키를 해지했습니다.')
     onChanged()
   }
 
@@ -190,7 +190,7 @@ function KeyDetail({ apiKey: k, scopes, onChanged }: { apiKey: ApiKeyView; scope
         <span className="font-mono text-[13px] text-gray-500">{k.prefix}</span>
         {!closed && (
           <button type="button" className={`${toolDangerButton} ml-auto`} onClick={() => setConfirm(true)}>
-            {k.status === 'pending' ? '요청 거두기' : '해지'}
+            {k.status === 'pending' ? '요청 철회' : '해지'}
           </button>
         )}
       </div>
@@ -264,9 +264,9 @@ function KeyDetail({ apiKey: k, scopes, onChanged }: { apiKey: ApiKeyView; scope
       )}
       {confirm && (
         <ConfirmDialog
-          title={k.status === 'pending' ? '요청을 거둘까요?' : '이 키를 해지할까요?'}
-          body={k.status === 'pending' ? '관리자에게 보낸 요청을 거둬요.' : '이 키로 부르는 요청은 바로 막혀요. 해지한 키는 다시 켤 수 없어요.'}
-          confirm={k.status === 'pending' ? '거두기' : '해지'}
+          title={k.status === 'pending' ? '요청을 철회하시겠습니까?' : '이 키를 해지하시겠습니까?'}
+          body={k.status === 'pending' ? '관리자에게 보낸 요청을 철회합니다.' : '이 키로 보내는 요청이 즉시 차단됩니다. 해지한 키는 다시 사용할 수 없습니다.'}
+          confirm={k.status === 'pending' ? '철회' : '해지'}
           danger
           working={working}
           onCancel={() => setConfirm(false)}
@@ -314,22 +314,22 @@ function RequestDialog({ scopes, onClose, onCreated }: { scopes: ScopeInfo[]; on
       () => true,
       () => false,
     )
-    if (!ok) showToast('복사하지 못했어요.')
+    if (!ok) showToast('복사하지 못했습니다.')
     else setCopied(true)
   }
 
   return (
     <Modal onClose={onClose} labelledBy={titleId} closeOnBackdrop={false} className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto p-6">
       <h2 id={titleId} className="text-[17px] font-semibold text-gray-900">
-        {created ? '키를 복사해 두세요' : 'API 키 요청'}
+        {created ? '키를 복사해 두십시오' : '새 API 키'}
       </h2>
       {created ? (
         <>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">이 창을 닫으면 키를 다시 볼 수 없어요. 관리자가 승인하면 바로 쓸 수 있어요.</p>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">이 창을 닫으면 키를 다시 볼 수 없습니다. 관리자가 승인하면 바로 사용할 수 있습니다.</p>
           <div className="mt-4 flex items-center gap-2 rounded-xl bg-gray-50 p-3">
             <code className="min-w-0 flex-1 font-mono text-[12.5px] break-all text-gray-900">{created}</code>
             <button type="button" className={ghostButton} onClick={() => void copy()}>
-              {copied ? '복사했어요' : '복사'}
+              {copied ? '복사됨' : '복사'}
             </button>
           </div>
           <div className="mt-5 flex justify-end">
@@ -351,7 +351,7 @@ function RequestDialog({ scopes, onClose, onCreated }: { scopes: ScopeInfo[]; on
             <input className={textFieldSm} maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 공고 알림 봇" autoFocus />
           </label>
           <fieldset>
-            <legend className={`mb-2 ${labelText}`}>쓸 API</legend>
+            <legend className={`mb-2 ${labelText}`}>사용할 API</legend>
             <ul className="space-y-2.5">
               {scopes.map((s) => (
                 <li key={s.value}>
@@ -365,7 +365,7 @@ function RequestDialog({ scopes, onClose, onCreated }: { scopes: ScopeInfo[]; on
           </fieldset>
           <label className="block">
             <span className={`mb-1.5 block ${labelText}`}>사유</span>
-            <textarea className={textArea} rows={4} maxLength={2000} value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="어떤 서비스에서 어떻게 쓰려는지 적어 주세요." />
+            <textarea className={textArea} rows={4} maxLength={2000} value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="어떤 서비스에서 어떻게 사용할지 입력하십시오." />
           </label>
           <label className="block">
             <span className={`mb-1.5 block ${labelText}`}>서비스 주소 (선택)</span>
@@ -377,66 +377,11 @@ function RequestDialog({ scopes, onClose, onCreated }: { scopes: ScopeInfo[]; on
               취소
             </button>
             <button type="submit" className={primaryButton} disabled={!ready || working}>
-              {working ? '보내고 있어요' : '요청 보내기'}
+              {working ? '요청 중' : '요청 보내기'}
             </button>
           </div>
         </form>
       )}
     </Modal>
-  )
-}
-
-function Docs({ scopes }: { scopes: ScopeInfo[] }) {
-  const example = `curl "${PUBLIC_API_BASE}/postings?family=backend&size=5" \\\n  -H "X-API-Key: jvd_..."`
-  return (
-    <div className="max-w-3xl space-y-3">
-      <Panel title="시작하기">
-        <ol className="list-decimal space-y-1.5 pl-5 text-[13.5px] leading-relaxed text-gray-800">
-          <li>내 키에서 쓸 API를 골라 키를 요청해요.</li>
-          <li>관리자가 승인하면 요청에 X-API-Key 헤더로 키를 넣어 불러요.</li>
-          <li>응답은 늘 {'{ data, error: { code, message } }'} 모양이에요. 시각은 한국 시각이에요.</li>
-        </ol>
-        <pre className="mt-4 overflow-x-auto rounded-xl bg-white p-4 font-mono text-[12px] leading-relaxed text-gray-800">{example}</pre>
-        <p className="mt-3 text-[12.5px] leading-relaxed text-gray-500">
-          키마다 1분과 하루(한국 시각) 호출 한도가 있고, 응답 헤더 X-RateLimit-Remaining에 오늘 남은 수를 적어요. 키는 서버에서만 쓰고 브라우저 코드에 넣지 마세요.
-        </p>
-      </Panel>
-      <Panel title="API">
-        <p className="mb-3 font-mono text-[12.5px] break-all text-gray-500">{PUBLIC_API_BASE}</p>
-        <ul className="divide-y divide-gray-200/60">
-          {ENDPOINTS.map((e) => (
-            <li key={e.path} className="py-3 first:pt-0 last:pb-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge tone="white">GET</Badge>
-                <code className="font-mono text-[13px] font-medium text-gray-900">{e.path}</code>
-                <span className="ml-auto text-[12px] text-gray-400">{scopeName(scopes, e.scope)}</span>
-              </div>
-              <p className="mt-1.5 text-[13px] text-gray-600">{e.summary}</p>
-              {e.params.length > 0 && (
-                <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[12.5px]">
-                  {e.params.map(([key, desc]) => (
-                    <div key={key} className="contents">
-                      <dt className="font-mono text-gray-900">{key}</dt>
-                      <dd className="text-gray-500">{desc}</dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-            </li>
-          ))}
-        </ul>
-      </Panel>
-      <Panel title="오류">
-        <dl className="grid grid-cols-[auto_auto_1fr] gap-x-4 gap-y-1.5 text-[12.5px] tabular-nums">
-          {ERROR_DOCS.map(([status, code, desc]) => (
-            <div key={code} className="contents">
-              <dt className="text-gray-500">{status}</dt>
-              <dd className="font-mono text-gray-900">{code}</dd>
-              <dd className="text-gray-600">{desc}</dd>
-            </div>
-          ))}
-        </dl>
-      </Panel>
-    </div>
   )
 }

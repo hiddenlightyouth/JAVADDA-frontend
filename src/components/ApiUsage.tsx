@@ -22,7 +22,7 @@ export function ApiUsageView({ usage, compactView = false }: { usage: ApiUsage; 
       <dl className={`grid grid-cols-2 gap-3 ${compactView ? '' : 'lg:grid-cols-4'}`}>
         <Stat label="호출" value={full(total.calls)} note={`하루 ${(total.calls / Math.max(1, usage.daily.length)).toFixed(1)}번`} />
         <Stat label="오류" value={rate(total.errors, total.calls)} note={`${full(total.errors)}번`} />
-        <Stat label="한도 넘음" value={full(total.limited)} note="429 응답" />
+        <Stat label="한도 초과" value={full(total.limited)} note="429 응답" />
         <Stat label="평균 응답" value={`${Math.round(total.latencyMs / Math.max(1, total.calls))}ms`} />
       </dl>
       <Panel className="mt-3" title="날짜별 호출">
@@ -35,7 +35,7 @@ export function ApiUsageView({ usage, compactView = false }: { usage: ApiUsage; 
       </div>
       <Panel className="mt-3" title="최근 호출">
         {!usage.recent.length ? (
-          <p className="text-[13px] text-gray-500">아직 부른 적이 없어요.</p>
+          <p className="text-[13px] text-gray-500">호출 기록이 없습니다.</p>
         ) : (
           <div className="-mx-4 overflow-x-auto sm:-mx-5">
             <table className="w-full min-w-[560px] text-[13px] text-gray-700 tabular-nums">
@@ -75,7 +75,7 @@ function GroupTable({ title, groups, mono = false }: { title: string; groups: Us
   return (
     <Panel title={title} className="min-w-0">
       {!groups.length ? (
-        <p className="text-[13px] text-gray-500">없어요.</p>
+        <p className="text-[13px] text-gray-500">없습니다.</p>
       ) : (
         <ul className="space-y-2.5">
           {groups.map((g) => (

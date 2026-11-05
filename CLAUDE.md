@@ -186,9 +186,11 @@ src/
   components/Admin.tsx       앱의 관리자 화면 (/admin). 관리자 계정만 보고, 탭으로 나눠요
   components/AdminManage.tsx  운영 현황, 회원, 채용공고, 기업, 수집, AI 사용량 탭
   components/AdminApi.tsx     관리자의 API 탭. API 키 요청 목록, 심사 칸(KeyPanel: 권한, 한도, 기간, 메모, 승인과 거절과 해지), 전체 호출량
-  components/ApiKeys.tsx      내 API 키(/api-keys). 키 목록과 상세(호출량), 키 요청 창(RequestDialog), 공개 API 문서(Docs), 상태 이름표(StatusBadge)
+  components/ApiKeys.tsx      내 API 키(/api-keys). 키 목록과 상세(호출량), 키 요청 창(RequestDialog), 상태 이름표(StatusBadge)
+  components/ApiDocs.tsx      공개 API 문서(ApiDocs). 왼쪽 목차, 가이드 절, API마다 기본 정보와 요청, 응답, 예제 표
+  lib/apiDocs.ts      공개 API 문서의 자료. 가이드 목차(GUIDES), 코드 값(CODE_VALUES), 응답 객체(TYPES), API(ENDPOINTS: 설명, 파라미터, 응답, 예제), 공통 오류(COMMON_ERRORS)
   components/ApiUsage.tsx     API 호출량(ApiUsageView). 숫자 칸, 날짜별 막대, 키별과 API별 막대, 최근 호출. 내 API 키와 관리자가 같이 써요
-  lib/apiKeys.ts      API 키 타입과 요청(fetchMyKeys, requestKey, revokeKey, fetchKeyUsage, fetchScopes), 공개 API 주소(PUBLIC_API_BASE)와 문서 자료(ENDPOINTS, ERROR_DOCS)
+  lib/apiKeys.ts      API 키 타입과 요청(fetchMyKeys, requestKey, revokeKey, fetchKeyUsage, fetchScopes), 공개 API 주소(PUBLIC_API_BASE)
   components/AdminOverview.tsx, AdminUsers.tsx, AdminChats.tsx, AdminFeedback.tsx, AdminUsage.tsx  연결하지 않는 예전 채팅 관리자 화면
   components/AdminParts.tsx  관리자 탭이 같이 쓰는 부품. 숫자 칸(Stat, StatsLoading), 막대 그래프(BarChart), 기기 태그(DeviceTags), 회원 칸(MemberCell), 검색창(SearchBox, useDebounced), 한 번에 받는 자료(useAdminData)와 더 보기로 받는 목록(usePaged), 표(PagedTable, th, td, 눌러 여는 줄 openableRow), 상세 칸의 이름과 값(InfoGrid)과 내용 자리(PanelContent)
   components/Plans.tsx       요금제 세 개만 보여주는 업그레이드 창(PlansModal)
@@ -422,10 +424,12 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 우리 자료를 외부 서비스가 쓰도록 공개 API(서버의 `/api/public/v1`)를 열어요. 키는 관리자가 승인해야 쓸 수 있어요.
 
 - 사이드바 맨 아래 계정 메뉴의 "API 키"(열쇠 아이콘 `KeyIcon`)가 내 API 키 화면(`/api-keys`, `ApiKeys`)을 열어요. 탭은 내 키와 문서예요.
-- 키 요청(`RequestDialog`): 키 이름, 쓸 API(권한, 체크 칸과 설명), 사유(10자 넘게), 서비스 주소(선택)를 적어 보내요. 보내면 키 원문(`jvd_`로 시작)을 이 창에서 한 번만 보여주고 복사하게 해요. 서버는 키의 SHA-256 값과 앞부분(prefix)만 남겨서 다시 보여줄 수 없어요. 키는 심사 중으로 만들어지고 관리자가 승인하면 바로 쓸 수 있어요. 심사 중과 사용 중을 합쳐 다섯 개(`MAX_KEYS`)까지 가질 수 있어요.
+- 키가 하나도 없으면 가운데에 "API 키가 발견되지 않음"과 "새 API 키" 버튼만 있어요. 제목 줄 오른쪽 버튼도 "새 API 키"예요.
+- 키 요청(`RequestDialog`, 제목 "새 API 키"): 키 이름, 쓸 API(권한, 체크 칸과 설명), 사유(10자 넘게), 서비스 주소(선택)를 적어 보내요. 보내면 키 원문(`jvd_`로 시작)을 이 창에서 한 번만 보여주고 복사하게 해요. 서버는 키의 SHA-256 값과 앞부분(prefix)만 남겨서 다시 보여줄 수 없어요. 키는 심사 중으로 만들어지고 관리자가 승인하면 바로 쓸 수 있어요. 심사 중과 사용 중을 합쳐 다섯 개(`MAX_KEYS`)까지 가질 수 있어요.
 - 키 목록은 회색 카드(이름, 상태, 앞부분, 권한, 오늘 호출이나 요청한 때)이고, 누르면 상세(상태, 관리자 메모, 한도와 기간, 받은 권한과 승인되지 않은 권한, 사유, 호출량)예요. 심사 중이면 "요청 거두기", 사용 중이면 "해지"(확인 창, 다시 켤 수 없어요)가 있어요.
 - 권한(서버의 `ApiScope`)은 채용 공고 `postings:read`, 기업 `companies:read`, 기술 스택 `skills:read`, 채용 통계 `stats:read`, 기술 블로그 `blogs:read`, 공모전 `contests:read`예요. 화면은 GET /api-keys/scopes로 이름과 설명을 받아요. 새 권한은 서버에만 더하면 화면에 나와요. 문서 탭의 API 목록(`ENDPOINTS`)은 화면에 적어 둬서 서버의 공개 API를 더하면 같이 고쳐요.
-- 문서 탭은 시작하기(요청, 승인, X-API-Key 헤더, 응답 모양, curl 보기), API 목록(주소, 설명, 파라미터, 필요한 권한), 오류 코드예요.
+- 문서 탭(`ApiDocs`, 자료는 `lib/apiDocs.ts`)은 카카오 개발자 문서처럼 자세히 적어요. 넓은 화면(1280px 이상)에서는 왼쪽에 목차(가이드와 권한별 API)가 멈춰 있고, 보고 있는 절을 칠하고, 누르면 그 자리로 부드럽게 가요. 가이드는 개요(권한과 API 표), 시작하기(순서와 기본 정보), 인증, 응답 형식(data와 error, 값의 모양), 페이지, 호출 한도(응답 헤더), 오류 코드, 코드 값이에요. API마다 기본 정보(메서드, URL, 인증 방식, 권한), 요청(헤더, 경로 파라미터, 쿼리 파라미터의 이름, 타입, 설명, 필수), 응답(본문과 객체 표, 객체 타입을 누르면 그 표로 가요), 예제(요청은 cURL, JavaScript, Python을 고르고, 응답은 실제 자료에서 줄인 JSON), 그 API만의 오류가 있어요. 칸마다 복사 버튼이 있어요. 문서는 로그인하지 않아도 봐요(권한 이름은 로그인 없이 받는 GET /api-keys/scopes). 서버의 공개 API나 응답을 바꾸면 `lib/apiDocs.ts`도 같이 고쳐요. 개별 항목 API의 제목은 "개별 공고", "개별 기업", "개별 스킬"이에요.
+- API 문서와 내 API 키 화면(`ApiDocs`, `ApiKeys`, `ApiUsage`, `lib/apiKeys.ts`의 오류 문구)은 다른 화면과 달리 합쇼체(~합니다, ~하십시오)로 써요. 예제 응답의 자료 글은 실제 응답 그대로 해요체예요. 관리자의 API 탭은 다른 관리자 화면처럼 해요체예요.
 - 관리자의 API 탭(`/admin/api`, `AdminApi`): 검색(키 이름, 요청자)과 상태 메뉴(전체, 심사 중, 사용 중, 거절, 해지), 심사 중과 사용 중인 키 수, 키 표(심사 중이 맨 위)가 있고, 아래에 기간별 전체 호출량(키별, API별, 최근 호출)이 있어요. 줄을 누르면 오른쪽 심사 칸(`KeyPanel`)에서 사유와 서비스 주소를 보고, 권한(요청한 것에 "요청함")을 골라 일부만 줄 수 있고, 1분과 하루 한도, 사용 기간, 요청자에게 보일 메모를 정해 승인, 거절, 저장, 해지해요. 해지한 키는 고칠 수 없어요. 승인한 키는 그 키의 호출량도 보여줘요.
 - 호출량(`ApiUsageView`)은 호출, 오류 비율, 한도 넘음(429), 평균 응답, 날짜별 막대, 키별과 API별 막대, 최근 호출 30개(시각, API, 응답 코드, 시간)예요.
 
@@ -445,7 +449,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 ## 텍스트 작성 규칙
 
 - 화면에 노출되는 모든 문구와 AI가 생성하는 글에서 긴 대시, 가운데점, 화살표 기호 같은 특수문자를 쓰지 않아요. 쉼표나 마침표로 자연스럽게 연결해요.
-- 말투는 친근한 존댓말(~해요, ~네요)로 통일해요. 이력서 문단처럼 사용자의 서류를 흉내 내는 보기 자료는 격식체 그대로 둬요.
+- 말투는 친근한 존댓말(~해요, ~네요)로 통일해요. API 문서와 내 API 키 화면만 합쇼체(~합니다, ~하십시오)예요. 이력서 문단처럼 사용자의 서류를 흉내 내는 보기 자료는 격식체 그대로 둬요.
 - 통계 용어는 쓰지 않고 "보통", "대체로"처럼 일상적인 말로 풀어 써요.
 - 이모지는 쓰지 않아요.
 - 안내와 오류는 토스트나 화면 가운데의 안내(`Notice`)로 보여줘요.
@@ -575,6 +579,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `sidebar_report_pin` | 사이드바에서 리포트를 고정하거나 풀었을 때 | `pinned` |
 | `sidebar_folder_toggle` | 사이드바에서 이력서 폴더를 접거나 폈을 때 | `open` |
 | `history_resume_select` | 내 리포트 화면에서 이력서 메뉴를 골랐을 때 | `resume`(all, resume, deleted) |
+| `api_docs_nav` | API 문서의 목차를 눌렀을 때 | `section`(가이드나 API 아이디) |
 | `api_keys_open`, `api_keys_tab`, `api_key_request_open`, `api_key_request`, `api_key_revoke` | 계정 메뉴에서 API 키를 열거나, 탭을 바꾸거나, 키를 요청하거나 해지했을 때 | `from`(menu), `tab`(keys, docs), `scopes`, `status` |
 | `admin_api_key_update` | 관리자가 API 키를 승인, 거절, 해지하거나 저장했을 때 | `status`(approved, rejected, revoked, save), `scopes` |
 | `admin_tab_view`, `admin_period_change`, `admin_user_open`, `admin_user_action`, `admin_call_open`, `admin_call_copy`, `admin_chat_action` | 관리자 화면 | 전과 같아요 |
