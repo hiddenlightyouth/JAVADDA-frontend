@@ -9,7 +9,6 @@ import { SettingRow } from './SettingRow'
 const TEXT = messages({
   ko: {
     label: 'AI 모델',
-    note: '진단, 서류 검증, 예상 질문, 면접 연습에 사용할 모델입니다.',
     defaultHint: '기본',
     loading: '불러오고 있어요',
     none: '고를 수 있는 모델이 없어요',
@@ -19,7 +18,6 @@ const TEXT = messages({
   },
   en: {
     label: 'AI model',
-    note: 'The model used for diagnosis, document review, interview questions, and practice.',
     defaultHint: 'Default',
     loading: 'Loading',
     none: 'No models available',
@@ -64,7 +62,7 @@ export function useAiModelSetting() {
     setAiModel(id)
   }
 
-  const note = ai === 'offline' ? text.offline : ai && models.length === 0 ? text.noneNote : text.note
+  const note = ai === 'offline' ? text.offline : ai && models.length === 0 ? text.noneNote : undefined
   const control =
     ai === null ? (
       <Dropdown align="right" value={text.loading} groups={[{ items: [], progress: load.percent }]} />
