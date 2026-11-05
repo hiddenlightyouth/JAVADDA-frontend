@@ -420,7 +420,7 @@ function PromptCopy({ id, text }: { id: string; text: () => string }) {
   return (
     <button type="button" className={toolButton} onClick={() => void copy()} aria-live="polite">
       {copied ? <CheckIcon /> : <SparkleIcon />}
-      {copied ? '복사됨' : '에이전트에게 말하기'}
+      {copied ? '복사됨' : '에이전트 전달 프롬프트'}
     </button>
   )
 }
