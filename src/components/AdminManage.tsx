@@ -13,6 +13,7 @@ import {
   type Posting,
   type Business,
   type Call,
+  type CallDetail,
   type Source,
 } from '../lib/adminManage'
 import type { Result } from '../lib/admin'
@@ -819,6 +820,7 @@ export function ManagementAi() {
   const [days, setDays] = useState<Period>(30)
   const [metric, setMetric] = useState<Metric>('cost')
   const [failed, setFailed] = useState<'all' | 'failed'>('all')
+  const [opened, setOpened] = useState<Call | null>(null)
   const state = useAdminData(() => getManage<AiUsage>(`/ai-usage?days=${days}`), days, true)
   const list = usePaged((page) => listManage<Call>('/ai-calls', '', { failed: String(failed === 'failed') }, page), failed)
   const refresh = () => {
@@ -855,7 +857,7 @@ export function ManagementAi() {
         head={<Head columns={['시각', '용도', '모델', '입력', '출력', '처리 시간', '비용']} />}
       >
         {(a) => (
-          <tr key={a.id} className={`${tableRow} align-top`}>
+          <tr key={a.id} className={`${openableRow(opened?.id === a.id)} align-top`} onClick={() => setOpened(a)}>
             <td className={`${td} whitespace-nowrap`}>{date(a.createdAt)}</td>
             <td className={`${td} max-w-[280px]`}>
               <p className="flex items-center gap-1.5 text-gray-900">
@@ -876,8 +878,110 @@ export function ManagementAi() {
           </tr>
         )}
       </PagedTable>
+      {opened && <CallPanel key={opened.id} call={opened} close={() => setOpened(null)} />}
     </>
   )
+}
+
+/** 호출 하나에 보낸 입력과 받은 답이에요. JSON이면 읽기 좋게 줄을 바꿔 보여줘요. */
+function CallPanel({ call, close }: { call: Call; close: () => void }) {
+  const state = useAdminData(() => getManage<CallDetail>(`/ai-calls/${call.id}`), call.id)
+  return (
+    <SidePanel
+      label={purposeName(call.purpose)}
+      closeLabel="닫기"
+      onClose={close}
+      className="max-w-[760px]"
+      header={
+        <>
+          <p className="text-[13px] text-gray-500">{date(call.createdAt)}</p>
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+            {purposeName(call.purpose)}
+            {!call.success && <Badge tone="red">실패</Badge>}
+          </h2>
+        </>
+      }
+    >
+      <PanelContent state={state}>
+        {({ call: c, system, input, output, retentionDays }) => (
+          <>
+            <InfoGrid
+              wide
+              rows={[
+                ['모델', c.model],
+                ['처리 시간', seconds(c.latencyMs)],
+                ['토큰', `${full(c.inputTokens)}, ${full(c.outputTokens)}`],
+                ['비용', c.cost === null ? '단가 없음' : usd(c.cost)],
+              ]}
+            />
+            {c.error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-[12.5px] leading-relaxed break-words text-red-600">{c.error}</p>}
+            {input === null && output === null && (
+              <p className="mt-6 text-[13px] text-gray-500">보낸 입력과 받은 답이 남아 있지 않아요. {retentionDays}일이 지났거나 기록을 남기기 전의 호출이에요.</p>
+            )}
+            {input !== null && <Content title="입력" text={input} />}
+            {output !== null && <Content title="출력" text={output} />}
+            {system !== null && <Content title="시스템 프롬프트" text={system} note="지금 파일" folded />}
+          </>
+        )}
+      </PanelContent>
+    </SidePanel>
+  )
+}
+
+function Content({ title, text, note, folded = false }: { title: string; text: string; note?: string; folded?: boolean }) {
+  const [open, setOpen] = useState(!folded)
+  const [copied, setCopied] = useState(false)
+  const shown = pretty(text)
+  async function copy() {
+    const ok = await navigator.clipboard.writeText(shown).then(
+      () => true,
+      () => false,
+    )
+    if (!ok) {
+      showToast('복사하지 못했어요.')
+      return
+    }
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1500)
+  }
+  return (
+    <section className="mt-6">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-[14px] font-semibold text-gray-900">
+          {title}
+          <span className="ml-2 text-[12px] font-normal text-gray-400 tabular-nums">
+            {note ? `${note}, ` : ''}
+            {full(text.length)}자
+          </span>
+        </h3>
+        <div className="flex items-center gap-1">
+          {folded && (
+            <button type="button" className={ghostButton} onClick={() => setOpen((v) => !v)}>
+              {open ? '접기' : '펼치기'}
+            </button>
+          )}
+          <button type="button" className={ghostButton} onClick={() => void copy()}>
+            {copied ? '복사했어요' : '복사'}
+          </button>
+        </div>
+      </div>
+      {open && (
+        <pre className="mt-2 max-h-[480px] overflow-auto rounded-xl bg-gray-50 p-4 font-mono text-[12px] leading-relaxed whitespace-pre-wrap break-words text-gray-800">
+          {shown}
+        </pre>
+      )}
+    </section>
+  )
+}
+
+function pretty(text: string) {
+  const trimmed = text.trim()
+  if (!trimmed.startsWith('{') && !trimmed.startsWith('[')) return text
+  try {
+    return JSON.stringify(JSON.parse(trimmed), null, 2)
+  } catch {
+    return text
+  }
 }
 
 function UsageView({ usage, metric, onMetric }: { usage: AiUsage; metric: Metric; onMetric: (metric: Metric) => void }) {

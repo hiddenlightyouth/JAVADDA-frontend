@@ -62,6 +62,17 @@ export interface Call {
   /** 설정한 단가로 어림한 달러. 단가를 모르면 null */
   cost: number | null
 }
+/**
+ * AI 호출 하나의 자세한 내용이에요. system은 지금의 프롬프트 파일이라 그때와 다를 수 있어요.
+ * input과 output은 보관 기간(retentionDays) 동안만 있고, 지났거나 남기기 전 호출이면 null이에요.
+ */
+export interface CallDetail {
+  call: Call
+  system: string | null
+  input: string | null
+  output: string | null
+  retentionDays: number
+}
 /** 합계예요. cost는 단가를 아는 호출만 더한 달러이고, latencyMs는 합이에요. */
 export interface AiTotals {
   calls: number
