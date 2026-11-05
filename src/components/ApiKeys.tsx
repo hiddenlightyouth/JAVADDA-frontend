@@ -6,6 +6,7 @@ import {
   fetchKeyUsage,
   fetchMyKeys,
   fetchScopes,
+  issueKey,
   requestKey,
   revokeKey,
   type ApiKeyView,
@@ -37,6 +38,7 @@ import {
   Tabs,
   textArea,
   textFieldSm,
+  toolButton,
   toolDangerButton,
 } from './ui'
 
@@ -56,6 +58,9 @@ export const scopeName = (scopes: ScopeInfo[], value: string) => scopes.find((s)
 
 const dateOf = (value: string | null) => (value ? formatDateTime(value) : '없음')
 
+/** 키 앞부분이에요. 발급 전이면 그 사정을 적어요. */
+const prefixText = (k: ApiKeyView) => k.prefix ?? (k.status === 'approved' ? '발급 대기' : k.status === 'pending' ? '승인 후 발급' : '발급하지 않음')
+
 type Tab = 'keys' | 'docs'
 
 /** 내 API 키(/api-keys)예요. 키를 요청하고, 승인 상태와 호출량을 보고, 문서를 읽어요. */
@@ -64,12 +69,19 @@ export function ApiKeys() {
   const [tab, setTab] = useState<Tab>('keys')
   const [asking, setAsking] = useState(false)
   const [openId, setOpenId] = useState<number | null>(null)
-  const state = useAdminData(async () => {
-    const [keys, scopes] = await Promise.all([fetchMyKeys(), fetchScopes()])
-    if (!keys.ok) return keys
-    if (!scopes.ok) return scopes
-    return { ok: true as const, data: { keys: keys.data, scopes: scopes.data } }
-  }, me?.email ?? 'guest', true)
+  const state = useAdminData(
+    async () => {
+      const [keys, scopes] = await Promise.all([fetchMyKeys(), fetchScopes()])
+      if (!keys.ok) return keys
+      if (!scopes.ok) return scopes
+      return {
+        ok: true as const,
+        data: { keys: keys.data, scopes: scopes.data },
+      }
+    },
+    me?.email ?? 'guest',
+    true,
+  )
   // 문서는 로그인하지 않아도 봐서 권한 이름을 따로 받아요.
   const publicScopes = useAdminData(() => fetchScopes(), 'scopes')
   const opened = state.data?.keys.find((k) => k.id === openId) ?? null
@@ -125,12 +137,16 @@ export function ApiKeys() {
         <ul className="grid grid-cols-1 gap-3 @container lg:grid-cols-2">
           {state.data.keys.map((k, order) => (
             <li key={k.id} className="animate-rise" style={stagger(order)}>
-              <button type="button" onClick={() => setOpenId(k.id)} className="block w-full rounded-2xl bg-gray-50 p-4 text-left transition-colors hover:bg-gray-100 sm:p-5">
+              <button
+                type="button"
+                onClick={() => setOpenId(k.id)}
+                className="block w-full rounded-2xl bg-gray-50 p-4 text-left transition-colors hover:bg-gray-100 sm:p-5"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <p className="truncate text-[15px] font-semibold text-gray-900">{k.name}</p>
                   <StatusBadge status={k.status} />
                 </div>
-                <p className="mt-1 font-mono text-[12.5px] text-gray-500">{k.prefix}</p>
+                <p className={`mt-1 text-[12.5px] text-gray-500 ${k.prefix ? 'font-mono' : ''}`}>{prefixText(k)}</p>
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {(k.status === 'approved' ? k.scopes : k.requestedScopes).map((s) => (
                     <Badge key={s} tone="white">
@@ -138,25 +154,12 @@ export function ApiKeys() {
                     </Badge>
                   ))}
                 </div>
-                <p className="mt-3 text-[12.5px] text-gray-500 tabular-nums">
-                  {k.status === 'approved'
-                    ? `오늘 ${full(k.callsToday)}번, 하루 ${full(k.perDay)}번까지`
-                    : k.status === 'pending'
-                      ? `${dateOf(k.createdAt)} 요청`
-                      : dateOf(k.reviewedAt ?? k.createdAt)}
-                </p>
               </button>
             </li>
           ))}
         </ul>
       )}
-      {asking && state.data && (
-        <RequestDialog
-          scopes={state.data.scopes}
-          onClose={() => setAsking(false)}
-          onCreated={() => state.reload()}
-        />
-      )}
+      {asking && state.data && <RequestDialog scopes={state.data.scopes} onClose={() => setAsking(false)} onCreated={() => state.reload()} />}
     </ScrollPage>
   )
 }
@@ -165,6 +168,8 @@ function KeyDetail({ apiKey: k, scopes, onChanged }: { apiKey: ApiKeyView; scope
   const [days, setDays] = useState<7 | 30 | 90>(30)
   const [confirm, setConfirm] = useState(false)
   const [working, setWorking] = useState(false)
+  const [reissuing, setReissuing] = useState(false)
+  const [issued, setIssued] = useState<string | null>(null)
   const usage = useAdminData(() => fetchKeyUsage(k.id, days), `${k.id}:${days}`, true)
   const closed = k.status === 'rejected' || k.status === 'revoked'
   const narrowed = k.status === 'approved' && k.scopes.length < k.requestedScopes.length
@@ -183,16 +188,43 @@ function KeyDetail({ apiKey: k, scopes, onChanged }: { apiKey: ApiKeyView; scope
     onChanged()
   }
 
+  async function issue() {
+    const again = !!k.prefix
+    setWorking(true)
+    const result = await issueKey(k.id)
+    setWorking(false)
+    if (!result.ok) {
+      showToast(result.message)
+      return
+    }
+    setReissuing(false)
+    track('api_key_issue', { reissue: again })
+    setIssued(result.data.key)
+    onChanged()
+  }
+
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge status={k.status} />
-        <span className="font-mono text-[13px] text-gray-500">{k.prefix}</span>
-        {!closed && (
-          <button type="button" className={`${toolDangerButton} ml-auto`} onClick={() => setConfirm(true)}>
-            {k.status === 'pending' ? '요청 철회' : '해지'}
-          </button>
-        )}
+        <span className={`text-[13px] text-gray-500 ${k.prefix ? 'font-mono' : ''}`}>{prefixText(k)}</span>
+        <div className="ml-auto flex gap-2">
+          {k.status === 'approved' &&
+            (k.prefix ? (
+              <button type="button" className={toolButton} onClick={() => setReissuing(true)}>
+                재발급
+              </button>
+            ) : (
+              <button type="button" className={primaryButton} disabled={working} onClick={() => void issue()}>
+                {working ? '발급 중' : '키 발급'}
+              </button>
+            ))}
+          {!closed && (
+            <button type="button" className={toolDangerButton} onClick={() => setConfirm(true)}>
+              {k.status === 'pending' ? '요청 철회' : '해지'}
+            </button>
+          )}
+        </div>
       </div>
       {k.note && (
         <p className="mt-4 rounded-2xl bg-brand-soft p-4 text-[13.5px] leading-relaxed text-gray-800">
@@ -205,7 +237,7 @@ function KeyDetail({ apiKey: k, scopes, onChanged }: { apiKey: ApiKeyView; scope
           [
             ['한도', `1분 ${full(k.perMinute)}번, 하루 ${full(k.perDay)}번`],
             ['기간', k.expiresAt ? `${dateOf(k.expiresAt)}까지` : '제한 없음'],
-            ['요청', dateOf(k.createdAt)],
+            k.status === 'pending' ? ['요청', dateOf(k.createdAt)] : ['발급', dateOf(k.issuedAt)],
             ['마지막 호출', dateOf(k.lastUsedAt)],
           ] as const
         ).map(([name, value]) => (
@@ -226,7 +258,11 @@ function KeyDetail({ apiKey: k, scopes, onChanged }: { apiKey: ApiKeyView; scope
         </ul>
         {narrowed && (
           <p className="mt-3 text-[12.5px] text-gray-500">
-            승인되지 않은 권한: {k.requestedScopes.filter((s) => !k.scopes.includes(s)).map((s) => scopeName(scopes, s)).join(', ')}
+            승인되지 않은 권한:{' '}
+            {k.requestedScopes
+              .filter((s) => !k.scopes.includes(s))
+              .map((s) => scopeName(scopes, s))
+              .join(', ')}
           </p>
         )}
       </Panel>
@@ -262,6 +298,17 @@ function KeyDetail({ apiKey: k, scopes, onChanged }: { apiKey: ApiKeyView; scope
           )}
         </>
       )}
+      {reissuing && (
+        <ConfirmDialog
+          title="키를 재발급하시겠습니까?"
+          body="새 키를 발급하면 지금 쓰는 키는 바로 사용할 수 없습니다."
+          confirm="재발급"
+          working={working}
+          onCancel={() => setReissuing(false)}
+          onConfirm={() => void issue()}
+        />
+      )}
+      {issued && <IssuedDialog apiKey={issued} onClose={() => setIssued(null)} />}
       {confirm && (
         <ConfirmDialog
           title={k.status === 'pending' ? '요청을 철회하시겠습니까?' : '이 키를 해지하시겠습니까?'}
@@ -285,8 +332,6 @@ function RequestDialog({ scopes, onClose, onCreated }: { scopes: ScopeInfo[]; on
   const [picked, setPicked] = useState<string[]>([])
   const [error, setError] = useState('')
   const [working, setWorking] = useState(false)
-  const [created, setCreated] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
   const ready = name.trim() && purpose.trim().length >= 10 && picked.length > 0
 
   useEffect(() => {
@@ -297,20 +342,91 @@ function RequestDialog({ scopes, onClose, onCreated }: { scopes: ScopeInfo[]; on
     if (!ready || working) return
     setWorking(true)
     setError('')
-    const result = await requestKey({ name: name.trim(), purpose: purpose.trim(), site: site.trim(), scopes: picked })
+    const result = await requestKey({
+      name: name.trim(),
+      purpose: purpose.trim(),
+      site: site.trim(),
+      scopes: picked,
+    })
     setWorking(false)
     if (!result.ok) {
       setError(result.message)
       return
     }
     track('api_key_request', { scopes: picked.length })
-    setCreated(result.data.key)
+    showToast('요청을 보냈습니다. 승인되면 키를 발급받을 수 있습니다.')
     onCreated()
+    onClose()
   }
 
+  return (
+    <Modal onClose={onClose} labelledBy={titleId} closeOnBackdrop={false} className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto p-6">
+      <h2 id={titleId} className="text-[17px] font-semibold text-gray-900">
+        새 API 키
+      </h2>
+      <form
+        className="mt-4 space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault()
+          void submit()
+        }}
+      >
+        <label className="block">
+          <span className={`mb-1.5 block ${labelText}`}>키 이름</span>
+          <input className={textFieldSm} maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 공고 알림 봇" autoFocus />
+        </label>
+        <fieldset>
+          <legend className={`mb-2 ${labelText}`}>사용할 API</legend>
+          <ul className="space-y-2.5">
+            {scopes.map((s) => (
+              <li key={s.value}>
+                <Checkbox
+                  checked={picked.includes(s.value)}
+                  onChange={(on) => setPicked((list) => (on ? [...list, s.value] : list.filter((v) => v !== s.value)))}
+                >
+                  <span className="font-medium text-gray-900">{s.label}</span>
+                </Checkbox>
+                <p className="mt-0.5 pl-6 text-[12.5px] leading-relaxed text-gray-500">{s.description}</p>
+              </li>
+            ))}
+          </ul>
+        </fieldset>
+        <label className="block">
+          <span className={`mb-1.5 block ${labelText}`}>사유</span>
+          <textarea
+            className={textArea}
+            rows={4}
+            maxLength={2000}
+            value={purpose}
+            onChange={(e) => setPurpose(e.target.value)}
+            placeholder="어떤 서비스에서 어떻게 사용할지 입력하십시오."
+          />
+        </label>
+        <label className="block">
+          <span className={`mb-1.5 block ${labelText}`}>서비스 주소 (선택)</span>
+          <input className={textFieldSm} type="url" maxLength={500} value={site} onChange={(e) => setSite(e.target.value)} placeholder="https://" />
+        </label>
+        <FormError>{error}</FormError>
+        <div className="flex justify-end gap-2">
+          <button type="button" className={quietButton} onClick={onClose}>
+            취소
+          </button>
+          <button type="submit" className={primaryButton} disabled={!ready || working}>
+            {working ? '요청 중' : '요청 보내기'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+/** 발급한 키를 한 번만 보여주는 창이에요. 닫으면 다시 볼 수 없어요. */
+function IssuedDialog({ apiKey, onClose }: { apiKey: string; onClose: () => void }) {
+  const titleId = useId()
+  const [copied, setCopied] = useState(false)
+
   async function copy() {
-    if (!created) return
-    const ok = await navigator.clipboard.writeText(created).then(
+    const ok = await navigator.clipboard.writeText(apiKey).then(
       () => true,
       () => false,
     )
@@ -319,69 +435,22 @@ function RequestDialog({ scopes, onClose, onCreated }: { scopes: ScopeInfo[]; on
   }
 
   return (
-    <Modal onClose={onClose} labelledBy={titleId} closeOnBackdrop={false} className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto p-6">
+    <Modal onClose={onClose} labelledBy={titleId} closeOnBackdrop={false} className="w-full max-w-lg p-6">
       <h2 id={titleId} className="text-[17px] font-semibold text-gray-900">
-        {created ? '키를 복사해 두십시오' : '새 API 키'}
+        키를 복사해 두십시오
       </h2>
-      {created ? (
-        <>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">이 창을 닫으면 키를 다시 볼 수 없습니다. 관리자가 승인하면 바로 사용할 수 있습니다.</p>
-          <div className="mt-4 flex items-center gap-2 rounded-xl bg-gray-50 p-3">
-            <code className="min-w-0 flex-1 font-mono text-[12.5px] break-all text-gray-900">{created}</code>
-            <button type="button" className={ghostButton} onClick={() => void copy()}>
-              {copied ? '복사됨' : '복사'}
-            </button>
-          </div>
-          <div className="mt-5 flex justify-end">
-            <button type="button" className={primaryButton} onClick={onClose}>
-              닫기
-            </button>
-          </div>
-        </>
-      ) : (
-        <form
-          className="mt-4 space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            void submit()
-          }}
-        >
-          <label className="block">
-            <span className={`mb-1.5 block ${labelText}`}>키 이름</span>
-            <input className={textFieldSm} maxLength={100} value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 공고 알림 봇" autoFocus />
-          </label>
-          <fieldset>
-            <legend className={`mb-2 ${labelText}`}>사용할 API</legend>
-            <ul className="space-y-2.5">
-              {scopes.map((s) => (
-                <li key={s.value}>
-                  <Checkbox checked={picked.includes(s.value)} onChange={(on) => setPicked((list) => (on ? [...list, s.value] : list.filter((v) => v !== s.value)))}>
-                    <span className="font-medium text-gray-900">{s.label}</span>
-                  </Checkbox>
-                  <p className="mt-0.5 pl-6 text-[12.5px] leading-relaxed text-gray-500">{s.description}</p>
-                </li>
-              ))}
-            </ul>
-          </fieldset>
-          <label className="block">
-            <span className={`mb-1.5 block ${labelText}`}>사유</span>
-            <textarea className={textArea} rows={4} maxLength={2000} value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="어떤 서비스에서 어떻게 사용할지 입력하십시오." />
-          </label>
-          <label className="block">
-            <span className={`mb-1.5 block ${labelText}`}>서비스 주소 (선택)</span>
-            <input className={textFieldSm} type="url" maxLength={500} value={site} onChange={(e) => setSite(e.target.value)} placeholder="https://" />
-          </label>
-          <FormError>{error}</FormError>
-          <div className="flex justify-end gap-2">
-            <button type="button" className={quietButton} onClick={onClose}>
-              취소
-            </button>
-            <button type="submit" className={primaryButton} disabled={!ready || working}>
-              {working ? '요청 중' : '요청 보내기'}
-            </button>
-          </div>
-        </form>
-      )}
+      <p className="mt-1.5 text-[13px] leading-relaxed text-gray-500">이 창을 닫으면 키를 다시 볼 수 없습니다. 잃어버리면 재발급하십시오.</p>
+      <div className="mt-4 flex items-center gap-2 rounded-xl bg-gray-50 p-3">
+        <code className="min-w-0 flex-1 font-mono text-[12.5px] break-all text-gray-900">{apiKey}</code>
+        <button type="button" className={ghostButton} onClick={() => void copy()}>
+          {copied ? '복사됨' : '복사'}
+        </button>
+      </div>
+      <div className="mt-5 flex justify-end">
+        <button type="button" className={primaryButton} onClick={onClose}>
+          닫기
+        </button>
+      </div>
     </Modal>
   )
 }

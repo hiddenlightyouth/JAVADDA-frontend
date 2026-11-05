@@ -117,8 +117,8 @@ export function ApiDocs({ scopes }: { scopes: ScopeInfo[] }) {
 
         <Section id="start" title="시작하기">
           <ol className="list-decimal space-y-2 pl-5 text-[14px] leading-relaxed text-gray-800">
-            <li>내 키 탭에서 새 API 키를 요청하십시오. 키는 한 번만 표시됩니다.</li>
-            <li>관리자가 승인하면 사용할 수 있습니다.</li>
+            <li>내 키 탭에서 새 API 키를 요청하십시오.</li>
+            <li>관리자가 승인하면 키 상세에서 키를 발급하십시오. 키는 한 번만 표시되고, 잃어버리면 재발급할 수 있습니다.</li>
             <li>X-API-Key 헤더에 키를 넣어 호출하십시오.</li>
           </ol>
           <H3>기본 정보</H3>
@@ -134,7 +134,7 @@ export function ApiDocs({ scopes }: { scopes: ScopeInfo[] }) {
 
         <Section id="auth" title="인증">
           <FieldTable fields={HEADERS} required />
-          <Note>키는 서버에서만 사용하십시오. 노출되었다면 바로 해지하고 새 키를 요청하십시오.</Note>
+          <Note>키는 서버에서만 사용하십시오. 노출되었다면 바로 재발급하십시오. 예전 키는 즉시 막힙니다.</Note>
         </Section>
 
         <Section id="format" title="응답 형식">

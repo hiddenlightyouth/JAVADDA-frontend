@@ -86,7 +86,7 @@ export function ManagementApi() {
           <tr key={k.id} className={openableRow(opened?.id === k.id)} onClick={() => setOpened(k)}>
             <td className={`${td} max-w-[220px]`}>
               <p className="truncate font-medium text-gray-900">{k.name}</p>
-              <p className="font-mono text-[12px] text-gray-500">{k.prefix}</p>
+              <p className="font-mono text-[12px] text-gray-500">{k.prefix ?? '발급 전'}</p>
             </td>
             <td className={`${td} max-w-[200px]`}>
               <p className="truncate text-gray-900">{k.owner?.name}</p>
@@ -210,7 +210,7 @@ function KeyPanel({ apiKey: k, scopes, close, changed }: { apiKey: ApiKeyView; s
             wide
             rows={[
               ['요청자', k.owner?.name ?? ''],
-              ['키', <span className="font-mono text-[12.5px]">{k.prefix}</span>],
+              ['키', <span className="font-mono text-[12.5px]">{k.prefix ?? '발급 전'}</span>],
               ['요청', dateOf(k.createdAt)],
               ['마지막 호출', dateOf(k.lastUsedAt)],
             ]}
