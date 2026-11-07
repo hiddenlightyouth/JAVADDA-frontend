@@ -7,7 +7,7 @@ import { Carousel } from './Carousel'
 import { CompanyMark, DiagnosedTag, FitBadge } from './GapParts'
 import { JobCard, useJobBrowser } from './JobCard'
 import { ChevronRightIcon, SearchIcon } from './Icons'
-import { LofyScript, ScriptMark } from './LofyScript'
+import { LofyScript } from './LofyScript'
 import { SplitView } from './PostingBrowser'
 import { SuggestionHint, useSuggestion } from './ScreenParts'
 import { menuPanel } from './ui'
@@ -288,10 +288,6 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
   return (
     <SplitView side={browser.side}>
       <main className="relative flex-1 overflow-hidden">
-        {/* 휴대폰에서는 큰 손글씨 로고 대신, 맨 위 줄의 사이드바 버튼 옆에 사이드바와 같은 자리, 같은 크기로 로고를 둬요. 스크롤해도 그대로이고 공고 줄은 그 아래로 흐리게 지나가요. */}
-        <div className="absolute inset-x-0 top-0 z-20 flex h-14 items-center bg-white/80 pl-12 backdrop-blur-xl sm:hidden">
-          <ScriptMark className="h-6 w-auto" />
-        </div>
         <div className={`relative h-full overflow-y-auto ${gutter} pb-10`}>
           {/* 휴대폰에서는 로고, 타이틀, 설명, 검색창을 두지 않고 바로 공고 줄부터 보여줘요. 검색은 공고 탐색에서 해요. */}
           <div className="mx-auto w-full max-w-lg pt-[max(4.5rem,11vh)] pb-10 max-sm:hidden sm:pt-[max(6rem,16vh)] sm:pb-14">
@@ -375,8 +371,8 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
             </div>
           </div>
 
-          {/* 휴대폰에서는 위의 덩어리가 없어서, 왼쪽 위 사이드바 버튼 아래(헤더 높이)에서 기다리지 않고 바로 떠올라요. */}
-          <div className="flex animate-rise flex-col gap-9 max-sm:pt-14 sm:[animation-delay:450ms]">
+          {/* 휴대폰에서는 위의 덩어리가 없어서, 맨 위 로고 줄(AppFrame) 아래 16px에서 기다리지 않고 바로 떠올라요. */}
+          <div className="flex animate-rise flex-col gap-9 max-sm:pt-[72px] sm:[animation-delay:450ms]">
             <section aria-labelledby="home-hot">
               <h2 id="home-hot" className="text-[15px] font-semibold text-gray-900">
                 {L.hot}

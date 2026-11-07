@@ -3,8 +3,10 @@ import { useDismiss } from '../hooks/useDismiss'
 import { track } from '../lib/analytics'
 import { isWebApp } from '../lib/app'
 import { messages, useMessages } from '../lib/i18n'
+import { followLink } from '../lib/links'
 import { readFlag, writeFlag } from '../lib/storage'
 import { CloseIcon, MenuIcon, SidebarIcon } from './Icons'
+import { ScriptMark } from './LofyScript'
 
 // 앱에서만 쓰는 화면은 필요할 때만 받아요.
 const AppGate = lazy(() => import('./AppGate').then((module) => ({ default: module.AppGate })))
@@ -129,7 +131,7 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
 
   return (
     // 사이드바가 옆에 없으면 화면의 제목 줄이 사이드바 버튼 옆, 같은 줄로 올라가요(index.css의 page-header 규칙).
-    <div data-sidebar={!narrow && sidebarOpen ? 'open' : 'closed'} data-shell={isWebApp ? 'web' : 'mac'} className="relative flex h-dvh bg-white">
+    <div data-sidebar={narrow ? 'drawer' : sidebarOpen ? 'open' : 'closed'} data-shell={isWebApp ? 'web' : 'mac'} className="relative flex h-dvh bg-white">
       {/* 사이드바 접기 버튼은 늘 같은 자리에 있어서 접어도 펴도 움직이지 않아요. 앱에서는 창 버튼 바로 옆, 웹에서는 왼쪽 위예요. 좁은 화면에서는 서랍을 여는 햄버거 그림이에요. */}
       <button
         type="button"
@@ -140,6 +142,15 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
       >
         {narrow ? drawerOpen ? <CloseIcon className="size-4" /> : <MenuIcon /> : <SidebarIcon />}
       </button>
+      {/* 휴대폰에서는 맨 위 줄의 사이드바 버튼 옆에 로고를 둬요. 서랍의 로고와 같은 자리, 같은 크기라 서랍을 열고 닫아도 움직이지 않아요.
+          화면의 제목 줄은 이 줄 아래로 내려가요(index.css의 data-sidebar='drawer' 규칙). 바탕은 App이 늘 겹쳐 두는 반투명 블러 헤더(h-14)라, 로고만 그 위(z-21)에 얹어요. 헤더 아래에 두면 헤더의 블러에 로고가 뭉개져요. */}
+      {narrow && (
+        <div className="absolute top-0 left-0 z-[21] flex h-14 items-center pl-12">
+          <a href="/app" onClick={followLink(sidebar.onNew)} className="inline-flex items-center">
+            <ScriptMark className="h-6 w-auto" />
+          </a>
+        </div>
+      )}
       {open &&
         (narrow ? (
           // 휴대폰에서는 서랍이 화면 전체를 덮어요. 바탕은 반투명이라 뒤의 화면이 흐리게 비쳐요. 빨리 떠야 빠릿하게 느껴져서 짧게 들어와요.
