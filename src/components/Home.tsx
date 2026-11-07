@@ -117,7 +117,7 @@ const CAROUSEL_GAP = 4
 function CompanyCarousel({ companies, onSelect }: { companies: Company[]; onSelect: (company: Company) => void }) {
   return (
     <Carousel
-      className="mt-2"
+      className={`mt-2 ${phoneBleed}`}
       items={companies}
       itemWidth={CAROUSEL_ITEM}
       gap={CAROUSEL_GAP}
@@ -136,6 +136,13 @@ function CompanyCarousel({ companies, onSelect }: { companies: Company[]; onSele
     />
   )
 }
+
+/**
+ * 휴대폰에서 움직이는 줄(요즘 뜨는 기업, 기업으로 둘러보기)을 화면 가장자리까지 넓혀요.
+ * 바깥 칸만 좌우 여백만큼 넓히고 같은 만큼 안쪽 여백을 둬서, 처음 자리는 그대로이고 잘리는 자리만 화면 끝으로 가요.
+ * 그 위 화면은 내용 폭이 좁아서 여백 안에서 잘려도 어색하지 않아요.
+ */
+const phoneBleed = '-mx-4 px-4 sm:mx-0 sm:px-0'
 
 /** 요즘 뜨는 기업 카드 하나의 폭과 카드 사이 간격(px), 카드 하나가 지나가는 데 걸리는 시간(초)이에요. */
 const HOT_CARD = 236
@@ -173,7 +180,7 @@ function HotCompanies({ companies, onSelect }: { companies: { company: Company; 
     </li>
   )
   return (
-    <div className="mt-3 overflow-hidden">
+    <div className={`mt-3 overflow-hidden ${phoneBleed}`}>
       <ul
         className="flex w-max animate-marquee hover:[animation-play-state:paused] focus-within:[animation-play-state:paused] motion-reduce:animate-none"
         style={{ '--marquee-duration': `${companies.length * HOT_SECONDS}s` } as CSSProperties}
