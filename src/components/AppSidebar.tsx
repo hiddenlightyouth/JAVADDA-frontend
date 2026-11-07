@@ -358,7 +358,7 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
 
   return (
     <aside
-      className={`relative z-30 flex shrink-0 flex-col ${drawer ? 'w-full bg-gray-50/75 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl backdrop-saturate-150' : 'w-72 border-r border-gray-200 bg-gray-50'}`}
+      className={`relative z-30 flex shrink-0 flex-col ${drawer ? 'w-full overflow-y-auto overscroll-contain bg-gray-50/75 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl backdrop-saturate-150' : 'w-72 border-r border-gray-200 bg-gray-50'}`}
     >
       {isWebApp ? (
         // 웹에서는 왼쪽 위의 사이드바 버튼 옆에 로고를 두고, 누르면 새 진단 화면으로 가요. 높이는 헤더와 맞춰요.
@@ -498,7 +498,8 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
         )}
       </div>
 
-      <nav className="mt-1.5 min-h-0 flex-1 overflow-y-auto px-3 pb-3">
+      {/* 넓은 화면에서는 리포트 목록만 스크롤해요. 휴대폰 서랍은 위의 메뉴만으로 화면이 차서 목록 칸이 남지 않으니, 서랍 전체가 같이 스크롤해요. */}
+      <nav className={`mt-1.5 flex-1 px-3 pb-3 ${drawer ? 'shrink-0' : 'min-h-0 overflow-y-auto'}`}>
         {reports.length === 0 ? (
           <p className="px-3 py-2 text-[13px] leading-relaxed text-gray-500">{list.none}</p>
         ) : (
