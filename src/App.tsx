@@ -17,9 +17,10 @@ import { isAppGithubCallback } from './lib/githubConnect'
 import { useFeedback } from './lib/feedback'
 import { useShortcuts } from './lib/shortcuts'
 import { localizePath, messages, pick, useLang } from './lib/i18n'
-import { applyMeta, HOME_META } from './lib/meta'
+import { applyMeta, HOME_META, SITE_TITLE } from './lib/meta'
+import { pageTitle } from './lib/pageTitle'
 import { pathOf, reportFromPath } from './lib/routes'
-import { setLoginHandler, startDiagnosis, useResume } from './lib/gap'
+import { setLoginHandler, startDiagnosis, useReports, useResume } from './lib/gap'
 import { closePlans, refreshUsage, usePlansOpen } from './lib/usage'
 import type { AccountPage } from './components/Account'
 
@@ -70,11 +71,14 @@ export default function App() {
   const lang = useLang()
   const resume = useResume()
 
-  // 소개와 아티클, 계정 화면은 스스로 제목과 미리보기 태그를 정하고, 그 밖의 화면은 메인 화면의 값을 언어에 맞춰 써요.
+  // 소개와 아티클, 계정 화면은 스스로 제목과 미리보기 태그를 정하고, 그 밖의 화면은 메인 화면의 값을 언어에 맞춰 쓰되 탭 제목에 지금 화면의 이름을 붙여요("공고 탐색 | 잡아따").
   const ownMeta = page?.kind === 'about' || article || account !== null
+  const reports = useReports()
+  const screenName = ownMeta ? null : pageTitle(page, lang, reports)
   useEffect(() => {
-    if (!ownMeta) applyMeta(HOME_META[lang], lang, '/')
-  }, [ownMeta, lang])
+    if (ownMeta || page?.kind === 'app-login') return
+    applyMeta({ ...HOME_META[lang], ...(screenName ? { title: `${screenName} | ${SITE_TITLE}` } : {}) }, lang, '/')
+  }, [ownMeta, page?.kind, screenName, lang])
 
   // 로그인하거나 로그아웃하면(계정이 바뀌어도) 한도가 바뀌어서, 이번 주 사용량을 새로 받아요. 토큰을 새로 받는 것만으로는 다시 받지 않아요.
   const signedIn = tokens !== null
