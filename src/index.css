@@ -19,6 +19,7 @@
   --animate-slide-in: slide-in 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-slide-in-left: slide-in-left 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-fade: fade 0.2s ease-out both;
+  --animate-drawer-in: drawer-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-grow: grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-word: word 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   /* 같은 줄을 두 번 이어 붙인 것을 반만큼 밀어서 끊김 없이 흘러가요. 빠르기는 칸 수에 맞춰 --marquee-duration으로 정해요. */
@@ -62,6 +63,17 @@
   }
 
   /* 웹의 /app에서 좁은 화면의 사이드바 서랍이 왼쪽에서 미끄러져 들어와요. */
+  /* 흐림(backdrop-filter)은 부모가 투명해지는 동안 그려지지 않아서, 서랍은 투명도 없이 밀려 들어오기만 해요. */
+  @keyframes drawer-in {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
   @keyframes slide-in-left {
     from {
       opacity: 0;

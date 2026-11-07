@@ -4,7 +4,7 @@ import { track } from '../lib/analytics'
 import { isWebApp } from '../lib/app'
 import { messages, useMessages } from '../lib/i18n'
 import { readFlag, writeFlag } from '../lib/storage'
-import { MenuIcon, SidebarIcon } from './Icons'
+import { CloseIcon, MenuIcon, SidebarIcon } from './Icons'
 
 // 앱에서만 쓰는 화면은 필요할 때만 받아요.
 const AppGate = lazy(() => import('./AppGate').then((module) => ({ default: module.AppGate })))
@@ -106,6 +106,7 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
   const panel = (
     <AppSidebar
       {...sidebar}
+      drawer={narrow}
       onNew={closing(sidebar.onNew)!}
       onOpenReport={closing(sidebar.onOpenReport)!}
       onHistory={closing(sidebar.onHistory)!}
@@ -117,6 +118,7 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
       onCalendar={closing(sidebar.onCalendar)!}
       onMap={closing(sidebar.onMap)!}
       onBlogs={closing(sidebar.onBlogs)!}
+      onContests={closing(sidebar.onContests)!}
       onLabs={closing(sidebar.onLabs)!}
       onAdmin={closing(sidebar.onAdmin)}
       onApiKeys={closing(sidebar.onApiKeys)!}
@@ -136,16 +138,14 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
         onClick={toggle}
         className={`absolute z-[31] flex size-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-200/70 hover:text-gray-900 ${isWebApp ? 'top-3.5 left-3' : 'top-0.5 left-[78px]'}`}
       >
-        {narrow ? <MenuIcon /> : <SidebarIcon />}
+        {narrow ? drawerOpen ? <CloseIcon className="size-4" /> : <MenuIcon /> : <SidebarIcon />}
       </button>
       {open &&
         (narrow ? (
-          <>
-            <div aria-hidden onClick={() => setDrawerOpen(false)} className="fixed inset-0 z-30 animate-fade bg-gray-900/20" />
-            <div className="fixed inset-y-0 left-0 z-30 flex animate-slide-in-left">
-              <Suspense fallback={<aside className="w-72 border-r border-gray-200 bg-gray-50" />}>{panel}</Suspense>
-            </div>
-          </>
+          // 휴대폰에서는 서랍이 화면 전체를 덮어요. 바탕은 반투명이라 뒤의 화면이 흐리게 비쳐요. 빨리 떠야 빠릿하게 느껴져서 짧게 들어와요.
+          <div className="fixed inset-0 z-30 flex animate-drawer-in">
+            <Suspense fallback={<aside className="w-full bg-gray-50/75 backdrop-blur-2xl" />}>{panel}</Suspense>
+          </div>
         ) : (
           <Suspense fallback={<aside data-app-drag className="w-72 shrink-0 border-r border-gray-200 bg-gray-50" />}>{panel}</Suspense>
         ))}

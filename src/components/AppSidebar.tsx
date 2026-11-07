@@ -87,6 +87,8 @@ const REPORT_ORDER_KEY = 'javadda:sidebar-report-order'
 const PINNED_REPORTS_KEY = 'javadda:sidebar-pinned-reports'
 
 interface Props {
+  /** 좁은 화면에서 화면 전체를 덮는 서랍으로 꺼냈는지. 폭을 다 쓰고 뒤가 흐리게 비치는 반투명 바탕이에요. */
+  drawer?: boolean
   /** 지금 열려 있는 리포트. 목록에서 강조해요. */
   activeReportId: string | null
   /** 지금 보고 있는 화면. 위쪽 링크를 강조해요. */
@@ -125,9 +127,10 @@ interface Props {
 }
 
 const link = 'relative flex h-9 w-full items-center rounded-lg px-3 text-left text-[13px] font-medium transition-colors'
-const tone = (active: boolean) => (active ? 'bg-gray-200/70 text-gray-900' : 'text-gray-600 hover:bg-gray-200/50 hover:text-gray-900')
+// 휴대폰에는 hover가 없어서, 누르는 순간(active) 바로 바탕이 깔려야 눌렸다는 게 보여요.
+const tone = (active: boolean) => (active ? 'bg-gray-200/70 text-gray-900' : 'text-gray-600 hover:bg-gray-200/50 hover:text-gray-900 active:bg-gray-200/70 active:text-gray-900')
 /** 사이드바 아래의 아이콘 버튼이에요. 회색 사이드바 위라 한 단계 짙은 회색으로 깔려요. */
-const sideIconButton = 'flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-gray-200/50 hover:text-gray-700'
+const sideIconButton = 'flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-gray-200/50 hover:text-gray-700 active:bg-gray-200/70'
 
 /** 리포트 줄을 끌어 옮길 때 놓일 자리예요. 위로 옮기면 그 줄의 위, 아래로 옮기면 아래에 메인 컬러 선이 생겨요. */
 type DropMark = 'before' | 'after' | null
@@ -225,7 +228,7 @@ function ResumeFolder({ group, open, onToggle }: { group: ResumeGroup; open: boo
       aria-expanded={open}
       aria-label={list.toggle(name)}
       onClick={onToggle}
-      className="flex h-8 w-full items-center gap-1.5 rounded-lg px-2 text-left text-[12.5px] font-medium text-gray-600 transition-colors hover:bg-gray-200/50 hover:text-gray-900"
+      className="flex h-8 w-full items-center gap-1.5 rounded-lg px-2 text-left text-[12.5px] font-medium text-gray-600 transition-colors hover:bg-gray-200/50 hover:text-gray-900 active:bg-gray-200/70"
     >
       <ChevronDownIcon className={`size-3 shrink-0 text-gray-400 transition-transform ${open ? '' : '-rotate-90'}`} />
       <DocumentIcon className="size-3.5 shrink-0 text-gray-400" />
@@ -297,7 +300,7 @@ function NavLink({ href, active, onClick, icon, label, shortcut, trailing, locke
 }
 
 /** 앱 화면 왼쪽의 사이드바예요. 새 진단, 공고 탐색, 추천 공고, 마감 달력, 채용 지도, 기술 블로그, 공모전, 내 이력서, 잡아따 Labs, 내 리포트 목록과 관리, 내 정보로 가는 링크가 있어요. */
-export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend, onCalendar, onMap, onResume, onBlogs, onContests, onLabs, onOpenReport, onHistory, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, onApiKeys, signedIn, onLogin }: Props) {
+export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExplore, onRecommend, onCalendar, onMap, onResume, onBlogs, onContests, onLabs, onOpenReport, onHistory, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, onApiKeys, signedIn, onLogin }: Props) {
   const { me } = useAuth()
   const list = useMessages(REPORT_LIST_TEXT)
   const text = useMessages(TEXT)
@@ -354,7 +357,9 @@ export function AppSidebar({ activeReportId, page, onNew, onExplore, onRecommend
   const [deleting, setDeleting] = useState<Report | null>(null)
 
   return (
-    <aside className="relative z-30 flex w-72 shrink-0 flex-col border-r border-gray-200 bg-gray-50">
+    <aside
+      className={`relative z-30 flex shrink-0 flex-col ${drawer ? 'w-full bg-gray-50/75 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl backdrop-saturate-150' : 'w-72 border-r border-gray-200 bg-gray-50'}`}
+    >
       {isWebApp ? (
         // 웹에서는 왼쪽 위의 사이드바 버튼 옆에 로고를 두고, 누르면 새 진단 화면으로 가요. 높이는 헤더와 맞춰요.
         <div className="flex h-14 shrink-0 items-center pl-12">
