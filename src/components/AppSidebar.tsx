@@ -571,8 +571,8 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
       </nav>
       </div>
 
-      {/* 브라우저의 /app에서만 macOS 앱을 받을 수 있게 둬요. 앱 안에서는 이미 앱이라 두지 않아요. */}
-      {isWebApp && MAC_DOWNLOAD_OPEN && (
+      {/* 브라우저의 /app에서만 macOS 앱을 받을 수 있게 둬요. 앱 안에서는 이미 앱이라 두지 않고, 휴대폰 서랍에서는 맥 앱을 받을 일이 없어서 두지 않아요. */}
+      {isWebApp && MAC_DOWNLOAD_OPEN && !drawer && (
         <div className="shrink-0 px-3 pb-2">
           <a
             href={MAC_DOWNLOAD}
