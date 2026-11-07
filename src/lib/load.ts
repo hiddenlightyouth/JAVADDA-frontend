@@ -86,3 +86,37 @@ export function useLoadHold(loading: boolean): boolean {
   }, [holding])
   return loading || holding
 }
+
+/** 그림을 다 받는 데 이보다 오래 걸리면 기다리지 않고 그려요. 느린 망에서 화면이 막히지 않게요. */
+const IMAGE_WAIT_MS = 5000
+
+/**
+ * 그림들을 미리 받아 브라우저에 담아 둬요. 다 받거나(실패한 것도 끝난 것으로 쳐요) IMAGE_WAIT_MS가 지나면 끝나요.
+ * onLoad에는 받은 비율을 0에서 1로 알려요.
+ */
+export function preloadImages(urls: readonly string[], onLoad?: (fraction: number) => void): Promise<void> {
+  if (urls.length === 0) {
+    onLoad?.(1)
+    return Promise.resolve()
+  }
+  let done = 0
+  const each = urls.map(
+    (url) =>
+      new Promise<void>((resolve) => {
+        const image = new Image()
+        const finish = () => {
+          done += 1
+          onLoad?.(done / urls.length)
+          resolve()
+        }
+        image.onload = () =>
+          void image
+            .decode()
+            .catch(() => undefined)
+            .finally(finish)
+        image.onerror = finish
+        image.src = url
+      }),
+  )
+  return Promise.race([Promise.all(each).then(() => undefined), new Promise<void>((resolve) => setTimeout(resolve, IMAGE_WAIT_MS))]).finally(() => onLoad?.(1))
+}

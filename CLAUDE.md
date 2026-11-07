@@ -93,7 +93,7 @@ worker/reading.ts     면접 질문을 소리 내어 읽기 좋은 글로 바꾸
 worker/index.ts       배포용 Worker. /tts에 음성 캐시와 주소별 횟수 제한을 붙여요
 src/
   lib/shell.ts        앱 화면(macOS 앱, 웹의 /app)으로 보여줄지 정하기(appShell, isWebApp), 예전 주소를 /app 주소로 옮기기, /app 붙이고 떼기. 다른 모듈을 불러오지 않아서 가장 먼저 읽혀요
-  main.tsx            처음 그리기. 앱 화면이면 기업과 공고를 받는 동안 화면 가운데에 받은 정도(퍼센트)를 보여주고 받은 뒤에 그리고(loadCatalog), 계정 자료 받기를 켜요(startAccountSync)
+  main.tsx            처음 그리기. 앱 화면이면 기업과 공고, 기업 로고 그림을 받는 동안 화면 가운데에 받은 정도(퍼센트)를 보여주고 다 받은 뒤에 그리고(loadCatalog, 로고는 `load.ts`의 preloadImages로 5초까지 기다려요. 화면이 먼저 뜨고 로고가 늦게 채워지면 어색해서요), 계정 자료 받기를 켜요(startAccountSync)
   App.tsx             화면을 묶는 곳. 화면 옮기기, 로그인하러 갔다 돌아오기(requireLogin), 단축키, 헤더와 본문과 사이드바 배치
   prerender.tsx       소개 화면과 아티클 화면을 빌드할 때 미리 HTML로 그리는 코드 (브라우저에서는 쓰지 않아요)
   index.css           Tailwind 테마 토큰, 자간, 애니메이션

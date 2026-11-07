@@ -3,9 +3,9 @@ import { createRoot, type Root } from 'react-dom/client'
 import App from './App'
 import { LoadProgress } from './components/ui'
 import { appShell } from './lib/app'
-import { loadCatalog, startAccountSync } from './lib/gap'
+import { companyLogos, loadCatalog, startAccountSync } from './lib/gap'
 import { currentPath } from './lib/i18n'
-import { createLoadTracker, LOAD_HOLD_MS, LOAD_SHOW_AFTER_MS } from './lib/load'
+import { createLoadTracker, LOAD_HOLD_MS, LOAD_SHOW_AFTER_MS, preloadImages } from './lib/load'
 import { aboutFromPath } from './lib/routes'
 import './index.css'
 
@@ -71,13 +71,18 @@ const boot = () => {
     startAccountSync()
     const began = performance.now()
     showBoot(0)
-    void loadCatalog(createLoadTracker(showBoot)).finally(() => {
-      if (performance.now() - began < LOAD_SHOW_AFTER_MS) start()
-      else {
-        showBoot(100)
-        setTimeout(start, LOAD_HOLD_MS)
-      }
-    })
+    const tracker = createLoadTracker(showBoot)
+    // 기업 로고까지 받은 뒤에 그려요. 화면이 먼저 뜨고 로고가 하나씩 늦게 채워지면 어색해서요. 로고 몫도 막대에 같이 세요.
+    const logosPart = tracker.track()
+    void loadCatalog(tracker)
+      .then(() => preloadImages(companyLogos(), logosPart))
+      .finally(() => {
+        if (performance.now() - began < LOAD_SHOW_AFTER_MS) start()
+        else {
+          showBoot(100)
+          setTimeout(start, LOAD_HOLD_MS)
+        }
+      })
   } else start()
 }
 

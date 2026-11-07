@@ -482,6 +482,9 @@ const MAJOR_COMPANY_IDS = ['naver', 'kakao', 'line', 'coupang', 'woowa', 'daangn
 
 export const majorCompanies = () => MAJOR_COMPANY_IDS.flatMap((id) => COMPANIES.filter((company) => company.id === id))
 
+/** 기업 로고 그림 주소들(겹치지 않게). 앱 화면을 처음 그리기 전에 미리 받아 둬요. */
+export const companyLogos = (): string[] => [...new Set(COMPANIES.map((company) => company.logo).filter((logo): logo is string => !!logo))]
+
 export const companyOf = (id: string): Company => companyById.get(id) ?? { id, name: id, initial: id[0]?.toUpperCase() ?? '?', industry: '', site: '' }
 
 /** 스킬이 어느 묶음인지. 레이더의 축이에요. */
