@@ -1,7 +1,7 @@
 /**
  * 지금 화면을 앱처럼(왼쪽 사이드바와 오른쪽 화면) 보여줄지 정해요. 다른 모듈을 불러오지 않아서 가장 먼저 읽혀요.
  * macOS 앱의 웹뷰이거나, 브라우저에서 /app으로 들어왔으면 앱 화면이에요.
- * 브라우저의 메인 주소(/)는 소개 화면이고, 진단과 계정 화면은 모두 /app 아래에 있어요.
+ * 브라우저의 메인 주소(/)는 /app으로 옮겨요. 진단과 계정 화면은 모두 /app 아래에 있어요.
  */
 
 const browser = typeof window !== 'undefined'
@@ -17,9 +17,8 @@ const APP_ROUTES = /^\/(?:r|login|signup|me|history|diagnose|recommend|resume|co
 if (browser && !isApp) {
   const { pathname, search, hash } = window.location
   if (APP_ROUTES.test(pathname)) window.history.replaceState(null, '', `/app${pathname}${search}${hash}`)
-  // 소개 화면은 이제 메인 주소에 있어요. 예전 소개 주소로 들어오면 메인 주소로 옮겨요.
-  else if (/^\/about\/?$/.test(pathname)) window.history.replaceState(null, '', `/${search}${hash}`)
-  else if (/^\/en\/about\/?$/.test(pathname)) window.history.replaceState(null, '', `/en${search}${hash}`)
+  // 소개 화면은 두지 않아요. 메인 주소(/, /en)와 예전 소개 주소로 들어오면 /app(새 진단 화면)으로 옮겨요. index.html의 맨 앞 스크립트도 같은 일을 해요.
+  else if (/^\/(?:en\/?)?(?:about\/?)?$/.test(pathname)) window.history.replaceState(null, '', `/app${search}${hash}`)
 }
 
 /** 브라우저에서 /app으로 들어와서 앱처럼 쓰고 있는지 */

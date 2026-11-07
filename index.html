@@ -22,6 +22,14 @@
     <meta name="twitter:description" content="기업이나 공고를 기준으로 이력서를 진단하고, 부족한 역량과 채우는 방법, 맞는 공고까지 한 리포트로 받아요." />
     <meta name="twitter:image" content="https://javadda.hidly.dev/og.png" />
     <!-- 예전 이름(whoisloafing:)으로 저장한 값을 javadda:로 한 번 옮겨요. 다른 코드가 읽기 전에 돌아야 해서 맨 앞에 둬요. -->
+    <!-- 소개 화면은 두지 않아요. 브라우저의 메인 주소(/, /en, 예전 /about)로 들어오면 그리기 전에 바로 /app(새 진단 화면)으로 옮기고, 미리 그린 소개 화면은 숨겨요. -->
+    <script>
+      if (!/JavaddaApp\//.test(navigator.userAgent) && /^\/(?:en\/?)?(?:about\/?)?$/.test(location.pathname)) {
+        history.replaceState(null, '', '/app' + location.search + location.hash)
+        document.documentElement.dataset.shell = ''
+      }
+    </script>
+    <style>html[data-shell] #root{display:none}</style>
     <script>
       try {
         for (var i = localStorage.length - 1; i >= 0; i--) {

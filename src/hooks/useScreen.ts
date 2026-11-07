@@ -107,14 +107,13 @@ export function useScreen() {
   const openArticle = useCallback((slug: string | null) => open({ kind: 'article', slug }), [open])
 
   const openAbout = useCallback(() => {
-    // 브라우저의 소개 화면은 메인 주소(/)에 있어요.
+    // 소개 화면은 두지 않아요. 아티클 화면에서 로고를 누르면 /app(새 진단 화면)으로, 앱 안에서는 새 진단 화면으로 가요.
     if (!appShell) {
-      window.history.pushState(null, '', localizePath('/'))
-      openFromLocation()
+      window.location.assign('/app')
       return
     }
-    open({ kind: 'about' })
-  }, [open, openFromLocation])
+    open(null)
+  }, [open])
 
   const openAccount = useCallback((next: AccountPage, replace = false) => open({ kind: 'account', page: next }, replace), [open])
 
