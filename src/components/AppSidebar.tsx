@@ -358,7 +358,7 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
 
   return (
     <aside
-      className={`relative z-30 flex shrink-0 flex-col ${drawer ? 'w-full overflow-y-auto overscroll-contain bg-gray-50/75 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl backdrop-saturate-150' : 'w-72 border-r border-gray-200 bg-gray-50'}`}
+      className={`relative z-30 flex shrink-0 flex-col ${drawer ? 'w-full bg-gray-50/75 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl backdrop-saturate-150' : 'w-72 border-r border-gray-200 bg-gray-50'}`}
     >
       {isWebApp ? (
         // 웹에서는 왼쪽 위의 사이드바 버튼 옆에 로고를 두고, 누르면 새 진단 화면으로 가요. 높이는 헤더와 맞춰요.
@@ -371,6 +371,8 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
         <div data-app-drag className="h-11 shrink-0" />
       )}
 
+      {/* 휴대폰 서랍은 위의 메뉴만으로 화면이 차서, 로고와 아래 계정 칸은 그대로 두고 그 사이의 메뉴와 리포트 목록을 같이 스크롤해요. 넓은 화면에서는 이 칸이 없는 것처럼 둬요(contents). */}
+      <div className={drawer ? 'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain' : 'contents'}>
       <div className="px-3">
         <button
           type="button"
@@ -498,7 +500,7 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
         )}
       </div>
 
-      {/* 넓은 화면에서는 리포트 목록만 스크롤해요. 휴대폰 서랍은 위의 메뉴만으로 화면이 차서 목록 칸이 남지 않으니, 서랍 전체가 같이 스크롤해요. */}
+      {/* 넓은 화면에서는 리포트 목록만 스크롤해요. 휴대폰 서랍에서는 감싼 칸이 메뉴와 목록을 같이 스크롤해요. */}
       <nav className={`mt-1.5 flex-1 px-3 pb-3 ${drawer ? 'shrink-0' : 'min-h-0 overflow-y-auto'}`}>
         {reports.length === 0 ? (
           <p className="px-3 py-2 text-[13px] leading-relaxed text-gray-500">{list.none}</p>
@@ -567,6 +569,7 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
           </ul>
         )}
       </nav>
+      </div>
 
       {/* 브라우저의 /app에서만 macOS 앱을 받을 수 있게 둬요. 앱 안에서는 이미 앱이라 두지 않아요. */}
       {isWebApp && MAC_DOWNLOAD_OPEN && (
