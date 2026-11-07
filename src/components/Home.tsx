@@ -289,7 +289,8 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
     <SplitView side={browser.side}>
       <main className="relative flex-1 overflow-hidden">
         <div className={`relative h-full overflow-y-auto ${gutter} pb-10`}>
-          <div className="mx-auto w-full max-w-lg pt-[max(4.5rem,11vh)] pb-10 sm:pt-[max(6rem,16vh)] sm:pb-14">
+          {/* 휴대폰에서는 로고, 타이틀, 설명, 검색창을 두지 않고 바로 공고 줄부터 보여줘요. 검색은 공고 탐색에서 해요. */}
+          <div className="mx-auto w-full max-w-lg pt-[max(4.5rem,11vh)] pb-10 max-sm:hidden sm:pt-[max(6rem,16vh)] sm:pb-14">
             <LofyScript className="mx-auto mb-5 h-16 w-auto sm:h-20" />
             <Title text={L.title} />
             <p className="mt-3 mb-7 animate-rise text-balance break-keep text-center text-[13px] leading-relaxed text-gray-500 sm:mb-8 sm:text-[14px]" style={{ animationDelay: '250ms' }}>
@@ -370,7 +371,8 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
             </div>
           </div>
 
-          <div className="flex animate-rise flex-col gap-9" style={{ animationDelay: '450ms' }}>
+          {/* 휴대폰에서는 위의 덩어리가 없어서, 왼쪽 위 사이드바 버튼 아래(헤더 높이)에서 기다리지 않고 바로 떠올라요. */}
+          <div className="flex animate-rise flex-col gap-9 max-sm:pt-14 sm:[animation-delay:450ms]">
             <section aria-labelledby="home-hot">
               <h2 id="home-hot" className="text-[15px] font-semibold text-gray-900">
                 {L.hot}
