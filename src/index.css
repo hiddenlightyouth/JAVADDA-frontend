@@ -934,6 +934,10 @@ header[data-on-dark] .logo-mark {
  * 제목 줄 가운데가 버튼 가운데(앱은 위 16px, 웹은 위 28px)에 오게 위로 당기고, 버튼 오른쪽에서 시작하게 왼쪽을 비워요.
  * 위에 겹친 헤더보다 앞에 둬서 제목 줄의 버튼이 눌려요. 값은 framePad(pt-12, md:pt-9)와 gutter(16, 24, 40px)에 맞춘 거예요.
  */
+/* 휴대폰(웹의 768px 미만)은 맨 위 줄에 로고가 있어서 제목 줄을 올리지 않고, 로고 줄(56px) 아래 16px에서 시작해요. 위 여백 pt-12와 제목 줄의 pt-2에 더한 값이에요. */
+[data-sidebar='drawer'] [data-page-header] {
+  margin-top: 16px;
+}
 [data-sidebar='closed'] [data-page-header] {
   position: relative;
   z-index: 21;
