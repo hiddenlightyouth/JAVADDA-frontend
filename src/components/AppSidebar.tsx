@@ -371,8 +371,8 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
         <div data-app-drag className="h-11 shrink-0" />
       )}
 
-      {/* 휴대폰 서랍은 위의 메뉴만으로 화면이 차서, 로고와 아래 계정 칸은 그대로 두고 그 사이의 메뉴와 리포트 목록을 같이 스크롤해요. 넓은 화면에서는 이 칸이 없는 것처럼 둬요(contents). */}
-      <div className={drawer ? 'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain' : 'contents'}>
+      {/* 휴대폰 서랍은 위의 메뉴만으로 화면이 차서, 로고와 아래 계정 칸은 그대로 두고 그 사이의 메뉴와 리포트 목록을 같이 스크롤해요. 넓은 화면에서는 이 칸이 없는 것처럼 둬요(contents). 스크롤 칸은 바깥을 잘라서, 위에 여백을 둬야 새 진단 버튼의 테두리가 잘리지 않고 로고와도 떨어져요. */}
+      <div className={drawer ? 'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pt-3' : 'contents'}>
       <div className="px-3">
         <button
           type="button"
