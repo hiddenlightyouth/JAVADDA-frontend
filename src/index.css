@@ -751,6 +751,65 @@ header[data-on-dark] .logo-mark {
   --color-brand-soft: #172b45;
 }
 
+/*
+ * 설정 창에서 고른 메인 컬러예요(src/lib/theme.ts의 ACCENTS). html에 data-accent가 붙으면 메인 컬러 토큰 세 개를 바꿔요.
+ * 다크 모드는 메인 컬러는 그대로 두고 hover를 밝게, 연한 배경을 어두운 색으로 바꿔요. 파랑(기본)은 붙이지 않아요.
+ */
+html[data-accent='iris'] {
+  --color-brand: #7a5af8;
+  --color-brand-hover: #6938ef;
+  --color-brand-soft: #f4f3ff;
+}
+
+html.dark[data-accent='iris'] {
+  --color-brand-hover: #9b8afb;
+  --color-brand-soft: #251f45;
+}
+
+html[data-accent='rose'] {
+  --color-brand: #ee46bc;
+  --color-brand-hover: #dd2590;
+  --color-brand-soft: #fdf2fa;
+}
+
+html.dark[data-accent='rose'] {
+  --color-brand-hover: #f670c7;
+  --color-brand-soft: #3b1630;
+}
+
+html[data-accent='ember'] {
+  --color-brand: #ef6820;
+  --color-brand-hover: #e04f16;
+  --color-brand-soft: #fef6ee;
+}
+
+html.dark[data-accent='ember'] {
+  --color-brand-hover: #f38744;
+  --color-brand-soft: #3a2112;
+}
+
+html[data-accent='grove'] {
+  --color-brand: #16b364;
+  --color-brand-hover: #099250;
+  --color-brand-soft: #edfcf2;
+}
+
+html.dark[data-accent='grove'] {
+  --color-brand-hover: #3ccb7f;
+  --color-brand-soft: #0f2e1f;
+}
+
+html[data-accent='ocean'] {
+  --color-brand: #0ba5c0;
+  --color-brand-hover: #0e7f96;
+  --color-brand-soft: #ecfdff;
+}
+
+html.dark[data-accent='ocean'] {
+  --color-brand-hover: #2fc5df;
+  --color-brand-soft: #0b2e36;
+}
+
 /* 메인 컬러나 빨간 배경 위의 글자는 다크 모드에서도 흰색이에요. */
 .dark .text-white,
 .dark .hover\:text-white:hover {

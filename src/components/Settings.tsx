@@ -4,8 +4,8 @@ import { AiModelRow } from './AiModelSetting'
 import { Modal } from './Dialog'
 import { appAtLeast, appVersion, postToApp, type AppTheme } from '../lib/app'
 import { setShortcutHintsPinned, useShortcutHintsPinned } from '../lib/shortcuts'
-import { setAppShield, setAppTheme, useAppSettings } from '../lib/theme'
-import { LANG_NAMES, LANGS, messages, setLang, useLang, useMessages } from '../lib/i18n'
+import { ACCENTS, setAppAccent, setAppShield, setAppTheme, useAppSettings } from '../lib/theme'
+import { LANG_NAMES, LANGS, messages, pick, setLang, useLang, useMessages } from '../lib/i18n'
 import { CloseButton } from './Icons'
 import { settingList, SettingRow } from './SettingRow'
 import { label, Segmented, softButton } from './ui'
@@ -20,6 +20,8 @@ const TEXT = messages({
     close: '닫기',
     display: '화면',
     theme: '화면 모드',
+    accent: '메인 컬러',
+    accentNote: '버튼과 강조 색을 바꿉니다. 라이트와 다크 모드 모두에 적용됩니다.',
     language: '언어',
     hints: '단축키 항상 표시',
     hintsNote: '단축키가 사용 가능한 메뉴에 어떤 단축키를 사용하는지 항상 표시합니다.',
@@ -37,6 +39,8 @@ const TEXT = messages({
     close: 'Close',
     display: 'Display',
     theme: 'Appearance',
+    accent: 'Accent color',
+    accentNote: 'Changes buttons and highlights in both light and dark mode.',
     language: 'Language',
     hints: 'Always show shortcuts',
     hintsNote: 'Always show which keyboard shortcut each menu uses.',
@@ -56,6 +60,38 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <h3 className={label}>{title}</h3>
       <dl className={`mt-2 ${settingList}`}>{children}</dl>
     </section>
+  )
+}
+
+/** 메인 컬러 고르기예요. 색 동그라미와 이름을 담은 칸을 늘어놓고, 고른 칸은 그 색 테두리를 둘러요. */
+function AccentPicker({ label }: { label: string }) {
+  const { accent } = useAppSettings()
+  return (
+    <div role="radiogroup" aria-label={label} className="grid grid-cols-3 gap-2 pb-3.5 sm:grid-cols-6">
+      {ACCENTS.map((item) => {
+        const on = item.key === accent
+        return (
+          <button
+            key={item.key}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => {
+              track('app_accent_change', { accent: item.key })
+              setAppAccent(item.key)
+            }}
+            className={`flex flex-col items-center gap-2 rounded-xl px-2 pt-3 pb-2.5 transition-colors ${on ? 'bg-brand-soft' : 'bg-gray-50 hover:bg-gray-100'}`}
+          >
+            {/* 고른 색을 보여주는 동그라미라 메인 컬러 토큰을 쓰지 않아요. */}
+            <span
+              style={{ background: item.color, outline: on ? `2px solid ${item.color}` : undefined, outlineOffset: 2 }}
+              className="size-7 rounded-full"
+            />
+            <span className={`text-[12.5px] ${on ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>{pick(item.name)}</span>
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
@@ -108,6 +144,12 @@ export function Settings({ onClose }: { onClose: () => void }) {
               }}
             />
           </SettingRow>
+          <div>
+            <SettingRow label={text.accent} note={text.accentNote}>
+              {null}
+            </SettingRow>
+            <AccentPicker label={text.accent} />
+          </div>
           <SettingRow label={text.language}>
             <Segmented
               size="md"

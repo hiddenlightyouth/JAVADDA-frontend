@@ -42,13 +42,15 @@
         }
       } catch (e) {}
     </script>
-    <!-- 앱 화면이 다크 모드면 자바스크립트를 받기 전에 dark를 붙여서, 밝은 화면이 잠깐 깜빡이지 않게 해요. 규칙은 src/lib/theme.ts와 같아요. -->
+    <!-- 앱 화면이 다크 모드면 자바스크립트를 받기 전에 dark를 붙이고 고른 메인 컬러(data-accent)를 붙여서, 밝은 화면이 잠깐 깜빡이지 않게 해요. 규칙은 src/lib/theme.ts와 같아요. -->
     <script>
       try {
         var p = location.pathname
         if (/JavaddaApp\//.test(navigator.userAgent) || /^\/(?:app|r|login|signup|me|history|diagnose|recommend|resume|company|explore|admin)(?=\/|$)/.test(p)) {
           var t = localStorage.getItem('javadda:app-theme')
           if (t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark')
+          var a = localStorage.getItem('javadda:app-accent')
+          if (a && a !== 'blue') document.documentElement.setAttribute('data-accent', a)
         }
       } catch (e) {}
     </script>
