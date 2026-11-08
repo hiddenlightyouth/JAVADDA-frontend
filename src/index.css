@@ -752,62 +752,183 @@ header[data-on-dark] .logo-mark {
 }
 
 /*
- * 설정 창에서 고른 메인 컬러예요(src/lib/theme.ts의 ACCENTS). html에 data-accent가 붙으면 메인 컬러 토큰 세 개를 바꿔요.
- * 다크 모드는 메인 컬러는 그대로 두고 hover를 밝게, 연한 배경을 어두운 색으로 바꿔요. 파랑(기본)은 붙이지 않아요.
+ * 설정 창에서 고른 테마예요(src/lib/theme.ts의 ACCENTS와 TONES). html에 data-accent가 붙으면 메인 컬러 세 개와 함께
+ * 바탕(white)과 회색 단계 전부를 그 색으로 물들여서, 버튼만이 아니라 화면 안쪽 색이 다 바뀌어요.
+ * 다크 모드 규칙이 라이트 규칙보다 구체적이라(html.dark) 어두운 값이 이겨요. 파랑(기본)은 붙이지 않아서 물들지 않은 회색이에요.
  */
 html[data-accent='iris'] {
   --color-brand: #7a5af8;
   --color-brand-hover: #6938ef;
   --color-brand-soft: #f4f3ff;
+  --color-white: oklch(0.995 0.008 290);
+  --color-gray-50: oklch(0.97 0.018 290);
+  --color-gray-100: oklch(0.95 0.024 290);
+  --color-gray-200: oklch(0.91 0.03 290);
+  --color-gray-300: oklch(0.85 0.034 290);
+  --color-gray-400: oklch(0.7 0.04 290);
+  --color-gray-500: oklch(0.56 0.042 290);
+  --color-gray-600: oklch(0.45 0.04 290);
+  --color-gray-700: oklch(0.37 0.036 290);
+  --color-gray-800: oklch(0.28 0.032 290);
+  --color-gray-900: oklch(0.21 0.026 290);
+  --color-gray-950: oklch(0.14 0.02 290);
 }
 
 html.dark[data-accent='iris'] {
   --color-brand-hover: #9b8afb;
-  --color-brand-soft: #251f45;
+  --color-brand-soft: #2e2557;
+  --color-white: oklch(0.2 0.038 290);
+  --color-gray-50: oklch(0.24 0.045 290);
+  --color-gray-100: oklch(0.275 0.048 290);
+  --color-gray-200: oklch(0.325 0.05 290);
+  --color-gray-300: oklch(0.385 0.05 290);
+  --color-gray-400: oklch(0.65 0.04 290);
+  --color-gray-500: oklch(0.71 0.034 290);
+  --color-gray-600: oklch(0.79 0.026 290);
+  --color-gray-700: oklch(0.86 0.018 290);
+  --color-gray-800: oklch(0.92 0.012 290);
+  --color-gray-900: oklch(0.96 0.007 290);
+  --color-gray-950: oklch(1 0 290);
 }
 
 html[data-accent='rose'] {
   --color-brand: #ee46bc;
   --color-brand-hover: #dd2590;
   --color-brand-soft: #fdf2fa;
+  --color-white: oklch(0.995 0.008 350);
+  --color-gray-50: oklch(0.97 0.018 350);
+  --color-gray-100: oklch(0.95 0.024 350);
+  --color-gray-200: oklch(0.91 0.03 350);
+  --color-gray-300: oklch(0.85 0.034 350);
+  --color-gray-400: oklch(0.7 0.04 350);
+  --color-gray-500: oklch(0.56 0.042 350);
+  --color-gray-600: oklch(0.45 0.04 350);
+  --color-gray-700: oklch(0.37 0.036 350);
+  --color-gray-800: oklch(0.28 0.032 350);
+  --color-gray-900: oklch(0.21 0.026 350);
+  --color-gray-950: oklch(0.14 0.02 350);
 }
 
 html.dark[data-accent='rose'] {
   --color-brand-hover: #f670c7;
-  --color-brand-soft: #3b1630;
+  --color-brand-soft: #4a1a40;
+  --color-white: oklch(0.2 0.038 350);
+  --color-gray-50: oklch(0.24 0.045 350);
+  --color-gray-100: oklch(0.275 0.048 350);
+  --color-gray-200: oklch(0.325 0.05 350);
+  --color-gray-300: oklch(0.385 0.05 350);
+  --color-gray-400: oklch(0.65 0.04 350);
+  --color-gray-500: oklch(0.71 0.034 350);
+  --color-gray-600: oklch(0.79 0.026 350);
+  --color-gray-700: oklch(0.86 0.018 350);
+  --color-gray-800: oklch(0.92 0.012 350);
+  --color-gray-900: oklch(0.96 0.007 350);
+  --color-gray-950: oklch(1 0 350);
 }
 
 html[data-accent='ember'] {
   --color-brand: #ef6820;
   --color-brand-hover: #e04f16;
   --color-brand-soft: #fef6ee;
+  --color-white: oklch(0.995 0.008 45);
+  --color-gray-50: oklch(0.97 0.018 45);
+  --color-gray-100: oklch(0.95 0.024 45);
+  --color-gray-200: oklch(0.91 0.03 45);
+  --color-gray-300: oklch(0.85 0.034 45);
+  --color-gray-400: oklch(0.7 0.04 45);
+  --color-gray-500: oklch(0.56 0.042 45);
+  --color-gray-600: oklch(0.45 0.04 45);
+  --color-gray-700: oklch(0.37 0.036 45);
+  --color-gray-800: oklch(0.28 0.032 45);
+  --color-gray-900: oklch(0.21 0.026 45);
+  --color-gray-950: oklch(0.14 0.02 45);
 }
 
 html.dark[data-accent='ember'] {
   --color-brand-hover: #f38744;
-  --color-brand-soft: #3a2112;
+  --color-brand-soft: #4a2816;
+  --color-white: oklch(0.2 0.038 45);
+  --color-gray-50: oklch(0.24 0.045 45);
+  --color-gray-100: oklch(0.275 0.048 45);
+  --color-gray-200: oklch(0.325 0.05 45);
+  --color-gray-300: oklch(0.385 0.05 45);
+  --color-gray-400: oklch(0.65 0.04 45);
+  --color-gray-500: oklch(0.71 0.034 45);
+  --color-gray-600: oklch(0.79 0.026 45);
+  --color-gray-700: oklch(0.86 0.018 45);
+  --color-gray-800: oklch(0.92 0.012 45);
+  --color-gray-900: oklch(0.96 0.007 45);
+  --color-gray-950: oklch(1 0 45);
 }
 
 html[data-accent='grove'] {
   --color-brand: #16b364;
   --color-brand-hover: #099250;
   --color-brand-soft: #edfcf2;
+  --color-white: oklch(0.995 0.008 155);
+  --color-gray-50: oklch(0.97 0.018 155);
+  --color-gray-100: oklch(0.95 0.024 155);
+  --color-gray-200: oklch(0.91 0.03 155);
+  --color-gray-300: oklch(0.85 0.034 155);
+  --color-gray-400: oklch(0.7 0.04 155);
+  --color-gray-500: oklch(0.56 0.042 155);
+  --color-gray-600: oklch(0.45 0.04 155);
+  --color-gray-700: oklch(0.37 0.036 155);
+  --color-gray-800: oklch(0.28 0.032 155);
+  --color-gray-900: oklch(0.21 0.026 155);
+  --color-gray-950: oklch(0.14 0.02 155);
 }
 
 html.dark[data-accent='grove'] {
   --color-brand-hover: #3ccb7f;
-  --color-brand-soft: #0f2e1f;
+  --color-brand-soft: #143b2e;
+  --color-white: oklch(0.2 0.038 155);
+  --color-gray-50: oklch(0.24 0.045 155);
+  --color-gray-100: oklch(0.275 0.048 155);
+  --color-gray-200: oklch(0.325 0.05 155);
+  --color-gray-300: oklch(0.385 0.05 155);
+  --color-gray-400: oklch(0.65 0.04 155);
+  --color-gray-500: oklch(0.71 0.034 155);
+  --color-gray-600: oklch(0.79 0.026 155);
+  --color-gray-700: oklch(0.86 0.018 155);
+  --color-gray-800: oklch(0.92 0.012 155);
+  --color-gray-900: oklch(0.96 0.007 155);
+  --color-gray-950: oklch(1 0 155);
 }
 
 html[data-accent='ocean'] {
   --color-brand: #0ba5c0;
   --color-brand-hover: #0e7f96;
   --color-brand-soft: #ecfdff;
+  --color-white: oklch(0.995 0.008 215);
+  --color-gray-50: oklch(0.97 0.018 215);
+  --color-gray-100: oklch(0.95 0.024 215);
+  --color-gray-200: oklch(0.91 0.03 215);
+  --color-gray-300: oklch(0.85 0.034 215);
+  --color-gray-400: oklch(0.7 0.04 215);
+  --color-gray-500: oklch(0.56 0.042 215);
+  --color-gray-600: oklch(0.45 0.04 215);
+  --color-gray-700: oklch(0.37 0.036 215);
+  --color-gray-800: oklch(0.28 0.032 215);
+  --color-gray-900: oklch(0.21 0.026 215);
+  --color-gray-950: oklch(0.14 0.02 215);
 }
 
 html.dark[data-accent='ocean'] {
   --color-brand-hover: #2fc5df;
-  --color-brand-soft: #0b2e36;
+  --color-brand-soft: #0f3a47;
+  --color-white: oklch(0.2 0.038 215);
+  --color-gray-50: oklch(0.24 0.045 215);
+  --color-gray-100: oklch(0.275 0.048 215);
+  --color-gray-200: oklch(0.325 0.05 215);
+  --color-gray-300: oklch(0.385 0.05 215);
+  --color-gray-400: oklch(0.65 0.04 215);
+  --color-gray-500: oklch(0.71 0.034 215);
+  --color-gray-600: oklch(0.79 0.026 215);
+  --color-gray-700: oklch(0.86 0.018 215);
+  --color-gray-800: oklch(0.92 0.012 215);
+  --color-gray-900: oklch(0.96 0.007 215);
+  --color-gray-950: oklch(1 0 215);
 }
 
 /* 메인 컬러나 빨간 배경 위의 글자는 다크 모드에서도 흰색이에요. */
