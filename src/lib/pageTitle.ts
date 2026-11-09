@@ -8,7 +8,7 @@ import type { Page } from './routes'
 
 const NAMES = messages({
   ko: {
-    home: '새 진단',
+    home: '탐색',
     explore: '공고 탐색',
     recommend: '추천 공고',
     calendar: '마감 달력',
@@ -29,7 +29,7 @@ const NAMES = messages({
     apiKeys: 'API 키',
   },
   en: {
-    home: 'New diagnosis',
+    home: 'Discover',
     explore: 'Explore jobs',
     recommend: 'Recommended',
     calendar: 'Deadlines',

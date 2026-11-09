@@ -309,7 +309,9 @@ export default function App() {
               ? account
               : article
                 ? 'articles'
-                : null,
+                : page || account
+                  ? null
+                  : 'home',
         onNew: goHome,
         onExplore: openExplore,
         onRecommend: openRecommend,

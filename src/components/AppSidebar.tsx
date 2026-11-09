@@ -12,14 +12,14 @@ import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { readJson, writeJson } from '../lib/storage'
 import { openPlans, percentOf, refreshUsage, useUsage } from '../lib/usage'
-import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, FlaskIcon, KeyIcon, ChristmasTreeIcon, PersonIcon, PinIcon, PlusIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon, TrophyIcon } from './Icons'
+import { BookIcon, BugIcon, CalendarIcon, MapIcon, CheckIcon, ChevronDownIcon, ChevronUpDownIcon, DocumentIcon, DownloadIcon, DotsIcon, FlaskIcon, KeyIcon, ChristmasTreeIcon, CompassIcon, PersonIcon, PinIcon, SearchIcon, SettingsIcon, ShieldIcon, SignOutIcon, StarIcon, TrophyIcon } from './Icons'
 import { menuDangerItem, menuItem as menuRow, menuPanel, primaryButtonMd } from './ui'
 import { fitColor, Tip } from './GapParts'
 import { Avatar } from './Avatar'
 
 const TEXT = messages({
   ko: {
-    new: '새 진단',
+    new: '탐색',
     explore: '공고 탐색',
     calendar: '마감 달력',
     map: '채용 지도',
@@ -43,7 +43,7 @@ const TEXT = messages({
     download: '앱 다운로드',
   },
   en: {
-    new: 'New diagnosis',
+    new: 'Discover',
     explore: 'Explore jobs',
     calendar: 'Deadlines',
     map: 'Job map',
@@ -77,7 +77,7 @@ function resetLeft(value: string): { days: number; hours: number } | null {
   return { days: hours >= 24 ? Math.ceil(ms / 86_400_000) : 0, hours }
 }
 
-type SidebarPage = 'explore' | 'recommend' | 'calendar' | 'map' | 'resume' | 'blogs' | 'contests' | 'labs' | 'articles' | 'me' | 'history' | 'admin' | 'api-keys' | null
+type SidebarPage = 'home' | 'explore' | 'recommend' | 'calendar' | 'map' | 'resume' | 'blogs' | 'contests' | 'labs' | 'articles' | 'me' | 'history' | 'admin' | 'api-keys' | null
 
 /** 접어 둔 이력서 폴더의 아이디예요. 이 기기에 기억해요. */
 const CLOSED_FOLDERS_KEY = 'javadda:sidebar-closed-resumes'
@@ -299,7 +299,7 @@ function NavLink({ href, active, onClick, icon, label, shortcut, trailing, locke
   )
 }
 
-/** 앱 화면 왼쪽의 사이드바예요. 새 진단, 공고 탐색, 추천 공고, 마감 달력, 채용 지도, 기술 블로그, 공모전, 내 이력서, 잡아따 Labs, 내 리포트 목록과 관리, 내 정보로 가는 링크가 있어요. */
+/** 앱 화면 왼쪽의 사이드바예요. 탐색(새 진단 화면), 공고 탐색, 추천 공고, 마감 달력, 채용 지도, 기술 블로그, 공모전, 내 이력서, 잡아따 Labs, 내 리포트 목록과 관리, 내 정보로 가는 링크가 있어요. */
 export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExplore, onRecommend, onCalendar, onMap, onResume, onBlogs, onContests, onLabs, onOpenReport, onHistory, onReportDeleted, onMe, onSettings, settingsOpen, onAdmin, onApiKeys, signedIn, onLogin }: Props) {
   const { me } = useAuth()
   const list = useMessages(REPORT_LIST_TEXT)
@@ -372,18 +372,17 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
         <div data-app-drag className="h-11 shrink-0" />
       )}
 
-      {/* 휴대폰 서랍은 위의 메뉴만으로 화면이 차서, 로고와 아래 계정 칸은 그대로 두고 그 사이의 메뉴와 리포트 목록을 같이 스크롤해요. 넓은 화면에서는 이 칸이 없는 것처럼 둬요(contents). 스크롤 칸은 바깥을 잘라서, 위에 여백을 둬야 새 진단 버튼의 테두리가 잘리지 않고 로고와도 떨어져요. */}
+      {/* 휴대폰 서랍은 위의 메뉴만으로 화면이 차서, 로고와 아래 계정 칸은 그대로 두고 그 사이의 메뉴와 리포트 목록을 같이 스크롤해요. 넓은 화면에서는 이 칸이 없는 것처럼 둬요(contents). 스크롤 칸은 바깥을 잘라서, 위에 여백을 둬서 로고와 떨어져요. */}
       <div className={drawer ? 'flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pt-3' : 'contents'}>
       <div className="px-3">
-        <button
-          type="button"
+        <NavLink
+          href="/app"
+          active={page === 'home'}
           onClick={onNew}
-          className="flex h-10 w-full items-center gap-2 rounded-lg bg-white px-3 text-[13px] font-semibold text-gray-900 ring-1 ring-gray-200 transition-colors hover:text-brand"
-        >
-          <PlusIcon className="size-4" />
-          <span className="flex-1 text-left">{text.new}</span>
-          <Kbd>N</Kbd>
-        </button>
+          label={text.new}
+          shortcut="N"
+          icon={<CompassIcon className="size-4 shrink-0" />}
+        />
         <NavLink
           href="/explore"
           active={page === 'explore'}

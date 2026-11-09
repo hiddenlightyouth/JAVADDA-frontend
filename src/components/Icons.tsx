@@ -235,6 +235,16 @@ export function MapIcon({ className = 'size-4', strokeWidth = 1.4, label }: Icon
   )
 }
 
+/** 사이드바의 탐색(새 진단 화면) 나침반이에요. */
+export function CompassIcon({ className = 'size-4', strokeWidth = 1.4, label }: IconProps) {
+  return (
+    <Icon className={className} strokeWidth={strokeWidth} label={label}>
+      <circle cx="8" cy="8" r="5.75" />
+      <path d="m10.4 5.6-1.3 3.5-3.5 1.3 1.3-3.5z" />
+    </Icon>
+  )
+}
+
 /** 찾기 칸의 돋보기예요. */
 export function SearchIcon({ className = 'size-4 shrink-0 text-gray-400', strokeWidth = 1.5, label }: IconProps) {
   return (
