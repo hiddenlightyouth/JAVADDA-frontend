@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react'
 import { useDismiss } from '../hooks/useDismiss'
-import { isWebApp, MAC_DOWNLOAD, MAC_DOWNLOAD_OPEN, vibrancy } from '../lib/app'
+import { isWebApp, MAC_DOWNLOAD, MAC_DOWNLOAD_OPEN, sidebarGlass, vibrancy } from '../lib/app'
 import { followLink } from '../lib/links'
 import { track } from '../lib/analytics'
 import { signOut, useAuth, type Me } from '../lib/auth'
@@ -358,8 +358,9 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
 
   return (
     <aside
-      data-vibrant={vibrancy && !drawer ? '' : undefined}
-      className={`relative z-30 flex shrink-0 flex-col ${drawer ? 'w-full bg-gray-50/75 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl backdrop-saturate-150' : `w-72 border-r border-gray-200 ${vibrancy ? '' : 'bg-gray-50'}`}`}
+      // 유리 패널(앱 3.0부터)은 앱이 둥글게 그려서, 네모난 덧칠과 오른쪽 선을 빼요.
+      data-vibrant={vibrancy && !sidebarGlass && !drawer ? '' : undefined}
+      className={`relative z-30 flex shrink-0 flex-col ${drawer ? 'w-full bg-gray-50/75 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl backdrop-saturate-150' : `w-72 ${sidebarGlass ? '' : 'border-r border-gray-200'} ${vibrancy ? '' : 'bg-gray-50'}`}`}
     >
       {isWebApp ? (
         // 웹에서는 왼쪽 위의 사이드바 버튼 옆에 로고를 두고, 누르면 새 진단 화면으로 가요. 높이는 헤더와 맞춰요.

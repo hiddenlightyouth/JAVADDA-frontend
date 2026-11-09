@@ -22,6 +22,9 @@ export function appAtLeast(minimum: string): boolean {
 /** 앱 창 뒤에 macOS 사이드바 블러가 깔려 있는지(앱 2.8부터). 이때 바탕과 사이드바를 비워서 블러가 비치게 해요. index.html의 data-vibrancy와 같은 규칙이에요. */
 export const vibrancy = appAtLeast('2.8')
 
+/** 앱이 사이드바 자리에 macOS 유리 패널을 띄우는지(앱 3.0부터, macOS 26 이상). 웹은 사이드바 폭을 sidebar 메시지로 알리고, 사이드바의 오른쪽 선과 테마 덧칠을 빼요. 앱이 macOS 26보다 낮으면 유리 없이 블러만 보여요. */
+export const sidebarGlass = appAtLeast('3.0')
+
 /** macOS 앱 설치 파일. 앱 레포에서 만든 DMG를 `public/download`에 넣어 둬요. 새 버전도 같은 이름으로 덮어써서 주소가 바뀌지 않아요. */
 export const MAC_DOWNLOAD = '/download/javadda/Javadda.dmg'
 export const MAC_SUPPORT = 'for Apple Silicon'
@@ -54,6 +57,8 @@ type AppMessage =
   /** 명암 대비(%, 50에서 150). 앱 2.9부터 받아요. */
   | { type: 'contrast'; contrast: number }
   | { type: 'update' }
+  /** 사이드바 폭(CSS 픽셀, 접으면 0). 앱 3.0부터 받아서 그 자리에 유리 패널을 띄워요. */
+  | { type: 'sidebar'; width: number }
   | { type: 'open'; url: string }
   | { type: 'mic'; action: 'prepare'; recognize: boolean }
   | { type: 'mic'; action: 'open'; lang: string | null }
