@@ -10,6 +10,7 @@ const TEXT = messages({
     done: '다 됐어요!',
     error: '앗, 잘 안 됐어요',
     hello: ['안녕하세요!', '오늘도 공고 보러 왔어요?', '같이 갭을 채워 봐요', '이력서는 잘 되고 있어요?', '면접 연습도 해 봐요', '간지러워요'],
+    grabbed: ['으악, 어디 가요?', '내려 주세요!', '머리는 잡지 마요', '살살 들어 주세요'],
   },
   en: {
     names: { claude: 'Claude', codex: 'Codex' },
@@ -17,10 +18,13 @@ const TEXT = messages({
     done: 'All done!',
     error: 'Oops, that failed',
     hello: ['Hi there!', 'Looking at postings today?', "Let's close those gaps", "How's the resume going?", 'Try an interview practice', 'That tickles'],
+    grabbed: ['Whoa, where are we going?', 'Put me down!', 'Not the head!', 'Easy there'],
   },
 })
 
 export const PET_SIZE = 124
+/** 그리는 칸은 펫 칸보다 넓어서, 매달려 흔들려도 잘리지 않아요. 높이가 같아서 펫의 크기는 그대로예요. */
+const CANVAS_WIDTH = 200
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
 type Scene = ReturnType<typeof import('./petScene').createPetScene>
@@ -33,13 +37,17 @@ interface Props {
   /** 바라볼 쪽(-1에서 1). 없으면 이 창 안의 마우스를 따라가요. */
   look?: number
   bubbleAlign: 'left' | 'right' | 'center'
+  /** 끌려가는 중인지예요. */
+  grabbed?: boolean
+  /** 마지막으로 끌려간 거리(px)예요. at이 바뀔 때마다 반영해요. */
+  pull?: { dx: number; at: number }
 }
 
 /**
  * 펫 한 마리와 말풍선이에요. 앱 화면 안의 펫(`Pet`)과 macOS 앱이 바탕화면에 띄우는 펫 창(`PetWindow`)이 같이 써요.
  * AI를 기다리는 동안 바쁘게 움직이고 퍼센트를 적고, 끝나면 뛰어오르며 기뻐하고, 실패하면 어지러워해요.
  */
-export function PetStage({ kind, status, pokeAt, look, bubbleAlign }: Props) {
+export function PetStage({ kind, status, pokeAt, look, bubbleAlign, grabbed = false, pull }: Props) {
   const text = useMessages(TEXT)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<Scene | null>(null)
@@ -92,6 +100,17 @@ export function PetStage({ kind, status, pokeAt, look, bubbleAlign }: Props) {
   }, [pokeAt])
 
   // AI가 분석하거나 화면이 자료를 받는 동안 춤춰요.
+  useEffect(() => {
+    sceneRef.current?.grab(grabbed)
+    if (!grabbed) return
+    const lines = text.grabbed
+    say(lines[Math.floor(Math.random() * lines.length)], 'talk', 1800)
+  }, [grabbed])
+
+  useEffect(() => {
+    if (pull) sceneRef.current?.pull(pull.dx)
+  }, [pull?.at])
+
   const mood: PetMood = bubble?.mood ?? (status.busy || status.loading ? 'dance' : 'idle')
   useEffect(() => {
     sceneRef.current?.setMood(mood)
@@ -126,7 +145,12 @@ export function PetStage({ kind, status, pokeAt, look, bubbleAlign }: Props) {
           {line}
         </div>
       )}
-      <canvas ref={canvasRef} className="size-full" aria-label={text.names[kind]} />
+      <canvas
+        ref={canvasRef}
+        className="pointer-events-none absolute top-0 h-full max-w-none"
+        style={{ width: CANVAS_WIDTH, left: (PET_SIZE - CANVAS_WIDTH) / 2 }}
+        aria-label={text.names[kind]}
+      />
     </div>
   )
 }

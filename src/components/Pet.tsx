@@ -81,6 +81,9 @@ function InAppPet({ kind }: { kind: PetKind }) {
   const status = usePetStatus()
   const [position, setPosition] = useState<PetPosition>(() => clamp(readPetPosition()))
   const [pokeAt, setPokeAt] = useState(0)
+  const [grabbed, setGrabbed] = useState(false)
+  const [pull, setPull] = useState<{ dx: number; at: number } | undefined>()
+  const lastX = useRef(0)
 
   useEffect(() => {
     const onResize = () => setPosition((value) => clamp(value))
@@ -100,13 +103,20 @@ function InAppPet({ kind }: { kind: PetKind }) {
     const dx = event.clientX - d.x
     const dy = event.clientY - d.y
     if (!d.moved && Math.hypot(dx, dy) < DRAG_PX) return
+    if (!d.moved) {
+      lastX.current = event.clientX
+      setGrabbed(true)
+    }
     d.moved = true
+    setPull({ dx: event.clientX - lastX.current, at: performance.now() })
+    lastX.current = event.clientX
     setPosition(clamp({ right: d.start.right - dx, bottom: d.start.bottom - dy }))
   }
   const onPointerUp = () => {
     const d = drag.current
     drag.current = null
     if (!d) return
+    setGrabbed(false)
     if (d.moved) {
       setPosition((value) => {
         writePetPosition(value)
@@ -127,16 +137,19 @@ function InAppPet({ kind }: { kind: PetKind }) {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={() => (drag.current = null)}
+        onPointerCancel={() => {
+          drag.current = null
+          setGrabbed(false)
+        }}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault()
             setPokeAt(Date.now())
           }
         }}
-        className="pointer-events-auto block cursor-pointer touch-none rounded-2xl"
+        className={`pointer-events-auto block touch-none rounded-2xl ${grabbed ? 'cursor-grabbing' : 'cursor-pointer'}`}
       >
-        <PetStage kind={kind} status={status} pokeAt={pokeAt} bubbleAlign={onLeft ? 'left' : 'right'} />
+        <PetStage kind={kind} status={status} pokeAt={pokeAt} bubbleAlign={onLeft ? 'left' : 'right'} grabbed={grabbed} pull={pull} />
       </button>
     </div>
   )

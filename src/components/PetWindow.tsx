@@ -10,6 +10,10 @@ interface Detail {
   event?: PetStatus['event']
   poke?: number
   look?: number
+  /** 앱이 펫 창을 끌기 시작하면 true, 놓으면 false예요(앱 3.4부터). */
+  grab?: boolean
+  /** 끌려간 가로 거리(pt)예요(앱 3.4부터). */
+  drag?: number
 }
 
 /**
@@ -21,6 +25,8 @@ export function PetWindow() {
   const [status, setStatus] = useState<PetStatus>({ busy: false, loading: false, percent: null, event: null })
   const [pokeAt, setPokeAt] = useState(0)
   const [look, setLook] = useState(0)
+  const [grabbed, setGrabbed] = useState(false)
+  const [pull, setPull] = useState<{ dx: number; at: number } | undefined>()
 
   useEffect(() => {
     const onEvent = (event: Event) => {
@@ -29,6 +35,8 @@ export function PetWindow() {
       if (detail.busy !== undefined) setStatus({ busy: detail.busy, loading: detail.loading ?? false, percent: detail.percent ?? null, event: detail.event ?? null })
       if (detail.poke) setPokeAt(detail.poke)
       if (typeof detail.look === 'number') setLook(detail.look)
+      if (typeof detail.grab === 'boolean') setGrabbed(detail.grab)
+      if (typeof detail.drag === 'number') setPull({ dx: detail.drag, at: performance.now() })
     }
     window.addEventListener(PET_WINDOW_EVENT, onEvent)
     return () => window.removeEventListener(PET_WINDOW_EVENT, onEvent)
@@ -36,7 +44,7 @@ export function PetWindow() {
 
   return (
     <div className="flex h-dvh cursor-pointer items-end justify-center overflow-hidden select-none">
-      <PetStage key={kind} kind={kind} status={status} pokeAt={pokeAt} look={look} bubbleAlign="center" />
+      <PetStage key={kind} kind={kind} status={status} pokeAt={pokeAt} look={look} bubbleAlign="center" grabbed={grabbed} pull={pull} />
     </div>
   )
 }

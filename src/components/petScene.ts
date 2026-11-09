@@ -9,6 +9,14 @@ export type PetMood = 'idle' | 'dance' | 'happy' | 'error' | 'talk'
 
 /** 춤의 빠르기(1초에 몇 박)예요. 네 박마다 다음 동작으로 넘어가요. */
 const BEAT = 2.4
+/** 끌려갈 때 흔들리는 진자의 세기예요. */
+const SWING_SPRING = 38
+const SWING_DAMP_HELD = 2.6
+const SWING_DAMP_FREE = 9
+const SWING_PULL = 0.05
+const SWING_MAX = 0.75
+const SWING_MAX_SPEED = 9
+const GRAB_LIFT = 0.07
 /** 통통 뛰기, 옆으로 스텝, 두 팔 흔들기, 회전 점프를 차례로 춰요. */
 const MOVES = ['bounce', 'shuffle', 'wave', 'spin'] as const
 type FaceStyle = 'normal' | 'dry' | 'soft' | 'happy' | 'curious' | 'angry' | 'dizzy'
@@ -269,6 +277,12 @@ export function createPetScene(canvas: HTMLCanvasElement, kind: PetKind, still: 
   let faceKey = ''
   let frame = 0
   let last = 0
+  // 끌려갈 때: 머리 위를 잡힌 채 매달려서, 끄는 쪽 반대로 흔들리는 진자예요.
+  let grabbed = false
+  let releaseAt = -10
+  let swing = 0
+  let swingSpeed = 0
+  let lift = 0
   const clock = new THREE.Clock()
 
   const resize = () => {
@@ -281,6 +295,8 @@ export function createPetScene(canvas: HTMLCanvasElement, kind: PetKind, still: 
   resize()
 
   const styleOf = (t: number): FaceStyle => {
+    // 잡혀 있으면 놀란 눈, 세게 흔들리면 어지러운 눈이에요.
+    if (grabbed) return Math.abs(swingSpeed) > 4 ? 'dizzy' : 'curious'
     if (t - hopStart < 1.1) return 'happy'
     if (mood === 'happy') return 'happy'
     if (mood === 'error') return 'dizzy'
@@ -304,7 +320,7 @@ export function createPetScene(canvas: HTMLCanvasElement, kind: PetKind, still: 
       blinkUntil = t + 0.12
       nextBlink = t + 2.5 + Math.random() * 3
     }
-    const blink = t < blinkUntil && mood !== 'error'
+    const blink = t < blinkUntil && mood !== 'error' && !grabbed
     const talking = mood === 'talk' || mood === 'happy'
     const open = talking && !still ? Math.max(0, Math.sin(t * 14)) * 0.8 : 0
     const style = styleOf(t)
@@ -315,7 +331,7 @@ export function createPetScene(canvas: HTMLCanvasElement, kind: PetKind, still: 
     }
 
     // 바라보기: 마우스가 있는 쪽으로 천천히 돌아요.
-    const wantYaw = BASE_YAW + lookX * 0.55 + (mood === 'idle' && !still ? Math.sin(t * 0.35) * 0.12 : 0)
+    const wantYaw = grabbed ? lookX * 0.3 : BASE_YAW + lookX * 0.55 + (mood === 'idle' && !still ? Math.sin(t * 0.35) * 0.12 : 0)
     yaw += (wantYaw - yaw) * Math.min(1, dt * 4)
 
     let y = 0
@@ -391,13 +407,36 @@ export function createPetScene(canvas: HTMLCanvasElement, kind: PetKind, still: 
         armLift = [0, 0]
       }
     }
+    if (!still) {
+      swingSpeed += (-SWING_SPRING * swing - (grabbed ? SWING_DAMP_HELD : SWING_DAMP_FREE) * swingSpeed) * dt
+      swingSpeed = Math.max(-SWING_MAX_SPEED, Math.min(SWING_MAX_SPEED, swingSpeed))
+      swing = Math.max(-SWING_MAX, Math.min(SWING_MAX, swing + swingSpeed * dt))
+      lift += ((grabbed ? GRAB_LIFT : 0) - lift) * Math.min(1, dt * (grabbed ? 16 : 12))
+      if (grabbed) {
+        // 머리 위를 축으로 매달려 흔들리고, 몸이 축 늘어지며 팔다리를 버둥거려요.
+        const top = bot.height
+        x = top * Math.sin(swing)
+        y = lift + top * (1 - Math.cos(swing))
+        tilt = swing
+        twist = 0
+        spin = 0
+        sy = 1.07 + Math.sin(t * 9) * 0.015
+        armLift = [0.5 + Math.sin(t * 17) * 0.45, 0.5 + Math.sin(t * 17 + 2) * 0.45]
+      } else {
+        // 놓으면 떨어져서 찌그러졌다가 펴지고, 남은 흔들림은 발을 축으로 잦아들어요.
+        y += lift
+        tilt += swing * 0.5
+        const p = (t - releaseAt - 0.12) / 0.22
+        if (p > 0 && p < 1) sy = Math.min(sy, 1 - Math.sin(p * Math.PI) * 0.16)
+      }
+    }
     bot.root.rotation.set(0, yaw + twist + spin, tilt)
     bot.root.position.set(x, y, 0)
     bot.body.scale.set(1 + (1 - sy) * 0.5, sy, 1 + (1 - sy) * 0.5)
     bot.arms.forEach((arm, i) => {
       const s = i ? 1 : -1
       arm.rotation.x = 0
-      arm.rotation.z = mood === 'happy' || t - hopStart < 1.0 ? s * 0.6 : mood === 'dance' ? s * (0.2 + armLift[i]) : 0
+      arm.rotation.z = grabbed ? s * armLift[i] : mood === 'happy' || t - hopStart < 1.0 ? s * 0.6 : mood === 'dance' ? s * (0.2 + armLift[i]) : 0
     })
     renderer.render(scene, camera)
   }
@@ -417,6 +456,17 @@ export function createPetScene(canvas: HTMLCanvasElement, kind: PetKind, still: 
     },
     look(x: number) {
       lookX = Math.max(-1, Math.min(1, x))
+    },
+    /** 잡거나 놓아요. */
+    grab(on: boolean) {
+      if (on === grabbed) return
+      grabbed = on
+      if (!on) releaseAt = clock.getElapsedTime()
+      if (still) render()
+    },
+    /** 끌려간 거리(px)예요. 끄는 쪽 반대로 몸이 흔들려요. */
+    pull(dx: number) {
+      swingSpeed -= dx * SWING_PULL
     },
     hop() {
       hopStart = clock.getElapsedTime()
