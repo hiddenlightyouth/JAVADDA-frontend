@@ -4,6 +4,7 @@ import App from './App'
 import { Skeleton } from './components/ui'
 import { appShell } from './lib/app'
 import { companyLogos, loadCatalog, startAccountSync } from './lib/gap'
+import { startSeenSync } from './lib/seen'
 import { currentPath } from './lib/i18n'
 import { preloadImages } from './lib/load'
 import { aboutFromPath } from './lib/routes'
@@ -68,6 +69,7 @@ const boot = () => {
     // 앱 화면은 기업과 공고를 받은 뒤에 그려요. 공고를 찾는 함수(postingOf, companyOf)가 바로 답할 수 있게요.
     // 받는 동안은 화면 모양의 뼈대를 보여주고, 서버에 닿지 못하면 적어 둔 목록으로 그려요. 로그인해 있으면 이력서와 리포트도 같이 받기 시작해요.
     startAccountSync()
+    startSeenSync()
     showBoot()
     // 기업 로고까지 받은 뒤에 그려요. 화면이 먼저 뜨고 로고가 하나씩 늦게 채워지면 어색해서요.
     void loadCatalog()
