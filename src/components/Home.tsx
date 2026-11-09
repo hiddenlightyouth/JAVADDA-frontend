@@ -4,6 +4,7 @@ import { CONTEST_CATEGORIES, contestDaysLeft, fetchContests, type Contest, type 
 import { COMPANIES, companyOf, fitOf, majorCompanies, POSTINGS, postingOf, RECOMMEND_MIN_FIT, sortPostings, useReports, useResume, type Company, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { readItem, writeItem } from '../lib/storage'
+import { showToast } from '../lib/toast'
 import { gutter } from './AppPage'
 import { Carousel } from './Carousel'
 import { CompanyMark, DiagnosedTag, FitBadge, filterChip, filterRow } from './GapParts'
@@ -32,6 +33,7 @@ const TEXT = messages({
     contests: '공모전',
     contestRows: { closing: '마감이 가까운 공모전', roomy: '준비할 기간이 충분한 공모전' },
     contestEmpty: '이 분야에는 지금 열린 공모전이 없어요.',
+    contestChosen: (name: string | null) => (name ? `이제부터 ${name} 분야의 공모전을 보여줘요.` : '이제부터 모든 분야의 공모전을 보여줘요.'),
   },
   en: {
     label: 'Search companies and postings',
@@ -45,6 +47,7 @@ const TEXT = messages({
     contests: 'Contests',
     contestRows: { closing: 'Contests closing soon', roomy: 'Contests with time to prepare' },
     contestEmpty: 'No open contests in this category right now.',
+    contestChosen: (name: string | null) => (name ? `From now on, showing ${name} contests.` : 'From now on, showing contests in every category.'),
   },
 })
 
@@ -121,6 +124,8 @@ function ContestRows({ onOpen, onAll }: { onOpen: (contest: Contest) => void; on
     track('home_contest_category', { category: next ?? 'all' })
     setCategory(next)
     writeItem(CONTEST_CATEGORY_KEY, next ?? '')
+    // 고른 분야를 다음에 열 때도 기억한다는 것을 알려요.
+    showToast(L.contestChosen(next && C.categories[next]))
   }
 
   return (
