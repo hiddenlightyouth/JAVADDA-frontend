@@ -63,6 +63,13 @@ const showBoot = () => {
 // 소개(브라우저의 메인 주소)와 아티클 주소로 들어오면 미리 그려 둔 화면이 이미 있어요. 그 화면의 코드를 먼저 받은 뒤에 그려서, 글이 잠깐 사라졌다 나타나지 않게 해요.
 const boot = () => {
   const path = currentPath()
+  // macOS 앱이 바탕화면에 띄우는 펫 창이에요. 바탕을 비우고 펫만 그려요.
+  if (location.pathname === '/pet-window') {
+    document.documentElement.style.background = 'transparent'
+    document.body.style.background = 'transparent'
+    void import('./components/PetWindow').then(({ PetWindow }) => mount().render(<PetWindow />))
+    return
+  }
   if (/^\/articles(\/|$)/.test(path)) void import('./components/Articles').finally(start)
   else if (aboutFromPath()) void import('./components/About').finally(start)
   else if (appShell) {

@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { appAtLeast, postToApp } from './app'
 import { readItem, readJson, writeItem, writeJson } from './storage'
 import { createStore, useStore } from './store'
 
@@ -24,6 +25,31 @@ export const usePet = () => useStore(kindStore, (value) => value, null)
 export function setPet(kind: PetKind | null) {
   writeItem(KIND_KEY, kind)
   kindStore.set(kind)
+  if (desktopPet) postToApp({ type: 'pet', kind })
+}
+
+/**
+ * macOS 앱 3.2부터는 펫이 앱 창 밖, 바탕화면에 떠요. 앱이 투명한 펫 창을 띄우고 그 안에 /pet-window를 그려요.
+ * 웹은 고른 펫(pet 메시지)과 상태(petState 메시지)만 앱에 보내고, 앱 안에는 펫을 그리지 않아요.
+ */
+export const desktopPet = appAtLeast('3.2')
+
+/** 앱이 펫 창에 상태, 누르기, 바라볼 쪽을 넘기는 이벤트예요. */
+export const PET_WINDOW_EVENT = 'javadda:pet'
+
+// 앱이 켜질 때 웹에 적어 둔 펫을 알려서, 앱이 기억한 값과 맞춰요.
+if (desktopPet) postToApp({ type: 'pet', kind: kindStore.get() })
+
+/** 펫이 지금 바쁜지, 몇 퍼센트인지, 마지막으로 끝난 일이 무엇인지예요. */
+export interface PetStatus {
+  busy: boolean
+  percent: number | null
+  event: { kind: 'done' | 'error'; at: number } | null
+}
+
+/** 바탕화면의 펫 창에 지금 상태를 보내요. hidden이면 앱이 펫 창을 잠깐 내려요(면접 연습 화면 등). */
+export function postPetState(status: PetStatus, hidden: boolean) {
+  postToApp({ type: 'petState', busy: status.busy, percent: status.percent, event: status.event, hidden })
 }
 
 /** 창의 오른쪽 아래에서 떨어진 거리(px)예요. 끌어 옮긴 자리를 이 기기에 기억해요. */

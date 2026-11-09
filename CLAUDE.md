@@ -26,7 +26,7 @@ Codex의 공통 작업 지침은 루트의 [AGENTS.md](AGENTS.md)에 있어요. 
 
 ## 브랜딩 규칙
 
-- 서비스명: 화면에 보이는 이름은 Javadda예요(미리보기 태그, 푸터, 안내 문구, 아티클). 탭 제목만 화면 언어와 상관없이 잡아따예요(`src/lib/meta.ts`의 `SITE_TITLE`, `index.html`의 `<title>`). 아티클과 계정 화면의 탭 제목은 "아티클 | 잡아따", "Sign in | 잡아따"처럼 뒤에 붙여요. 앱 화면도 지금 화면 이름을 앞에 붙여요("탐색 | 잡아따", "공고 탐색 | 잡아따", 기업 상세는 "카카오 | 잡아따", 리포트는 "카카오 리포트 | 잡아따", `src/lib/pageTitle.ts`). 그 전 이름은 Lofy였고, 패키지명(lofy)과 코드 안의 이름(`LofyScript`, lofy 규칙)은 그대로 둬요. 더 예전 이름은 WhoIsLoafing이었어요. localStorage 키는 `javadda:`로 시작해요. 예전 이름(`whoisloafing:`)으로 저장한 값은 `index.html`의 맨 앞 스크립트가 처음 열 때 `javadda:`로 옮기고 지워요. javadda.hidly.dev는 Cloudflare의 `javadda-frontend` Worker가 내보내고(`wrangler.toml`의 `name`), 이 레포의 develop에 푸시하면 Cloudflare가 빌드해서 배포해요. 예전 `whoisloafing` Worker는 예전 Lofy 서비스예요. API 서버는 https://javadda-api.hidly.dev예요. macOS 앱은 JAVADDA-app 레포의 Javadda 앱이고, 앱과 약속한 값은 Javadda 이름이에요(User-Agent의 `JavaddaApp`, `javadda://` 주소, 웹뷰 메시지 이름 `javadda`, 이벤트 이름 `javadda:app-login`, `javadda:app-settings`, `javadda:app-capture`, 설치 파일 `/download/javadda/Javadda.dmg`). 바꾸면 앱의 `AppConfig`와 `Info.plist`도 같이 바꿔요. 예전 Lofy 앱(`WhoIsLoafingApp`)은 이 웹을 앱 화면으로 열지 못해요.
+- 서비스명: 화면에 보이는 이름은 Javadda예요(미리보기 태그, 푸터, 안내 문구, 아티클). 탭 제목만 화면 언어와 상관없이 잡아따예요(`src/lib/meta.ts`의 `SITE_TITLE`, `index.html`의 `<title>`). 아티클과 계정 화면의 탭 제목은 "아티클 | 잡아따", "Sign in | 잡아따"처럼 뒤에 붙여요. 앱 화면도 지금 화면 이름을 앞에 붙여요("탐색 | 잡아따", "공고 탐색 | 잡아따", 기업 상세는 "카카오 | 잡아따", 리포트는 "카카오 리포트 | 잡아따", `src/lib/pageTitle.ts`). 그 전 이름은 Lofy였고, 패키지명(lofy)과 코드 안의 이름(`LofyScript`, lofy 규칙)은 그대로 둬요. 더 예전 이름은 WhoIsLoafing이었어요. localStorage 키는 `javadda:`로 시작해요. 예전 이름(`whoisloafing:`)으로 저장한 값은 `index.html`의 맨 앞 스크립트가 처음 열 때 `javadda:`로 옮기고 지워요. javadda.hidly.dev는 Cloudflare의 `javadda-frontend` Worker가 내보내고(`wrangler.toml`의 `name`), 이 레포의 develop에 푸시하면 Cloudflare가 빌드해서 배포해요. 예전 `whoisloafing` Worker는 예전 Lofy 서비스예요. API 서버는 https://javadda-api.hidly.dev예요. macOS 앱은 JAVADDA-app 레포의 Javadda 앱이고, 앱과 약속한 값은 Javadda 이름이에요(User-Agent의 `JavaddaApp`, `javadda://` 주소, 웹뷰 메시지 이름 `javadda`, 이벤트 이름 `javadda:app-login`, `javadda:app-settings`, `javadda:app-capture`, `javadda:pet`, 펫 창 주소 `/pet-window`, 설치 파일 `/download/javadda/Javadda.dmg`). 바꾸면 앱의 `AppConfig`와 `Info.plist`도 같이 바꿔요. 예전 Lofy 앱(`WhoIsLoafingApp`)은 이 웹을 앱 화면으로 열지 못해요.
 - 로고: 화면에 보이는 로고는 모두 Javadda라고 쓴 손글씨예요. 헤더(`Logo`), 앱 로그인 화면, 웹 앱 사이드바 맨 위는 움직임 없이 그린 것(`ScriptMark`)이고, 소개 화면 첫 화면에서는 흰색으로 써져요. 예전의 중절모와 Lofy 글자 그림(`public/logo.svg`)은 더 이상 화면에 쓰지 않아요. 손글씨(`LofyScript`)는 Javadda라고 쓰고, 소개 화면 맨 위와 앱 로그인 화면에 써요. 새 진단 화면에는 사이드바 로고와 겹쳐서 크게 두지 않아요. 웹 앱 사이드바 맨 위의 로고도 같은 손글씨를 움직임 없이 그린 것(`ScriptMark`)이에요. 색은 짙은 회색(#2C2C2C) 한 가지예요. 파비콘과 미리보기 이미지는 따로 만든 파일이라 같이 고쳐야 해요.
 - 본문 폰트: Pretendard. 전체 자간은 -0.02em
 - 메인 컬러: #2E90FA, hover는 #1570EF, 연한 배경은 #EFF8FF. 앱 화면에서는 설정 창의 테마로 자바따(파랑, 기본), 아이리스(보라), 로즈(분홍), 엠버(주황), 그로브(초록), 오션(청록) 중에 바꿀 수 있어요(`theme.ts`의 `ACCENTS`, localStorage의 `javadda:app-accent`). 화면 모드와 따로 골라서 라이트와 다크 모드 모두에 적용돼요. html에 `data-accent`를 붙이면 `index.css`의 규칙이 `brand`, `brand-hover`, `brand-soft` 세 토큰과 함께 바탕(`white`)과 회색 단계 전부를 그 색으로 물들여서(oklch, 단계마다의 밝기와 물들이는 정도는 `theme.ts`의 `TONES`이고 `index.css`의 규칙은 이 숫자로 만들었어요. 바꾸면 둘 다 바꿔요), 버튼만이 아니라 화면 안쪽 색이 다 바뀌어요. 다크 모드는 같은 방식의 어두운 값이에요. 파랑(기본)은 물들이지 않은 회색 그대로예요. 지도의 파란 점과 핀(`mapDot.ts`, `NaverJobMap`)은 고정값이라 바뀌지 않아요. macOS 앱 2.9부터는 웹에서 테마를 바꾸면 앱에 `accent` 메시지로 알려서 앱의 설정 창(테마 고르기)과 앱이 칠하는 바탕이 같이 바뀌고, 앱에서 바꾸면 `javadda:app-settings` 이벤트의 `accent`로 웹이 따라가요. 앱은 페이지를 읽기 전에 `javadda:app-accent`를 적어 둬서 처음부터 그 테마로 그려요(앱에서 고른 적이 있을 때만). 앱 2.8부터 투명한 사이드바(`data-vibrant`)는 Claude 앱의 사이드바처럼 창 뒤 블러 위에 gray-50을 72%로 덧칠하고 경계선을 옅게 둬요. 기본 테마는 물들이지 않은 회색이고, 테마를 골랐으면 그 테마의 gray-50이라 같이 물들어요. 색을 더하면 `ACCENTS`와 `index.css`에 같이 더해요.
@@ -137,7 +137,9 @@ src/
   lib/analytics.ts    Google Analytics 이벤트 전송
   lib/toast.ts        화면 아래에 잠깐 뜨는 안내(토스트) 저장소
   lib/pet.ts          펫. 고른 펫(usePet, setPet, `javadda:pet`), 끌어 옮긴 자리(`javadda:pet-position`), AI가 하는 일(petWork, petEvent, usePetActivity), 면접 화면에서 숨기기(useHidePet)
-  components/Pet.tsx  화면 구석에 떠 있는 펫과 말풍선. 끌어 옮기기, 누르면 인사, AI 일과 리포트에 반응
+  components/Pet.tsx  펫. 펫의 상태 모으기(usePetStatus), 앱 화면 안의 펫(InAppPet, 끌어 옮기기), macOS 앱 3.2부터 바탕화면 펫에 상태 보내기(DesktopPetBridge)
+  components/PetStage.tsx 펫 한 마리와 말풍선. AI 일과 누르기에 반응해요. 앱 화면 안의 펫과 바탕화면 펫 창이 같이 써요
+  components/PetWindow.tsx macOS 앱이 바탕화면에 띄우는 펫 창의 화면(/pet-window). 앱이 보내는 javadda:pet 이벤트로 움직여요
   components/petScene.ts 펫을 three.js로 그리기(createPetScene). pixel-reels 릴스의 Claude와 Codex 모델(makeBot, FACES)을 옮겼어요
   lib/theme.ts        앱의 화면 설정(화면 모드, 메인 컬러 ACCENTS) 저장과 적용
   lib/shortcuts.ts    단축키 걸기와 단축키 힌트를 보여줄지
@@ -444,13 +446,14 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 ## 펫
 
-Codex 앱의 펫처럼 앱 화면(macOS 앱, 웹의 /app) 오른쪽 아래 구석에 작은 캐릭터가 떠 있어요(`Pet`). 설정 창의 펫 줄(끄기, Claude, Codex)에서 고르고 처음은 꺼져 있어요(localStorage `javadda:pet`). 캐릭터는 pixel-reels 릴스의 3D 모델을 그대로 옮긴 거예요. Claude는 주황 박스 봇(세로로 긴 검은 눈, 짧은 팔, 다리 넷), Codex는 크림색 구름 머리 치비(어두운 화면 얼굴에 민트색 눈, 가슴에 >_)예요. 펫의 색은 캐릭터 그대로라 메인 컬러 규칙의 예외예요.
+Codex 앱의 펫처럼 작은 캐릭터가 떠 있어요. 설정 창의 펫 줄(끄기, Claude, Codex)에서 고르고 처음은 꺼져 있어요(localStorage `javadda:pet`). 캐릭터는 pixel-reels 릴스의 3D 모델을 그대로 옮긴 거예요. Claude는 주황 박스 봇(세로로 긴 검은 눈, 짧은 팔, 다리 넷), Codex는 크림색 구름 머리 치비(어두운 화면 얼굴에 민트색 눈, 가슴에 >_)예요. 펫의 색은 캐릭터 그대로라 메인 컬러 규칙의 예외예요.
 
-- three.js(`petScene.ts`)로 투명한 124px 칸에 그리고, 펫을 켰을 때만 받아요. 탭이 뒤에 있으면 그리지 않고, 움직임 줄이기 설정이면 움직이지 않고 얼굴만 바뀌어요. WebGL이 없으면 그리지 않아요.
+- 어디에 뜨는지: macOS 앱 3.2부터는 앱 창 밖, 바탕화면에 떠요(`desktopPet`). 앱이 투명하고 늘 위에 있는 작은 창(240x176)을 띄우고 그 안에 웹의 `/pet-window?kind=claude`(`PetWindow`, `/app` 밖이고 바탕이 투명해요)를 그려요. 모든 데스크톱과 전체 화면 위에도 떠요. 펫을 누르면 잡아따 창이 앞으로 오고(닫았으면 다시 열려요), 끌면 옮겨지고 자리를 앱이 기억해요. 펫이 켜져 있으면 창을 닫아도 앱이 종료되지 않아요. 웹은 고른 펫(`pet` 메시지)과 상태(`petState` 메시지: busy, percent, event, hidden)만 앱에 보내고(`DesktopPetBridge`), 앱이 펫 창에 `javadda:pet` 이벤트로 상태, 누르기(poke), 바라볼 쪽(look, 화면의 마우스 위치)을 넘겨요. 브라우저와 3.1까지의 앱에서는 앱 화면 오른쪽 아래 구석에 떠 있고(`Pet`의 `InAppPet`), 끌어 옮긴 자리를 `javadda:pet-position`에 기억해요.
+- 그리기: 펫 한 마리와 말풍선은 `PetStage`가 그리고, 두 곳이 같이 써요. three.js(`petScene.ts`)로 투명한 124px 칸에 그리고, 펫을 켰을 때만 받아요. 탭이 뒤에 있으면 그리지 않고, 움직임 줄이기 설정이면 움직이지 않고 얼굴만 바뀌어요. WebGL이 없으면 그리지 않아요.
 - 평소에는 숨 쉬듯 살짝 움직이고, 깜빡이고, 마우스가 있는 쪽을 천천히 바라봐요.
 - AI를 기다리는 동안(`withProgress`를 쓰는 요청이 `petWork`로 알려요, 만드는 중인 리포트도) 자판을 두드리듯 팔을 움직이고 집중한 눈을 하며, 짙은 회색 말풍선에 "열심히 하는 중이에요 42%"를 적어요. 끝나면 웅크렸다 뛰어올라 한 바퀴 돌고 "다 됐어요!", 실패하면 어지러운 눈으로 "앗, 잘 안 됐어요"예요. 켜기 전에 끝난 일에는 반응하지 않아요.
-- 누르면(Enter와 스페이스도) 뛰어오르며 인사 한마디를 해요. 4px 넘게 끌면 옮겨지고, 놓은 자리(오른쪽 아래에서의 거리)를 `javadda:pet-position`에 기억해요. 창을 줄이면 창 안으로 들어와요. 말풍선은 펫이 화면 왼쪽 반에 있으면 왼쪽에 맞춰요.
-- 면접 연습의 검은 화면(리포트와 Labs 기술 면접 모두, `useHidePet`)에서는 숨겨요.
+- 누르면(앱 화면 안의 펫은 Enter와 스페이스도) 뛰어오르며 인사 한마디를 해요.
+- 면접 연습의 검은 화면(리포트와 Labs 기술 면접 모두, `useHidePet`)에서는 숨겨요. 바탕화면 펫도 그동안 내려가요.
 
 ## API 키와 공개 API
 

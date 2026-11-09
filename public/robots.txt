@@ -5,6 +5,7 @@ Disallow: /r/
 Disallow: /me
 Disallow: /history
 Disallow: /app-login
+Disallow: /pet-window
 Disallow: /auth/
 Disallow: /diagnose
 Disallow: /recommend
