@@ -31,7 +31,10 @@ interface BotDef {
   emblem?: string
 }
 
-const BOTS: Record<PetKind, BotDef> = {
+/** 이 파일이 그리는 펫이에요. 잡아따 도마뱀은 `geckoScene.ts`가 그려요. */
+export type BotKind = Exclude<PetKind, 'javadda'>
+
+const BOTS: Record<BotKind, BotDef> = {
   claude: { color: '#e0683c', body: [0.4, 0.28, 0.27], legs: 4, face: 'clawd' },
   codex: { color: '#ece9e1', body: [0.32, 0.42, 0.26], legs: 2, face: 'chibi', rough: 0.32, chibi: true, emblem: '>_' },
 }
@@ -243,7 +246,7 @@ function makeBot(def: BotDef) {
 const ease = (x: number) => x * x * (3 - 2 * x)
 
 /** 펫 하나를 canvas에 그려요. setMood로 기분을, look으로 바라볼 쪽(-1에서 1)을 바꾸고, hop으로 한 바퀴 뛰어요. */
-export function createPetScene(canvas: HTMLCanvasElement, kind: PetKind, still: boolean) {
+export function createPetScene(canvas: HTMLCanvasElement, kind: BotKind, still: boolean) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
   renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1))
   renderer.outputColorSpace = THREE.SRGBColorSpace

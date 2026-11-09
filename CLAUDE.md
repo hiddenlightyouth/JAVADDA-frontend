@@ -57,7 +57,7 @@ Codex의 공통 작업 지침은 루트의 [AGENTS.md](AGENTS.md)에 있어요. 
 ## 기술 스택
 
 - 프론트엔드: React + TypeScript (Vite)
-- 3D: three.js. 펫을 켰을 때만 따로 받아요(`petScene.ts`). 다른 그래프는 전처럼 라이브러리 없이 그려요
+- 3D: three.js. 펫을 켰을 때만 따로 받아요(`petScene.ts`, 잡아따 도마뱀은 `geckoScene.ts`). 다른 그래프는 전처럼 라이브러리 없이 그려요
 - 스타일: Tailwind CSS v4 (`@tailwindcss/vite`)
 
 - 서버: 회원, 피드백, 관리자, 사용량, 진단(기업, 공고, 이력서, 리포트, 서류 검증, 면접 질문과 연습, 보완 계획, 면접 노트, 기술 블로그)을 모두 백엔드(Spring Boot)가 맡아요. 주소는 `VITE_API_BASE_URL`이고, 응답은 늘 `{ data, error: { code, message } }` 모양이에요(`readResult`).
@@ -136,11 +136,12 @@ src/
   lib/format.ts       서버 시각을 "오늘 오후 3:12", "어제", "10월 3일" 같은 말로 바꾸기
   lib/analytics.ts    Google Analytics 이벤트 전송
   lib/toast.ts        화면 아래에 잠깐 뜨는 안내(토스트) 저장소
-  lib/pet.ts          펫. 고른 펫(usePet, setPet, `javadda:pet`), 끌어 옮긴 자리(`javadda:pet-position`), AI가 하는 일(petWork, petEvent, usePetActivity), 면접 화면에서 숨기기(useHidePet)
+  lib/pet.ts          펫. 펫 종류와 이름(PET_KINDS, PET_NAMES, isPetKind), 고른 펫(usePet, setPet, `javadda:pet`), 끌어 옮긴 자리(`javadda:pet-position`), AI가 하는 일(petWork, petEvent, usePetActivity), 면접 화면에서 숨기기(useHidePet)
   components/Pet.tsx  펫. 펫의 상태 모으기(usePetStatus), 앱 화면 안의 펫(InAppPet, 끌어 옮기기), macOS 앱 3.2부터 바탕화면 펫에 상태 보내기(DesktopPetBridge)
   components/PetStage.tsx 펫 한 마리와 말풍선. AI 일과 누르기에 반응해요. 앱 화면 안의 펫과 바탕화면 펫 창이 같이 써요
   components/PetWindow.tsx macOS 앱이 바탕화면에 띄우는 펫 창의 화면(/pet-window). 앱이 보내는 javadda:pet 이벤트로 움직여요
   components/petScene.ts 펫을 three.js로 그리기(createPetScene). pixel-reels 릴스의 Claude와 Codex 모델(makeBot, FACES)을 옮겼어요
+  components/geckoScene.ts 잡아따 도마뱀 펫을 three.js로 그리기(createGeckoScene). 블록 도마뱀을 자세마다 따로 쌓아 두고(네 발, 앉기, 자기, makeGecko), 몸 색은 테마를 따라가요(setColor). createPetScene과 같은 함수를 돌려줘요
   lib/theme.ts        앱의 화면 설정(화면 모드, 메인 컬러 ACCENTS) 저장과 적용
   lib/shortcuts.ts    단축키 걸기와 단축키 힌트를 보여줄지
   components/Shortcuts.tsx   단축키의 자판 모양 표시(Kbd)
@@ -446,7 +447,12 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 
 ## 펫
 
-Codex 앱의 펫처럼 작은 캐릭터가 떠 있어요. 설정 창의 펫 줄(끄기, Claude, Codex)에서 고르고 처음은 꺼져 있어요(localStorage `javadda:pet`). 캐릭터는 pixel-reels 릴스의 3D 모델을 그대로 옮긴 거예요. Claude는 주황 박스 봇(세로로 긴 검은 눈, 짧은 팔, 다리 넷), Codex는 크림색 구름 머리 치비(어두운 화면 얼굴에 민트색 눈, 가슴에 >_)예요. 펫의 색은 캐릭터 그대로라 메인 컬러 규칙의 예외예요.
+Codex 앱의 펫처럼 작은 캐릭터가 떠 있어요. 설정 창의 펫 줄(끄기, Javadda, Claude, Codex)에서 고르고 처음은 꺼져 있어요(localStorage `javadda:pet`). Javadda는 우리 마스코트인 블록 도마뱀이고(`geckoScene.ts`), Claude와 Codex는 pixel-reels 릴스의 3D 모델을 그대로 옮긴 거예요. Claude는 주황 박스 봇(세로로 긴 검은 눈, 짧은 팔, 다리 넷), Codex는 크림색 구름 머리 치비(어두운 화면 얼굴에 민트색 눈, 가슴에 >_)예요. Claude와 Codex의 색은 캐릭터 그대로라 메인 컬러 규칙의 예외예요.
+
+- 잡아따 도마뱀(`geckoScene.ts`): 블록을 쌓은 도마뱀이고, 이음선 없는 상자(`BoxGeometry`)로 쌓아 매끈한 덩어리로 보여요. 큰 둥근 머리에 세로로 긴 눈과 하이라이트, 밝은 배와 턱 밑, 등의 줄무늬, 길게 말린 꼬리예요. 몸 색은 고른 테마의 메인 컬러이고, 줄무늬와 배는 같은 색상의 한 단계, 두 단계 밝은 톤이에요(`setColor`, 테마를 바꾸면 바로 바뀌어요. 바탕화면 펫 창은 이 기기의 `javadda:app-accent`를 읽어요). 자세마다 모양을 따로 쌓아 두고 바꿔 끼워요. 네 발 모델은 뛰고, 달리고, 매달릴 때, 앉은 모델(아래가 넓은 몸통, 가슴 앞 앞발, 옆으로 벌린 뒷발, 바닥을 따라 깔린 꼬리)은 평소와 기쁠 때와 실패했을 때, 자는 모델(몸을 말고 꼬리로 앞을 감싸고 턱을 괸 모습)은 잘 때예요.
+  - 평소에는 앉아서 숨 쉬듯 들썩이고 두리번거리다가, 가끔 칸 안에서 폴짝 뛰어 자리를 옮겨요. 20초 동안 아무 일이 없으면(마우스도 안 움직이면) 잠들고 블록 Z가 올라가요.
+  - AI가 일하거나 자료를 받는 동안은 칸 안을 왔다 갔다 다다다 달리며 블록 흔적을 남겨요. 끝나면 앉은 채 점프하며 두 팔을 V자로 들고 꽃가루를, 실패하면 고개를 갸웃하며 머리 위에 물음표를 띄워요. 말할 때는 입이 뻐끔거려요.
+  - 끌면 고양이 목덜미 잡히듯 매달려요. 머리는 위, 몸은 아래로 늘어지고 앞발은 위로 허우적, 뒷발은 아래로 버둥거리며, 찡그린 눈썹에 실눈과 ∧ 입으로 싫어하는 얼굴을 하고 땀방울이 튀어요. 들고 1.2초 안에 좌우로 네 번 넘게 세게 흔들면(`SHAKE_*`) 꼬리가 쏙 빠져 칸 아래로 떨어져 꿈틀대다 사라지고, 3분(`REGROW`) 뒤에 다시 자라요. 그동안은 뭉툭한 꼬리 뿌리만 남은 채로 똑같이 지내요.
 
 - 어디에 뜨는지: macOS 앱 3.2부터는 앱 창 밖, 바탕화면에 떠요(`desktopPet`). 앱이 투명하고 늘 위에 있는 작은 창(240x176)을 띄우고 그 안에 웹의 `/pet-window?kind=claude`(`PetWindow`, `/app` 밖이고 바탕이 투명해요)를 그려요. 모든 데스크톱과 전체 화면 위에도 떠요. 펫 위에서는 마우스가 손가락 모양이에요(앱 3.3부터는 잡아따가 뒤에 있어도요). 펫을 누르면 잡아따 창이 앞으로 오고(닫았으면 다시 열려요), 끌면 옮겨지고 자리를 앱이 기억해요. 펫이 켜져 있으면 창을 닫아도 앱이 종료되지 않아요. 웹은 고른 펫(`pet` 메시지)과 상태(`petState` 메시지: busy, loading, percent, event, hidden)만 앱에 보내고(`DesktopPetBridge`), 앱이 펫 창에 `javadda:pet` 이벤트로 상태, 누르기(poke), 바라볼 쪽(look, 화면의 마우스 위치)을 넘겨요. 브라우저와 3.1까지의 앱에서는 앱 화면 오른쪽 아래 구석에 떠 있고(`Pet`의 `InAppPet`), 끌어 옮긴 자리를 `javadda:pet-position`에 기억해요.
 - 그리기: 펫 한 마리와 말풍선은 `PetStage`가 그리고, 두 곳이 같이 써요. three.js(`petScene.ts`)로 투명한 124px 칸에 그리고, 펫을 켰을 때만 받아요. 탭이 뒤에 있으면 그리지 않고, 움직임 줄이기 설정이면 움직이지 않고 얼굴만 바뀌어요. WebGL이 없으면 그리지 않아요.
@@ -630,7 +636,7 @@ Codex 앱의 펫처럼 작은 캐릭터가 떠 있어요. 설정 창의 펫 줄(
 | `auth_password_change` | 내 정보나 초기화된 계정의 화면에서 비밀번호를 바꿨을 때 | `forced`, `success` |
 | `account_nav_click`, `auth_login`, `auth_signup`, `auth_social_click`, `auth_social`, `auth_logout`, `auth_social_unlink`, `auth_withdraw`, `session_revoke` | 계정 | 전과 같아요 |
 | `app_login_browser_click`, `app_login_approve`, `app_login_cancel`, `app_login` | 앱 로그인 | `success` |
-| `settings_open`, `app_theme_change`, `app_accent_change`(`accent`), `app_contrast_change`(`contrast`, `from`: slider, reset), `app_update_check`, `app_shield_change`, `capture_shield_view`, `capture_shield_allow`, `app_shortcut_hints_change`, `app_pet_change`(`pet`: off, claude, codex), `app_ai_model_change`(`model`), `app_menu_open`, `plans_open` | 앱의 설정과 메뉴 | 전과 같아요 |
+| `settings_open`, `app_theme_change`, `app_accent_change`(`accent`), `app_contrast_change`(`contrast`, `from`: slider, reset), `app_update_check`, `app_shield_change`, `capture_shield_view`, `capture_shield_allow`, `app_shortcut_hints_change`, `app_pet_change`(`pet`: off, javadda, claude, codex), `app_ai_model_change`(`model`), `app_menu_open`, `plans_open` | 앱의 설정과 메뉴 | 전과 같아요 |
 | `feedback_prompt_view`, `feedback_prompt_close`, `bug_report_open`, `feedback_send` | 평가와 버그 신고 | `kind`, `rating`, `commented`, `success` |
 
 ## 현재까지 구현된 기능
@@ -645,11 +651,12 @@ Codex 앱의 펫처럼 작은 캐릭터가 떠 있어요. 설정 창의 펫 줄(
 - 로그인, 회원가입, 내 정보, GitHub로 로그인과 계정 연결 (위의 로그인과 계정 절 참고). 카카오 로그인과 회원 탈퇴는 서버에 아직 없어요
 - 앱의 관리자 화면 (위의 관리자 화면 절 참고)
 - 요금제 창, 평가와 버그 신고, Google Analytics 이벤트 추적
-- 화면 구석의 펫(Claude, Codex) (위의 펫 절 참고)
+- 화면 구석의 펫(잡아따 도마뱀, Claude, Codex) (위의 펫 절 참고)
 - API 키 요청과 관리자 승인, 권한과 한도, 호출량, 공개 API 문서 (위의 API 키와 공개 API 절 참고)
 
 ## 남은 작업
 
+- 바탕화면 펫(macOS 앱 3.2부터)이 잡아따 도마뱀(`pet` 메시지의 `javadda`)을 받는지 앱에서 확인해요. 앱이 Claude와 Codex만 받으면 앱의 펫 종류에도 더해요.
 - 기업 본사 주소와 좌표를 서버의 기업 자료로 받아요. 지금은 화면의 `COMPANY_OFFICE`에 열 곳만 적어 두었어요.
 - 네이버 클라우드 콘솔의 Maps 서비스 주소에 운영 주소(javadda.hidly.dev)가 등록되어 있는지 배포 전에 확인해요. localhost:5173은 동작해요.
 - 워크넷 기업의 실제 주소를 서버가 주면 채용 지도의 핀을 동네 가운데가 아니라 그 주소에 꽂아요.

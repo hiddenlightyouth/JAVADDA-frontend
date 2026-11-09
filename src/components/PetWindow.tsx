@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { PET_WINDOW_EVENT, type PetKind, type PetStatus } from '../lib/pet'
+import { isPetKind, PET_WINDOW_EVENT, type PetKind, type PetStatus } from '../lib/pet'
 import { PetStage } from './PetStage'
 
 interface Detail {
@@ -21,7 +21,10 @@ interface Detail {
  * 상태와 누르기, 바라볼 쪽은 앱이 `javadda:pet` 이벤트로 넘겨줘요. 누르면 앱이 잡아따 창을 열어요.
  */
 export function PetWindow() {
-  const [kind, setKind] = useState<PetKind>(() => (new URLSearchParams(location.search).get('kind') === 'codex' ? 'codex' : 'claude'))
+  const [kind, setKind] = useState<PetKind>(() => {
+    const kind = new URLSearchParams(location.search).get('kind')
+    return isPetKind(kind) ? kind : 'claude'
+  })
   const [status, setStatus] = useState<PetStatus>({ busy: false, loading: false, percent: null, event: null })
   const [pokeAt, setPokeAt] = useState(0)
   const [look, setLook] = useState(0)
@@ -31,7 +34,7 @@ export function PetWindow() {
   useEffect(() => {
     const onEvent = (event: Event) => {
       const detail = (event as CustomEvent<Detail>).detail ?? {}
-      if (detail.kind === 'claude' || detail.kind === 'codex') setKind(detail.kind)
+      if (isPetKind(detail.kind)) setKind(detail.kind)
       if (detail.busy !== undefined) setStatus({ busy: detail.busy, loading: detail.loading ?? false, percent: detail.percent ?? null, event: detail.event ?? null })
       if (detail.poke) setPokeAt(detail.poke)
       if (typeof detail.look === 'number') setLook(detail.look)

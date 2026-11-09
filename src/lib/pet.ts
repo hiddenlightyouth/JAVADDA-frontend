@@ -4,17 +4,20 @@ import { readItem, readJson, writeItem, writeJson } from './storage'
 import { createStore, useStore } from './store'
 
 // 앱 화면 구석에 떠 있는 펫이에요. Codex 앱의 펫처럼 AI가 일하는 동안 같이 바빠지고, 끝나면 기뻐해요.
-// 캐릭터는 pixel-reels 릴스의 Claude(주황 박스 봇)와 Codex(구름 머리 치비)를 그대로 옮겼어요.
+// 캐릭터는 잡아따 도마뱀(블록 도마뱀, 몸 색이 테마를 따라가요)과, pixel-reels 릴스의 Claude(주황 박스 봇)와 Codex(구름 머리 치비)예요.
 
-export type PetKind = 'claude' | 'codex'
-export const PET_KINDS: PetKind[] = ['claude', 'codex']
+export type PetKind = 'javadda' | 'claude' | 'codex'
+export const PET_KINDS: PetKind[] = ['javadda', 'claude', 'codex']
+/** 펫 이름이에요. 설정의 펫 줄과 펫의 읽기 이름표가 같이 써요. */
+export const PET_NAMES: Record<PetKind, string> = { javadda: 'Javadda', claude: 'Claude', codex: 'Codex' }
+export const isPetKind = (value: unknown): value is PetKind => PET_KINDS.includes(value as PetKind)
 
 const KIND_KEY = 'javadda:pet'
 const POSITION_KEY = 'javadda:pet-position'
 
 const readKind = (): PetKind | null => {
   const raw = readItem(KIND_KEY)
-  return raw === 'claude' || raw === 'codex' ? raw : null
+  return isPetKind(raw) ? raw : null
 }
 
 const kindStore = createStore<PetKind | null>(typeof window === 'undefined' ? null : readKind())

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { messages, useMessages } from '../lib/i18n'
-import type { PetKind, PetStatus } from '../lib/pet'
-import type { PetMood } from './petScene'
+import { PET_NAMES, type PetKind, type PetStatus } from '../lib/pet'
+import { appShell } from '../lib/shell'
+import { accentColor, useAppSettings } from '../lib/theme'
+import type { BotKind, PetMood } from './petScene'
 
 const TEXT = messages({
   ko: {
-    names: { claude: 'Claude', codex: 'Codex' } as Record<PetKind, string>,
     working: '열심히 하는 중이에요',
     done: '다 됐어요!',
     error: '앗, 잘 안 됐어요',
@@ -13,7 +14,6 @@ const TEXT = messages({
     grabbed: ['으악, 어디 가요?', '내려 주세요!', '머리는 잡지 마요', '살살 들어 주세요'],
   },
   en: {
-    names: { claude: 'Claude', codex: 'Codex' },
     working: 'Working on it',
     done: 'All done!',
     error: 'Oops, that failed',
@@ -27,7 +27,8 @@ export const PET_SIZE = 124
 const CANVAS_WIDTH = 200
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
-type Scene = ReturnType<typeof import('./petScene').createPetScene>
+/** 두 그리기(petScene, geckoScene)가 같은 함수를 돌려줘요. 도마뱀만 테마 색을 따라가요(setColor). */
+type Scene = ReturnType<typeof import('./petScene').createPetScene> & { setColor?: (hex: string) => void }
 
 interface Props {
   kind: PetKind
@@ -54,14 +55,21 @@ export function PetStage({ kind, status, pokeAt, look, bubbleAlign, grabbed = fa
   const [bubble, setBubble] = useState<{ text: string; mood: PetMood } | null>(null)
   const bubbleTimer = useRef<number | undefined>(undefined)
 
+  // 도마뱀 몸 색은 고른 테마의 메인 컬러예요. 바탕화면 펫 창은 앱 화면 밖이라 이 기기에 적어 둔 값을 읽어요.
+  const { accent } = useAppSettings()
+  const color = accentColor(appShell ? accent : undefined)
+
   // three.js는 펫을 켰을 때만 받아요.
   useEffect(() => {
     let alive = true
     let scene: Scene | null = null
-    void import('./petScene').then(({ createPetScene }) => {
+    const load = kind === 'javadda'
+      ? import('./geckoScene').then(({ createGeckoScene }) => (canvas: HTMLCanvasElement) => createGeckoScene(canvas, reducedMotion(), color))
+      : import('./petScene').then(({ createPetScene }) => (canvas: HTMLCanvasElement) => createPetScene(canvas, kind as BotKind, reducedMotion()))
+    void load.then((create) => {
       if (!alive || !canvasRef.current) return
       try {
-        scene = createPetScene(canvasRef.current, kind, reducedMotion())
+        scene = create(canvasRef.current)
         sceneRef.current = scene
       } catch {
         // WebGL을 쓸 수 없는 환경이면 펫을 그리지 않아요.
@@ -73,6 +81,10 @@ export function PetStage({ kind, status, pokeAt, look, bubbleAlign, grabbed = fa
       sceneRef.current = null
     }
   }, [kind])
+
+  useEffect(() => {
+    sceneRef.current?.setColor?.(color)
+  }, [color])
 
   const say = (line: string, mood: PetMood, ms = 2600) => {
     window.clearTimeout(bubbleTimer.current)
@@ -149,7 +161,7 @@ export function PetStage({ kind, status, pokeAt, look, bubbleAlign, grabbed = fa
         ref={canvasRef}
         className="pointer-events-none absolute top-0 h-full max-w-none"
         style={{ width: CANVAS_WIDTH, left: (PET_SIZE - CANVAS_WIDTH) / 2 }}
-        aria-label={text.names[kind]}
+        aria-label={PET_NAMES[kind]}
       />
     </div>
   )

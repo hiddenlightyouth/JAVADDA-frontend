@@ -3,7 +3,7 @@ import { track } from '../lib/analytics'
 import { AiModelRow } from './AiModelSetting'
 import { Modal } from './Dialog'
 import { appAtLeast, appVersion, postToApp, type AppTheme } from '../lib/app'
-import { PET_KINDS, setPet, usePet, type PetKind } from '../lib/pet'
+import { PET_KINDS, PET_NAMES, setPet, usePet, type PetKind } from '../lib/pet'
 import { setShortcutHintsPinned, useShortcutHintsPinned } from '../lib/shortcuts'
 import { setAppShield, useAppSettings } from '../lib/theme'
 import { ContrastRow, ModePicker, ThemePicker } from './AppearanceSetting'
@@ -164,7 +164,7 @@ export function Settings({ onClose }: { onClose: () => void }) {
               size="md"
               label={text.pet}
               value={pet ?? 'off'}
-              options={[['off', text.petOff], ...PET_KINDS.map((kind): [PetKind, string] => [kind, kind === 'claude' ? 'Claude' : 'Codex'])]}
+              options={[['off', text.petOff], ...PET_KINDS.map((kind): [PetKind, string] => [kind, PET_NAMES[kind]])]}
               onChange={(value) => {
                 const next = value === 'off' ? null : (value as PetKind)
                 track('app_pet_change', { pet: next ?? 'off' })

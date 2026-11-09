@@ -178,6 +178,14 @@ export function setAppShield(shield: boolean) {
   postToApp({ type: 'shield', on: shield })
 }
 
+/**
+ * 고른 테마의 메인 컬러예요. 앱 화면 밖(바탕화면 펫 창 /pet-window)에서는 설정을 읽지 않아서, 이 기기에 적어 둔 값을 바로 읽어요.
+ */
+export function accentColor(accent?: Accent): string {
+  const key = accent ?? readItem(ACCENT_STORAGE)
+  return (ACCENTS.find((item) => item.key === key) ?? ACCENTS[0]).color
+}
+
 export function useAppSettings(): AppSettings {
   return useStore(settings)
 }

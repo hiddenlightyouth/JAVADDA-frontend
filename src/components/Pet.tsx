@@ -11,6 +11,7 @@ import {
   usePetHidden,
   usePetLoadingNow,
   writePetPosition,
+  PET_NAMES,
   type PetKind,
   type PetPosition,
   type PetStatus,
@@ -133,7 +134,7 @@ function InAppPet({ kind }: { kind: PetKind }) {
     <div className="pointer-events-none fixed z-30 select-none" style={{ right: position.right, bottom: position.bottom }} data-pet={kind}>
       <button
         type="button"
-        aria-label={text.label(kind === 'claude' ? 'Claude' : 'Codex')}
+        aria-label={text.label(PET_NAMES[kind])}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
