@@ -51,6 +51,8 @@ type AppMessage =
   | { type: 'shield'; on: boolean }
   /** 고른 테마(theme.ts의 ACCENTS). 앱 2.9부터 받아서 앱의 설정 창과 창 바탕을 맞추고, 그보다 낮은 앱은 모르는 메시지라 넘겨요. */
   | { type: 'accent'; accent: string }
+  /** 명암 대비(%, 50에서 150). 앱 2.9부터 받아요. */
+  | { type: 'contrast'; contrast: number }
   | { type: 'update' }
   | { type: 'open'; url: string }
   | { type: 'mic'; action: 'prepare'; recognize: boolean }

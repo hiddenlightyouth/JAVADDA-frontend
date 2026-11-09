@@ -945,6 +945,44 @@ html[data-accent] [data-vibrant] {
   background-color: color-mix(in oklab, var(--color-gray-50) 60%, transparent);
 }
 
+/* 설정 창의 슬라이더(명암 대비)예요. 지나온 쪽은 메인 컬러, 남은 쪽은 회색 막대이고, 손잡이는 바탕색 동그라미에 메인 컬러 테두리예요. */
+.setting-range {
+  appearance: none;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.setting-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--color-brand) var(--fill), var(--color-gray-200) var(--fill));
+}
+
+.setting-range::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--color-brand) var(--fill), var(--color-gray-200) var(--fill));
+}
+
+.setting-range::-webkit-slider-thumb {
+  appearance: none;
+  margin-top: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  border: 2.5px solid var(--color-brand);
+  background: var(--color-white);
+}
+
+.setting-range::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 9999px;
+  border: 2.5px solid var(--color-brand);
+  background: var(--color-white);
+}
+
 /* 메인 컬러나 빨간 배경 위의 글자는 다크 모드에서도 흰색이에요. */
 .dark .text-white,
 .dark .hover\:text-white:hover {

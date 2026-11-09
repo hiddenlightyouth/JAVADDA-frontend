@@ -5,7 +5,7 @@ import { Modal } from './Dialog'
 import { appAtLeast, appVersion, postToApp, type AppTheme } from '../lib/app'
 import { setShortcutHintsPinned, useShortcutHintsPinned } from '../lib/shortcuts'
 import { setAppShield, useAppSettings } from '../lib/theme'
-import { ModePicker, ThemePicker } from './AppearanceSetting'
+import { ContrastRow, ModePicker, ThemePicker } from './AppearanceSetting'
 import { LANG_NAMES, LANGS, messages, setLang, useLang, useMessages } from '../lib/i18n'
 import { CloseButton } from './Icons'
 import { settingList, SettingRow } from './SettingRow'
@@ -22,6 +22,10 @@ const TEXT = messages({
     theme: '화면 모드',
     accent: '테마',
     accentNote: '라이트와 다크 모드 모두에 적용됩니다.',
+    interface: '인터페이스',
+    contrast: '명암 대비',
+    contrastNote: '화면 전체의 색과 테두리 대비를 조절합니다.',
+    reset: '기본값으로 되돌리기',
     language: '언어',
     hints: '단축키 항상 표시',
     hintsNote: '단축키가 사용 가능한 메뉴에 어떤 단축키를 사용하는지 항상 표시합니다.',
@@ -41,6 +45,10 @@ const TEXT = messages({
     theme: 'Appearance',
     accent: 'Themes',
     accentNote: 'Used for both light and dark.',
+    interface: 'Interface',
+    contrast: 'Contrast',
+    contrastNote: 'Adjust the contrast of colors and borders across the interface.',
+    reset: 'Reset to default',
     language: 'Language',
     hints: 'Always show shortcuts',
     hintsNote: 'Always show which keyboard shortcut each menu uses.',
@@ -112,6 +120,12 @@ export function Settings({ onClose }: { onClose: () => void }) {
           </div>
           <div className="mt-3">
             <ThemePicker label={text.accent} />
+          </div>
+        </section>
+        <section className="mt-7">
+          <h3 className={label}>{text.interface}</h3>
+          <div className="mt-3 rounded-2xl border border-gray-200">
+            <ContrastRow label={text.contrast} note={text.contrastNote} reset={text.reset} />
           </div>
         </section>
         <Section title={text.display}>

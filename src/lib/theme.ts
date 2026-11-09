@@ -8,6 +8,10 @@ const SHIELD_STORAGE = 'javadda:app-capture-shield'
 const SETTINGS_EVENT = 'javadda:app-settings'
 
 const ACCENT_STORAGE = 'javadda:app-accent'
+const CONTRAST_STORAGE = 'javadda:app-contrast'
+
+/** 명암 대비를 고르는 범위(%)예요. 100이 기본이에요. */
+export const CONTRAST_RANGE = { min: 50, max: 150, step: 5, base: 100 } as const
 
 const THEMES: AppTheme[] = ['system', 'light', 'dark']
 
@@ -48,6 +52,23 @@ const NEUTRAL: Record<'light' | 'dark', Record<Tone, string>> = {
   dark: { white: '#1c1c1e', 'gray-50': '#232325', 'gray-100': '#2c2c2e', 'gray-200': '#3a3a3c', 'gray-300': '#48484a' },
 }
 
+/**
+ * 물들이지 않은 회색 단계 전부의 oklch(L, C, H)예요. 명암 대비를 바꿀 때 써요.
+ * 라이트는 Tailwind v4의 기본 회색, 다크는 `index.css`의 `.dark` 값을 oklch로 옮긴 거예요.
+ */
+const NEUTRAL_TONES: Record<'light' | 'dark', [string, number, number, number][]> = {
+  light: [
+    ['white', 1, 0, 0], ['gray-50', 0.985, 0.002, 247.8], ['gray-100', 0.967, 0.003, 264.5], ['gray-200', 0.928, 0.006, 264.5],
+    ['gray-300', 0.872, 0.01, 258.3], ['gray-400', 0.707, 0.022, 261.3], ['gray-500', 0.551, 0.027, 264.4], ['gray-600', 0.446, 0.03, 256.8],
+    ['gray-700', 0.373, 0.034, 259.7], ['gray-800', 0.278, 0.033, 256.8], ['gray-900', 0.21, 0.034, 264.7], ['gray-950', 0.13, 0.028, 261.7],
+  ],
+  dark: [
+    ['white', 0.227, 0.004, 286.1], ['gray-50', 0.257, 0.004, 286.1], ['gray-100', 0.294, 0.004, 286.2], ['gray-200', 0.349, 0.003, 286.2],
+    ['gray-300', 0.402, 0.003, 286.3], ['gray-400', 0.648, 0.007, 286.2], ['gray-500', 0.711, 0.007, 286.2], ['gray-600', 0.787, 0.007, 286.2],
+    ['gray-700', 0.862, 0.007, 286.3], ['gray-800', 0.923, 0.007, 286.3], ['gray-900', 0.963, 0.007, 286.3], ['gray-950', 1, 0, 0],
+  ],
+}
+
 /** 테마 하나의 라이트나 다크 화면에서 회색 한 단계의 색이에요. 설정 창의 미리보기가 써요. */
 export function toneOf(accent: (typeof ACCENTS)[number], mode: 'light' | 'dark', tone: Tone) {
   if (accent.hue === null) return NEUTRAL[mode][tone]
@@ -63,10 +84,17 @@ interface AppSettings {
   theme: AppTheme
   /** 메인 컬러 */
   accent: Accent
+  /** 명암 대비(%). 100이 기본이고, 낮으면 회색과 테두리가 바탕에 가까워지고 높으면 또렷해져요. */
+  contrast: number
   /** 화면 공유나 녹화가 감지되면 화면을 가릴지. 처음에는 켜져 있어요. */
   shield: boolean
 }
 
+
+function clampContrast(value: number) {
+  if (!Number.isFinite(value)) return CONTRAST_RANGE.base
+  return Math.min(CONTRAST_RANGE.max, Math.max(CONTRAST_RANGE.min, Math.round(value / CONTRAST_RANGE.step) * CONTRAST_RANGE.step))
+}
 
 function readSettings(): AppSettings {
   const theme = readItem(THEME_STORAGE) as AppTheme | null
@@ -74,27 +102,47 @@ function readSettings(): AppSettings {
   return {
     theme: theme && THEMES.includes(theme) ? theme : 'system',
     accent: isAccent(accent) ? accent : 'blue',
+    contrast: clampContrast(Number(readItem(CONTRAST_STORAGE) ?? CONTRAST_RANGE.base)),
     shield: readItem(SHIELD_STORAGE) !== '0',
   }
 }
 
-const settings = createStore<AppSettings>(appShell ? readSettings() : { theme: 'light', accent: 'blue', shield: false })
+const settings = createStore<AppSettings>(appShell ? readSettings() : { theme: 'light', accent: 'blue', contrast: CONTRAST_RANGE.base, shield: false })
 
 const systemDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches
 
 /** html에 dark를 붙이면 index.css가 색 토큰을 어두운 값으로 바꾸고, data-accent를 붙이면 메인 컬러를 그 색으로 바꿔요. */
 function apply() {
   const root = document.documentElement
-  const { theme, accent } = settings.get()
-  root.classList.toggle('dark', theme === 'dark' || (theme === 'system' && systemDark()))
+  const { theme, accent, contrast } = settings.get()
+  const dark = theme === 'dark' || (theme === 'system' && systemDark())
+  root.classList.toggle('dark', dark)
   if (accent === 'blue') delete root.dataset.accent
   else root.dataset.accent = accent
+  applyContrast(root, accent, dark ? 'dark' : 'light', contrast / 100)
+}
+
+/**
+ * 명암 대비를 적용해요. 회색 단계마다 바탕(white)과의 밝기 차이에 배율을 곱해서 html의 style에 적어요.
+ * 인라인 값이라 `index.css`의 테마 규칙보다 이겨요. 100%면 지우고 `index.css`의 값으로 돌아가요. 바탕 자체는 그대로예요.
+ */
+function applyContrast(root: HTMLElement, accent: Accent, mode: 'light' | 'dark', ratio: number) {
+  const item = ACCENTS.find((entry) => entry.key === accent) ?? ACCENTS[0]
+  const tones: [string, number, number, number][] =
+    item.hue === null ? NEUTRAL_TONES[mode] : TONES[mode].map(([name, l, c]) => [name, l, c, item.hue as number])
+  const base = tones[0][1]
+  for (const [name, l, c, h] of tones.slice(1)) {
+    const prop = `--color-${name}`
+    if (ratio === 1) root.style.removeProperty(prop)
+    else root.style.setProperty(prop, `oklch(${Math.min(1, Math.max(0, base + (l - base) * ratio)).toFixed(3)} ${c} ${h})`)
+  }
 }
 
 function store(next: AppSettings) {
   // 저장하지 못해도 이번 화면에서는 그대로 동작해요.
   writeItem(THEME_STORAGE, next.theme)
   writeItem(ACCENT_STORAGE, next.accent)
+  writeItem(CONTRAST_STORAGE, String(next.contrast))
   writeItem(SHIELD_STORAGE, next.shield ? '1' : '0')
   settings.set(next)
   apply()
@@ -111,6 +159,18 @@ export function setAppAccent(accent: Accent) {
   store({ ...settings.get(), accent })
   postToApp({ type: 'accent', accent })
 }
+
+/** 명암 대비를 바꾸고 앱에도 알려서, 앱의 설정 창 슬라이더가 같이 바뀌게 해요. */
+export function setAppContrast(contrast: number) {
+  const next = clampContrast(contrast)
+  if (next === settings.get().contrast) return
+  store({ ...settings.get(), contrast: next })
+  // 슬라이더를 끄는 동안 값이 계속 바뀌어서, 멈춘 뒤에 한 번만 앱에 알려요.
+  window.clearTimeout(contrastTimer)
+  contrastTimer = window.setTimeout(() => postToApp({ type: 'contrast', contrast: next }), 250)
+}
+
+let contrastTimer = 0
 
 /** 화면 공유 중에 화면을 가릴지 정하고 앱에도 알려서, 앱의 설정 창과 같이 바뀌게 해요. */
 export function setAppShield(shield: boolean) {
@@ -134,6 +194,7 @@ if (isApp) {
       ...settings.get(),
       theme: detail.theme && THEMES.includes(detail.theme) ? detail.theme : settings.get().theme,
       accent: isAccent(detail.accent ?? null) ? (detail.accent as Accent) : settings.get().accent,
+      contrast: typeof detail.contrast === 'number' ? clampContrast(detail.contrast) : settings.get().contrast,
       shield: typeof detail.shield === 'boolean' ? detail.shield : settings.get().shield,
     })
   })
