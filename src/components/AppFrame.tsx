@@ -158,7 +158,7 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
             <Suspense fallback={<aside className="w-full bg-gray-50/75 backdrop-blur-2xl" />}>{panel}</Suspense>
           </div>
         ) : (
-          <Suspense fallback={<aside data-app-drag className={`w-72 shrink-0 border-r border-gray-200 ${vibrancy ? '' : 'bg-gray-50'}`} />}>{panel}</Suspense>
+          <Suspense fallback={<aside data-app-drag data-vibrant={vibrancy ? '' : undefined} className={`w-72 shrink-0 border-r border-gray-200 ${vibrancy ? '' : 'bg-gray-50'}`} />}>{panel}</Suspense>
         ))}
       {children}
       {settingsOpen && (

@@ -358,6 +358,7 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
 
   return (
     <aside
+      data-vibrant={vibrancy && !drawer ? '' : undefined}
       className={`relative z-30 flex shrink-0 flex-col ${drawer ? 'w-full bg-gray-50/75 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl backdrop-saturate-150' : `w-72 border-r border-gray-200 ${vibrancy ? '' : 'bg-gray-50'}`}`}
     >
       {isWebApp ? (
