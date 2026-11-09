@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { track } from '../../lib/analytics'
 import { CONTEST_CATEGORIES, contestDaysLeft, fetchContests, type Contest, type ContestCategory } from '../../lib/contests'
-import { useLoadHold, useLoadProgress } from '../../lib/load'
 import { messages, useMessages } from '../../lib/i18n'
 import { readItem, writeItem } from '../../lib/storage'
 import { Dropdown } from '../Dropdown'
@@ -11,7 +10,7 @@ import { CalendarIcon, DocumentIcon, ExternalLinkIcon, SearchIcon } from '../Ico
 import { jobsGrid, jobsList, NotchedFrame, onBlankClick, PostingCountBar, readLayout, useElementSize, type Layout } from '../JobCard'
 import { shortDate } from '../ScreenParts'
 import { PostingBrowser, SplitView, type BrowserPage } from '../PostingBrowser'
-import { Badge, LoadProgress, loadCenter, primaryButton, stagger, tag, useShowMore } from '../ui'
+import { Badge, primaryButton, Skeleton, stagger, tag, useShowMore } from '../ui'
 
 /**
  * 사이드바의 공모전 (/contests)이에요. 예전에는 잡아따 Labs의 실험이었어요. 공모전 사이트 네 곳에서 모은 공모전을 분야로 골라 봐요.
@@ -96,7 +95,6 @@ export function Contests({ header }: { header?: ReactNode }) {
 
 function ContestList({ onOpen }: { onOpen: (contest: Contest) => void }) {
   const L = useMessages(TEXT)
-  const { percent, one } = useLoadProgress()
   const [contests, setContests] = useState<Contest[] | null>(null)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -108,13 +106,13 @@ function ContestList({ onOpen }: { onOpen: (contest: Contest) => void }) {
   useEffect(() => {
     let alive = true
     setFailed(false)
-    fetchContests(one())
+    fetchContests()
       .then((list) => alive && setContests(list))
       .catch(() => alive && setFailed(true))
     return () => {
       alive = false
     }
-  }, [one, attempt])
+  }, [attempt])
 
   const choose = (next: ContestCategory | null) => {
     track('labs_contest_category', { category: next ?? 'all' })
@@ -142,10 +140,9 @@ function ContestList({ onOpen }: { onOpen: (contest: Contest) => void }) {
   }, [contests, category, query, sort])
 
   const { count, more } = useShowMore(shown.length, `${category}|${query}|${sort}`)
-  const loading = useLoadHold(!contests && !failed)
 
   if (failed) return <Failed onRetry={() => setAttempt((value) => value + 1)} className="pt-24" />
-  if (!contests || loading) return <LoadProgress percent={contests ? 100 : percent} className={loadCenter} />
+  if (!contests) return <Skeleton shape="cards" className="mt-4" />
   if (contests.length === 0) return <Notice title={L.noneTitle} body={L.noneBody} className="pt-24" />
 
   return (

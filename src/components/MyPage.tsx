@@ -29,7 +29,7 @@ import { messages, pick, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
 import { CheckIcon } from './Icons'
 import { PasswordChangeDialog } from './PasswordChange'
-import { FormError, LoadProgress, softButton, softDangerButton } from './ui'
+import { FormError, Skeleton, softButton, softDangerButton } from './ui'
 
 const TEXT = messages({
   ko: {
@@ -114,11 +114,11 @@ function Message({ children }: { children: ReactNode }) {
   return <p className="border-y border-gray-100 py-6 text-center text-[13.5px] text-gray-500">{children}</p>
 }
 
-/** 목록 자리에서 받는 정도를 보여줘요. 목록과 같은 위아래 선 안에 가는 막대와 퍼센트만 둬요. */
-function LoadingRows({ percent }: { percent: number }) {
+/** 목록이 올 자리의 뼈대예요. 목록과 같은 위아래 선 안에 줄 모양을 둬요. */
+function LoadingRows() {
   return (
-    <div className="border-y border-gray-100 py-6">
-      <LoadProgress percent={percent} compact />
+    <div className="border-y border-gray-100 py-5">
+      <Skeleton shape="lines" />
     </div>
   )
 }
@@ -240,7 +240,7 @@ function Sessions() {
     else setError(pick(TEXT).revokeFailed)
   }
 
-  if (waiting || !sessions) return waiting ? <LoadingRows percent={progress.percent} /> : <Message>{error}</Message>
+  if (waiting || !sessions) return waiting ? <LoadingRows /> : <Message>{error}</Message>
 
   return (
     <>
@@ -307,7 +307,7 @@ function LoginHistory() {
   }, [load])
 
   const waiting = useLoadHold(loading && records.length === 0)
-  if (waiting) return <LoadingRows percent={progress.percent} />
+  if (waiting) return <LoadingRows />
   if (records.length === 0) return <Message>{error || text.noRecords}</Message>
 
   return (
@@ -397,7 +397,7 @@ export function MyPage({ onSignedOut }: Props) {
 
         <Section title={text.account}>
           {waitingMe ? (
-            <LoadingRows percent={meLoad.percent} />
+            <LoadingRows />
           ) : (
             <dl className={settingList}>
               {[

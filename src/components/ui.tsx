@@ -347,35 +347,8 @@ export function NumberedList({ items, onGray = false, className = '' }: { items:
 // ── 불러오는 중 ────────────────────────────────────────
 
 /**
- * 메뉴나 표처럼 좁은 자리에 두는 한 줄 진행 막대예요. 가는 막대(gray-200/70 바탕에 메인 컬러)와 퍼센트(고정폭 숫자)만 보이고, 문장은 읽기 프로그램에만 알려요.
- * `LoadProgress`의 compact가 써요. 화면을 채우는 자리는 `ProgressRing`이에요.
- */
-function ProgressLine({ value, text, className = '' }: { value: number; text: string; className?: string }) {
-  const L = useMessages(TEXT)
-  const percent = Math.min(100, Math.max(0, Math.round(value)))
-  return (
-    <div className={`flex items-center gap-3 ${className}`}>
-      <span role="status" className="sr-only">
-        {text}
-      </span>
-      <div
-        role="progressbar"
-        aria-label={`${L.progress}, ${text}`}
-        aria-valuenow={percent}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-gray-200/70"
-      >
-        <div className="h-full rounded-full bg-brand transition-[width] duration-300 ease-out" style={{ width: `${percent}%` }} />
-      </div>
-      <span className="shrink-0 text-[12px] font-medium text-gray-500 tabular-nums">{percent}%</span>
-    </div>
-  )
-}
-
-/**
  * 기다리는 화면의 큰 모양이에요. 위에 움직이는 로봇(`AiLoader`), 그 아래 동그란 진행 고리 안에 큰 퍼센트, 맨 아래에 지금 하는 일의 문장이 있어요.
- * AI를 기다리는 칸(`AiProgress`, `GapParts`)과 자료를 받는 칸(`LoadProgress`)이 같이 써요. 메뉴나 표처럼 좁은 자리는 `LoadProgress`의 compact를 써요.
+ * AI를 기다리는 칸(`AiProgress`, `GapParts`)이 써요. 자료를 받는 동안은 이것 대신 뼈대(`Skeleton`)예요.
  * 로봇은 처음 쓸 때 따로 받아 와서, 받는 동안은 같은 크기의 빈자리만 둬요. 고리는 넘겨받은 퍼센트를 그대로 그려요.
  * title을 주면 문장 위에 작게 적어요(올리는 파일 이름 등).
  */
@@ -423,27 +396,227 @@ export function ProgressRing({ value, text, title, className = '' }: { value: nu
   )
 }
 
+/** 뼈대(`Skeleton`)의 한 조각이에요. 회색 막대가 천천히 옅어졌다 짙어져요. 회색 칸 위에서도 보이게 gray-200/70이에요. */
+export function Bone({ className = '' }: { className?: string }) {
+  return <span aria-hidden className={`block animate-skeleton rounded-md bg-gray-200/70 ${className}`} />
+}
+
+/** 뼈대가 흉내 낼 내용의 모양이에요. */
+export type SkeletonShape = 'cards' | 'rows' | 'lines' | 'page' | 'document' | 'calendar' | 'block' | 'stats' | 'app'
+
+/** 회색 칸 하나의 뼈대예요. 공고 카드처럼 로고와 이름, 제목, 한 줄 정보, 이름표, 아래 줄이 있어요. */
+function CardBones() {
+  return (
+    <div className="rounded-2xl bg-gray-50 p-4 sm:p-5">
+      <div className="flex items-center gap-2.5">
+        <Bone className="size-9 rounded-lg" />
+        <Bone className="h-3.5 w-24" />
+      </div>
+      <Bone className="mt-5 h-5 w-4/5" />
+      <Bone className="mt-3 h-3.5 w-3/5" />
+      <div className="mt-5 flex gap-1.5">
+        <Bone className="h-6 w-16" />
+        <Bone className="h-6 w-14" />
+        <Bone className="h-6 w-20" />
+      </div>
+      <div className="mt-5 flex items-center justify-between">
+        <Bone className="h-6 w-20" />
+        <Bone className="h-9 w-24 rounded-lg" />
+      </div>
+    </div>
+  )
+}
+
+/** 표나 리스트의 한 줄 뼈대예요. */
+function RowBones({ index }: { index: number }) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3.5">
+      <Bone className="size-9 shrink-0 rounded-lg" />
+      <div className="min-w-0 flex-1">
+        <Bone className={`h-4 ${index % 3 === 1 ? 'w-2/5' : index % 3 === 2 ? 'w-3/5' : 'w-1/2'}`} />
+        <Bone className="mt-2 h-3 w-1/3" />
+      </div>
+      <Bone className="hidden h-6 w-16 sm:block" />
+    </div>
+  )
+}
+
+const DOC_WIDTHS = ['w-full', 'w-11/12', 'w-full', 'w-4/5', 'w-full', 'w-2/3']
+
 /**
- * 자료를 받는 동안 그 자리에 두는 진행 칸이에요. 퍼센트는 받은 바이트로 셈해요(`useLoadProgress`, `src/lib/load.ts`).
- * 화면을 채우는 자리에서는 로봇과 진행 고리(`ProgressRing`)를, compact(메뉴, 표 안)에서는 한 줄 막대를 보여줘요.
- * 금방 끝나는 받기에서 깜빡이지 않게 0.15초 뒤에 나타나요. 그동안은 자리만 차지해요. 문장을 주지 않으면 "불러오고 있어요"예요.
- * 화면 가운데에 둘 때는 `loadCenter`를 className으로 넘겨요.
+ * 자료를 받는 동안 내용이 올 자리에 두는 뼈대(스켈레톤)예요. 내용과 비슷한 모양의 회색 칸이 천천히 깜빡여요.
+ * AI를 기다리는 곳은 이것을 쓰지 않고 진행 정도를 알려 주는 `AiProgress`(`ProgressRing`)를 써요.
+ * shape는 cards(공고 카드 그리드), rows(표와 리스트), lines(메뉴 안처럼 좁은 자리), page(화면 하나), document(글), calendar(달력), block(지도처럼 큰 칸 하나), stats(숫자 칸과 표), app(사이드바와 화면)이에요.
+ * 금방 끝나는 받기에서 깜빡이지 않게 0.15초 뒤에 나타나요. 그동안은 자리만 차지해요. 읽기 프로그램에는 "불러오고 있어요"를 알려요.
  */
-export function LoadProgress({ percent, text, compact = false, className = '' }: { percent: number; text?: string; compact?: boolean; className?: string }) {
+export function Skeleton({ shape = 'page', count, className = '' }: { shape?: SkeletonShape; count?: number; className?: string }) {
   const L = useMessages(TEXT)
   const [visible, setVisible] = useState(false)
   useEffect(() => {
     const timer = setTimeout(() => setVisible(true), LOAD_SHOW_AFTER_MS)
     return () => clearTimeout(timer)
   }, [])
+  const many = (fallback: number) => Array.from({ length: count ?? fallback }, (_, index) => index)
+  let body: ReactNode
+  switch (shape) {
+    case 'cards':
+      body = (
+        <div className="@container">
+          <div className="grid grid-cols-1 gap-4 @2xl:grid-cols-2 @6xl:grid-cols-3">
+            {many(6).map((index) => (
+              <CardBones key={index} />
+            ))}
+          </div>
+        </div>
+      )
+      break
+    case 'rows':
+      body = (
+        <div className="divide-y divide-gray-200/70 overflow-hidden rounded-2xl bg-gray-50">
+          {many(8).map((index) => (
+            <RowBones key={index} index={index} />
+          ))}
+        </div>
+      )
+      break
+    case 'lines':
+      body = (
+        <div className="flex flex-col gap-2.5">
+          {many(3).map((index) => (
+            <Bone key={index} className={`h-3.5 ${index % 2 === 0 ? 'w-3/4' : 'w-1/2'}`} />
+          ))}
+        </div>
+      )
+      break
+    case 'document':
+      body = (
+        <div className="flex flex-col gap-3">
+          <Bone className="mb-3 h-7 w-2/3" />
+          {many(12).map((index) => (
+            <Bone key={index} className={`h-3.5 ${DOC_WIDTHS[index % DOC_WIDTHS.length]} ${index % 4 === 3 ? 'mb-4' : ''}`} />
+          ))}
+        </div>
+      )
+      break
+    case 'calendar':
+      body = (
+        <div className="grid gap-8 @5xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="overflow-hidden rounded-2xl border border-gray-200">
+            <div className="h-9 border-b border-gray-200 bg-gray-50" />
+            <div className="grid grid-cols-7">
+              {Array.from({ length: 42 }, (_, index) => (
+                <div key={index} className="h-20 border-gray-200 p-2 not-[:nth-child(7n)]:border-r not-[:nth-last-child(-n+7)]:border-b sm:h-24">
+                  <Bone className="h-3 w-4" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="hidden flex-col gap-2 @5xl:flex">
+            <Bone className="mb-2 h-5 w-32" />
+            {[0, 1, 2, 3].map((index) => (
+              <div key={index} className="flex items-center gap-3 rounded-xl bg-gray-50 p-3">
+                <Bone className="size-8 shrink-0 rounded-lg" />
+                <div className="flex-1">
+                  <Bone className="h-3.5 w-3/4" />
+                  <Bone className="mt-2 h-3 w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+      break
+    case 'block':
+      body = <Bone className="size-full min-h-[420px] rounded-2xl" />
+      break
+    case 'stats':
+      body = (
+        <div>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            {[0, 1, 2, 3].map((index) => (
+              <div key={index} className="rounded-2xl bg-gray-50 p-4">
+                <Bone className="h-3 w-16" />
+                <Bone className="mt-3 h-7 w-20" />
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 rounded-2xl bg-gray-50 p-5">
+            <Bone className="h-4 w-28" />
+            <div className="mt-5 flex h-36 items-end gap-2">
+              {[40, 65, 50, 80, 55, 90, 70, 60, 85, 45, 75, 95].map((height, index) => (
+                <span key={index} aria-hidden className="block flex-1 animate-skeleton rounded-t-md bg-gray-200/70" style={{ height: `${height}%` }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )
+      break
+    case 'app':
+      body = (
+        <div className="flex min-h-dvh">
+          <div className="hidden w-60 shrink-0 flex-col gap-2 bg-gray-50 px-3 pt-14 md:flex">
+            {many(9).map((index) => (
+              <div key={index} className="flex items-center gap-2.5 px-2 py-1.5">
+                <Bone className="size-4 rounded" />
+                <Bone className={`h-3.5 ${index % 2 === 0 ? 'w-24' : 'w-20'}`} />
+              </div>
+            ))}
+          </div>
+          <div className="min-w-0 flex-1 px-4 pt-16 sm:px-6 md:px-10">
+            <Bone className="mx-auto h-12 w-full max-w-2xl rounded-xl" />
+            <Bone className="mt-12 h-5 w-40" />
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {[0, 1, 2].map((index) => (
+                <div key={index} className={index === 1 ? 'hidden sm:block' : index === 2 ? 'hidden xl:block' : ''}>
+                  <CardBones />
+                </div>
+              ))}
+            </div>
+            <Bone className="mt-10 h-5 w-32" />
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {[0, 1, 2].map((index) => (
+                <div key={index} className={index === 1 ? 'hidden sm:block' : index === 2 ? 'hidden xl:block' : ''}>
+                  <CardBones />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )
+      break
+    default:
+      body = (
+        <div>
+          <div className="rounded-2xl bg-gray-50 p-5 sm:p-6">
+            <Bone className="h-4 w-32" />
+            <Bone className="mt-4 h-7 w-2/3" />
+            <Bone className="mt-3 h-3.5 w-full" />
+            <Bone className="mt-2 h-3.5 w-4/5" />
+          </div>
+          <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {[0, 1].map((index) => (
+              <div key={index} className="rounded-2xl bg-gray-50 p-5">
+                <Bone className="h-4 w-24" />
+                {[0, 1, 2].map((line) => (
+                  <Bone key={line} className={`mt-4 h-3.5 ${line === 2 ? 'w-1/2' : 'w-full'}`} />
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+  }
   return (
     <div aria-busy="true" className={`${visible ? 'animate-fade' : 'invisible'} ${className}`}>
-      {compact ? <ProgressLine value={percent} text={text ?? L.loading} /> : <ProgressRing value={percent} text={text ?? L.loading} />}
+      <span role="status" className="sr-only">
+        {L.loading}
+      </span>
+      {body}
     </div>
   )
 }
 
-/** 화면 가운데에 두는 진행 칸(`LoadProgress`, `AiProgress`)의 자리예요. */
+/** 화면 가운데에 두는 AI 진행 칸(`AiProgress`)의 자리예요. */
 export const loadCenter = 'mx-auto mt-16 w-full max-w-md'
 
 // ── 카드 ───────────────────────────────────────────────

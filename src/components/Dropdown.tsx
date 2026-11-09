@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useDismiss } from '../hooks/useDismiss'
 import { Kbd } from './Shortcuts'
 import { CheckIcon, ChevronDownIcon } from './Icons'
-import { label as labelText, LoadProgress, menuItem, menuPanel, toolButton, toolButtonLg } from './ui'
+import { label as labelText, menuItem, menuPanel, Skeleton, toolButton, toolButtonLg } from './ui'
 
 interface MenuItem {
   label: string
@@ -20,7 +20,7 @@ interface MenuGroup {
   items: MenuItem[]
   /** 항목 대신 보여줄 안내 (오류 등) */
   note?: string
-  /** 불러오는 중이면 받은 정도(0에서 100)예요. 항목 대신 가는 진행 막대와 퍼센트를 보여줘요. */
+  /** 불러오는 중이면 받은 정도(0에서 100)예요. 항목 대신 줄 모양의 뼈대(`Skeleton`)를 보여줘요. */
   progress?: number
 }
 
@@ -129,7 +129,7 @@ export function Dropdown({ label, value, active = false, groups, onOpen, align =
             <div key={group.title ?? index} className={index > 0 ? 'mt-1 border-t border-gray-100 pt-1' : ''}>
               {group.title && <p className={`px-2.5 pt-2 pb-1 ${labelText}`}>{group.title}</p>}
               {group.note && <p className="px-2.5 py-2 text-[13px] leading-relaxed text-gray-500">{group.note}</p>}
-              {group.progress !== undefined && <LoadProgress percent={group.progress} compact className="px-2.5 py-3" />}
+              {group.progress !== undefined && <Skeleton shape="lines" className="px-2.5 py-3" />}
               {group.items.map((item, order) => (
                 <button
                   key={`${order}:${item.label}`}

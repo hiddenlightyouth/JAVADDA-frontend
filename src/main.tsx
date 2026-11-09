@@ -1,11 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import App from './App'
-import { LoadProgress } from './components/ui'
+import { Skeleton } from './components/ui'
 import { appShell } from './lib/app'
 import { companyLogos, loadCatalog, startAccountSync } from './lib/gap'
 import { currentPath } from './lib/i18n'
-import { createLoadTracker, LOAD_HOLD_MS, LOAD_SHOW_AFTER_MS, preloadImages } from './lib/load'
+import { preloadImages } from './lib/load'
 import { aboutFromPath } from './lib/routes'
 import './index.css'
 
@@ -48,12 +48,12 @@ const start = () => {
   )
 }
 
-/** 앱 화면을 그리기 전에 기업과 공고를 받는 동안, 화면 가운데에 받은 정도를 퍼센트로 보여줘요. */
-const showBoot = (percent: number) => {
+/** 앱 화면을 그리기 전에 기업과 공고를 받는 동안, 사이드바와 새 진단 화면 모양의 뼈대를 보여줘요. */
+const showBoot = () => {
   mount().render(
     <StrictMode>
-      <div className="flex min-h-dvh items-center justify-center bg-white px-6">
-        <LoadProgress percent={percent} className="w-full max-w-xs" />
+      <div className="bg-white">
+        <Skeleton shape="app" />
       </div>
     </StrictMode>,
   )
@@ -66,23 +66,13 @@ const boot = () => {
   else if (aboutFromPath()) void import('./components/About').finally(start)
   else if (appShell) {
     // 앱 화면은 기업과 공고를 받은 뒤에 그려요. 공고를 찾는 함수(postingOf, companyOf)가 바로 답할 수 있게요.
-    // 받는 동안은 가운데에 받은 정도(퍼센트)를 보여주고, 서버에 닿지 못하면 적어 둔 목록으로 그려요. 로그인해 있으면 이력서와 리포트도 같이 받기 시작해요.
-    // 막대가 보였으면(0.15초 넘게 걸렸으면) 100%를 0.2초 보여준 뒤에 그려요.
+    // 받는 동안은 화면 모양의 뼈대를 보여주고, 서버에 닿지 못하면 적어 둔 목록으로 그려요. 로그인해 있으면 이력서와 리포트도 같이 받기 시작해요.
     startAccountSync()
-    const began = performance.now()
-    showBoot(0)
-    const tracker = createLoadTracker(showBoot)
-    // 기업 로고까지 받은 뒤에 그려요. 화면이 먼저 뜨고 로고가 하나씩 늦게 채워지면 어색해서요. 로고 몫도 막대에 같이 세요.
-    const logosPart = tracker.track()
-    void loadCatalog(tracker)
-      .then(() => preloadImages(companyLogos(), logosPart))
-      .finally(() => {
-        if (performance.now() - began < LOAD_SHOW_AFTER_MS) start()
-        else {
-          showBoot(100)
-          setTimeout(start, LOAD_HOLD_MS)
-        }
-      })
+    showBoot()
+    // 기업 로고까지 받은 뒤에 그려요. 화면이 먼저 뜨고 로고가 하나씩 늦게 채워지면 어색해서요.
+    void loadCatalog()
+      .then(() => preloadImages(companyLogos()))
+      .finally(start)
   } else start()
 }
 

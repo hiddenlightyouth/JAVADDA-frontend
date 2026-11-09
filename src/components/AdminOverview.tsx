@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { track } from '../lib/analytics'
 import { dayLabel, fetchOverview, type AdminOverview as Overview } from '../lib/admin'
 import { BarChart, card, cardTitle, Empty, Failed, full, sectionTitle, share, Stat, useAdminData } from './AdminParts'
-import { loadCenter, LoadProgress, Segmented } from './ui'
+import { Segmented, Skeleton } from './ui'
 import { messages, useMessages } from '../lib/i18n'
 
 type Metric = 'chats' | 'signups'
@@ -80,9 +80,9 @@ export function AdminOverview() {
   // 기간만 바꿀 때는 보던 숫자를 그대로 두고 그래프만 바꿔요.
   const state = useAdminData<Overview>((onLoad) => fetchOverview(period, onLoad), period, true)
 
-  if (state.waiting) return <LoadProgress percent={state.percent} className={loadCenter} />
+  if (state.waiting) return <Skeleton shape="stats" />
   if (state.error) return <Failed message={state.error} onRetry={state.reload} />
-  if (!state.data) return <LoadProgress percent={state.percent} className={loadCenter} />
+  if (!state.data) return <Skeleton shape="stats" />
 
   const { users, devices, chats, daily, topRepos } = state.data
   const topCount = topRepos[0]?.chats ?? 0

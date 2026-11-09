@@ -3,7 +3,6 @@ import { track } from '../lib/analytics'
 import { blogCompaniesOf, blogOutlook, COLLECTED_AT, fetchBlogDigests, fetchBlogOutlook, type BlogOutlook, isStale, THEME_NAMES, themeTrends, topSkills, type BlogDigest, type BlogPost, type BlogTheme, type ThemeTrend } from '../lib/blogs'
 import { canEmbed, companyOf, POSTINGS, useResume } from '../lib/gap'
 import { getLang, messages, useMessages } from '../lib/i18n'
-import { useLoadHold, useLoadProgress } from '../lib/load'
 import { isPlainClick } from '../lib/links'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
@@ -136,14 +135,12 @@ export function Blogs({ company, onCompany, onJobs }: {
   // 앱 안에 띄울 수 없어서 새 탭으로 열려고 기다리는 글이에요.
   const [leaving, setLeaving] = useState<BrowserPage | null>(null)
   const [served, setServed] = useState<BlogOutlook | null | undefined>(outlookCache)
-  const load = useLoadProgress()
-  const waiting = useLoadHold(loaded === undefined)
 
   useEffect(() => {
     if (cache) return
     let stale = false
     setLoaded(undefined)
-    fetchBlogDigests(load.one()).then(
+    fetchBlogDigests().then(
       (list) => {
         cache = list
         if (!stale) setLoaded(list)
@@ -155,7 +152,7 @@ export function Blogs({ company, onCompany, onJobs }: {
     return () => {
       stale = true
     }
-  }, [attempt, load.one])
+  }, [attempt])
 
   // 총정리는 글 목록을 막지 않고 따로 받아요. 오기 전과 서버에 없을 때는 화면이 글에서 계산한 총정리를 보여줘요.
   useEffect(() => {
@@ -257,7 +254,7 @@ export function Blogs({ company, onCompany, onJobs }: {
         </div>
 
         <div className="mt-4">
-          <LoadGate waiting={waiting || loaded === undefined} failed={loaded === 'failed'} percent={load.percent} onRetry={() => setAttempt((value) => value + 1)}>
+          <LoadGate waiting={loaded === undefined} failed={loaded === 'failed'} skeleton="cards" onRetry={() => setAttempt((value) => value + 1)}>
             {() =>
               company && !digest ? (
                 <Notice title={L.missing} body={L.missingBody} action={L.missingAction} onAction={() => selectCompany(null)} className="mt-16" />

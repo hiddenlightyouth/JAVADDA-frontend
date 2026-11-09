@@ -66,7 +66,7 @@ export function AdminFeedback({ onOpenChat }: { onOpenChat: (id: string) => void
   return (
     <>
       {summary.waiting || (!counts && !summary.error) ? (
-        <StatsLoading percent={summary.percent} className="" />
+        <StatsLoading className="" />
       ) : counts ? (
         <dl className="grid grid-cols-3 gap-3">
           <Stat label={L.good} value={full(counts.good)} note={rated > 0 ? share(counts.good, rated).replace(L.ofTotal, L.ofRatings) : undefined} />

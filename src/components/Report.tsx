@@ -26,7 +26,6 @@ import { useAuth } from '../lib/auth'
 import { useShortcuts } from '../lib/shortcuts'
 import { formatDateTime } from '../lib/format'
 import { messages, pick, useMessages } from '../lib/i18n'
-import { useLoadHold, useLoadProgress } from '../lib/load'
 import { showToast } from '../lib/toast'
 import { bleed, gutter, pageFrame, PageHeader } from './AppPage'
 import { panelBody, SidePanel } from './Dialog'
@@ -37,7 +36,7 @@ import { PostingBrowser, SplitView } from './PostingBrowser'
 import { ReviewTab } from './ReportReview'
 import { QuestionsTab } from './ReportQuestions'
 import { Callout, switchReport } from './ReportParts'
-import { Badge, Bullets, label, loadCenter, LoadProgress, NumberedList, primaryButton, Segmented, stagger, Tabs, textArea, toolButton, toolDangerButton, iconOnPhone, phoneHidden } from './ui'
+import { Badge, Bullets, label, loadCenter, NumberedList, Skeleton, primaryButton, Segmented, stagger, Tabs, textArea, toolButton, toolDangerButton, iconOnPhone, phoneHidden } from './ui'
 
 /** 리포트의 탭이에요. 요약, 적합도 설명, 서류 검증, 예상 면접 질문 순서예요. */
 export type ReportTab = 'summary' | 'fit' | 'review' | 'questions'
@@ -753,9 +752,7 @@ function FitTab({ report, onPick, onOpenGap }: { report: ReportData; onPick: (po
 /** 리포트 대시보드예요. 공고 하나와 내 서류를 맞춰 본 결과를 탭으로 나눠 보여줘요. */
 export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
   const L = useMessages(TEXT)
-  const load = useLoadProgress()
-  const report = useReport(id, load.one)
-  const waiting = useLoadHold(report === undefined)
+  const report = useReport(id)
   const resume = useResume()
   const posting = useReportPosting(report?.postingId)
   const company = report ? companyOf(report.companyId) : null
@@ -780,12 +777,12 @@ export function Report({ id, tab, onTab, onBack, onPractice, onPick }: Props) {
     !deleting,
   )
 
-  // 상세를 받는 동안은 받은 바이트로 센 퍼센트를 보여줘요. 만드는 중(pending)인 리포트는 아래에서 AI 진행 막대를 보여줘요.
-  if (waiting || report === undefined) {
+  // 상세를 받는 동안은 리포트 모양의 뼈대를 보여줘요. 만드는 중(pending)인 리포트는 아래에서 AI 진행 막대를 보여줘요.
+  if (report === undefined) {
     return (
       <main className={pageFrame}>
         <PageHeader title={L.tabs.summary} onBack={onBack} backLabel={L.back} />
-        <LoadProgress percent={load.percent} className={loadCenter} />
+        <Skeleton shape="page" className="pt-4" />
       </main>
     )
   }

@@ -60,31 +60,15 @@ export function useLoadProgress() {
   return { percent, start, one }
 }
 
-/** 이만큼(ms) 안에 끝나는 받기는 진행 막대를 보여주지 않아요. `LoadProgress`도 같은 시간만큼 늦게 나타나요. */
+/** 이만큼(ms) 안에 끝나는 받기는 뼈대(`Skeleton`, ui)를 보여주지 않아요. 뼈대가 그만큼 늦게 나타나요. */
 export const LOAD_SHOW_AFTER_MS = 150
-/** 진행 막대가 보였으면 100%를 이만큼(ms) 보여준 뒤에 내용으로 바꿔요. */
-export const LOAD_HOLD_MS = 200
-
-const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
 
 /**
- * 진행 막대를 보여줄지예요. 받는 동안(loading)은 true이고, 끝났을 때 막대가 이미 보였으면(150ms 넘게 받았으면) 100%를 0.2초 더 보여주려고 그동안도 true예요.
- * 금방 끝난 받기는 바로 false가 돼서 내용이 곧장 보여요.
+ * 뼈대를 보여줄지예요. 받는 동안(loading)만 true이고, 받으면 바로 내용으로 바꿔요.
+ * 예전에는 진행 막대의 100%를 잠깐 보여주려고 끝난 뒤에도 잠깐 true였어요. 뼈대는 끝을 보여줄 것이 없어서 기다리지 않아요.
  */
 export function useLoadHold(loading: boolean): boolean {
-  const [state, setState] = useState(() => ({ loading, since: loading ? now() : 0, holding: false }))
-  let current = state
-  if (state.loading !== loading) {
-    current = loading ? { loading, since: now(), holding: false } : { loading, since: 0, holding: now() - state.since >= LOAD_SHOW_AFTER_MS }
-    setState(current)
-  }
-  const holding = current.holding
-  useEffect(() => {
-    if (!holding) return
-    const timer = setTimeout(() => setState((prev) => ({ ...prev, holding: false })), LOAD_HOLD_MS)
-    return () => clearTimeout(timer)
-  }, [holding])
-  return loading || holding
+  return loading
 }
 
 /** 그림을 다 받는 데 이보다 오래 걸리면 기다리지 않고 그려요. 느린 망에서 화면이 막히지 않게요. */

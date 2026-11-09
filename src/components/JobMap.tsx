@@ -87,7 +87,7 @@ export function JobMap({ onPick }: { onPick: (postingId: string) => void }) {
   const [selection, setSelection] = useState<Selection | null>(null)
   /** 지도가 가운데에 꽉 차게 보여줄 칸이에요. 권역을 고르면 그 권역, 전국 보기면 없어요. */
   const [target, setTarget] = useState<MapBox | null>(null)
-  const { loaded, postings, waiting, percent, retry } = usePostings()
+  const { loaded, postings, waiting, retry } = usePostings()
 
   // 공고마다 근무지를 찾아 둬요. 근무지를 하나도 모르면 지역 무관이에요.
   const located = useMemo(() => (postings ?? []).map((posting) => ({ posting, places: placesOf(posting.location) })), [postings])
@@ -253,7 +253,7 @@ export function JobMap({ onPick }: { onPick: (postingId: string) => void }) {
         <PageHeader title={L.title} />
       </div>
       <div className={`min-h-0 flex-1 ${gutter} pt-3 pb-4 sm:pt-4 sm:pb-6 md:pb-8`}>
-        <LoadGate waiting={waiting} failed={loaded === 'failed'} percent={percent} onRetry={retry}>
+        <LoadGate waiting={waiting} failed={loaded === 'failed'} skeleton="block" onRetry={retry}>
           {() => (
             <div className="relative size-full min-h-[420px] overflow-hidden rounded-2xl bg-gray-50">
               {useNaver ? (

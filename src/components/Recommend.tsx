@@ -71,7 +71,7 @@ export function Recommend({ onPick, onResume, onExplore }: { onPick: (postingId:
   // 직군이에요. null은 개발 직군 전체라 기타(개발이 아닌 직무)는 처음에 빠져요. 고르면 그 직군만 봐요.
   const [family, setFamily] = useState<JobFamily | null>(null)
   // 공고 목록은 서류와 상관없어서, 서류를 바꿔도 다시 받지 않아요.
-  const { loaded, postings, waiting, percent, retry } = usePostings()
+  const { loaded, postings, waiting, retry } = usePostings()
   const browser = useJobBrowser()
   const [layout, setLayout] = useState<Layout>(readLayout)
 
@@ -163,7 +163,7 @@ export function Recommend({ onPick, onResume, onExplore }: { onPick: (postingId:
         <PostingCountBar count={list ? list.length : null} layout={layout} onLayout={setLayout} />
 
         <div className="mt-4">
-          <LoadGate waiting={waiting} failed={loaded === 'failed'} percent={percent} onRetry={retry}>
+          <LoadGate waiting={waiting} failed={loaded === 'failed'} skeleton={layout === 'list' ? 'rows' : 'cards'} onRetry={retry}>
             {() =>
               list && list.length > 0 ? (
                 <PostingList postings={list} layout={layout} resume={resume} browser={browser} onAnalyze={(posting) => analyze(posting, 'recommend')} animateKey={`${sort}:${threshold}`} />

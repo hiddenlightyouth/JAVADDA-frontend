@@ -63,7 +63,7 @@
 - 이력서와 리포트의 숫자 아이디는 받으면서 문자열로 바꾸고, 서버 요청에서 필요한 곳만 숫자로 바꿔요. 기업과 공고 아이디는 문자열이에요.
 - 생성과 진단 계산은 서버의 책임이에요. 기존 프론트 계산인 `fitOf`, `canonical` 등을 바꿀 때는 `CLAUDE.md`의 계산 규칙을 확인해요.
 - 계정 자료를 임의의 localStorage에 복제하지 않아요. 화면 설정 등 로컬 값은 `storage.ts`의 함수를 쓰고, 새 키는 `javadda:`로 시작해요.
-- 자료를 받는 동안은 `useLoadProgress`, `useLoadHold`, `LoadProgress`를 사용해요. AI 생성 대기는 기존 `withProgress`, `AiProgress` 흐름을 따라요. 로딩, 실패와 빈 결과를 구분해요.
+- 자료를 받는 동안은 내용 모양의 뼈대(`ui`의 `Skeleton`)를 사용해요. AI 생성 대기만 기존 `withProgress`, `AiProgress` 흐름(퍼센트)을 따라요. 로딩, 실패와 빈 결과를 구분해요.
 - 외부 링크는 `followLink`와 `isPlainClick`의 관례를 따라 보조 키와 가운데 버튼 동작을 보존해요. 새 탭 링크에는 `noopener noreferrer`를 적용해요.
 - 새 주소는 `routes.ts`의 `Page`, `pathOf`와 관련 이동 흐름에 반영해요. `/app`과 언어 접두사는 `shell.ts`, `i18n.ts`를 거쳐 처리하고 화면에서 임의로 덧붙이지 않아요.
 - `track`을 사용하고 기존 이벤트 이름과 속성을 보존해요. 이벤트가 바뀌면 `CLAUDE.md`의 이벤트 표도 맞춰요.

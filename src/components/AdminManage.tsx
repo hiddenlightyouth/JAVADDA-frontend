@@ -55,8 +55,7 @@ import {
   ghostDangerButton,
   iconButton,
   label as labelText,
-  loadCenter,
-  LoadProgress,
+  Skeleton,
   primaryButton,
   quietButton,
   dangerButton,
@@ -223,7 +222,7 @@ export function ManagementOverview({ onTab }: { onTab: (tab: AdminTab) => void }
     return { ok: true as const, data: { o: overview.data, usage: usage.ok ? usage.data : null } }
   }, 'overview')
   if (!state.data)
-    return state.error ? <Failed message={state.error} onRetry={state.reload} /> : <LoadProgress percent={state.percent} className={loadCenter} />
+    return state.error ? <Failed message={state.error} onRetry={state.reload} /> : <Skeleton shape="stats" />
   const { o, usage } = state.data
   return (
     <>
@@ -863,7 +862,7 @@ export function ManagementCrawl() {
         state.error ? (
           <Failed message={state.error} onRetry={state.reload} />
         ) : (
-          <LoadProgress percent={state.percent} className={loadCenter} />
+          <Skeleton shape="stats" />
         )
       ) : (
         <>
@@ -988,7 +987,7 @@ export function ManagementAi() {
         <Segmented label="기간" size="md" options={periods} value={days} onChange={setDays} />
       </Toolbar>
       {!state.data ? (
-        state.error ? <Failed message={state.error} onRetry={state.reload} /> : <StatsLoading percent={state.percent} />
+        state.error ? <Failed message={state.error} onRetry={state.reload} /> : <StatsLoading />
       ) : (
         <UsageView usage={state.data} metric={metric} onMetric={setMetric} />
       )}

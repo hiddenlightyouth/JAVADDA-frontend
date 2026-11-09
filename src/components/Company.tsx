@@ -3,7 +3,6 @@ import { track } from '../lib/analytics'
 import { fetchBlogDigests, isStale, type BlogDigest } from '../lib/blogs'
 import { canEmbed, categoryName, companyOf, companySizeOf, daysLeft, daysSince, familyName, fetchCompany, isSizeWord, sizeName, sortPostings, useResume, type CompanyProfile, type QuestionCategory, type Resume, type JobFamily } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
-import { useLoadHold, useLoadProgress } from '../lib/load'
 import { isPlainClick } from '../lib/links'
 import { PageHeader, ScrollPage } from './AppPage'
 import { CompanyLocation } from './CompanyLocation'
@@ -86,7 +85,6 @@ export function Company({ id, onBack, onPick, onPostings, onBlogs }: {
   const resume = useResume()
   const [loaded, setLoaded] = useState<Loaded | undefined>(undefined)
   const [attempt, setAttempt] = useState(0)
-  const load = useLoadProgress()
   // 미니 브라우저에 띄운 것이에요. 기업 사이트(site)나 기술 블로그 글이에요.
   const [viewing, setViewing] = useState<'site' | BrowserPage | null>(null)
 
@@ -94,7 +92,7 @@ export function Company({ id, onBack, onPick, onPostings, onBlogs }: {
     let stale = false
     setLoaded(undefined)
     // 기술 블로그 요약은 기술 블로그 화면과 같은 자료(`blogs.ts`)를 같이 받아요.
-    void Promise.all([fetchCompany(id), fetchBlogDigests(load.one())]).then(
+    void Promise.all([fetchCompany(id), fetchBlogDigests()]).then(
       ([profile, digests]) => {
         if (!stale) setLoaded(profile && { profile, digest: digests.find((digest) => digest.companyId === id) ?? null })
       },
@@ -105,10 +103,9 @@ export function Company({ id, onBack, onPick, onPostings, onBlogs }: {
     return () => {
       stale = true
     }
-  }, [id, attempt, load.one])
+  }, [id, attempt])
 
   const company = companyOf(id)
-  const waiting = useLoadHold(loaded === undefined)
 
   if (loaded === null) {
     return (
@@ -174,7 +171,7 @@ export function Company({ id, onBack, onPick, onPostings, onBlogs }: {
           />
         }
       >
-        <LoadGate waiting={waiting || loaded === undefined} failed={loaded === 'failed'} percent={load.percent} onRetry={() => setAttempt((value) => value + 1)}>
+        <LoadGate waiting={loaded === undefined} failed={loaded === 'failed'} skeleton="page" onRetry={() => setAttempt((value) => value + 1)}>
           {() => loaded && loaded !== 'failed' && <Profile profile={loaded.profile} digest={loaded.digest} resume={resume} onPick={onPick} onPostings={() => onPostings(id)} onBlogs={() => onBlogs(id)} onRead={setViewing} />}
         </LoadGate>
       </ScrollPage>

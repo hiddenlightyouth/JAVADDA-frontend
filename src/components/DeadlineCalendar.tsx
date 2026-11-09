@@ -124,7 +124,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
   const [scope, setScope] = useState<Scope>('all')
   const [selected, setSelected] = useState<string>(todayKey)
   // 검색어와 직군, 경력은 공고 탐색처럼 서버가 걸러 줘요. 검색어는 잠깐 멈췄을 때 보내요.
-  const { loaded, postings, waiting, percent, retry } = usePostings({ query, family: serverFamily(family), career })
+  const { loaded, postings, waiting, retry } = usePostings({ query, family: serverFamily(family), career })
   const majors = useMemo(majorCompanies, [])
 
   // 진단한 공고예요. 진단함 태그(`DiagnosedTag`)처럼 만들지 못한 리포트는 빼요.
@@ -266,7 +266,7 @@ export function DeadlineCalendar({ onPick }: { onPick: (postingId: string) => vo
       </div>
 
       <div className="mt-4">
-        <LoadGate waiting={waiting} failed={loaded === 'failed'} percent={percent} onRetry={retry}>
+        <LoadGate waiting={waiting} failed={loaded === 'failed'} skeleton="calendar" onRetry={retry}>
           {() => (
             // 넓은 화면에서는 달력을 왼쪽에 두고, 고른 날짜의 공고를 오른쪽 칸에 나란히 둬요. 좁으면 달력 아래로 내려가요.
             // 달력과 오른쪽 칸은 저마다 @container라, 안의 칸과 줄은 화면 폭이 아니라 자기 폭을 보고 글자를 줄여요.

@@ -16,7 +16,7 @@ import {
   FormError,
   iconButton,
   label as labelText,
-  LoadProgress,
+  Skeleton,
   primaryButton,
   Segmented,
   textArea,
@@ -122,7 +122,7 @@ export function ManagementApi() {
       ) : summary.error ? (
         <Failed message={summary.error} onRetry={summary.reload} />
       ) : (
-        <StatsLoading percent={summary.percent} />
+        <StatsLoading />
       )}
       {opened && (
         <KeyPanel
@@ -306,7 +306,7 @@ function KeyPanel({ apiKey: k, scopes, close, changed }: { apiKey: ApiKeyView; s
               ) : usage.error ? (
                 <Failed message={usage.error} onRetry={usage.reload} />
               ) : (
-                <LoadProgress percent={usage.percent} compact />
+                <Skeleton shape="stats" />
               )}
             </>
           )}

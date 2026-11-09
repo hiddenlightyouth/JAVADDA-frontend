@@ -1,5 +1,5 @@
 import { lazy } from 'react'
-import { LoadProgress, loadCenter } from './ui'
+import { Skeleton } from './ui'
 import { PageHeader } from './AppPage'
 import { pick } from '../lib/i18n'
 import type { AccountPage } from './Account'
@@ -44,10 +44,10 @@ export function preloadScreens() {
   idle(next)
 }
 
-/** 화면 코드를 받는 동안의 자리예요. 바이트를 알 수 없어서 미니 브라우저처럼 30%로 두고, 금방 오면 보이지 않아요. 처음 그릴 때만 보이고, 화면을 옮길 때는 보던 화면을 그대로 둬요(useScreen의 startTransition). */
+/** 화면 코드를 받는 동안의 자리예요. 화면 모양의 뼈대를 두고, 금방 오면 보이지 않아요. 처음 그릴 때만 보이고, 화면을 옮길 때는 보던 화면을 그대로 둬요(useScreen의 startTransition). */
 export const screenFallback = (
-  <main className="flex min-w-0 flex-1 flex-col pt-[20vh]">
-    <LoadProgress percent={30} className={loadCenter} />
+  <main className="flex min-w-0 flex-1 flex-col px-4 pt-16 sm:px-6 md:px-10">
+    <Skeleton shape="page" />
   </main>
 )
 

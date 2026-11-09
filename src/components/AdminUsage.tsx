@@ -4,7 +4,7 @@ import { addDays, dayLabel, daysBetween, fetchAiCall, fetchAiCalls, fetchAiUsage
 import { formatDateTime } from '../lib/format'
 import { showToast } from '../lib/toast'
 import { BarChart, card, cardTitle, compact, Empty, Failed, full, InfoGrid, openableRow, PagedTable, PanelContent, sectionTitle, share, Stat, td, th, useAdminData, usePaged, type Bar } from './AdminParts'
-import { ghostButton, loadCenter, LoadProgress, Segmented, tag } from './ui'
+import { ghostButton, Segmented, Skeleton, tag } from './ui'
 import { messages, pick, useMessages } from '../lib/i18n'
 import { SidePanel } from './Dialog'
 
@@ -213,7 +213,7 @@ export function AdminUsage({ calls }: { calls: boolean }) {
       </div>
 
       {state.waiting || (!summary && !state.error) ? (
-        <LoadProgress percent={state.percent} className={loadCenter} />
+        <Skeleton shape="stats" />
       ) : !summary ? (
         <Failed message={state.error} onRetry={state.reload} />
       ) : (

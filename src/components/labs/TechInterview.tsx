@@ -13,7 +13,7 @@ import { Dropdown } from '../Dropdown'
 import { BackIcon, CheckIcon, ChevronRightIcon, ClockIcon, CloseButton, SearchIcon } from '../Icons'
 import { Practice, type LabSession } from '../Practice'
 import { PastScreen } from '../ReportQuestions'
-import { buttonRadius, ghostButton, LoadProgress, loadCenter, primaryButton, primaryButtonMd, quietButton, Segmented, toolButtonLg, useShowMore } from '../ui'
+import { buttonRadius, ghostButton, primaryButton, primaryButtonMd, quietButton, Segmented, Skeleton, toolButtonLg, useShowMore } from '../ui'
 
 /**
  * 잡아따 Labs의 기술 면접 (/labs/tech-interview)이에요. 모아 둔 백엔드와 프론트엔드 기술 면접 질문(`techQuestions.ts`)으로 가상 면접을 봐요.
@@ -553,7 +553,7 @@ function AnswerView({ item, score, onBack, onPractice }: { item: Item; score?: n
 
       <div className="mt-8">
         {html === undefined ? (
-          <LoadProgress percent={30} className={loadCenter} />
+          <Skeleton shape="document" />
         ) : html === null ? (
           <Failed message={L.answerFailed} onRetry={() => setAttempt((value) => value + 1)} className="pt-16" />
         ) : (

@@ -28,8 +28,7 @@ import {
   FormError,
   ghostButton,
   label as labelText,
-  loadCenter,
-  LoadProgress,
+  Skeleton,
   primaryButton,
   quietButton,
   Segmented,
@@ -126,7 +125,7 @@ export function ApiKeys() {
         state.error ? (
           <Failed message={state.error} onRetry={state.reload} className="mt-16" />
         ) : (
-          <LoadProgress percent={state.percent} className={loadCenter} />
+          <Skeleton shape="rows" count={4} className="pt-2" />
         )
       ) : opened ? (
         <KeyDetail apiKey={opened} onChanged={state.reload} />
@@ -286,7 +285,7 @@ function KeyDetail({ apiKey: k, onChanged }: { apiKey: ApiKeyView; onChanged: ()
           ) : usage.error ? (
             <Failed message={usage.error} onRetry={usage.reload} className="mt-8" />
           ) : (
-            <LoadProgress percent={usage.percent} compact />
+            <Skeleton shape="stats" />
           )}
         </>
       )}

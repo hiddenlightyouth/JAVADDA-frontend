@@ -4,7 +4,6 @@ import { track } from '../lib/analytics'
 import { companyOf, fetchQuestions, PROGRESS_START, submitAnswer, useReport, useReportPosting, type InterviewQuestion, type PracticeFeedback, type ProgressState } from '../lib/gap'
 import { messages, pick, useLang, useMessages } from '../lib/i18n'
 import { greetingOf, INTERVIEWERS, setInterviewer, useInterviewer, type InterviewerKey, type InterviewerProfile } from '../lib/interviewers'
-import { useLoadHold, useLoadProgress } from '../lib/load'
 import { canDictate, canSpeak, chime, joinSpeech, micAllowed, prefetchVoice, prepareMic, setPracticeVolume, unlockChime, useDictation, useMicLevel, usePracticeVolume, useSpeak } from '../lib/speech'
 import { REST, type MouthPose } from '../lib/lipsync'
 import { showToast } from '../lib/toast'
@@ -14,7 +13,7 @@ import { ChevronRightIcon, CloseIcon, MicIcon, SpeakerIcon } from './Icons'
 import { Interviewer } from './Interviewer'
 import { InterviewerPicker } from './InterviewerPicker'
 import { darkButton, lightButton, ResultCard } from './ReportParts'
-import { buttonRadius, loadCenter, LoadProgress } from './ui'
+import { buttonRadius, Skeleton } from './ui'
 
 const TEXT = messages({
   ko: {
@@ -196,11 +195,9 @@ interface Answer {
 export function Practice({ id = '', question: startId, onBack, lab }: { id?: string; question?: string; onBack: () => void; lab?: LabSession }) {
   const L = useMessages(TEXT)
   const lang = useLang()
-  const reportLoad = useLoadProgress()
   // 실험실의 기술 면접은 리포트 없이 해서 리포트를 받지 않아요.
-  const report = useReport(lab ? null : id, reportLoad.one)
-  // 리포트 상세는 자료를 받는 것이라 받은 바이트로, 질문은 AI가 만드는 것이라 서버의 단계로 퍼센트를 보여줘요.
-  const waitingReport = useLoadHold(!lab && report === undefined)
+  const report = useReport(lab ? null : id)
+  // 리포트 상세는 자료를 받는 것이라 뼈대로, 질문은 AI가 만드는 것이라 서버의 단계로 퍼센트를 보여줘요.
   /** 면접관마다 AI가 따로 만든 질문이에요. 받는 중이면 없고, 받지 못했거나 비었으면 null이에요. */
   const [sets, setSets] = useState<Partial<Record<InterviewerKey, InterviewQuestion[] | null>>>({})
   const [progresses, setProgresses] = useState<Partial<Record<InterviewerKey, ProgressState>>>({})
@@ -569,8 +566,8 @@ export function Practice({ id = '', question: startId, onBack, lab }: { id?: str
   let body
   if ((!lab && report === null) || (questions === null && phase !== 'intro')) {
     body = <Notice title={L.missing} body={L.missingBody} action={L.back} onAction={exit} className="mt-[18vh]" />
-  } else if (!lab && (waitingReport || report === undefined)) {
-    body = <LoadProgress percent={reportLoad.percent} className={loadCenter} />
+  } else if (!lab && report === undefined) {
+    body = <Skeleton shape="lines" count={4} className="mx-auto mt-[18vh] w-full max-w-md opacity-30" />
   } else if (questions === null && single) {
     body = <Notice title={L.missing} body={L.missingBody} action={L.back} onAction={exit} className="mt-[18vh]" />
   } else if (starting) {

@@ -5,7 +5,7 @@ import { panelBody } from './Dialog'
 import { Failed as FailedNotice } from './GapParts'
 import { SearchIcon } from './Icons'
 import { MoreButton } from './MoreButton'
-import { fieldBase, loadCenter, LoadProgress, tag } from './ui'
+import { Bone, fieldBase, Skeleton, tag } from './ui'
 import type { OnLoad } from '../lib/http'
 import { getLang, messages, pick, useMessages } from '../lib/i18n'
 import { useLoadHold, useLoadProgress } from '../lib/load'
@@ -55,11 +55,16 @@ export function Stat({ label, value, note }: { label: string; value: string; not
   )
 }
 
-/** 숫자 칸이 올 자리에서 받는 정도를 보여줘요. 회색 칸 하나에 가는 막대와 퍼센트만 둬요. */
-export function StatsLoading({ percent, className = 'mt-3' }: { percent: number; className?: string }) {
+/** 숫자 칸이 올 자리의 뼈대예요. 숫자 칸 네 개 모양이에요. */
+export function StatsLoading({ className = 'mt-3' }: { className?: string }) {
   return (
-    <div className={`${className} ${card} py-6`}>
-      <LoadProgress percent={percent} compact />
+    <div className={`${className} grid grid-cols-2 gap-3 md:grid-cols-4`}>
+      {[0, 1, 2, 3].map((index) => (
+        <div key={index} className={card}>
+          <Bone className="h-3 w-16" />
+          <Bone className="mt-3 h-6 w-20" />
+        </div>
+      ))}
     </div>
   )
 }
@@ -277,9 +282,7 @@ export function PagedTable<T>({ list, empty, head, minWidth = 'min-w-[760px]', c
 }) {
   if (list.waiting) {
     return (
-      <div className="mt-3 rounded-2xl bg-gray-50 px-4 py-6">
-        <LoadProgress percent={list.percent} compact />
-      </div>
+      <Skeleton shape="rows" className="mt-3" />
     )
   }
   if (list.items === null) return <Failed message={list.error} onRetry={list.retry} />
@@ -317,15 +320,15 @@ export function InfoGrid({ rows, wide = false }: { rows: readonly (readonly [str
 }
 
 /**
- * 오른쪽 상세 칸(`SidePanel`)의 내용 자리예요. 처음 받는 동안은 진행 막대, 받지 못하면 다시 시도, 받으면 children으로 그려요.
+ * 오른쪽 상세 칸(`SidePanel`)의 내용 자리예요. 처음 받는 동안은 뼈대, 받지 못하면 다시 시도, 받으면 children으로 그려요.
  * 다시 받는 동안(관리 작업 뒤)에는 보던 내용을 그대로 둬요.
  */
 export function PanelContent<T>({ state, children }: { state: ReturnType<typeof useAdminData<T>>; children: (data: T) => ReactNode }) {
   if (state.data === null) {
     if (state.waiting || !state.error) {
       return (
-        <div className="px-6">
-          <LoadProgress percent={state.percent} className={loadCenter} />
+        <div className="px-6 pt-2">
+          <Skeleton shape="lines" count={8} />
         </div>
       )
     }

@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { fetchPostings, SEARCH_SUGGESTIONS, SUGGEST_MS, type CareerLevel, type JobFamily, type JobPosting } from '../lib/gap'
-import { useLoadHold, useLoadProgress } from '../lib/load'
 import { Failed } from './GapParts'
-import { loadCenter, LoadProgress } from './ui'
+import { Skeleton, type SkeletonShape } from './ui'
 
 /**
  * 공고를 늘어놓는 화면(새 진단, 공고 탐색, 추천 공고, 마감 달력, 채용 지도, 기업 상세, 기술 블로그)이 같이 쓰는 작은 부품이에요.
@@ -20,23 +19,21 @@ const postingCache = new Map<string, JobPosting[]>()
 /**
  * 공고 목록을 받아요(GET /postings). 공고 탐색, 추천 공고, 마감 달력, 채용 지도가 같이 써요.
  * 받는 동안 loaded는 undefined이고, 받지 못하면 'failed'예요. retry로 다시 받아요. 조건이 바뀌면 앞의 요청의 답은 버려요.
- * 검색어가 있으면 잠깐 멈췄을 때 보내요. waiting은 진행 칸을 보여줄지(`useLoadHold`)이고, percent는 받은 정도예요.
+ * 검색어가 있으면 잠깐 멈췄을 때 보내요. waiting은 뼈대를 보여줄지예요.
  */
 export function usePostings({ query = '', family = null, career = null }: { query?: string; family?: JobFamily | null; career?: CareerLevel | null } = {}) {
   const key = `${query}|${family ?? ''}|${career ?? ''}`
   const [loaded, setLoaded] = useState<LoadedPostings>(() => postingCache.get(key))
   const [attempt, setAttempt] = useState(0)
-  const load = useLoadProgress()
 
   useEffect(() => {
     let stale = false
     // 이번 접속에서 같은 조건으로 받아 둔 공고가 있으면 그것으로 바로 그리고, 뒤에서 새로 받아 바꿔요. 화면을 옮길 때마다 받는 칸이 뜨지 않아요.
     const cached = postingCache.get(key)
     setLoaded(cached)
-    const onLoad = cached ? undefined : load.one()
     const timer = window.setTimeout(
       () => {
-        void fetchPostings({ query, family, career }, onLoad).then(
+        void fetchPostings({ query, family, career }).then(
           (list) => {
             postingCache.set(key, list)
             if (!stale) setLoaded(list)
@@ -52,19 +49,18 @@ export function usePostings({ query = '', family = null, career = null }: { quer
       stale = true
       window.clearTimeout(timer)
     }
-  }, [key, query, family, career, attempt, load.one])
+  }, [key, query, family, career, attempt])
 
-  const hold = useLoadHold(loaded === undefined)
   const retry = useCallback(() => setAttempt((value) => value + 1), [])
-  return { loaded, postings: Array.isArray(loaded) ? loaded : null, waiting: hold || loaded === undefined, percent: load.percent, retry }
+  return { loaded, postings: Array.isArray(loaded) ? loaded : null, waiting: loaded === undefined, retry }
 }
 
 /**
- * 자료를 받는 동안에는 가운데에 진행 칸(`LoadProgress`)을, 받지 못했으면 다시 시도 안내(`Failed`)를, 받았으면 내용을 그려요.
+ * 자료를 받는 동안에는 내용 모양의 뼈대(`Skeleton`, 모양은 skeleton)를, 받지 못했으면 다시 시도 안내(`Failed`)를, 받았으면 내용을 그려요.
  * 내용은 받은 뒤에만 만들게 함수로 넘겨요.
  */
-export function LoadGate({ waiting, failed, percent, onRetry, children }: { waiting: boolean; failed: boolean; percent: number; onRetry: () => void; children: () => ReactNode }) {
-  if (waiting) return <LoadProgress percent={percent} className={loadCenter} />
+export function LoadGate({ waiting, failed, skeleton = 'cards', onRetry, children }: { waiting: boolean; failed: boolean; skeleton?: SkeletonShape; onRetry: () => void; children: () => ReactNode }) {
+  if (waiting) return <Skeleton shape={skeleton} />
   if (failed) return <Failed className="mt-16" onRetry={onRetry} />
   return <>{children()}</>
 }

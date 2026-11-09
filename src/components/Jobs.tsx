@@ -106,7 +106,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
   const [layout, setLayout] = useState<Layout>(readLayout)
   const [hideRolling, setHideRolling] = useState(() => readFlag(HIDE_ROLLING_KEY))
   // 검색어는 잠깐 멈췄을 때 보내요.
-  const { loaded, postings, waiting, percent, retry } = usePostings({ query, family: serverFamily(family), career })
+  const { loaded, postings, waiting, retry } = usePostings({ query, family: serverFamily(family), career })
   const majors = useMemo(majorCompanies, [])
 
   function analyze(posting: JobPosting) {
@@ -214,7 +214,7 @@ export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: st
         </PostingCountBar>
 
         <div className="mt-4">
-          <LoadGate waiting={waiting} failed={loaded === 'failed'} percent={percent} onRetry={retry}>
+          <LoadGate waiting={waiting} failed={loaded === 'failed'} skeleton={layout === 'list' ? 'rows' : 'cards'} onRetry={retry}>
             {() =>
               list && list.length > 0 ? (
                 <PostingList postings={list} layout={layout} resume={resume} browser={browser} onAnalyze={analyze} animateKey={sort} />

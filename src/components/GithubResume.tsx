@@ -4,7 +4,7 @@ import { isApp, openInBrowser } from '../lib/app'
 import { addGithubProjects, connectGithub, createGithubResume, disconnectGithub, fetchGithubConnection, fetchGithubRepos, MAX_GITHUB_PROJECTS, MAX_GITHUB_REPOS, PROGRESS_START, type GithubConnection, type GithubRepo, type ProgressState, type Resume } from '../lib/gap'
 import { appGithubConnect, isGithubReturn, onAppGithubReturn, startAppGithubConnect, startGithubConnect, takeGithubReturn, type GithubReturn } from '../lib/githubConnect'
 import { messages, pick, useMessages } from '../lib/i18n'
-import { useLoadHold, useLoadProgress } from '../lib/load'
+import { useLoadHold } from '../lib/load'
 import { SITE } from '../lib/meta'
 import { showToast } from '../lib/toast'
 import { useServerConfig } from '../hooks/useServerConfig'
@@ -12,7 +12,7 @@ import { ConfirmDialog } from './Dialog'
 import { AiProgress, Failed, Notice } from './GapParts'
 import { CheckIcon, LockIcon, SearchIcon } from './Icons'
 import { GitHubMark } from './Social'
-import { Badge, Checkbox, ghostButton, LoadProgress, loadCenter, primaryButton, quietButton, useShowMore } from './ui'
+import { Badge, Checkbox, ghostButton, primaryButton, quietButton, Skeleton, useShowMore } from './ui'
 
 /**
  * GitHub 레포로 이력서와 포트폴리오를 만드는 칸이에요. 서류 추가 화면에서 GitHub를 고르면 나와요.
@@ -153,7 +153,7 @@ export function GithubResume({ addTo, onDone, onWorking }: { addTo?: Resume; onD
   }, [attempt, finish])
 
   const waiting = useLoadHold(connection === undefined || config === null)
-  if (waiting) return <LoadProgress percent={connection === undefined ? 40 : 100} compact className="max-w-md" />
+  if (waiting) return <Skeleton shape="page" className="max-w-2xl" />
   if (connection === null) return <Failed onRetry={() => setAttempt((value) => value + 1)} className="mt-10" />
   if (!connection?.connected) {
     const clientId = config?.githubConnectClientId
@@ -252,7 +252,6 @@ function RepoPicker({ connection, addTo, onDone, onWorking, onDisconnected }: {
   onDisconnected: () => void
 }) {
   const L = useMessages(TEXT)
-  const load = useLoadProgress()
   /** undefined는 받는 중, null은 실패예요. */
   const [repos, setRepos] = useState<GithubRepo[] | null | undefined>(undefined)
   const [attempt, setAttempt] = useState(0)
@@ -266,7 +265,7 @@ function RepoPicker({ connection, addTo, onDone, onWorking, onDisconnected }: {
   useEffect(() => {
     let stale = false
     setRepos(undefined)
-    void fetchGithubRepos(load.one()).then((result) => {
+    void fetchGithubRepos().then((result) => {
       if (stale) return
       if (result === 'disconnected') onDisconnected()
       else setRepos(result)
@@ -274,7 +273,7 @@ function RepoPicker({ connection, addTo, onDone, onWorking, onDisconnected }: {
     return () => {
       stale = true
     }
-  }, [attempt, load.one, onDisconnected])
+  }, [attempt, onDisconnected])
 
   const added = useMemo(() => new Set((addTo?.projects ?? []).map((project) => project.repo.toLowerCase())), [addTo])
   const available = useMemo(() => (repos ?? []).filter((repo) => !added.has(repo.fullName.toLowerCase())), [repos, added])
@@ -363,7 +362,7 @@ function RepoPicker({ connection, addTo, onDone, onWorking, onDisconnected }: {
 
       <div className="mt-4">
         {waiting ? (
-          <LoadProgress percent={load.percent} className={loadCenter} />
+          <Skeleton shape="rows" count={6} />
         ) : repos === null ? (
           <Failed onRetry={() => setAttempt((value) => value + 1)} className="mt-10" />
         ) : (repos ?? []).length === 0 ? (
