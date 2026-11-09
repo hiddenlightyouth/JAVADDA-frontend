@@ -231,8 +231,8 @@ function ResumeFolder({ group, open, onToggle }: { group: ResumeGroup; open: boo
       className="flex h-8 w-full items-center gap-1.5 rounded-lg px-2 text-left text-[12.5px] font-medium text-gray-600 transition-colors hover:bg-gray-200/50 hover:text-gray-900 active:bg-gray-200/70"
     >
       <ChevronDownIcon className={`size-3 shrink-0 text-gray-400 transition-transform ${open ? '' : '-rotate-90'}`} />
-      <DocumentIcon className="size-3.5 shrink-0 text-gray-400" />
-      {group.primary && <StarIcon filled className="size-3 shrink-0 text-brand" />}
+      {/* 대표 이력서 폴더는 서류 아이콘 대신 메인 컬러 별이에요. */}
+      {group.primary ? <StarIcon filled className="size-3.5 shrink-0 text-brand" /> : <DocumentIcon className="size-3.5 shrink-0 text-gray-400" />}
       <span className="min-w-0 flex-1 truncate">{name}</span>
     </button>
   )
