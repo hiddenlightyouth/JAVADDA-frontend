@@ -6,6 +6,7 @@ import { messages, useMessages } from '../lib/i18n'
 import { followLink } from '../lib/links'
 import { readFlag, writeFlag } from '../lib/storage'
 import { markVisited, startVisits, type FreshSection } from '../lib/seen'
+import { usePet } from '../lib/pet'
 import { CloseIcon, MenuIcon, SidebarIcon } from './Icons'
 import { ScriptMark } from './LofyScript'
 
@@ -17,6 +18,7 @@ const AppSidebar = lazy(() => import('./AppSidebar').then((module) => ({ default
 const CaptureShield = lazy(() => import('./CaptureShield').then((module) => ({ default: module.CaptureShield })))
 
 // 설정 창은 앱에서만 쓰여서, 열 때만 받아요.
+const Pet = lazy(() => import('./Pet').then((module) => ({ default: module.Pet })))
 const Settings = lazy(() => import('./Settings').then((module) => ({ default: module.Settings })))
 
 const SIDEBAR_CLOSED_KEY = 'javadda:app-sidebar-closed'
@@ -87,6 +89,7 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
   // 휴대폰은 서랍을 열 때만 사이드바를 그려서, 늘 있는 이 틀에서 적어요.
   useEffect(startVisits, [])
   const page = sidebar.page
+  const pet = usePet()
   useEffect(() => {
     if (page && FRESH_SECTIONS.includes(page)) markVisited(page as FreshSection)
   }, [page])
@@ -197,6 +200,11 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
       {settingsOpen && (
         <Suspense fallback={null}>
           <Settings onClose={closeSettings} />
+        </Suspense>
+      )}
+      {pet && (
+        <Suspense fallback={null}>
+          <Pet />
         </Suspense>
       )}
       <Suspense fallback={null}>

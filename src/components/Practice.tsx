@@ -14,6 +14,7 @@ import { Interviewer } from './Interviewer'
 import { InterviewerPicker } from './InterviewerPicker'
 import { darkButton, lightButton, ResultCard } from './ReportParts'
 import { buttonRadius, Skeleton } from './ui'
+import { useHidePet } from '../lib/pet'
 
 const TEXT = messages({
   ko: {
@@ -195,6 +196,8 @@ interface Answer {
 export function Practice({ id = '', question: startId, onBack, lab }: { id?: string; question?: string; onBack: () => void; lab?: LabSession }) {
   const L = useMessages(TEXT)
   const lang = useLang()
+  // 검은 면접 화면에서는 펫을 숨겨요.
+  useHidePet()
   // 실험실의 기술 면접은 리포트 없이 해서 리포트를 받지 않아요.
   const report = useReport(lab ? null : id)
   // 리포트 상세는 자료를 받는 것이라 뼈대로, 질문은 AI가 만드는 것이라 서버의 단계로 퍼센트를 보여줘요.

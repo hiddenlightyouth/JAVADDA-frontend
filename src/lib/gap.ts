@@ -10,6 +10,7 @@ import { authFetch, isSignedIn, onSignedInChange } from './auth'
 import { apiUrl, readWithLoad, type ApiResult, type OnLoad } from './http'
 import type { LoadTracker } from './load'
 import { getLang, messages, pick } from './i18n'
+import { petWork } from './pet'
 import { createStore, useStore } from './store'
 import { showToast } from './toast'
 
@@ -1187,6 +1188,7 @@ function newProgressId(): string {
  */
 async function withProgress<T>(onProgress: OnProgress | undefined, run: (headers: Record<string, string>) => Promise<ApiResult<T>>): Promise<ApiResult<T>> {
   if (!onProgress) return run({})
+  const pet = petWork()
   const id = newProgressId()
   let settled = false
   let polled = false
@@ -1195,6 +1197,7 @@ async function withProgress<T>(onProgress: OnProgress | undefined, run: (headers
   const report = (next: ProgressState) => {
     if (settled) return
     best = Math.max(best, Math.min(100, Math.max(0, Math.round(next.progress))))
+    pet.progress(best)
     onProgress({ progress: best, stage: next.stage || 'waiting' })
   }
   const poll = () => {
@@ -1212,6 +1215,7 @@ async function withProgress<T>(onProgress: OnProgress | undefined, run: (headers
   const result = await run({ 'X-Progress-Id': id })
   clearTimeout(timer)
   settled = true
+  pet.end(result.ok)
   if (result.ok) {
     onProgress({ progress: 100, stage: 'done' })
     // 금방 끝난 요청(이미 만들어 둔 결과)은 기다리지 않고 바로 돌려줘요.

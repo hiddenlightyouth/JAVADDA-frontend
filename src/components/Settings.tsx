@@ -3,6 +3,7 @@ import { track } from '../lib/analytics'
 import { AiModelRow } from './AiModelSetting'
 import { Modal } from './Dialog'
 import { appAtLeast, appVersion, postToApp, type AppTheme } from '../lib/app'
+import { PET_KINDS, setPet, usePet, type PetKind } from '../lib/pet'
 import { setShortcutHintsPinned, useShortcutHintsPinned } from '../lib/shortcuts'
 import { setAppShield, useAppSettings } from '../lib/theme'
 import { ContrastRow, ModePicker, ThemePicker } from './AppearanceSetting'
@@ -29,6 +30,9 @@ const TEXT = messages({
     language: '언어',
     hints: '단축키 항상 표시',
     hintsNote: '단축키가 사용 가능한 메뉴에 어떤 단축키를 사용하는지 항상 표시합니다.',
+    pet: '펫',
+    petNote: '화면 구석에 펫을 띄웁니다. AI가 일하는 동안 함께 움직이고, 끌어서 옮길 수 있습니다.',
+    petOff: '끄기',
     privacy: '개인정보 보호',
     shield: '화면 녹화 감지 시 가리기',
     shieldNote: 'macOS에서 화면 녹화가 감지되면 해제 시까지 화면을 가립니다.',
@@ -52,6 +56,9 @@ const TEXT = messages({
     language: 'Language',
     hints: 'Always show shortcuts',
     hintsNote: 'Always show which keyboard shortcut each menu uses.',
+    pet: 'Pet',
+    petNote: 'Show a pet in the corner. It works along with the AI, and you can drag it around.',
+    petOff: 'Off',
     privacy: 'Privacy',
     shield: 'Hide screen while recording',
     shieldNote: 'When screen recording is detected on macOS, the screen stays hidden until you reveal it.',
@@ -95,6 +102,7 @@ function Switch({ on, label, onChange }: { on: boolean; label: string; onChange:
 export function Settings({ onClose }: { onClose: () => void }) {
   const { shield } = useAppSettings()
   const hints = useShortcutHintsPinned()
+  const pet = usePet()
   const lang = useLang()
   const text = useMessages(TEXT)
 
@@ -148,6 +156,19 @@ export function Settings({ onClose }: { onClose: () => void }) {
               onChange={(next) => {
                 track('app_shortcut_hints_change', { on: next })
                 setShortcutHintsPinned(next)
+              }}
+            />
+          </SettingRow>
+          <SettingRow label={text.pet} note={text.petNote}>
+            <Segmented
+              size="md"
+              label={text.pet}
+              value={pet ?? 'off'}
+              options={[['off', text.petOff], ...PET_KINDS.map((kind): [PetKind, string] => [kind, kind === 'claude' ? 'Claude' : 'Codex'])]}
+              onChange={(value) => {
+                const next = value === 'off' ? null : (value as PetKind)
+                track('app_pet_change', { pet: next ?? 'off' })
+                setPet(next)
               }}
             />
           </SettingRow>

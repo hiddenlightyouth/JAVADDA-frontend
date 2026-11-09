@@ -57,6 +57,7 @@ Codex의 공통 작업 지침은 루트의 [AGENTS.md](AGENTS.md)에 있어요. 
 ## 기술 스택
 
 - 프론트엔드: React + TypeScript (Vite)
+- 3D: three.js. 펫을 켰을 때만 따로 받아요(`petScene.ts`). 다른 그래프는 전처럼 라이브러리 없이 그려요
 - 스타일: Tailwind CSS v4 (`@tailwindcss/vite`)
 
 - 서버: 회원, 피드백, 관리자, 사용량, 진단(기업, 공고, 이력서, 리포트, 서류 검증, 면접 질문과 연습, 보완 계획, 면접 노트, 기술 블로그)을 모두 백엔드(Spring Boot)가 맡아요. 주소는 `VITE_API_BASE_URL`이고, 응답은 늘 `{ data, error: { code, message } }` 모양이에요(`readResult`).
@@ -135,6 +136,9 @@ src/
   lib/format.ts       서버 시각을 "오늘 오후 3:12", "어제", "10월 3일" 같은 말로 바꾸기
   lib/analytics.ts    Google Analytics 이벤트 전송
   lib/toast.ts        화면 아래에 잠깐 뜨는 안내(토스트) 저장소
+  lib/pet.ts          펫. 고른 펫(usePet, setPet, `javadda:pet`), 끌어 옮긴 자리(`javadda:pet-position`), AI가 하는 일(petWork, petEvent, usePetActivity), 면접 화면에서 숨기기(useHidePet)
+  components/Pet.tsx  화면 구석에 떠 있는 펫과 말풍선. 끌어 옮기기, 누르면 인사, AI 일과 리포트에 반응
+  components/petScene.ts 펫을 three.js로 그리기(createPetScene). pixel-reels 릴스의 Claude와 Codex 모델(makeBot, FACES)을 옮겼어요
   lib/theme.ts        앱의 화면 설정(화면 모드, 메인 컬러 ACCENTS) 저장과 적용
   lib/shortcuts.ts    단축키 걸기와 단축키 힌트를 보여줄지
   components/Shortcuts.tsx   단축키의 자판 모양 표시(Kbd)
@@ -184,7 +188,7 @@ src/
   components/ui.tsx          기본 모양을 한 곳에서 정해요. 버튼과 입력칸의 모서리(buttonRadius, rounded-lg)와 높이(controlHeight, 40px). 버튼, 드롭다운, 입력칸, 검색창, 거르는 버튼은 모두 이 둘로 같아요. 새 버튼도 이것을 써요, 버튼(primaryButton, primaryButtonMd, 폭을 채우는 primaryButtonLg, 모두 40px, quietButton, dangerButton, softButton, softDangerButton, toolButton, 화면 맨 위 거르는 줄의 도구 버튼 toolButtonLg(글자만 조금 커요), toolDangerButton, 휴대폰에서 도구 버튼을 아이콘만 남기는 iconOnPhone과 phoneHidden, ghostButton 32px, ghostDangerButton, iconButton(sm 28px, md 32px, 40px 버튼과 나란히 놓이면 lg 40px). 도구 버튼은 누를 수 없을 때 글자만 흐려져요), 메뉴(menuPanel, menuItem, menuDangerItem), 입력칸(fieldBase, textField, textFieldSm은 모두 40px, textArea, 좁은 화면에서는 16px), 작은 제목(label), 이름표의 모양(chipShape, tag와 SkillChip이 같이 써요), 테두리 없는 작은 이름표(Badge, gray, muted, brand, outline, red, amber, white는 지금 gray와 같아요), 오류 문구(FormError), 고르는 칸(Segmented, sm과 md), 체크 칸(Checkbox), 밑줄 탭(Tabs), 점 목록(Bullets), 번호(NumberBadge, NumberedList), AI를 기다리는 칸(ProgressRing은 로봇 애니메이션과 진행 고리와 문장, 가운데 자리 loadCenter), 자료를 받는 동안의 뼈대(Skeleton, 조각은 Bone, 모양은 cards, rows, lines, page, document, calendar, block, stats, app), 긴 목록 조금씩 그리기(useShowMore), 카드 떠오르는 순서(stagger). 새 화면은 같은 모양을 다시 적지 않고 여기 것을 써요
   components/Dropdown.tsx    버튼을 누르면 펼쳐지는 고르기 메뉴(Dropdown). 공고 탐색, 추천 공고, 기술 블로그, 예상 질문, 내 리포트의 이력서 메뉴, 설정의 AI 모델이 써요. 고른 값이 있어 걸러진 상태(active)면 메인 컬러 테두리와 연한 바탕이에요. 오른쪽 끝에 놓인 버튼은 `align="right"`로 메뉴를 오른쪽에 맞추고, 화면 맨 위 거르는 줄에서는 `size="lg"`로 글자를 조금 키워요(높이는 늘 40px)
   components/AppearanceSetting.tsx 설정 창의 화면 모드 카드(ModePicker, 테마로 그린 미리보기 Mock)와 테마 구슬 칸(ThemePicker)
-  components/Settings.tsx    앱의 설정 창. 화면 모드, 테마, 언어, 단축키 항상 표시, AI 모델, 화면 녹화 감지 시 가리기, 버전
+  components/Settings.tsx    앱의 설정 창. 화면 모드, 테마, 언어, 단축키 항상 표시, 펫, AI 모델, 화면 녹화 감지 시 가리기, 버전
   components/SettingRow.tsx  설정 한 줄(SettingRow, 왼쪽에 이름과 설명, 오른쪽에 고르는 칸)과 옅은 선 목록(lineList, settingList). 설정 창과 내 정보 화면이 같이 써요
   components/AiModelSetting.tsx  AI 모델 고르기(useAiModelSetting은 이름, 설명, 드롭다운을, AiModelRow는 그것을 넣은 설정 한 줄을 돌려줘요). 설정 창과 내 정보 화면이 같이 써요
   components/AppLogin.tsx    앱이 브라우저로 열어 주는 앱 로그인 화면 (/app-login)
@@ -438,6 +442,16 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 내 리포트 화면(`/history`)은 두 개 이상의 이력서로 진단했으면 맨 위에 이력서 메뉴(`Dropdown`, 전체와 이력서마다 리포트 수)가 있어서 한 이력서의 리포트만 골라 봐요. 전체를 볼 때는 이력서와 상관없이 마감이 가까운 순서예요.
 - `/history`에도 같은 목록이 있어요. 웹의 헤더에서 들어가고, 앱 사이드바에는 링크를 두지 않아요.
 
+## 펫
+
+Codex 앱의 펫처럼 앱 화면(macOS 앱, 웹의 /app) 오른쪽 아래 구석에 작은 캐릭터가 떠 있어요(`Pet`). 설정 창의 펫 줄(끄기, Claude, Codex)에서 고르고 처음은 꺼져 있어요(localStorage `javadda:pet`). 캐릭터는 pixel-reels 릴스의 3D 모델을 그대로 옮긴 거예요. Claude는 주황 박스 봇(세로로 긴 검은 눈, 짧은 팔, 다리 넷), Codex는 크림색 구름 머리 치비(어두운 화면 얼굴에 민트색 눈, 가슴에 >_)예요. 펫의 색은 캐릭터 그대로라 메인 컬러 규칙의 예외예요.
+
+- three.js(`petScene.ts`)로 투명한 124px 칸에 그리고, 펫을 켰을 때만 받아요. 탭이 뒤에 있으면 그리지 않고, 움직임 줄이기 설정이면 움직이지 않고 얼굴만 바뀌어요. WebGL이 없으면 그리지 않아요.
+- 평소에는 숨 쉬듯 살짝 움직이고, 깜빡이고, 마우스가 있는 쪽을 천천히 바라봐요.
+- AI를 기다리는 동안(`withProgress`를 쓰는 요청이 `petWork`로 알려요, 만드는 중인 리포트도) 자판을 두드리듯 팔을 움직이고 집중한 눈을 하며, 짙은 회색 말풍선에 "열심히 하는 중이에요 42%"를 적어요. 끝나면 웅크렸다 뛰어올라 한 바퀴 돌고 "다 됐어요!", 실패하면 어지러운 눈으로 "앗, 잘 안 됐어요"예요. 켜기 전에 끝난 일에는 반응하지 않아요.
+- 누르면(Enter와 스페이스도) 뛰어오르며 인사 한마디를 해요. 4px 넘게 끌면 옮겨지고, 놓은 자리(오른쪽 아래에서의 거리)를 `javadda:pet-position`에 기억해요. 창을 줄이면 창 안으로 들어와요. 말풍선은 펫이 화면 왼쪽 반에 있으면 왼쪽에 맞춰요.
+- 면접 연습의 검은 화면(리포트와 Labs 기술 면접 모두, `useHidePet`)에서는 숨겨요.
+
 ## API 키와 공개 API
 
 우리 자료를 외부 서비스가 쓰도록 공개 API(서버의 `/api/public/v1`)를 열어요. 키는 관리자가 승인해야 쓸 수 있어요.
@@ -461,7 +475,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 배치는 macOS 앱과 같아요. 사이드바 맨 위에는 사이드바 버튼과 로고가 있고, 로고를 누르면 새 진단 화면으로 가요. macOS 앱 2.8부터는 앱이 창 뒤에 macOS 사이드바 블러를 깔아서, 웹은 바탕(html, body, `AppFrame`)과 사이드바를 비우고 본문 화면(`data-screen`)에만 흰 바탕을 칠해요. 그래서 사이드바에 Finder나 Claude 앱처럼 뒤의 바탕화면이 흐리게 비쳐요. 앱 버전은 `app.ts`의 `vibrancy`와 `index.html`의 `data-vibrancy`(자바스크립트를 받기 전에 붙여요)가 같은 규칙으로 봐요. 2.7까지의 앱과 브라우저는 전처럼 회색 사이드바예요. 앱 3.0부터(macOS 26 이상)는 웹이 `sidebar` 메시지로 사이드바 폭을 알리면 앱이 그 자리에 둥근 유리 패널을 띄우지만, 유리의 테두리가 두드러져 웹의 사이드바와 달라 보여서 웹은 폭을 알리지 않아요. 그래서 앱 3.0 이상도 2.9처럼 블러 위의 사이드바예요. 창 버튼과 창 옮기기, 화면 녹화 가리기, 앱 버전과 업데이트 확인, 단축키 안내(`ShortcutTip`)는 macOS 앱에서만 써요.
 - 공고 탐색과 기술 블로그는 로그인하지 않아도 써요. 이력서, 리포트, 서류 검증, 예상 질문, 면접 연습, 보완 계획, 면접 노트는 로그인해야 하고(서버가 401로 답해요), 로그인하지 않았으면 내 이력서와 내 리포트가 비어 있어요. 로그인하지 않았으면 사이드바의 계정 버튼 자리에 로그인 버튼을 보여줘요. 계정 칸 바로 위에는 macOS 앱을 받는 "앱 다운로드" 줄(받기 아이콘)이 있어요. 브라우저의 /app에서만 보이고 macOS 앱 안과 휴대폰의 사이드바 서랍에서는 두지 않아요. 리포트를 보다가 로그인하러 가면 로그인한 뒤에 그 리포트로 돌아오고, 로그인하지 않고 리포트 주소로 들어오면 로그인 안내를 보여줘요. 진단하거나 서류를 올리려다 로그인하러 가면 하던 화면으로 돌아와요. 그 밖에는 로그인하면 새 진단 화면으로 가요.
 - 떠나기 확인 창은 두지 않아요. 리포트는 서버가 만들고 계정에 저장해서, 만드는 중에 화면을 옮겨도 끝까지 만들어져요.
-- 설정 창에서 화면 모드, 메인 컬러, 언어, 단축키 항상 표시, AI 모델을 바꿔요. 설정 창 맨 위는 화면 모드와 테마예요(`AppearanceSetting`). 화면 모드는 고른 테마로 그린 작은 앱 화면 카드 세 장(시스템 설정은 왼쪽 반이 라이트, 오른쪽 반이 다크)이고, 테마는 라이트와 다크 구슬 두 개와 이름을 담은 칸 여섯 개예요. 고른 테마는 두 구슬에 메인 컬러 고리와 해, 달 표시가 붙어요. 구슬의 빛 번짐은 그라데이션 금지 규칙의 예외예요. 그 아래 인터페이스 칸에 명암 대비(`ContrastRow`, 50에서 150%, 5씩, 기본 100%)가 있어요. 이름 옆 되돌리기(100%가 아닐 때만), 설명, 오른쪽에 지금 값과 슬라이더(`index.css`의 `setting-range`)예요. 회색 단계마다 바탕과의 밝기 차이에 배율을 곱해 html의 style에 적어서(`theme.ts`의 `applyContrast`, 물들이지 않은 회색은 `NEUTRAL_TONES`), 낮추면 회색 글자, 테두리, 칸이 바탕에 가까워지고 높이면 또렷해져요. localStorage의 `javadda:app-contrast`에 두고, 앱 2.9에는 슬라이더를 멈춘 뒤 `contrast` 메시지로 알려요. 그 아래 화면 묶음에 언어와 단축키 항상 표시가 있어요. 면접관 목소리는 면접관마다 고정이라 고르는 줄이 없어요. 다크 모드도 `/app`에서는 켜져요. AI 모델 줄은 설정 창(사이드바 맨 아래 톱니바퀴)과 내 정보 화면(`/app/me`, 계정 칸 아래 AI 칸) 두 곳에 같은 부품(`AiModelRow`, `SettingRow`)으로 있고 늘 보여요. 설정 창을 열 때마다 `/config`를 다시 물어서(`refreshConfig`) 서버를 나중에 켰거나 키를 바꿔도 바로 맞춰요. 드롭다운 버튼에는 "서버 기본" 대신 늘 지금 쓰는 모델의 이름(고른 모델, 고르지 않았으면 서버의 기본 모델 `ai.defaultModel`)을 적어요. 메뉴는 공급자(OpenAI, Claude)마다 묶어 `ai.models`(서버에 키가 있는 모델만)를 늘어놓고, 서버의 기본 모델 오른쪽에 "기본"을 옅게 붙여요. 고른 것은 localStorage의 `javadda:ai-model`에 두고, 서버의 기본 모델을 고르면 지워요(헤더를 보내지 않아요). 고른 모델이 목록에서 빠졌으면 서버의 기본 모델이 체크되어 보여요. 받는 동안은 드롭다운 메뉴 안에 막대와 퍼센트 한 줄(`Dropdown` 그룹의 `progress`), 서버에 닿지 못하면 연결하지 못했다는 설명, 키가 없어서 목록이 비면 "고를 수 있는 모델이 없어요"와 규칙으로 분석한다는 설명을 보여줘요.
+- 설정 창에서 화면 모드, 메인 컬러, 언어, 단축키 항상 표시, AI 모델을 바꿔요. 설정 창 맨 위는 화면 모드와 테마예요(`AppearanceSetting`). 화면 모드는 고른 테마로 그린 작은 앱 화면 카드 세 장(시스템 설정은 왼쪽 반이 라이트, 오른쪽 반이 다크)이고, 테마는 라이트와 다크 구슬 두 개와 이름을 담은 칸 여섯 개예요. 고른 테마는 두 구슬에 메인 컬러 고리와 해, 달 표시가 붙어요. 구슬의 빛 번짐은 그라데이션 금지 규칙의 예외예요. 그 아래 인터페이스 칸에 명암 대비(`ContrastRow`, 50에서 150%, 5씩, 기본 100%)가 있어요. 이름 옆 되돌리기(100%가 아닐 때만), 설명, 오른쪽에 지금 값과 슬라이더(`index.css`의 `setting-range`)예요. 회색 단계마다 바탕과의 밝기 차이에 배율을 곱해 html의 style에 적어서(`theme.ts`의 `applyContrast`, 물들이지 않은 회색은 `NEUTRAL_TONES`), 낮추면 회색 글자, 테두리, 칸이 바탕에 가까워지고 높이면 또렷해져요. localStorage의 `javadda:app-contrast`에 두고, 앱 2.9에는 슬라이더를 멈춘 뒤 `contrast` 메시지로 알려요. 그 아래 화면 묶음에 언어, 단축키 항상 표시, 펫이 있어요. 면접관 목소리는 면접관마다 고정이라 고르는 줄이 없어요. 다크 모드도 `/app`에서는 켜져요. AI 모델 줄은 설정 창(사이드바 맨 아래 톱니바퀴)과 내 정보 화면(`/app/me`, 계정 칸 아래 AI 칸) 두 곳에 같은 부품(`AiModelRow`, `SettingRow`)으로 있고 늘 보여요. 설정 창을 열 때마다 `/config`를 다시 물어서(`refreshConfig`) 서버를 나중에 켰거나 키를 바꿔도 바로 맞춰요. 드롭다운 버튼에는 "서버 기본" 대신 늘 지금 쓰는 모델의 이름(고른 모델, 고르지 않았으면 서버의 기본 모델 `ai.defaultModel`)을 적어요. 메뉴는 공급자(OpenAI, Claude)마다 묶어 `ai.models`(서버에 키가 있는 모델만)를 늘어놓고, 서버의 기본 모델 오른쪽에 "기본"을 옅게 붙여요. 고른 것은 localStorage의 `javadda:ai-model`에 두고, 서버의 기본 모델을 고르면 지워요(헤더를 보내지 않아요). 고른 모델이 목록에서 빠졌으면 서버의 기본 모델이 체크되어 보여요. 받는 동안은 드롭다운 메뉴 안에 막대와 퍼센트 한 줄(`Dropdown` 그룹의 `progress`), 서버에 닿지 못하면 연결하지 못했다는 설명, 키가 없어서 목록이 비면 "고를 수 있는 모델이 없어요"와 규칙으로 분석한다는 설명을 보여줘요.
 - 좁은 화면(768px 미만)에서는 사이드바를 숨겨 두고, 왼쪽 위 버튼(사이드바 그림 대신 햄버거 그림 `MenuIcon`)을 누르면 사이드바가 화면 전체를 덮는 서랍으로 왼쪽에서 빠르게 밀려 들어오고(`animate-drawer-in`, 0.26초), 닫으면 왼쪽으로 빠져나간 뒤 사라져요(`animate-drawer-out`, 0.2초). 맨 위 로고는 서랍이 따로 그리지 않고 `AppFrame`의 로고가 서랍 위(z-31)에 늘 있어서, 열고 닫아도 로고는 움직이지 않아요. 서랍 바탕은 반투명한 회색에 블러를 줘서 뒤의 화면이 흐리게 비쳐요(`AppSidebar`의 `drawer`). 휴대폰은 위의 메뉴만으로 화면이 차서, 서랍에서는 맨 위 로고와 맨 아래 계정 칸은 그대로 두고 그 사이의 메뉴와 리포트 목록이 같이 스크롤해요. 흐림이 그려지게 서랍은 투명도 없이 밀려 들어오기만 해요. 서랍이 열려 있으면 왼쪽 위 버튼이 닫기(X)로 바뀌고, 화면을 고르거나 Esc를 누르면 닫혀요. 휴대폰에는 hover가 없어서, 사이드바의 메뉴와 리포트 줄은 누르는 순간(`active`) 바탕이 깔려요. 넓은 화면의 메뉴 줄은 40px이고, 지금 보고 있는 메뉴와 리포트 줄은 Claude 앱처럼 글자색 회색을 옅게(7%) 깐 바탕에 굵은 글자예요(`AppSidebar`의 `current`). 반투명이라 블러 위에서도 탁해지지 않고 테마 색으로 물들어요. 서랍(`data-drawer`)에서는 손가락으로 누르기 쉽게 메뉴 줄과 폴더 줄을 44px로, 리포트 줄은 위아래 여백을 넓히고 글자도 조금 키워요. 리포트 줄의 점 세 개 버튼은 hover가 없어서 늘 보여요.
 - `index.html`에는 소개 화면을 미리 그려 둬요. 이 파일은 없는 주소(`/app/...`)에도 대신 가서, 메인 주소가 아니거나 macOS 앱이면 `<head>`의 짧은 스크립트가 미리 그린 화면을 숨기고 `src/main.tsx`가 비운 뒤에 그려요. 다크 모드는 같은 `<head>`의 스크립트가 자바스크립트를 받기 전에 `dark`를 붙여서(규칙은 `theme.ts`와 같아요) 밝은 화면이 깜빡이지 않아요. 고른 메인 컬러(`data-accent`)도 같은 스크립트가 붙여서 파란색이 잠깐 비치지 않아요. 화면 설정의 규칙을 바꾸면 이 스크립트도 같이 바꿔요.
 
@@ -612,7 +626,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 | `auth_password_change` | 내 정보나 초기화된 계정의 화면에서 비밀번호를 바꿨을 때 | `forced`, `success` |
 | `account_nav_click`, `auth_login`, `auth_signup`, `auth_social_click`, `auth_social`, `auth_logout`, `auth_social_unlink`, `auth_withdraw`, `session_revoke` | 계정 | 전과 같아요 |
 | `app_login_browser_click`, `app_login_approve`, `app_login_cancel`, `app_login` | 앱 로그인 | `success` |
-| `settings_open`, `app_theme_change`, `app_accent_change`(`accent`), `app_contrast_change`(`contrast`, `from`: slider, reset), `app_update_check`, `app_shield_change`, `capture_shield_view`, `capture_shield_allow`, `app_shortcut_hints_change`, `app_ai_model_change`(`model`), `app_menu_open`, `plans_open` | 앱의 설정과 메뉴 | 전과 같아요 |
+| `settings_open`, `app_theme_change`, `app_accent_change`(`accent`), `app_contrast_change`(`contrast`, `from`: slider, reset), `app_update_check`, `app_shield_change`, `capture_shield_view`, `capture_shield_allow`, `app_shortcut_hints_change`, `app_pet_change`(`pet`: off, claude, codex), `app_ai_model_change`(`model`), `app_menu_open`, `plans_open` | 앱의 설정과 메뉴 | 전과 같아요 |
 | `feedback_prompt_view`, `feedback_prompt_close`, `bug_report_open`, `feedback_send` | 평가와 버그 신고 | `kind`, `rating`, `commented`, `success` |
 
 ## 현재까지 구현된 기능
@@ -627,6 +641,7 @@ ElevenLabs 키처럼 비밀인 값은 `.dev.vars`(`.dev.vars.example`을 복사,
 - 로그인, 회원가입, 내 정보, GitHub로 로그인과 계정 연결 (위의 로그인과 계정 절 참고). 카카오 로그인과 회원 탈퇴는 서버에 아직 없어요
 - 앱의 관리자 화면 (위의 관리자 화면 절 참고)
 - 요금제 창, 평가와 버그 신고, Google Analytics 이벤트 추적
+- 화면 구석의 펫(Claude, Codex) (위의 펫 절 참고)
 - API 키 요청과 관리자 승인, 권한과 한도, 호출량, 공개 API 문서 (위의 API 키와 공개 API 절 참고)
 
 ## 남은 작업
