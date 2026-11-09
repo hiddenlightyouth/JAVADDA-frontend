@@ -22,8 +22,6 @@
   --animate-drawer-in: drawer-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-grow: grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-word: word 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-  /* 같은 줄을 두 번 이어 붙인 것을 반만큼 밀어서 끊김 없이 흘러가요. 빠르기는 칸 수에 맞춰 --marquee-duration으로 정해요. */
-  --animate-marquee: marquee var(--marquee-duration, 60s) linear infinite;
 
   @keyframes word {
     from {
@@ -101,14 +99,6 @@
     }
   }
 
-  @keyframes marquee {
-    from {
-      transform: translateX(0);
-    }
-    to {
-      transform: translateX(-50%);
-    }
-  }
 
   @keyframes rise {
     from {

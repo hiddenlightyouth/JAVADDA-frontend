@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
 import { COMPANIES, companyOf, fitOf, majorCompanies, POSTINGS, postingOf, RECOMMEND_MIN_FIT, sortPostings, useReports, useResume, type Company, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
@@ -120,10 +120,9 @@ function CompanyCarousel({ companies, onSelect }: { companies: Company[]; onSele
  */
 const phoneBleed = '-mx-4 px-4 sm:mx-0 sm:px-0'
 
-/** 요즘 뜨는 기업 카드 하나의 폭과 카드 사이 간격(px), 카드 하나가 지나가는 데 걸리는 시간(초)이에요. */
+/** 요즘 뜨는 기업 카드 하나의 폭과 카드 사이 간격(px)이에요. */
 const HOT_CARD = 236
 const HOT_GAP = 12
-const HOT_SECONDS = 3.2
 
 /** 요즘 뜨는 기업이에요. 네카라쿠배당토 같은 유명 기업(`majorCompanies`) 열다섯 곳만, 정해 둔 순서 그대로 두고 채용 중인 공고 수를 세요. */
 function hotCompanies(): { company: Company; open: number }[] {
@@ -131,40 +130,34 @@ function hotCompanies(): { company: Company; open: number }[] {
 }
 
 /**
- * 요즘 뜨는 기업 줄이에요. 왼쪽에 로고, 오른쪽에 기업 이름과 채용 중인 공고 수를 적은 회색 카드가 오른쪽에서 왼쪽으로 멈추지 않고 흘러가요.
- * 같은 줄을 두 번 이어 붙여서 끝에 닿아도 끊기지 않아요. 마우스를 올리거나 키보드로 들어오면 멈추고,
- * 움직임 줄이기 설정이면 흐르지 않아요. 누르면 기업 상세로 가요.
+ * 요즘 뜨는 기업 줄이에요. 왼쪽에 로고, 오른쪽에 기업 이름과 채용 중인 공고 수를 적은 회색 카드가
+ * 기업으로 둘러보기처럼 잠깐마다 한 칸씩 왼쪽으로 넘어가요(`Carousel`). 누르면 기업 상세로 가요.
  */
 function HotCompanies({ companies, onSelect }: { companies: { company: Company; open: number }[]; onSelect: (company: Company) => void }) {
   const L = useMessages(TEXT)
-  // 카드 사이 간격은 gap 대신 카드 오른쪽 여백으로 둬서, 이어 붙인 두 줄의 폭이 똑같아 반만큼 밀면 처음 모습과 딱 맞아요.
-  const card = ({ company, open }: { company: Company; open: number }, copy: boolean) => (
-    <li key={`${copy ? 'copy-' : ''}${company.id}`} className="shrink-0" style={{ width: HOT_CARD + HOT_GAP, paddingRight: HOT_GAP }} aria-hidden={copy || undefined}>
-      <button
-        type="button"
-        tabIndex={copy ? -1 : undefined}
-        onClick={() => onSelect(company)}
-        className="group flex w-full items-center gap-3.5 rounded-2xl bg-gray-50 p-3.5 pr-4 text-left transition-colors hover:bg-gray-100"
-      >
-        <CompanyMark company={company} className="size-12 shrink-0 rounded-xl! text-[16px]" />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-semibold text-gray-900 transition-colors group-hover:text-brand">{company.name}</span>
-          <span className="mt-0.5 block text-[12.5px] text-gray-500 tabular-nums">{L.open(open)}</span>
-        </span>
-        <ChevronRightIcon className="size-4 shrink-0 text-gray-300 transition-colors group-hover:text-brand" />
-      </button>
-    </li>
-  )
   return (
-    <div className={`mt-3 overflow-hidden ${phoneBleed}`}>
-      <ul
-        className="flex w-max animate-marquee hover:[animation-play-state:paused] focus-within:[animation-play-state:paused] motion-reduce:animate-none"
-        style={{ '--marquee-duration': `${companies.length * HOT_SECONDS}s` } as CSSProperties}
-      >
-        {companies.map((item) => card(item, false))}
-        {companies.map((item) => card(item, true))}
-      </ul>
-    </div>
+    <Carousel
+      className={`mt-3 ${phoneBleed}`}
+      items={companies}
+      itemWidth={HOT_CARD}
+      gap={HOT_GAP}
+      keyOf={({ company }) => company.id}
+      render={({ company, open }, hidden) => (
+        <button
+          type="button"
+          tabIndex={hidden ? -1 : undefined}
+          onClick={() => onSelect(company)}
+          className="group flex w-full items-center gap-3.5 rounded-2xl bg-gray-50 p-3.5 pr-4 text-left transition-colors hover:bg-gray-100"
+        >
+          <CompanyMark company={company} className="size-12 shrink-0 rounded-xl! text-[16px]" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[15px] font-semibold text-gray-900 transition-colors group-hover:text-brand">{company.name}</span>
+            <span className="mt-0.5 block text-[12.5px] text-gray-500 tabular-nums">{L.open(open)}</span>
+          </span>
+          <ChevronRightIcon className="size-4 shrink-0 text-gray-300 transition-colors group-hover:text-brand" />
+        </button>
+      )}
+    />
   )
 }
 
