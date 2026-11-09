@@ -33,7 +33,7 @@ const TEXT = messages({
     contests: '공모전',
     contestRows: { closing: '마감이 가까운 공모전', roomy: '준비할 기간이 충분한 공모전' },
     contestEmpty: '이 분야에는 지금 열린 공모전이 없어요.',
-    contestChosen: (name: string | null) => (name ? `이제부터 ${name} 분야의 공모전을 보여줘요.` : '이제부터 모든 분야의 공모전을 보여줘요.'),
+    contestChosen: (name: string | null) => (name ? `이제부터 ${name} 분야의 공모전으로 표시됩니다.` : '이제부터 모든 분야의 공모전으로 표시됩니다.'),
   },
   en: {
     label: 'Search companies and postings',
