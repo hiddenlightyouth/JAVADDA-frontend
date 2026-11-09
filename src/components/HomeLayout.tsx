@@ -6,7 +6,7 @@ import { readJson, writeItem, writeJson } from '../lib/storage'
 import { createStore, useStore } from '../lib/store'
 import { Modal } from './Dialog'
 import { ChevronDownIcon, CloseButton, GripIcon } from './Icons'
-import { Checkbox, iconButton, primaryButton, quietButton } from './ui'
+import { buttonRadius, Checkbox, controlHeight, iconButton, primaryButton } from './ui'
 
 /**
  * 새 진단 화면의 배치예요. 검색창 아래의 줄(요즘 뜨는 기업, 공고 줄, 공모전)을 어떤 순서로 둘지, 어느 줄을 숨길지 정해요.
@@ -56,7 +56,7 @@ const TEXT = messages({
     title: '홈 화면 편집',
     body: '보고 싶은 줄만 켜고, 줄을 끌거나 화살표로 순서를 바꿔요.',
     close: '닫기',
-    reset: '기본 배치로',
+    reset: '초기화',
     done: '완료',
     up: (name: string) => `${name} 위로`,
     down: (name: string) => `${name} 아래로`,
@@ -69,17 +69,13 @@ const TEXT = messages({
       again: '다시 볼 공고',
       contests: '공모전',
     } satisfies Record<HomeSection, string>,
-    notes: {
-      fit: '이력서가 있을 때 보여요',
-      again: '적합도가 낮았던 공고가 있을 때 보여요',
-    } as Partial<Record<HomeSection, string>>,
   },
   en: {
     edit: 'Customize home',
     title: 'Customize home',
     body: 'Turn on the rows you want and drag or use the arrows to reorder them.',
     close: 'Close',
-    reset: 'Reset to default',
+    reset: 'Reset',
     done: 'Done',
     up: (name: string) => `Move ${name} up`,
     down: (name: string) => `Move ${name} down`,
@@ -92,10 +88,6 @@ const TEXT = messages({
       again: 'Worth another look',
       contests: 'Contests',
     } satisfies Record<HomeSection, string>,
-    notes: {
-      fit: 'Shown once you add a resume',
-      again: 'Shown when a diagnosed posting scored low',
-    } as Partial<Record<HomeSection, string>>,
   },
 })
 
@@ -280,7 +272,6 @@ export function HomeLayoutDialog({ onClose }: { onClose: () => void }) {
         {layout.order.map((id, index) => {
           const visible = !layout.hidden.includes(id)
           const name = L.names[id]
-          const note = L.notes[id]
           const grabbed = drag?.id === id
           return (
             <li
@@ -304,10 +295,7 @@ export function HomeLayoutDialog({ onClose }: { onClose: () => void }) {
             >
               <GripIcon className={`size-4 shrink-0 ${grabbed ? 'text-gray-500' : 'cursor-grab text-gray-300'}`} />
               <Checkbox checked={visible} onChange={(on) => toggle(id, on)} className="min-w-0 flex-1 py-1.5">
-                <span className="min-w-0">
-                  <span className={`block truncate text-[14px] ${visible ? 'text-gray-900' : 'text-gray-400'}`}>{name}</span>
-                  {note && <span className="block truncate text-[12px] text-gray-400">{note}</span>}
-                </span>
+                <span className={`min-w-0 truncate text-[14px] ${visible ? 'text-gray-900' : 'text-gray-400'}`}>{name}</span>
               </Checkbox>
               <button type="button" disabled={index === 0} onClick={() => move(id, index - 1)} aria-label={L.up(name)} className={iconButton.md}>
                 <ChevronDownIcon className="size-3.5 rotate-180" />
@@ -320,7 +308,7 @@ export function HomeLayoutDialog({ onClose }: { onClose: () => void }) {
         })}
       </ul>
       <div className="flex shrink-0 items-center justify-between gap-2 px-5 pt-3 pb-5">
-        <button type="button" disabled={isDefault} onClick={reset} className={`${quietButton} -ml-3.5 disabled:text-gray-300`}>
+        <button type="button" disabled={isDefault} onClick={reset} className={`${controlHeight} ${buttonRadius} -ml-3.5 px-3.5 text-[13px] font-medium text-red-500 transition-colors hover:text-red-600 disabled:text-gray-300`}>
           {L.reset}
         </button>
         <button type="button" onClick={onClose} className={primaryButton}>
