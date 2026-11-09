@@ -22,13 +22,22 @@ const readKind = (): PetKind | null => {
 
 const kindStore = createStore<PetKind | null>(typeof window === 'undefined' ? null : readKind())
 
+/**
+ * 앱에 알리는 펫 이름이에요. 3.4까지의 앱은 바탕화면 펫으로 Claude와 Codex만 받아서, 잡아따 도마뱀은 claude로 알려 펫 창만 띄우게 해요.
+ * 펫 창(`PetWindow`)이 이 기기에 적어 둔 고른 펫을 읽어 도마뱀을 그려요(`storedPet`).
+ */
+const appKind = (kind: PetKind | null): 'claude' | 'codex' | null => (kind === 'javadda' ? 'claude' : kind)
+
+/** 이 기기에 적어 둔 고른 펫이에요. 바탕화면 펫 창은 앱 화면 밖이라 이것으로 앱이 모르는 펫(도마뱀)을 알아요. */
+export const storedPet = readKind
+
 /** 고른 펫이에요. null이면 꺼져 있어요(처음은 꺼져 있어요). */
 export const usePet = () => useStore(kindStore, (value) => value, null)
 
 export function setPet(kind: PetKind | null) {
   writeItem(KIND_KEY, kind)
   kindStore.set(kind)
-  if (desktopPet) postToApp({ type: 'pet', kind })
+  if (desktopPet) postToApp({ type: 'pet', kind: appKind(kind) })
 }
 
 /**
@@ -41,7 +50,7 @@ export const desktopPet = appAtLeast('3.2')
 export const PET_WINDOW_EVENT = 'javadda:pet'
 
 // 앱이 켜질 때 웹에 적어 둔 펫을 알려서, 앱이 기억한 값과 맞춰요.
-if (desktopPet) postToApp({ type: 'pet', kind: kindStore.get() })
+if (desktopPet) postToApp({ type: 'pet', kind: appKind(kindStore.get()) })
 
 /** 펫이 지금 바쁜지, 몇 퍼센트인지, 마지막으로 끝난 일이 무엇인지예요. */
 export interface PetStatus {

@@ -71,6 +71,8 @@ export function PetStage({ kind, status, pokeAt, look, bubbleAlign, grabbed = fa
       try {
         scene = create(canvasRef.current)
         sceneRef.current = scene
+        // 개발 서버에서만 콘솔로 펫을 움직여 볼 수 있게 열어 둬요(잡기, 흔들기 등)
+        if (import.meta.env.DEV) (window as unknown as { __pet?: Scene }).__pet = scene
       } catch {
         // WebGL을 쓸 수 없는 환경이면 펫을 그리지 않아요.
       }

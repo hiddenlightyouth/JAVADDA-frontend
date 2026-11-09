@@ -43,8 +43,9 @@ const QUESTION: [number, number][] = [[0, 4], [1, 4], [2, 4], [2, 3], [1, 2], [1
 function makeMaterials() {
   return {
     body: new THREE.MeshStandardMaterial({ roughness: 0.5 }),
-    belly: new THREE.MeshStandardMaterial({ roughness: 0.5 }),
-    stripe: new THREE.MeshStandardMaterial({ roughness: 0.5 }),
+    // 배와 줄무늬는 톤 매핑을 빼요. 밝은 하늘색이 톤 매핑을 거치면 흰색으로 바래서, 매달렸을 때 배가 뚫린 것처럼 보였어요
+    belly: new THREE.MeshStandardMaterial({ roughness: 0.6, toneMapped: false }),
+    stripe: new THREE.MeshStandardMaterial({ roughness: 0.6, toneMapped: false }),
     eye: new THREE.MeshStandardMaterial({ color: '#0b0d12', roughness: 0.2 }),
     shine: new THREE.MeshStandardMaterial({ color: '#d4d8e0', roughness: 0.3 }),
   } satisfies Record<Slot, THREE.MeshStandardMaterial>
@@ -73,7 +74,9 @@ function makeGecko(mats: ReturnType<typeof makeMaterials>) {
         for (let z = z0; z <= z1; z++) {
           const ends = Number(x === x0 || x === x1) + Number(y === y0 || y === y1) + Number(z === z0 || z === z1)
           if (ends === 0 || ends >= 2) continue
-          onFace?.(x, y, z, cube(parent, x, y, z, paint(x, y, z)))
+          // 블록은 onFace가 없어도 늘 쌓아요. onFace?.(…, cube())로 쓰면 onFace가 없을 때 cube까지 건너뛰어요
+          const m = cube(parent, x, y, z, paint(x, y, z))
+          onFace?.(x, y, z, m)
         }
     // 깎은 모서리 안쪽을 메워서 구멍이 안 보이게 해요
     for (let x = x0 + 1; x < x1; x++)
@@ -248,11 +251,12 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
 
   const scene = new THREE.Scene()
   // 앞에서 부드럽게 비춰요. 옆면이 너무 어두우면 무거워 보여서 채움 빛을 넉넉히 둬요
-  scene.add(new THREE.HemisphereLight('#ffffff', '#7d8796', 1.7))
-  const key = new THREE.DirectionalLight('#ffffff', 1.9)
+  // 빛이 세면 화면을 정면으로 보는 밝은 면(매달렸을 때의 배)이 하얗게 날아가서, 전체 빛을 낮게 둬요
+  scene.add(new THREE.HemisphereLight('#ffffff', '#7d8796', 1.15))
+  const key = new THREE.DirectionalLight('#ffffff', 1.4)
   key.position.set(0.35, 1, 0.8)
   scene.add(key)
-  const fill = new THREE.DirectionalLight('#ffffff', 0.9)
+  const fill = new THREE.DirectionalLight('#ffffff', 0.55)
   fill.position.set(-0.8, 0.3, 0.6)
   scene.add(fill)
 
@@ -294,10 +298,10 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
   const setColor = (hex: string) => {
     const hsl = { h: 0, s: 0, l: 0 }
     new THREE.Color(hex).getHSL(hsl)
-    mats.body.color.setHSL(hsl.h, hsl.s, Math.max(0.3, hsl.l - 0.04))
-    // 밝은 톤은 톤 매핑에서 회색빛으로 바래서 채도를 거의 그대로 둬요
-    mats.stripe.color.setHSL(hsl.h, hsl.s * 0.95, Math.min(0.82, hsl.l + 0.12))
-    mats.belly.color.setHSL(hsl.h, hsl.s * 0.95, Math.min(0.86, hsl.l + 0.22))
+    mats.body.color.setHSL(hsl.h, hsl.s, Math.max(0.3, hsl.l - 0.02))
+    // 밝은 톤은 톤 매핑에서 바래서 채도는 거의 그대로 두고, 흰 화면에 묻히지 않게 너무 밝게는 하지 않아요
+    mats.stripe.color.setHSL(hsl.h, hsl.s * 0.9, Math.min(0.6, hsl.l + 0.02))
+    mats.belly.color.setHSL(hsl.h, hsl.s * 0.85, Math.min(0.66, hsl.l + 0.08))
   }
   setColor(color)
 
@@ -399,6 +403,10 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
     piece.updateMatrixWorld(true)
     scene.attach(piece)
     for (const t of [g.tail, g.sitTail, g.sleepTail]) t.visible = false
+    // 매달린 채 끊기면 꼬리가 세로로 서 있어서, 바닥에 눕혀서 떨어뜨려요. 칸 밖으로 나가지 않게 가운데 쪽에 둬요
+    piece.rotation.set(0.3, vx > 0 ? 0.5 : -0.5, 0)
+    piece.position.x = Math.max(-halfW + 8, Math.min(halfW - 8, piece.position.x))
+    piece.updateMatrixWorld(true)
     const box = new THREE.Box3().setFromObject(piece)
     bits.push({ obj: piece, vx, vy: 10, g: 60, life: 6.5, born: now, spin: 0, floor: ground - (box.min.y - piece.position.y) })
   }
