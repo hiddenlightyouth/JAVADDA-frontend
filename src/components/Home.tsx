@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
-import { CONTEST_CATEGORIES, contestDaysLeft, fetchContests, type Contest, type ContestCategory } from '../lib/contests'
+import { CONTEST_CATEGORIES, contestDaysLeft, fetchContests, type Contest, type ContestCategory, type ContestLink } from '../lib/contests'
 import { COMPANIES, companyOf, fitOf, majorCompanies, POSTINGS, postingOf, RECOMMEND_MIN_FIT, sortPostings, useReports, useResume, type Company, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { readItem, writeItem } from '../lib/storage'
@@ -84,7 +84,7 @@ function savedContestCategory(): ContestCategory | null {
  * 공모전 줄 두 개예요. 마감이 가까운 공모전과 준비할 기간이 충분한 공모전을 공모전 화면과 같은 카드(`ContestCard`)로 한 줄씩 늘어놓아요.
  * 위의 분야 버튼으로 두 줄을 같이 거르고, 고른 분야는 이 기기에 기억해요. 받지 못했거나 공모전이 없으면 덩어리째 두지 않아요.
  */
-function ContestRows({ onOpen, onAll }: { onOpen: (contest: Contest) => void; onAll: () => void }) {
+function ContestRows({ onOpen, onAll }: { onOpen: (contest: Contest, link?: ContestLink) => void; onAll: () => void }) {
   const L = useMessages(TEXT)
   const C = useMessages(CONTEST_TEXT)
   const [contests, setContests] = useState<Contest[] | null>(null)
@@ -177,9 +177,9 @@ function ContestRows({ onOpen, onAll }: { onOpen: (contest: Contest) => void; on
                 key={`${category}:${contest.id}`}
                 contest={contest}
                 order={order}
-                onOpen={(picked) => {
-                  track('home_contest_open', { row: key, category: picked.categories[0] ?? 'etc' })
-                  onOpen(picked)
+                onOpen={(picked, link) => {
+                  track('home_contest_open', { row: key, category: picked.categories[0] ?? 'etc', site: (link ?? picked.links[0])?.site })
+                  onOpen(picked, link)
                 }}
               />
             ))}
@@ -450,8 +450,8 @@ export function Home({ onPick, onExplore, onRecommend, onCompany, onContests }: 
         <ContestRows
           key={key}
           onAll={onContests}
-          onOpen={(contest) => {
-            const main = contest.links[0]
+          onOpen={(contest, link) => {
+            const main = link ?? contest.links[0]
             if (main) browser.viewPage({ url: main.url, title: contest.title })
           }}
         />

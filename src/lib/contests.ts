@@ -8,6 +8,22 @@ import { apiUrl, readWithLoad, type OnLoad } from './http'
 export type ContestCategory = 'it' | 'idea' | 'marketing' | 'video' | 'design' | 'naming' | 'writing' | 'science' | 'startup' | 'thesis' | 'arts' | 'etc'
 export type ContestSite = 'linkareer' | 'campuspick' | 'wevity' | 'thinkgood'
 
+export interface ContestLink {
+  site: ContestSite
+  url: string
+}
+
+/**
+ * 공모전을 모은 사이트의 이름과 로고(`public/contest-sites`, 사이트 아이콘을 받아 둔 거예요)예요. 카드의 출처 동그라미가 써요.
+ * glyph는 바탕 없이 글자 모양만 있는 아이콘이라, 동그라미 안에 여백을 두고 그려요.
+ */
+export const CONTEST_SITES: Record<ContestSite, { name: string; logo: string; glyph?: boolean }> = {
+  linkareer: { name: '링커리어', logo: '/contest-sites/linkareer.png' },
+  campuspick: { name: '캠퍼스픽', logo: '/contest-sites/campuspick.png', glyph: true },
+  wevity: { name: '위비티', logo: '/contest-sites/wevity.png', glyph: true },
+  thinkgood: { name: '씽굿', logo: '/contest-sites/thinkgood.png' },
+}
+
 export interface Contest {
   id: string
   title: string
@@ -18,7 +34,7 @@ export interface Contest {
   deadline: string | null
   imageUrl: string | null
   prize: string | null
-  links: { site: ContestSite; url: string }[]
+  links: ContestLink[]
   firstSeenAt: string
 }
 

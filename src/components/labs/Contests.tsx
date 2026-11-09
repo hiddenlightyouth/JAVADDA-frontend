@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { track } from '../../lib/analytics'
-import { CONTEST_CATEGORIES, contestDaysLeft, fetchContests, type Contest, type ContestCategory } from '../../lib/contests'
+import { CONTEST_CATEGORIES, CONTEST_SITES, contestDaysLeft, fetchContests, type Contest, type ContestCategory, type ContestLink } from '../../lib/contests'
 import { messages, useMessages } from '../../lib/i18n'
 import { readItem, writeItem } from '../../lib/storage'
 import { Dropdown } from '../Dropdown'
 import { ScrollPage } from '../AppPage'
-import { DeadlineTag, Failed, Notice, filterChip, filterRow } from '../GapParts'
+import { DeadlineTag, Failed, Notice, Tip, filterChip, filterRow } from '../GapParts'
 import { CalendarIcon, DocumentIcon, ExternalLinkIcon, SearchIcon } from '../Icons'
 import { jobsGrid, jobsList, NotchedFrame, onBlankClick, PostingCountBar, readLayout, useElementSize, type Layout } from '../JobCard'
 import { shortDate } from '../ScreenParts'
@@ -15,7 +15,7 @@ import { Badge, primaryButton, Skeleton, stagger, tag, useShowMore } from '../ui
 /**
  * 사이드바의 공모전 (/contests)이에요. 예전에는 잡아따 Labs의 실험이었어요. 공모전 사이트 네 곳에서 모은 공모전을 분야로 골라 봐요.
  * 모양은 공고 탐색과 같아요. 맨 위에 검색창과 정렬, 그 아래 분야 버튼 줄(IT가 맨 앞), 공모전 수와 보기 방식, 카드(`ContestCard`)나 줄(`ContestRow`)이에요.
- * 어느 사이트에서 모았는지는 목록에 적지 않아요. 카드를 누르면 처음 모은 사이트의 공고를 미니 브라우저로 열어요.
+ * 카드를 누르면 처음 모은 사이트의 공고를 미니 브라우저로 열어요. 모은 사이트는 카드 아래 줄에 로고 동그라미(`SiteMarks`)로 보여주고, 누르면 그 사이트의 공고를 열어요.
  */
 
 type Sort = 'deadline' | 'roomy' | 'recent'
@@ -39,6 +39,7 @@ const TEXT = messages({
     prize: (prize: string) => `상금 ${prize}`,
     period: '접수 기간',
     open: '공모전 보기',
+    site: (name: string) => `${name}에서 보기`,
     emptyTitle: '조건에 맞는 공모전이 없어요',
     emptyBody: '다른 분야를 고르거나 검색어를 바꿔 보세요.',
     noneTitle: '아직 모은 공모전이 없어요',
@@ -59,6 +60,7 @@ const TEXT = messages({
     prize: (prize: string) => `Prize ${prize}`,
     period: 'Entry period',
     open: 'View contest',
+    site: (name: string) => `View on ${name}`,
     emptyTitle: 'No contests match',
     emptyBody: 'Try another category or search term.',
     noneTitle: 'No contests yet',
@@ -77,8 +79,8 @@ function savedCategory(): ContestCategory | null {
 
 export function Contests({ header }: { header?: ReactNode }) {
   const [viewing, setViewing] = useState<BrowserPage | null>(null)
-  const open = (contest: Contest) => {
-    const main = contest.links[0]
+  const open = (contest: Contest, link?: ContestLink) => {
+    const main = link ?? contest.links[0]
     if (!main) return
     track('labs_contest_open', { site: main.site, category: contest.categories[0] ?? 'etc' })
     setViewing({ url: main.url, title: contest.title })
@@ -93,7 +95,7 @@ export function Contests({ header }: { header?: ReactNode }) {
   )
 }
 
-function ContestList({ onOpen }: { onOpen: (contest: Contest) => void }) {
+function ContestList({ onOpen }: { onOpen: (contest: Contest, link?: ContestLink) => void }) {
   const L = useMessages(TEXT)
   const [contests, setContests] = useState<Contest[] | null>(null)
   const [failed, setFailed] = useState(false)
@@ -242,6 +244,35 @@ function Poster({ contest, className }: { contest: Contest; className: string })
   )
 }
 
+/**
+ * 공모전을 모은 사이트예요. 사이트마다 작은 흰 동그라미에 로고를 넣고, 누르면 그 사이트의 공고를 미니 브라우저로 열어요.
+ * 같은 공모전을 여러 사이트에서 모았으면 나란히 늘어놓아요. 사이트 이름은 마우스를 올리면 떠요.
+ */
+function SiteMarks({ contest, onOpen }: { contest: Contest; onOpen: (contest: Contest, link?: ContestLink) => void }) {
+  const L = useMessages(TEXT)
+  const links = contest.links.filter((link, index, all) => CONTEST_SITES[link.site] && all.findIndex((each) => each.site === link.site) === index)
+  if (links.length === 0) return null
+  return (
+    <span className="flex shrink-0 items-center gap-1">
+      {links.map((link) => {
+        const site = CONTEST_SITES[link.site]
+        return (
+          <Tip key={link.site} text={L.site(site.name)} className="inline-flex">
+            <button
+              type="button"
+              onClick={() => onOpen(contest, link)}
+              aria-label={L.site(site.name)}
+              className="flex size-7 items-center justify-center overflow-hidden rounded-full bg-white ring-1 ring-gray-200/70 transition-transform hover:-translate-y-0.5"
+            >
+              <img src={site.logo} alt="" className={site.glyph ? 'size-4.5 object-contain' : 'size-full object-cover'} />
+            </button>
+          </Tip>
+        )
+      })}
+    </span>
+  )
+}
+
 /** 접수 기간이에요. 시작일을 모르면 마감만 적고(~ 11.30), 마감을 모르면 두지 않아요. */
 function Period({ contest }: { contest: Contest }) {
   const L = useMessages(TEXT)
@@ -258,7 +289,7 @@ function Period({ contest }: { contest: Contest }) {
  * 갤러리형 카드예요. 공고 탐색의 카드(`JobCard`)와 같은 모양으로, 오른쪽 위 홈에 마감까지 남은 날을 적어요.
  * 왼쪽에 포스터를 크게(3:4) 두고, 오른쪽에 주최와 첫 분야, 제목, 접수 기간, 분야 이름표를 적어요. 맨 아래 줄에 상금과 공모전 보기가 있어요.
  */
-export function ContestCard({ contest, order, onOpen }: { contest: Contest; order: number; onOpen: (contest: Contest) => void }) {
+export function ContestCard({ contest, order, onOpen }: { contest: Contest; order: number; onOpen: (contest: Contest, link?: ContestLink) => void }) {
   const L = useMessages(TEXT)
   const [ref, size] = useElementSize<HTMLLIElement>()
   const open = () => onOpen(contest)
@@ -289,19 +320,23 @@ export function ContestCard({ contest, order, onOpen }: { contest: Contest; orde
         </div>
       </div>
 
-      <div className="mt-5 flex items-center gap-1.5 border-t border-gray-200 pt-3">
+      {/* 카드가 좁으면 상금은 위에 남고, 사이트 동그라미와 공모전 보기가 아래 줄 오른쪽으로 내려가요. */}
+      <div className="mt-5 flex flex-wrap items-center gap-x-1.5 gap-y-2 border-t border-gray-200 pt-3">
         {contest.prize && <Badge tone="brand">{L.prize(contest.prize)}</Badge>}
-        <button type="button" onClick={open} className={`${primaryButton} ml-auto shrink-0 gap-1.5`}>
-          {L.open}
-          <ExternalLinkIcon className="size-3.5" />
-        </button>
+        <span className="ml-auto flex shrink-0 items-center gap-2.5">
+          <SiteMarks contest={contest} onOpen={onOpen} />
+          <button type="button" onClick={open} className={`${primaryButton} shrink-0 gap-1.5`}>
+            {L.open}
+            <ExternalLinkIcon className="size-3.5" />
+          </button>
+        </span>
       </div>
     </li>
   )
 }
 
 /** 리스트형 줄이에요. 공고 탐색의 줄(`JobRow`)과 같은 모양이고, 목록 폭이 좁으면 접수 기간, 분야, 상금, 버튼을 차례로 숨겨요. */
-function ContestRow({ contest, order, onOpen }: { contest: Contest; order: number; onOpen: (contest: Contest) => void }) {
+function ContestRow({ contest, order, onOpen }: { contest: Contest; order: number; onOpen: (contest: Contest, link?: ContestLink) => void }) {
   const L = useMessages(TEXT)
   const open = () => onOpen(contest)
   return (
@@ -332,6 +367,9 @@ function ContestRow({ contest, order, onOpen }: { contest: Contest; order: numbe
           <Badge tone="brand">{L.prize(contest.prize)}</Badge>
         </span>
       )}
+      <span className="hidden @lg:flex">
+        <SiteMarks contest={contest} onOpen={onOpen} />
+      </span>
       <DeadlineTag left={contestDaysLeft(contest)} />
       <button type="button" onClick={open} className={`${primaryButton} hidden! shrink-0 @3xl:inline-flex!`}>
         {L.open}
