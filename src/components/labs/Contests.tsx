@@ -19,8 +19,8 @@ import { Badge, LoadProgress, loadCenter, primaryButton, stagger, tag, useShowMo
  * 어느 사이트에서 모았는지는 목록에 적지 않아요. 카드를 누르면 처음 모은 사이트의 공고를 미니 브라우저로 열어요.
  */
 
-type Sort = 'deadline' | 'recent'
-const SORTS: readonly Sort[] = ['deadline', 'recent']
+type Sort = 'deadline' | 'roomy' | 'recent'
+const SORTS: readonly Sort[] = ['deadline', 'roomy', 'recent']
 const CATEGORY_KEY = 'javadda:contests-category'
 /** 카드에 보여주는 분야 수예요. */
 const CATEGORIES_SHOWN = 3
@@ -29,7 +29,7 @@ const TEXT = messages({
   ko: {
     search: '공모전 이름이나 주최로 찾기',
     sort: '정렬',
-    sorts: { deadline: '마감 임박순', recent: '최신순' } as Record<Sort, string>,
+    sorts: { deadline: '마감 임박순', roomy: '마감 널널한순', recent: '최신순' } as Record<Sort, string>,
     category: '분야',
     all: '전체',
     categories: {
@@ -49,7 +49,7 @@ const TEXT = messages({
   en: {
     search: 'Search by contest or organizer',
     sort: 'Sort',
-    sorts: { deadline: 'Closing soon', recent: 'Newest' } as Record<Sort, string>,
+    sorts: { deadline: 'Closing soon', roomy: 'Most time left', recent: 'Newest' } as Record<Sort, string>,
     category: 'Category',
     all: 'All',
     categories: {
@@ -135,7 +135,10 @@ function ContestList({ onOpen }: { onOpen: (contest: Contest) => void }) {
         (!category || contest.categories.includes(category)) &&
         words.every((word) => `${contest.title} ${contest.organizer ?? ''}`.toLowerCase().includes(word)),
     )
-    return sort === 'recent' ? [...list].sort((a, b) => (a.firstSeenAt < b.firstSeenAt ? 1 : -1)) : list
+    if (sort === 'recent') return [...list].sort((a, b) => (a.firstSeenAt < b.firstSeenAt ? 1 : -1))
+    // 마감 널널한순: 마감이 먼 것부터, 마감을 모르는 공모전은 맨 뒤예요.
+    if (sort === 'roomy') return [...list].sort((a, b) => (b.deadline ?? '').localeCompare(a.deadline ?? ''))
+    return list
   }, [contests, category, query, sort])
 
   const { count, more } = useShowMore(shown.length, `${category}|${query}|${sort}`)
