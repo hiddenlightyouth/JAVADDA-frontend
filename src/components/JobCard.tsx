@@ -237,7 +237,7 @@ export function NotchedFrame({ left, card }: { left: number | null; card: { widt
         <svg aria-hidden className="pointer-events-none absolute inset-0 -z-10" width={card.width} height={card.height}>
           <path
             d={notchedPath(card.width, card.height, labelSize.width)}
-            className={`fill-gray-50 transition-colors group-hover:fill-gray-100 ${left === 0 ? 'stroke-red-400' : 'stroke-gray-200'}`}
+            className={`fill-gray-50 transition-colors group-hover:fill-gray-100 ${left === 0 ? 'stroke-red-200' : 'stroke-gray-200'}`}
           />
         </svg>
       )}

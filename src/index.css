@@ -931,7 +931,8 @@ html.dark[data-accent='ocean'] {
 }
 
 /* 앱(2.8부터)의 사이드바는 투명해서 창 뒤 블러가 비쳐요. 테마를 골랐으면 블러 위에 그 테마의 회색을 반쯤 덧칠해서 사이드바도 물들어요. */
-html[data-accent] [data-vibrant] {
+html[data-accent] [data-vibrant],
+html[data-accent] [data-glass-tint] {
   background-color: color-mix(in oklab, var(--color-gray-50) 60%, transparent);
 }
 
@@ -1001,6 +1002,11 @@ html[data-accent] [data-vibrant] {
 
 .dark .text-red-600 {
   color: #ff8a80;
+}
+
+/* 오늘 마감 카드의 옅은 빨간 바깥선은 다크 모드에서 밝게 튀지 않게 어둡게 낮춰요. */
+.dark .stroke-red-200 {
+  stroke: rgb(239 68 68 / 0.3);
 }
 
 .dark .bg-amber-50 {
