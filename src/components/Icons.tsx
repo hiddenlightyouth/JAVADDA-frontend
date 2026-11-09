@@ -677,3 +677,19 @@ export function AlertIcon({ className = 'size-4 shrink-0', strokeWidth = 1.6, la
     </Icon>
   )
 }
+
+/** 끌어서 옮기는 손잡이예요. 점 여섯 개예요. */
+export function GripIcon({ className = 'size-4', label }: Omit<IconProps, 'strokeWidth'>) {
+  return (
+    <Icon className={className} label={label}>
+      <g fill="currentColor" stroke="none">
+        <circle cx="6" cy="4" r="1.1" />
+        <circle cx="10" cy="4" r="1.1" />
+        <circle cx="6" cy="8" r="1.1" />
+        <circle cx="10" cy="8" r="1.1" />
+        <circle cx="6" cy="12" r="1.1" />
+        <circle cx="10" cy="12" r="1.1" />
+      </g>
+    </Icon>
+  )
+}

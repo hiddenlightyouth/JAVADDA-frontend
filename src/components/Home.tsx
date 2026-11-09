@@ -9,10 +9,11 @@ import { Carousel } from './Carousel'
 import { CompanyMark, DiagnosedTag, FitBadge, filterChip, filterRow } from './GapParts'
 import { CONTEST_TEXT, ContestCard } from './labs/Contests'
 import { JobCard, useJobBrowser } from './JobCard'
-import { ChevronRightIcon, SearchIcon } from './Icons'
+import { HOME_LAYOUT_TEXT, HomeLayoutDialog, useHomeLayout, type HomeSection } from './HomeLayout'
+import { ChevronRightIcon, GridIcon, SearchIcon } from './Icons'
 import { SplitView } from './PostingBrowser'
 import { SuggestionHint, useSuggestion } from './ScreenParts'
-import { menuPanel } from './ui'
+import { ghostButton, menuPanel } from './ui'
 
 /**
  * 앱의 메인 화면, 새 진단이에요. 기업이나 공고를 찾아서 고르면 진단을 시작해요.
@@ -297,6 +298,9 @@ export function Home({ onPick, onExplore, onRecommend, onCompany, onContests }: 
   const resume = useResume()
   const reports = useReports()
   const browser = useJobBrowser()
+  const layout = useHomeLayout()
+  const layoutText = useMessages(HOME_LAYOUT_TEXT)
+  const [editing, setEditing] = useState(false)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   /** 방향키로 고른 검색 결과의 순서. 고른 게 없으면 -1이에요. */
@@ -377,13 +381,99 @@ export function Home({ onPick, onExplore, onRecommend, onCompany, onContests }: 
     [reports],
   )
 
-  const rows: { key: keyof typeof L.rows | 'companies'; list: JobPosting[]; more?: () => void }[] = [
-    ...(fit.length > 0 ? [{ key: 'fit' as const, list: fit, more: onRecommend }] : []),
-    { key: 'companies', list: [], more: onExplore },
-    { key: 'recent', list: recent, more: onExplore },
-    { key: 'closing', list: closing, more: onExplore },
-    ...(again.length > 0 ? [{ key: 'again' as const, list: again }] : []),
-  ]
+  // 공고 줄의 자료와 전체 보기예요. 비어 있는 줄(이력서가 없을 때의 나와 잘 맞는 공고 등)은 두지 않아요.
+  const postingRows: Record<keyof typeof L.rows, { list: JobPosting[]; more?: () => void }> = {
+    fit: { list: fit, more: onRecommend },
+    recent: { list: recent, more: onExplore },
+    closing: { list: closing, more: onExplore },
+    again: { list: again },
+  }
+
+  const sectionHeading = (key: string, title: string, more?: () => void) => (
+    <div className="flex items-center justify-between gap-4">
+      <h2 id={`home-${key}`} className="text-[15px] font-semibold text-gray-900">
+        {title}
+      </h2>
+      {more && (
+        <button
+          type="button"
+          onClick={() => {
+            track('home_more_click', { row: key })
+            more()
+          }}
+          className="inline-flex h-8 items-center gap-1 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand"
+        >
+          {L.seeAll}
+          <ChevronRightIcon className="size-3.5" />
+        </button>
+      )}
+    </div>
+  )
+
+  /** 배치(`useHomeLayout`)에 적힌 줄 하나를 그려요. 숨긴 줄은 부르지 않아요. */
+  function renderSection(key: HomeSection) {
+    if (key === 'hot')
+      return (
+        <section key={key} aria-labelledby="home-hot">
+          <h2 id="home-hot" className="text-[15px] font-semibold text-gray-900">
+            {L.hot}
+          </h2>
+          <HotCompanies
+            companies={hot}
+            onSelect={(company) => {
+              track('home_company_select', { company: company.id, from: 'hot' })
+              onCompany(company.id)
+            }}
+          />
+        </section>
+      )
+    if (key === 'companies')
+      return (
+        <section key={key} aria-labelledby="home-companies">
+          {sectionHeading(key, L.companies, onExplore)}
+          <CompanyCarousel
+            companies={browse}
+            onSelect={(company) => {
+              track('home_company_select', { company: company.id, from: 'browse' })
+              onCompany(company.id)
+            }}
+          />
+        </section>
+      )
+    if (key === 'contests')
+      return (
+        <ContestRows
+          key={key}
+          onAll={onContests}
+          onOpen={(contest) => {
+            const main = contest.links[0]
+            if (main) browser.viewPage({ url: main.url, title: contest.title })
+          }}
+        />
+      )
+    const { list, more } = postingRows[key]
+    if (list.length === 0) return null
+    return (
+      <section key={key} aria-labelledby={`home-${key}`}>
+        {sectionHeading(key, L.rows[key], more)}
+        <ul className={`mt-3 ${cardsLine}`}>
+          {/* 모든 줄이 공고 탐색과 같은 카드를 써요. 카드를 누르면 원문을 옆에 열고, 분석하기는 바로 진단해요. */}
+          {list.map((posting, order) => (
+            <JobCard
+              key={posting.id}
+              posting={posting}
+              resume={resume}
+              fit={fitOf(posting, resume)}
+              order={order}
+              onOpen={() => browser.view(posting)}
+              onCompany={() => browser.viewCompany(posting.companyId)}
+              onAnalyze={() => pick(posting)}
+            />
+          ))}
+        </ul>
+      </section>
+    )
+  }
 
   return (
     <SplitView side={browser.side}>
@@ -469,75 +559,25 @@ export function Home({ onPick, onExplore, onRecommend, onCompany, onContests }: 
 
           {/* 휴대폰에서는 위의 덩어리가 없어서, 맨 위 로고 줄(AppFrame) 아래 16px에서 기다리지 않고 바로 떠올라요. */}
           <div className="flex animate-rise flex-col gap-9 max-sm:pt-[72px] sm:[animation-delay:120ms]">
-            <section aria-labelledby="home-hot">
-              <h2 id="home-hot" className="text-[15px] font-semibold text-gray-900">
-                {L.hot}
-              </h2>
-              <HotCompanies
-                companies={hot}
-                onSelect={(company) => {
-                  track('home_company_select', { company: company.id, from: 'hot' })
-                  onCompany(company.id)
+            {layout.order.filter((key) => !layout.hidden.includes(key)).map(renderSection)}
+            {/* 배치는 맨 아래에서 바꿔요. 줄을 다 숨겨도 이 버튼은 남아요. */}
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={() => {
+                  track('home_layout_open')
+                  setEditing(true)
                 }}
-              />
-            </section>
-            {rows.map(({ key, list, more }) => (
-              <section key={key} aria-labelledby={`home-${key}`}>
-                <div className="flex items-center justify-between gap-4">
-                  <h2 id={`home-${key}`} className="text-[15px] font-semibold text-gray-900">
-                    {key === 'companies' ? L.companies : L.rows[key]}
-                  </h2>
-                  {more && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        track('home_more_click', { row: key })
-                        more()
-                      }}
-                      className="inline-flex h-8 items-center gap-1 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand"
-                    >
-                      {L.seeAll}
-                      <ChevronRightIcon className="size-3.5" />
-                    </button>
-                  )}
-                </div>
-                {key === 'companies' ? (
-                  <CompanyCarousel
-                    companies={browse}
-                    onSelect={(company) => {
-                      track('home_company_select', { company: company.id, from: 'browse' })
-                      onCompany(company.id)
-                    }}
-                  />
-                ) : (
-                  <ul className={`mt-3 ${cardsLine}`}>
-                    {/* 모든 줄이 공고 탐색과 같은 카드를 써요. 카드를 누르면 원문을 옆에 열고, 분석하기는 바로 진단해요. */}
-                    {list.map((posting, order) => (
-                      <JobCard
-                        key={posting.id}
-                        posting={posting}
-                        resume={resume}
-                        fit={fitOf(posting, resume)}
-                        order={order}
-                        onOpen={() => browser.view(posting)}
-                        onCompany={() => browser.viewCompany(posting.companyId)}
-                        onAnalyze={() => pick(posting)}
-                      />
-                    ))}
-                  </ul>
-                )}
-              </section>
-            ))}
-            <ContestRows
-              onAll={onContests}
-              onOpen={(contest) => {
-                const main = contest.links[0]
-                if (main) browser.viewPage({ url: main.url, title: contest.title })
-              }}
-            />
+                className={`${ghostButton} inline-flex items-center gap-1.5 px-3 text-gray-500`}
+              >
+                <GridIcon className="size-3.5" />
+                {layoutText.edit}
+              </button>
+            </div>
           </div>
         </div>
       </main>
+      {editing && <HomeLayoutDialog onClose={() => setEditing(false)} />}
     </SplitView>
   )
 }
