@@ -129,8 +129,9 @@ interface Props {
 // 휴대폰 서랍(data-drawer)에서는 손가락으로 누르기 쉽게 줄을 44px로 키우고 글자도 조금 키워요.
 const link = 'relative flex h-10 w-full items-center rounded-lg px-3 text-left text-[13px] transition-colors group-data-[drawer]/side:h-11 group-data-[drawer]/side:text-[15px]'
 // 휴대폰에는 hover가 없어서, 누르는 순간(active) 바로 바탕이 깔려야 눌렸다는 게 보여요.
-// 고른 메뉴는 마우스를 올린 줄보다 확실히 짙은 바탕에 굵은 글자라, hover와 헷갈리지 않아요.
-const tone = (active: boolean) => (active ? 'bg-gray-300/70 font-semibold text-gray-900' : 'font-medium text-gray-600 hover:bg-gray-200/40 hover:text-gray-900 active:bg-gray-200/70 active:text-gray-900')
+const tone = (active: boolean) => (active ? 'bg-gray-200 font-semibold text-gray-900' : 'font-medium text-gray-600 hover:bg-gray-200/40 hover:text-gray-900 active:bg-gray-200/70 active:text-gray-900')
+// 지금 보고 있는 화면(메뉴와 리포트)은 회색이 아니라 연한 메인 컬러 바탕에 메인 컬러 글자라, 투명한 사이드바 위에서도 한눈에 보여요.
+const current = 'bg-brand-soft font-semibold text-brand'
 /** 사이드바 아래의 아이콘 버튼이에요. 회색 사이드바 위라 한 단계 짙은 회색으로 깔려요. */
 const sideIconButton = 'group-data-[drawer]/side:size-11 flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-gray-200/50 hover:text-gray-700 active:bg-gray-200/70'
 
@@ -166,7 +167,7 @@ function ReportRow({ report, urgency, active, menuOpen, pinned, drag, dragging, 
       draggable
       {...drag}
       // 마감된 줄은 글자만 흐리게 해요. 줄 전체를 흐리게 하면 그 안의 메뉴까지 흐려지고 아래 줄에 가려져요. 메뉴가 열린 줄은 위로 올려요.
-      className={`group relative flex items-center rounded-xl transition-colors ${tone(active || menuOpen)} ${dragging ? 'opacity-40' : ''} ${menuOpen ? 'z-20' : ''} ${
+      className={`group relative flex items-center rounded-xl transition-colors ${active ? current : tone(menuOpen)} ${dragging ? 'opacity-40' : ''} ${menuOpen ? 'z-20' : ''} ${
         mark ? `before:absolute before:inset-x-2 before:h-0.5 before:rounded-full before:bg-brand ${mark === 'before' ? 'before:-top-px' : 'before:-bottom-px'}` : ''
       }`}
     >
@@ -292,7 +293,7 @@ function NavLink({ href, active, onClick, icon, label, shortcut, trailing, locke
       </Tip>
     )
   return (
-    <a href={href} aria-current={active ? 'page' : undefined} onClick={followLink(onClick)} className={`${link} mt-1.5 gap-2 ${tone(active)}`}>
+    <a href={href} aria-current={active ? 'page' : undefined} onClick={followLink(onClick)} className={`${link} mt-1.5 gap-2 ${active ? current : tone(false)}`}>
       {icon}
       <span className="flex-1">{label}</span>
       {shortcut && <Kbd>{shortcut}</Kbd>}
