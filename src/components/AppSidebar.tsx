@@ -126,12 +126,13 @@ interface Props {
   onLogin?: () => void
 }
 
-const link = 'relative flex h-9 w-full items-center rounded-lg px-3 text-left text-[13px] transition-colors'
+// 휴대폰 서랍(data-drawer)에서는 손가락으로 누르기 쉽게 줄을 44px로 키우고 글자도 조금 키워요.
+const link = 'relative flex h-9 w-full items-center rounded-lg px-3 text-left text-[13px] transition-colors group-data-[drawer]/side:h-11 group-data-[drawer]/side:text-[15px]'
 // 휴대폰에는 hover가 없어서, 누르는 순간(active) 바로 바탕이 깔려야 눌렸다는 게 보여요.
 // 고른 메뉴는 마우스를 올린 줄보다 확실히 짙은 바탕에 굵은 글자라, hover와 헷갈리지 않아요.
 const tone = (active: boolean) => (active ? 'bg-gray-200 font-semibold text-gray-900' : 'font-medium text-gray-600 hover:bg-gray-200/40 hover:text-gray-900 active:bg-gray-200/70 active:text-gray-900')
 /** 사이드바 아래의 아이콘 버튼이에요. 회색 사이드바 위라 한 단계 짙은 회색으로 깔려요. */
-const sideIconButton = 'flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-gray-200/50 hover:text-gray-700 active:bg-gray-200/70'
+const sideIconButton = 'group-data-[drawer]/side:size-11 flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-gray-200/50 hover:text-gray-700 active:bg-gray-200/70'
 
 /** 리포트 줄을 끌어 옮길 때 놓일 자리예요. 위로 옮기면 그 줄의 위, 아래로 옮기면 아래에 메인 컬러 선이 생겨요. */
 type DropMark = 'before' | 'after' | null
@@ -173,23 +174,23 @@ function ReportRow({ report, urgency, active, menuOpen, pinned, drag, dragging, 
         href={`/r/${report.id}`}
         aria-current={active ? 'page' : undefined}
         onClick={followLink(onOpen)}
-        className={`min-w-0 flex-1 px-3 py-2 ${urgency.kind === 'closed' && !active ? 'opacity-60' : ''}`}
+        className={`min-w-0 flex-1 px-3 py-2 group-data-[drawer]/side:py-3 ${urgency.kind === 'closed' && !active ? 'opacity-60' : ''}`}
       >
-        <p className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-900">
+        <p className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-900 group-data-[drawer]/side:text-[15px]">
           {pinned && <PinIcon className="size-3 shrink-0 text-gray-400" label={list.pinned} />}
           <span className="min-w-0 truncate">{company.name}</span>
           {report.status === 'done' && <span className={`shrink-0 text-[12px] font-medium tabular-nums ${fitColor(report.fitScore).text}`}>{report.fitScore}%</span>}
         </p>
-        <p className="mt-0.5 flex items-center justify-between gap-2 text-xs text-gray-400">
+        <p className="mt-0.5 flex items-center justify-between gap-2 text-xs text-gray-400 group-data-[drawer]/side:text-[13px]">
           <span className="min-w-0 truncate">{posting?.title ?? ''}</span>
           {/* 만든 때 대신 마감까지 남은 날을 적어서, 무엇부터 챙길지 바로 보여요. */}
           <UrgencyLabel report={report} urgency={urgency} />
         </p>
       </a>
 
-      {/* 평소에는 자리를 차지하지 않다가, 마우스를 올리면 시간 옆으로 부드럽게 밀고 들어와요. */}
+      {/* 평소에는 자리를 차지하지 않다가, 마우스를 올리면 시간 옆으로 부드럽게 밀고 들어와요. 휴대폰 서랍에는 hover가 없어서 늘 보여요. */}
       <div
-        className={`flex shrink-0 items-center overflow-hidden transition-[width,opacity] duration-200 ease-out group-hover:w-8 group-hover:opacity-100 group-focus-within:w-8 group-focus-within:opacity-100 ${
+        className={`flex shrink-0 items-center overflow-hidden transition-[width,opacity] duration-200 ease-out group-data-[drawer]/side:w-10 group-data-[drawer]/side:opacity-100 group-hover:w-8 group-hover:opacity-100 group-focus-within:w-8 group-focus-within:opacity-100 ${
           menuOpen ? 'w-8 opacity-100' : 'w-0 opacity-0'
         }`}
       >
@@ -199,7 +200,7 @@ function ReportRow({ report, urgency, active, menuOpen, pinned, drag, dragging, 
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           onClick={onToggleMenu}
-          className="flex size-7 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700"
+          className="flex size-7 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-200 hover:text-gray-700 group-data-[drawer]/side:size-9"
         >
           <DotsIcon />
         </button>
@@ -229,7 +230,7 @@ function ResumeFolder({ group, open, onToggle }: { group: ResumeGroup; open: boo
       aria-expanded={open}
       aria-label={list.toggle(name)}
       onClick={onToggle}
-      className="flex h-8 w-full items-center gap-1.5 rounded-lg px-2 text-left text-[12.5px] font-medium text-gray-600 transition-colors hover:bg-gray-200/50 hover:text-gray-900 active:bg-gray-200/70"
+      className="flex h-8 w-full items-center gap-1.5 rounded-lg px-2 text-left text-[12.5px] group-data-[drawer]/side:h-11 group-data-[drawer]/side:text-[14px] font-medium text-gray-600 transition-colors hover:bg-gray-200/50 hover:text-gray-900 active:bg-gray-200/70"
     >
       <ChevronDownIcon className={`size-3 shrink-0 text-gray-400 transition-transform ${open ? '' : '-rotate-90'}`} />
       {/* 대표 이력서 폴더는 서류 아이콘 대신 메인 컬러 별이에요. */}
@@ -360,7 +361,8 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
   return (
     <aside
       data-vibrant={vibrancy && !drawer ? '' : undefined}
-      className={`relative z-30 flex shrink-0 flex-col ${drawer ? 'w-full bg-gray-50/75 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl backdrop-saturate-150' : `w-72 border-r border-gray-200 ${vibrancy ? '' : 'bg-gray-50'}`}`}
+      data-drawer={drawer ? '' : undefined}
+      className={`group/side relative z-30 flex shrink-0 flex-col ${drawer ? 'w-full bg-gray-50/75 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl backdrop-saturate-150' : `w-72 border-r border-gray-200 ${vibrancy ? '' : 'bg-gray-50'}`}`}
     >
       {isWebApp ? (
         // 웹에서는 왼쪽 위의 사이드바 버튼 옆에 로고를 두고, 누르면 새 진단 화면으로 가요. 높이는 헤더와 맞춰요.
