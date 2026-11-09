@@ -167,10 +167,10 @@ export const textArea = `w-full resize-none ${buttonRadius} p-4 text-base leadin
 
 /** 칸 안의 작은 제목(판단 근거, 보완 방법 등)이에요. */
 export const label = 'text-[12.5px] font-medium text-gray-500'
-/** 테두리를 두른 이름표의 크기와 모양이에요(28px). 색은 덧붙여서 정해요. `tag`와 스킬 이름표(`SkillChip`, `GapParts`)가 같이 써요. */
+/** 이름표의 크기와 모양이에요(28px). 색은 덧붙여서 정해요. `tag`와 스킬 이름표(`SkillChip`, `GapParts`)가 같이 써요. */
 export const chipShape = 'inline-flex h-7 max-w-full items-center gap-1.5 rounded-md border px-2.5 text-[12.5px]'
-/** 작은 이름표의 모양이에요. 테두리를 두른 흰 칸이에요. */
-export const tag = `${chipShape} border-gray-200 bg-white text-gray-700`
+/** 작은 이름표의 모양이에요. 테두리 없이 옅은 회색으로 채운 칸이에요. */
+export const tag = `${chipShape} border-transparent bg-gray-200/70 text-gray-700`
 
 const BADGE_TONES = {
   /** 회색 칸 위의 기본 이름표 */
@@ -185,8 +185,8 @@ const BADGE_TONES = {
   red: 'bg-red-50 text-red-600',
   /** 적합도 중간 */
   amber: 'bg-amber-50 text-amber-700',
-  /** 회색 칸 안의 흰 이름표 */
-  white: 'bg-white text-gray-600',
+  /** 예전의 흰 이름표. 흰 칸이 도드라져 보여서 지금은 회색 이름표와 같아요 */
+  white: 'bg-gray-200/70 text-gray-600',
 }
 
 /**

@@ -285,10 +285,10 @@ export function FitBadge({ fit, compact = false }: { fit: number | null; compact
 type ChipTone = 'plain' | 'met' | 'partial' | 'missing'
 
 const CHIP_TONES: Record<ChipTone, string> = {
-  plain: 'border-gray-200 bg-white text-gray-700',
+  plain: 'border-transparent bg-gray-200/70 text-gray-700',
   met: 'border-brand bg-brand-soft text-brand-hover',
-  partial: 'border-dashed border-gray-300 bg-white text-gray-700',
-  missing: 'border-dashed border-gray-200 bg-white text-gray-400',
+  partial: 'border-dashed border-gray-300 bg-transparent text-gray-700',
+  missing: 'border-dashed border-gray-300 bg-transparent text-gray-400',
 }
 
 /**
