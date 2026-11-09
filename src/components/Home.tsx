@@ -17,9 +17,6 @@ import { menuPanel } from './ui'
  */
 const TEXT = messages({
   ko: {
-    title: '어떤 기업에 맞춰 볼까요?',
-    description: '기업 이름이나 공고를 찾아 고르면, 내 이력서와 공고 사이의 갭을 진단해요',
-    descriptionNoResume: '어떤 회사나 직무를 목표로 하고 있나요?',
     label: '기업과 공고 찾기',
     noResult: (query: string) => `"${query}"에 맞는 공고가 없어요.`,
     rows: { recent: '따끈따끈 공고', fit: '나와 잘 맞는 공고', closing: '마감이 가까운 공고', again: '다시 볼 공고' },
@@ -30,9 +27,6 @@ const TEXT = messages({
     results: (count: number) => `${count}개의 공고`,
   },
   en: {
-    title: 'Which company should we measure against?',
-    description: 'Search for a company or posting and pick one to see the gap between your resume and the role',
-    descriptionNoResume: 'Which company or role are you aiming for?',
     label: 'Search companies and postings',
     noResult: (query: string) => `No postings match "${query}".`,
     rows: { recent: 'Just posted', fit: 'Good fits for you', closing: 'Closing soon', again: 'Worth another look' },
@@ -44,27 +38,10 @@ const TEXT = messages({
   },
 })
 
-const WORD_STAGGER_MS = 80
 const ROW_SIZE = 8
 /** 공고 줄은 공고 탐색과 같은 카드를 화면 폭에 들어가는 만큼만 한 줄로 늘어놓아요. 넘치는 카드는 아래 줄로 가서 가려져요. */
 const cardsLine = 'grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] auto-rows-[0px] grid-rows-[auto] gap-x-4 overflow-hidden'
 
-/** 타이틀을 어절 단위로 나눠요. 어절이 하나씩 흐릿하게 떠오르며 나타나요. */
-function Title({ text }: { text: string }) {
-  const words = text.split(' ')
-  return (
-    <h1 aria-label={text} className="text-balance text-center text-[24px] font-semibold leading-snug text-gray-900 sm:text-[30px]">
-      {words.map((word, index) => (
-        <span key={`${text}:${index}`} aria-hidden="true">
-          <span className="inline-block animate-word" style={{ animationDelay: `${index * WORD_STAGGER_MS}ms` }}>
-            {word}
-          </span>
-          {index < words.length - 1 && ' '}
-        </span>
-      ))}
-    </h1>
-  )
-}
 
 interface Props {
   /** 공고를 골라 진단을 시작해요. */
@@ -288,15 +265,11 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
     <SplitView side={browser.side}>
       <main className="relative flex-1 overflow-hidden">
         <div className={`relative h-full overflow-y-auto ${gutter} pb-10`}>
-          {/* 휴대폰에서는 타이틀, 설명, 검색창을 두지 않고 바로 공고 줄부터 보여줘요. 검색은 공고 탐색에서 해요.
-              로고는 사이드바에 있어서 여기에는 두지 않고, 공고 줄이 먼저 눈에 들어오게 위 여백도 줄였어요. */}
-          <div className="mx-auto w-full max-w-lg pt-[max(3.5rem,9vh)] pb-10 max-sm:hidden sm:pb-12">
-            <Title text={L.title} />
-            <p className="mt-3 mb-7 animate-rise text-balance break-keep text-center text-[13px] leading-relaxed text-gray-500 sm:mb-8 sm:text-[14px]" style={{ animationDelay: '250ms' }}>
-              {resume ? L.description : L.descriptionNoResume}
-            </p>
+          {/* 로고, 타이틀, 설명은 두지 않고 검색창 하나만 맨 위에 둬서 공고와 기업이 한 화면에 더 많이 보여요.
+              휴대폰에서는 검색창도 두지 않고 바로 공고 줄부터 보여줘요. 검색은 공고 탐색에서 해요. */}
+          <div className="mx-auto w-full max-w-lg pt-12 pb-10 max-sm:hidden">
             {/* 검색 결과가 아래의 공고 줄 위로 펼쳐지게, 검색창 덩어리를 한 칸 앞에 둬요. */}
-            <div className="relative z-10 animate-rise" style={{ animationDelay: '350ms' }}>
+            <div className="relative z-10 animate-rise">
               <form
                 onSubmit={submit}
                 role="search"
@@ -371,7 +344,7 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
           </div>
 
           {/* 휴대폰에서는 위의 덩어리가 없어서, 맨 위 로고 줄(AppFrame) 아래 16px에서 기다리지 않고 바로 떠올라요. */}
-          <div className="flex animate-rise flex-col gap-9 max-sm:pt-[72px] sm:[animation-delay:450ms]">
+          <div className="flex animate-rise flex-col gap-9 max-sm:pt-[72px] sm:[animation-delay:120ms]">
             <section aria-labelledby="home-hot">
               <h2 id="home-hot" className="text-[15px] font-semibold text-gray-900">
                 {L.hot}
