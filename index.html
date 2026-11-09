@@ -52,9 +52,12 @@
           var a = localStorage.getItem('javadda:app-accent')
           if (a && a !== 'blue') document.documentElement.setAttribute('data-accent', a)
         }
+        // 앱 2.8부터는 창 뒤에 macOS 사이드바 블러가 깔려서, 바탕을 비워 사이드바 자리에 블러가 보이게 해요(app.ts의 vibrancy와 같은 규칙).
+        var v = /JavaddaApp\/(\d+)\.(\d+)/.exec(navigator.userAgent)
+        if (v && (+v[1] > 2 || (+v[1] === 2 && +v[2] >= 8))) document.documentElement.setAttribute('data-vibrancy', '')
       } catch (e) {}
     </script>
-    <style>html.dark{color-scheme:dark;background:#1c1c1e}html.dark[data-accent]{background:none}</style>
+    <style>html.dark{color-scheme:dark;background:#1c1c1e}html.dark[data-accent]{background:none}html[data-vibrancy],html[data-vibrancy] body{background:transparent}</style>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link
       rel="stylesheet"

@@ -145,6 +145,15 @@
 
   body {
     background: var(--color-white);
+  }
+
+  /* 앱 2.8부터는 창 뒤의 macOS 사이드바 블러가 비치게 바탕을 비워요(index.html의 data-vibrancy). 본문 화면은 따로 흰 바탕을 칠해요. */
+  html[data-vibrancy],
+  html[data-vibrancy] body {
+    background: transparent;
+  }
+
+  body {
     color: var(--color-gray-900);
     word-break: keep-all;
     overflow-wrap: anywhere;

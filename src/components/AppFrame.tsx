@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState, type ComponentProps, type ReactNode } from 'react'
 import { useDismiss } from '../hooks/useDismiss'
 import { track } from '../lib/analytics'
-import { isWebApp } from '../lib/app'
+import { isWebApp, vibrancy } from '../lib/app'
 import { messages, useMessages } from '../lib/i18n'
 import { followLink } from '../lib/links'
 import { readFlag, writeFlag } from '../lib/storage'
@@ -131,7 +131,7 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
 
   return (
     // 사이드바가 옆에 없으면 화면의 제목 줄이 사이드바 버튼 옆, 같은 줄로 올라가요(index.css의 page-header 규칙).
-    <div data-sidebar={narrow ? 'drawer' : sidebarOpen ? 'open' : 'closed'} data-shell={isWebApp ? 'web' : 'mac'} className="relative flex h-dvh bg-white">
+    <div data-sidebar={narrow ? 'drawer' : sidebarOpen ? 'open' : 'closed'} data-shell={isWebApp ? 'web' : 'mac'} className={`relative flex h-dvh ${vibrancy ? '' : 'bg-white'}`}>
       {/* 사이드바 접기 버튼은 늘 같은 자리에 있어서 접어도 펴도 움직이지 않아요. 앱에서는 창 버튼 바로 옆, 웹에서는 왼쪽 위예요. 좁은 화면에서는 서랍을 여는 햄버거 그림이에요. */}
       <button
         type="button"
@@ -158,7 +158,7 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
             <Suspense fallback={<aside className="w-full bg-gray-50/75 backdrop-blur-2xl" />}>{panel}</Suspense>
           </div>
         ) : (
-          <Suspense fallback={<aside data-app-drag className="w-72 shrink-0 border-r border-gray-200 bg-gray-50" />}>{panel}</Suspense>
+          <Suspense fallback={<aside data-app-drag className={`w-72 shrink-0 border-r border-gray-200 ${vibrancy ? '' : 'bg-gray-50'}`} />}>{panel}</Suspense>
         ))}
       {children}
       {settingsOpen && (

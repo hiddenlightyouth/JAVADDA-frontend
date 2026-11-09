@@ -19,6 +19,9 @@ export function appAtLeast(minimum: string): boolean {
   return true
 }
 
+/** 앱 창 뒤에 macOS 사이드바 블러가 깔려 있는지(앱 2.8부터). 이때 바탕과 사이드바를 비워서 블러가 비치게 해요. index.html의 data-vibrancy와 같은 규칙이에요. */
+export const vibrancy = appAtLeast('2.8')
+
 /** macOS 앱 설치 파일. 앱 레포에서 만든 DMG를 `public/download`에 넣어 둬요. 새 버전도 같은 이름으로 덮어써서 주소가 바뀌지 않아요. */
 export const MAC_DOWNLOAD = '/download/javadda/Javadda.dmg'
 export const MAC_SUPPORT = 'for Apple Silicon'
