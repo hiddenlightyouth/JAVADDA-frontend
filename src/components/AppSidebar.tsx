@@ -127,10 +127,10 @@ interface Props {
 }
 
 // 휴대폰 서랍(data-drawer)에서는 손가락으로 누르기 쉽게 줄을 44px로 키우고 글자도 조금 키워요.
-const link = 'relative flex h-9 w-full items-center rounded-lg px-3 text-left text-[13px] transition-colors group-data-[drawer]/side:h-11 group-data-[drawer]/side:text-[15px]'
+const link = 'relative flex h-10 w-full items-center rounded-lg px-3 text-left text-[13px] transition-colors group-data-[drawer]/side:h-11 group-data-[drawer]/side:text-[15px]'
 // 휴대폰에는 hover가 없어서, 누르는 순간(active) 바로 바탕이 깔려야 눌렸다는 게 보여요.
 // 고른 메뉴는 마우스를 올린 줄보다 확실히 짙은 바탕에 굵은 글자라, hover와 헷갈리지 않아요.
-const tone = (active: boolean) => (active ? 'bg-gray-200 font-semibold text-gray-900' : 'font-medium text-gray-600 hover:bg-gray-200/40 hover:text-gray-900 active:bg-gray-200/70 active:text-gray-900')
+const tone = (active: boolean) => (active ? 'bg-gray-300/70 font-semibold text-gray-900' : 'font-medium text-gray-600 hover:bg-gray-200/40 hover:text-gray-900 active:bg-gray-200/70 active:text-gray-900')
 /** 사이드바 아래의 아이콘 버튼이에요. 회색 사이드바 위라 한 단계 짙은 회색으로 깔려요. */
 const sideIconButton = 'group-data-[drawer]/side:size-11 flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-gray-200/50 hover:text-gray-700 active:bg-gray-200/70'
 
@@ -174,7 +174,7 @@ function ReportRow({ report, urgency, active, menuOpen, pinned, drag, dragging, 
         href={`/r/${report.id}`}
         aria-current={active ? 'page' : undefined}
         onClick={followLink(onOpen)}
-        className={`min-w-0 flex-1 px-3 py-2 group-data-[drawer]/side:py-3 ${urgency.kind === 'closed' && !active ? 'opacity-60' : ''}`}
+        className={`min-w-0 flex-1 px-3 py-2.5 group-data-[drawer]/side:py-3 ${urgency.kind === 'closed' && !active ? 'opacity-60' : ''}`}
       >
         <p className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-900 group-data-[drawer]/side:text-[15px]">
           {pinned && <PinIcon className="size-3 shrink-0 text-gray-400" label={list.pinned} />}
@@ -366,10 +366,13 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
     >
       {isWebApp ? (
         // 웹에서는 왼쪽 위의 사이드바 버튼 옆에 로고를 두고, 누르면 새 진단 화면으로 가요. 높이는 헤더와 맞춰요.
+        // 휴대폰 서랍에서는 AppFrame이 서랍 위에 늘 그려 두는 로고가 이 자리에 보여서, 자리만 비워 둬요. 같이 그리면 서랍과 함께 로고가 미끄러져 들어와요.
         <div className="flex h-14 shrink-0 items-center pl-12">
-          <a href="/app" onClick={followLink(onNew)} className="inline-flex items-center">
-            <ScriptMark className="h-6 w-auto" />
-          </a>
+          {!drawer && (
+            <a href="/app" onClick={followLink(onNew)} className="inline-flex items-center">
+              <ScriptMark className="h-6 w-auto" />
+            </a>
+          )}
         </div>
       ) : (
         <div data-app-drag className="h-11 shrink-0" />

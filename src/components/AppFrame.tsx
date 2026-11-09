@@ -94,6 +94,21 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
   useEffect(() => {
     if (!narrow) setDrawerOpen(false)
   }, [narrow])
+  /** 닫은 뒤에도 빠져나가는 움직임이 끝날 때까지 서랍을 그려 둬요. */
+  const [drawerShown, setDrawerShown] = useState(false)
+  useEffect(() => {
+    if (drawerOpen) {
+      setDrawerShown(true)
+      return
+    }
+    if (!narrow) {
+      setDrawerShown(false)
+      return
+    }
+    // 움직임이 끝나면 onAnimationEnd가 지우지만, 화면이 뒤에 있어 그리지 않으면 끝 알림이 늦어서 시간으로도 지워요.
+    const timer = window.setTimeout(() => setDrawerShown(false), 260)
+    return () => window.clearTimeout(timer)
+  }, [drawerOpen, narrow])
   const open = narrow ? drawerOpen : sidebarOpen
   // 앱 3.0은 sidebar 메시지로 폭을 받으면 사이드바 자리에 유리 패널을 띄우는데, 테두리가 두드러져 웹의 사이드바와 달라 보여서 폭을 알리지 않아요. 알리지 않으면 앱은 유리를 띄우지 않아요.
   const toggle = () => (narrow ? setDrawerOpen(!drawerOpen) : onToggleSidebar(!sidebarOpen))
@@ -144,18 +159,24 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
         {narrow ? drawerOpen ? <CloseIcon className="size-4" /> : <MenuIcon /> : <SidebarIcon />}
       </button>
       {/* 휴대폰에서는 맨 위 줄의 사이드바 버튼 옆에 로고를 둬요. 서랍의 로고와 같은 자리, 같은 크기라 서랍을 열고 닫아도 움직이지 않아요.
-          화면의 제목 줄은 이 줄 아래로 내려가요(index.css의 data-sidebar='drawer' 규칙). 바탕은 App이 늘 겹쳐 두는 반투명 블러 헤더(h-14)라, 로고만 그 위(z-21)에 얹어요. 헤더 아래에 두면 헤더의 블러에 로고가 뭉개져요. */}
+          화면의 제목 줄은 이 줄 아래로 내려가요(index.css의 data-sidebar='drawer' 규칙). 바탕은 App이 늘 겹쳐 두는 반투명 블러 헤더(h-14)라, 로고만 그 위에 얹어요. 헤더 아래에 두면 헤더의 블러에 로고가 뭉개져요.
+          서랍(z-30)보다도 위(z-31)라 서랍이 미끄러져 들어오고 나가도 로고는 제자리에 있어요. 서랍은 이 자리를 비워 두고 로고를 따로 그리지 않아요. */}
       {narrow && (
-        <div className="absolute top-0 left-0 z-[21] flex h-14 items-center pl-12">
+        <div className="absolute top-0 left-0 z-[31] flex h-14 items-center pl-12">
           <a href="/app" onClick={followLink(sidebar.onNew)} className="inline-flex items-center">
             <ScriptMark className="h-6 w-auto" />
           </a>
         </div>
       )}
-      {open &&
+      {(narrow ? drawerShown : open) &&
         (narrow ? (
-          // 휴대폰에서는 서랍이 화면 전체를 덮어요. 바탕은 반투명이라 뒤의 화면이 흐리게 비쳐요. 빨리 떠야 빠릿하게 느껴져서 짧게 들어와요.
-          <div className="fixed inset-0 z-30 flex animate-drawer-in">
+          // 휴대폰에서는 서랍이 화면 전체를 덮어요. 바탕은 반투명이라 뒤의 화면이 흐리게 비쳐요. 빨리 떠야 빠릿하게 느껴져서 짧게 들어오고, 닫을 때는 왼쪽으로 빠져나간 뒤에 사라져요.
+          <div
+            className={`fixed inset-0 z-30 flex ${drawerOpen ? 'animate-drawer-in' : 'pointer-events-none animate-drawer-out'}`}
+            onAnimationEnd={(event) => {
+              if (event.target === event.currentTarget && !drawerOpen) setDrawerShown(false)
+            }}
+          >
             <Suspense fallback={<aside className="w-full bg-gray-50/75 backdrop-blur-2xl" />}>{panel}</Suspense>
           </div>
         ) : (

@@ -20,6 +20,7 @@
   --animate-slide-in-left: slide-in-left 0.36s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-fade: fade 0.2s ease-out both;
   --animate-drawer-in: drawer-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-drawer-out: drawer-out 0.2s cubic-bezier(0.4, 0, 1, 1) both;
   --animate-grow: grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-word: word 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-skeleton: skeleton 1.4s ease-in-out infinite;
@@ -70,6 +71,16 @@
     to {
       opacity: 1;
       transform: translateX(0);
+    }
+  }
+
+  /* 닫을 때는 들어온 길로 조금 더 빨리 빠져나가요. */
+  @keyframes drawer-out {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-100%);
     }
   }
 
