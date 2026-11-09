@@ -274,7 +274,7 @@ export default function App() {
           feedback={feedback.ready}
         />
       ) : (
-        <Home onPick={openDiagnose} onExplore={openExplore} onRecommend={openRecommend} onResume={openResume} onCompany={openCompanyPage} />
+        <Home onPick={openDiagnose} onExplore={openExplore} onRecommend={openRecommend} onResume={openResume} onCompany={openCompanyPage} onContests={openContests} />
       )}
       </Suspense>
       {feedback.bugOpen && (

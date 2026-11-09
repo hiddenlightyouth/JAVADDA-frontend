@@ -68,6 +68,9 @@ const TEXT = messages({
   },
 })
 
+/** 새 진단 화면의 공모전 줄도 분야 이름을 같이 써요. */
+export { TEXT as CONTEST_TEXT }
+
 function savedCategory(): ContestCategory | null {
   const value = readItem(CATEGORY_KEY)
   return CONTEST_CATEGORIES.includes(value as ContestCategory) ? (value as ContestCategory) : null
@@ -255,7 +258,7 @@ function Period({ contest }: { contest: Contest }) {
  * 갤러리형 카드예요. 공고 탐색의 카드(`JobCard`)와 같은 모양으로, 오른쪽 위 홈에 마감까지 남은 날을 적어요.
  * 왼쪽에 포스터를 크게(3:4) 두고, 오른쪽에 주최와 첫 분야, 제목, 접수 기간, 분야 이름표를 적어요. 맨 아래 줄에 상금과 공모전 보기가 있어요.
  */
-function ContestCard({ contest, order, onOpen }: { contest: Contest; order: number; onOpen: (contest: Contest) => void }) {
+export function ContestCard({ contest, order, onOpen }: { contest: Contest; order: number; onOpen: (contest: Contest) => void }) {
   const L = useMessages(TEXT)
   const [ref, size] = useElementSize<HTMLLIElement>()
   const open = () => onOpen(contest)

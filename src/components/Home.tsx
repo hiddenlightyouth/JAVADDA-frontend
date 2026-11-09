@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { track } from '../lib/analytics'
+import { CONTEST_CATEGORIES, contestDaysLeft, fetchContests, type Contest, type ContestCategory } from '../lib/contests'
 import { COMPANIES, companyOf, fitOf, majorCompanies, POSTINGS, postingOf, RECOMMEND_MIN_FIT, sortPostings, useReports, useResume, type Company, type JobPosting } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
+import { readItem, writeItem } from '../lib/storage'
 import { gutter } from './AppPage'
 import { Carousel } from './Carousel'
-import { CompanyMark, DiagnosedTag, FitBadge } from './GapParts'
+import { CompanyMark, DiagnosedTag, FitBadge, filterChip, filterRow } from './GapParts'
+import { CONTEST_TEXT, ContestCard } from './labs/Contests'
 import { JobCard, useJobBrowser } from './JobCard'
 import { ChevronRightIcon, SearchIcon } from './Icons'
 import { SplitView } from './PostingBrowser'
@@ -25,6 +28,9 @@ const TEXT = messages({
     open: (count: number) => `채용 중 ${count}개`,
     seeAll: '전체 보기',
     results: (count: number) => `${count}개의 공고`,
+    contests: '공모전',
+    contestRows: { closing: '마감이 가까운 공모전', roomy: '준비할 기간이 충분한 공모전' },
+    contestEmpty: '이 분야에는 지금 열린 공모전이 없어요.',
   },
   en: {
     label: 'Search companies and postings',
@@ -35,6 +41,9 @@ const TEXT = messages({
     open: (count: number) => `${count} open`,
     seeAll: 'See all',
     results: (count: number) => `${count} ${count === 1 ? 'posting' : 'postings'}`,
+    contests: 'Contests',
+    contestRows: { closing: 'Contests closing soon', roomy: 'Contests with time to prepare' },
+    contestEmpty: 'No open contests in this category right now.',
   },
 })
 
@@ -51,6 +60,128 @@ interface Props {
   onResume: () => void
   /** 기업 상세(`/company/기업아이디`)를 열어요. */
   onCompany: (companyId: string) => void
+  /** 공모전 화면(`/contests`)을 열어요. */
+  onContests: () => void
+}
+
+/** 마감이 가까운 공모전은 마감까지 이만큼(일) 남은 것까지예요. 오늘 마감도 넣어요. */
+const CONTEST_CLOSING_DAYS = 7
+/** 준비할 기간이 충분한 공모전은 마감까지 이만큼(일) 넘게 남은 것이에요. 한 달이면 팀을 꾸리고 결과물을 만들 수 있어요. */
+const CONTEST_ROOMY_DAYS = 30
+/** 마지막으로 고른 공모전 분야예요. 공모전 화면의 분야(`javadda:contests-category`)와 따로 기억해요. */
+const CONTEST_CATEGORY_KEY = 'javadda:home-contest-category'
+
+function savedContestCategory(): ContestCategory | null {
+  const value = readItem(CONTEST_CATEGORY_KEY)
+  return CONTEST_CATEGORIES.includes(value as ContestCategory) ? (value as ContestCategory) : null
+}
+
+/**
+ * 공모전 줄 두 개예요. 마감이 가까운 공모전과 준비할 기간이 충분한 공모전을 공모전 화면과 같은 카드(`ContestCard`)로 한 줄씩 늘어놓아요.
+ * 위의 분야 버튼으로 두 줄을 같이 거르고, 고른 분야는 이 기기에 기억해요. 받지 못했거나 공모전이 없으면 덩어리째 두지 않아요.
+ */
+function ContestRows({ onOpen, onAll }: { onOpen: (contest: Contest) => void; onAll: () => void }) {
+  const L = useMessages(TEXT)
+  const C = useMessages(CONTEST_TEXT)
+  const [contests, setContests] = useState<Contest[] | null>(null)
+  const [category, setCategory] = useState<ContestCategory | null>(savedContestCategory)
+
+  useEffect(() => {
+    let alive = true
+    fetchContests()
+      .then((list) => alive && setContests(list))
+      .catch(() => alive && setContests([]))
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  // 마감을 모르는 공모전은 어느 줄에도 넣지 않아서, 분야 버튼도 마감이 있는 공모전으로 세요.
+  const dated = useMemo(
+    () =>
+      (contests ?? [])
+        .map((contest) => ({ contest, left: contestDaysLeft(contest) }))
+        .filter((each): each is { contest: Contest; left: number } => each.left !== null)
+        .sort((a, b) => a.left - b.left),
+    [contests],
+  )
+  const present = useMemo(() => new Set(dated.flatMap(({ contest }) => contest.categories)), [dated])
+  const rows = useMemo(() => {
+    const inCategory = dated.filter(({ contest }) => !category || contest.categories.includes(category))
+    return [
+      { key: 'closing' as const, list: inCategory.filter(({ left }) => left <= CONTEST_CLOSING_DAYS).slice(0, ROW_SIZE) },
+      { key: 'roomy' as const, list: inCategory.filter(({ left }) => left > CONTEST_ROOMY_DAYS).slice(0, ROW_SIZE) },
+    ].filter((row) => row.list.length > 0)
+  }, [dated, category])
+
+  if (dated.length === 0) return null
+
+  const choose = (next: ContestCategory | null) => {
+    track('home_contest_category', { category: next ?? 'all' })
+    setCategory(next)
+    writeItem(CONTEST_CATEGORY_KEY, next ?? '')
+  }
+
+  return (
+    <section aria-labelledby="home-contests" className="flex flex-col gap-9">
+      <div>
+        <h2 id="home-contests" className="text-[15px] font-semibold text-gray-900">
+          {L.contests}
+        </h2>
+        <div role="radiogroup" aria-label={C.category} className={`mt-3 ${filterRow}`}>
+          <button type="button" role="radio" aria-checked={!category} onClick={() => choose(null)} className={`${filterChip(!category)} px-5`}>
+            {C.all}
+          </button>
+          {CONTEST_CATEGORIES.filter((each) => present.has(each) || each === category).map((each) => (
+            <button
+              key={each}
+              type="button"
+              role="radio"
+              aria-checked={category === each}
+              onClick={() => choose(category === each ? null : each)}
+              className={`${filterChip(category === each)} px-5`}
+            >
+              {C.categories[each]}
+            </button>
+          ))}
+        </div>
+        {rows.length === 0 && <p className="mt-4 text-[13px] text-gray-500">{L.contestEmpty}</p>}
+      </div>
+      {rows.map(({ key, list }) => (
+        <section key={key} aria-labelledby={`home-contest-${key}`}>
+          <div className="flex items-center justify-between gap-4">
+            <h3 id={`home-contest-${key}`} className="text-[15px] font-semibold text-gray-900">
+              {L.contestRows[key]}
+            </h3>
+            <button
+              type="button"
+              onClick={() => {
+                track('home_more_click', { row: `contest-${key}` })
+                onAll()
+              }}
+              className="inline-flex h-8 shrink-0 items-center gap-1 text-[13px] font-medium text-gray-500 transition-colors hover:text-brand"
+            >
+              {L.seeAll}
+              <ChevronRightIcon className="size-3.5" />
+            </button>
+          </div>
+          <ul className={`mt-3 ${cardsLine}`}>
+            {list.map(({ contest }, order) => (
+              <ContestCard
+                key={`${category}:${contest.id}`}
+                contest={contest}
+                order={order}
+                onOpen={(picked) => {
+                  track('home_contest_open', { row: key, category: picked.categories[0] ?? 'etc' })
+                  onOpen(picked)
+                }}
+              />
+            ))}
+          </ul>
+        </section>
+      ))}
+    </section>
+  )
 }
 
 /** 공고마다 찾을 글자(기업 이름, 공고 제목, 지역, 스킬)를 한 번만 만들어 두어서, 글자를 칠 때마다 다시 잇지 않아요. */
@@ -161,7 +292,7 @@ function HotCompanies({ companies, onSelect }: { companies: { company: Company; 
   )
 }
 
-export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
+export function Home({ onPick, onExplore, onRecommend, onCompany, onContests }: Props) {
   const L = useMessages(TEXT)
   const resume = useResume()
   const reports = useReports()
@@ -397,6 +528,13 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
                 )}
               </section>
             ))}
+            <ContestRows
+              onAll={onContests}
+              onOpen={(contest) => {
+                const main = contest.links[0]
+                if (main) browser.viewPage({ url: main.url, title: contest.title })
+              }}
+            />
           </div>
         </div>
       </main>

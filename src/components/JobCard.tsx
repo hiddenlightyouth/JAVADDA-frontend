@@ -5,7 +5,7 @@ import { messages, useMessages } from '../lib/i18n'
 import { readItem, writeItem } from '../lib/storage'
 import { CompanyMark, DeadlineTag, DiagnosedTag, FitBadge, FitTag, PostingMeta, SkillChip, skillTone, Tip } from './GapParts'
 import { ExternalLinkIcon, GridIcon, ListIcon } from './Icons'
-import { PostingBrowser } from './PostingBrowser'
+import { PostingBrowser, type BrowserPage } from './PostingBrowser'
 import { iconButton, primaryButton, Segmented, stagger, useShowMore } from './ui'
 
 /**
@@ -90,22 +90,24 @@ export function PostingCountBar({ count, layout, onLayout, items, children }: {
   )
 }
 
-export type JobBrowser = { side: ReactNode; view: (posting: JobPosting) => void; viewCompany: (companyId: string) => void }
+export type JobBrowser = { side: ReactNode; view: (posting: JobPosting) => void; viewCompany: (companyId: string) => void; viewPage: (page: BrowserPage) => void }
 
 /**
- * 카드에서 여는 미니 브라우저예요. 공고의 원문이나 기업 소개 사이트를 열어요.
+ * 카드에서 여는 미니 브라우저예요. 공고의 원문이나 기업 소개 사이트, 공모전 같은 바깥 글(`viewPage`)을 열어요.
  * 화면은 side를 `SplitView`에 넘기고, 카드에 view와 viewCompany를 이어요.
  */
 export function useJobBrowser(): JobBrowser {
-  const [viewing, setViewing] = useState<{ posting: JobPosting } | { company: Company } | null>(null)
+  const [viewing, setViewing] = useState<{ posting: JobPosting } | { company: Company } | { page: BrowserPage } | null>(null)
   const side =
     viewing &&
-    ('posting' in viewing ? (
+    ('page' in viewing ? (
+      <PostingBrowser key={viewing.page.url} page={viewing.page} onClose={() => setViewing(null)} />
+    ) : 'posting' in viewing ? (
       <PostingBrowser key={viewing.posting.id} posting={viewing.posting} onClose={() => setViewing(null)} />
     ) : (
       <PostingBrowser key={viewing.company.id} company={viewing.company} onClose={() => setViewing(null)} onPosting={(posting) => setViewing({ posting })} />
     ))
-  return { side, view: (posting) => setViewing({ posting }), viewCompany: (companyId) => setViewing({ company: companyOf(companyId) }) }
+  return { side, view: (posting) => setViewing({ posting }), viewCompany: (companyId) => setViewing({ company: companyOf(companyId) }), viewPage: (page) => setViewing({ page }) }
 }
 
 /**
