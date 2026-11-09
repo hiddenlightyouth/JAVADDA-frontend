@@ -126,9 +126,10 @@ interface Props {
   onLogin?: () => void
 }
 
-const link = 'relative flex h-9 w-full items-center rounded-lg px-3 text-left text-[13px] font-medium transition-colors'
+const link = 'relative flex h-9 w-full items-center rounded-lg px-3 text-left text-[13px] transition-colors'
 // 휴대폰에는 hover가 없어서, 누르는 순간(active) 바로 바탕이 깔려야 눌렸다는 게 보여요.
-const tone = (active: boolean) => (active ? 'bg-gray-200/70 text-gray-900' : 'text-gray-600 hover:bg-gray-200/50 hover:text-gray-900 active:bg-gray-200/70 active:text-gray-900')
+// 고른 메뉴는 마우스를 올린 줄보다 확실히 짙은 바탕에 굵은 글자라, hover와 헷갈리지 않아요.
+const tone = (active: boolean) => (active ? 'bg-gray-200 font-semibold text-gray-900' : 'font-medium text-gray-600 hover:bg-gray-200/40 hover:text-gray-900 active:bg-gray-200/70 active:text-gray-900')
 /** 사이드바 아래의 아이콘 버튼이에요. 회색 사이드바 위라 한 단계 짙은 회색으로 깔려요. */
 const sideIconButton = 'flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-gray-200/50 hover:text-gray-700 active:bg-gray-200/70'
 
@@ -283,7 +284,7 @@ function NavLink({ href, active, onClick, icon, label, shortcut, trailing, locke
   if (locked)
     return (
       <Tip text={locked} side="right" className="mt-1.5 flex w-full">
-        <span aria-disabled="true" className={`${link} cursor-not-allowed gap-2 text-gray-400`}>
+        <span aria-disabled="true" className={`${link} cursor-not-allowed gap-2 font-medium text-gray-400`}>
           {icon}
           <span className="flex-1">{label}</span>
         </span>
