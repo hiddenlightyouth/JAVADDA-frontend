@@ -22,11 +22,14 @@ const readKind = (): PetKind | null => {
 
 const kindStore = createStore<PetKind | null>(typeof window === 'undefined' ? null : readKind())
 
+/** 앱 3.5부터 바탕화면 펫으로 잡아따 도마뱀(javadda)을 받아요. */
+const appTakesJavadda = appAtLeast('3.5')
+
 /**
  * 앱에 알리는 펫 이름이에요. 3.4까지의 앱은 바탕화면 펫으로 Claude와 Codex만 받아서, 잡아따 도마뱀은 claude로 알려 펫 창만 띄우게 해요.
- * 펫 창(`PetWindow`)이 이 기기에 적어 둔 고른 펫을 읽어 도마뱀을 그려요(`storedPet`).
+ * 그때는 펫 창(`PetWindow`)이 이 기기에 적어 둔 고른 펫을 읽어 도마뱀을 그려요(`storedPet`).
  */
-const appKind = (kind: PetKind | null): 'claude' | 'codex' | null => (kind === 'javadda' ? 'claude' : kind)
+const appKind = (kind: PetKind | null): PetKind | null => (kind === 'javadda' && !appTakesJavadda ? 'claude' : kind)
 
 /** 이 기기에 적어 둔 고른 펫이에요. 바탕화면 펫 창은 앱 화면 밖이라 이것으로 앱이 모르는 펫(도마뱀)을 알아요. */
 export const storedPet = readKind
