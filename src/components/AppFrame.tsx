@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useState, type ComponentProps, type ReactNode } from 'react'
 import { useDismiss } from '../hooks/useDismiss'
 import { track } from '../lib/analytics'
-import { isWebApp, postToApp, sidebarGlass, vibrancy } from '../lib/app'
+import { isWebApp, vibrancy } from '../lib/app'
 import { messages, useMessages } from '../lib/i18n'
 import { followLink } from '../lib/links'
 import { readFlag, writeFlag } from '../lib/storage'
@@ -95,10 +95,7 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
     if (!narrow) setDrawerOpen(false)
   }, [narrow])
   const open = narrow ? drawerOpen : sidebarOpen
-  // 앱(3.0부터)은 사이드바 자리에 유리 패널을 띄워서, 사이드바 폭을 알려 줘요. 사이드바는 w-72(288px)예요.
-  useEffect(() => {
-    if (sidebarGlass) postToApp({ type: 'sidebar', width: open && !narrow ? 288 : 0 })
-  }, [open, narrow])
+  // 앱 3.0은 sidebar 메시지로 폭을 받으면 사이드바 자리에 유리 패널을 띄우는데, 테두리가 두드러져 웹의 사이드바와 달라 보여서 폭을 알리지 않아요. 알리지 않으면 앱은 유리를 띄우지 않아요.
   const toggle = () => (narrow ? setDrawerOpen(!drawerOpen) : onToggleSidebar(!sidebarOpen))
 
   // 서랍에서 화면을 고르면 서랍을 닫고 그 화면을 보여줘요. 목록을 고치는 일(공유 취소, 지우기)과 설정 창은 서랍을 닫지 않아요.
@@ -162,7 +159,7 @@ export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Pr
             <Suspense fallback={<aside className="w-full bg-gray-50/75 backdrop-blur-2xl" />}>{panel}</Suspense>
           </div>
         ) : (
-          <Suspense fallback={<aside data-app-drag data-vibrant={vibrancy && !sidebarGlass ? '' : undefined} className={`w-72 shrink-0 ${sidebarGlass ? '' : 'border-r border-gray-200'} ${vibrancy ? '' : 'bg-gray-50'}`} />}>{panel}</Suspense>
+          <Suspense fallback={<aside data-app-drag data-vibrant={vibrancy ? '' : undefined} className={`w-72 shrink-0 border-r border-gray-200 ${vibrancy ? '' : 'bg-gray-50'}`} />}>{panel}</Suspense>
         ))}
       {children}
       {settingsOpen && (

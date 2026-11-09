@@ -931,8 +931,7 @@ html.dark[data-accent='ocean'] {
 }
 
 /* 앱(2.8부터)의 사이드바는 투명해서 창 뒤 블러가 비쳐요. 테마를 골랐으면 블러 위에 그 테마의 회색을 반쯤 덧칠해서 사이드바도 물들어요. */
-html[data-accent] [data-vibrant],
-html[data-accent] [data-glass-tint] {
+html[data-accent] [data-vibrant] {
   background-color: color-mix(in oklab, var(--color-gray-50) 60%, transparent);
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react'
 import { useDismiss } from '../hooks/useDismiss'
-import { isWebApp, MAC_DOWNLOAD, MAC_DOWNLOAD_OPEN, sidebarGlass, vibrancy } from '../lib/app'
+import { isWebApp, MAC_DOWNLOAD, MAC_DOWNLOAD_OPEN, vibrancy } from '../lib/app'
 import { followLink } from '../lib/links'
 import { track } from '../lib/analytics'
 import { signOut, useAuth, type Me } from '../lib/auth'
@@ -358,13 +358,9 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
 
   return (
     <aside
-      // 유리 패널(앱 3.0부터)은 앱이 둥글게 그려서, 네모난 덧칠과 오른쪽 선을 빼요.
-      data-vibrant={vibrancy && !sidebarGlass && !drawer ? '' : undefined}
-      // 유리 패널은 창 가장자리에서 8px 띄워 떠 있어서, 내용도 같은 만큼 안으로 들여 유리 가장자리에 붙지 않게 해요.
-      className={`relative z-30 flex shrink-0 flex-col ${drawer ? 'w-full bg-gray-50/75 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl backdrop-saturate-150' : `w-72 ${sidebarGlass ? 'px-2 pb-2' : 'border-r border-gray-200'} ${vibrancy ? '' : 'bg-gray-50'}`}`}
+      data-vibrant={vibrancy && !drawer ? '' : undefined}
+      className={`relative z-30 flex shrink-0 flex-col ${drawer ? 'w-full bg-gray-50/75 pb-[env(safe-area-inset-bottom)] backdrop-blur-2xl backdrop-saturate-150' : `w-72 border-r border-gray-200 ${vibrancy ? '' : 'bg-gray-50'}`}`}
     >
-      {/* 테마를 골랐으면 유리 패널과 같은 자리, 같은 둥근 모서리로 테마의 회색을 덧칠해서 유리도 화면과 같은 색으로 물들어요(index.css의 data-glass-tint). */}
-      {sidebarGlass && !drawer && <div aria-hidden data-glass-tint className="pointer-events-none absolute inset-2 -z-10 rounded-2xl" />}
       {isWebApp ? (
         // 웹에서는 왼쪽 위의 사이드바 버튼 옆에 로고를 두고, 누르면 새 진단 화면으로 가요. 높이는 헤더와 맞춰요.
         <div className="flex h-14 shrink-0 items-center pl-12">
