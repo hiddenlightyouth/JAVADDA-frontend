@@ -1,3 +1,4 @@
+import { markRead, pageKey, postingKey } from '../lib/seen'
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
 import { canEmbed, careerName, companyOf, familyName, POSTINGS, type Company, type JobPosting } from '../lib/gap'
@@ -93,6 +94,11 @@ export function PostingBrowser({ posting, company: about, page, onClose, onPosti
   const url = posting ? posting.url : page ? page.url : company!.site
   const title = posting ? L.title(company!.name) : page ? page.title : L.companyTitle(company!.name)
   const embeddable = canEmbed(url)
+  // 공고와 주소로 여는 글, 공모전은 열면 읽은 것으로 쳐요(목록의 읽음 표시). 기업 소개 사이트는 세지 않아요.
+  useEffect(() => {
+    if (posting) markRead(postingKey(posting.id))
+    else if (page) markRead(pageKey(page.url))
+  }, [posting, page])
   const [loaded, setLoaded] = useState(false)
   // 다른 사이트의 화면이 load 이벤트를 보낼 때까지 글 모양의 뼈대를 보여줘요.
   const waiting = !loaded

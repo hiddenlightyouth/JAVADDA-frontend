@@ -3,7 +3,8 @@ import { track } from '../lib/analytics'
 import { companyOf, daysLeft, fitOf, type Company, type JobPosting, type Resume } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
 import { readItem, writeItem } from '../lib/storage'
-import { CompanyMark, DeadlineTag, DiagnosedTag, FitBadge, FitTag, PostingMeta, SkillChip, skillTone, Tip } from './GapParts'
+import { CompanyMark, DeadlineTag, DiagnosedTag, FitBadge, FitTag, PostingMeta, ReadTag, readTitle, SkillChip, skillTone, Tip } from './GapParts'
+import { postingKey, useRead } from '../lib/seen'
 import { ExternalLinkIcon, GridIcon, ListIcon } from './Icons'
 import { PostingBrowser, type BrowserPage } from './PostingBrowser'
 import { iconButton, primaryButton, Segmented, stagger, useShowMore } from './ui'
@@ -252,6 +253,7 @@ export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onComp
   const L = useMessages(TEXT)
   const company = companyOf(posting.companyId)
   const left = daysLeft(posting)
+  const read = useRead(postingKey(posting.id))
   const [ref, size] = useElementSize<HTMLLIElement>()
   return (
     // 제목 버튼을 카드 전체에 늘여 덮으면, 누른 곳과 뗀 곳이 달라져 클릭이 한 번 씹혀서 카드가 직접 받아요.
@@ -270,7 +272,7 @@ export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onComp
         </button>
       </div>
 
-      <h3 className="mt-4 text-[16px] leading-snug font-semibold text-gray-900">
+      <h3 className={`mt-4 text-[16px] leading-snug font-semibold ${readTitle(read)}`}>
         <button type="button" onClick={onOpen} className="text-left transition-colors group-hover:text-brand-hover">
           {posting.title}
         </button>
@@ -291,6 +293,7 @@ export function JobCard({ posting, resume, fit, order, onOpen, onAnalyze, onComp
       <div className="mt-5 flex items-center gap-1.5 border-t border-gray-200 pt-3">
         <DiagnosedTag postingId={posting.id} />
         <FitTag fit={fit} percent />
+        <ReadTag read={read} />
         <ViewButton onClick={onOpen} className="ml-auto inline-flex shrink-0" />
         <button type="button" onClick={onAnalyze} className={`${primaryButton} shrink-0`}>
           {L.analyze}
@@ -314,13 +317,14 @@ function JobItem({ layout, ...props }: JobItemProps & { layout: Layout }) {
 function JobRow({ posting, resume, fit, order, onOpen, onAnalyze, onCompany }: JobItemProps) {
   const L = useMessages(TEXT)
   const company = companyOf(posting.companyId)
+  const read = useRead(postingKey(posting.id))
   return (
     <li onClick={onBlankClick(onOpen)} className="group flex animate-rise cursor-pointer items-center gap-4 rounded-2xl bg-gray-50 px-4 py-3.5 transition-colors hover:bg-gray-100" style={stagger(order)}>
       <button type="button" onClick={onCompany} aria-label={L.companyInfo(company.name)} className="shrink-0 rounded-xl transition-opacity hover:opacity-80">
         <CompanyMark company={company} className="size-10 text-[15px]" />
       </button>
       <div className="min-w-0 flex-1">
-        <h3 className="flex text-[15px] font-semibold text-gray-900">
+        <h3 className={`flex text-[15px] font-semibold ${readTitle(read)}`}>
           <button type="button" onClick={onOpen} className="min-w-0 truncate text-left transition-colors group-hover:text-brand-hover">
             {posting.title}
           </button>
@@ -334,6 +338,9 @@ function JobRow({ posting, resume, fit, order, onOpen, onAnalyze, onCompany }: J
           <SkillChip key={skill} name={skill} tone={skillTone(skill, resume)} />
         ))}
       </div>
+      <span className="hidden shrink-0 @xl:inline-flex">
+        <ReadTag read={read} />
+      </span>
       <DiagnosedTag postingId={posting.id} />
       {/* 좁은 줄에서는 제목 자리가 모자라서 적합도 태그를 숨겨요. */}
       <span className="hidden shrink-0 @md:inline-flex">

@@ -1,3 +1,4 @@
+import { markRead, pageKey } from '../lib/seen'
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
 import { track } from '../lib/analytics'
 import { fetchBlogDigests, isStale, type BlogDigest } from '../lib/blogs'
@@ -373,6 +374,7 @@ function Profile({ profile, digest, resume, onPick, onPostings, onBlogs, onRead 
                         rel="noreferrer"
                         onClick={(event: MouseEvent) => {
                           const embed = canEmbed(post.url) && isPlainClick(event)
+                          markRead(pageKey(post.url))
                           track('blog_post_open', { company: profile.company.id, from: embed ? 'company' : 'tab' })
                           if (!embed) return
                           event.preventDefault()

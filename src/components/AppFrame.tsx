@@ -5,6 +5,7 @@ import { isWebApp, vibrancy } from '../lib/app'
 import { messages, useMessages } from '../lib/i18n'
 import { followLink } from '../lib/links'
 import { readFlag, writeFlag } from '../lib/storage'
+import { markVisited, startVisits, type FreshSection } from '../lib/seen'
 import { CloseIcon, MenuIcon, SidebarIcon } from './Icons'
 import { ScriptMark } from './LofyScript'
 
@@ -77,8 +78,18 @@ interface Props {
  * 앱에서는 왼쪽에 사이드바를 두고, 오른쪽에 웹과 같은 화면을 보여줘요. 설정 창과 화면 공유 중 가리는 막도 여기서 띄워요.
  * 웹의 /app도 같은 배치예요. 좁은 화면에서는 사이드바를 숨겨 두고, 왼쪽 위 버튼을 누르면 서랍처럼 화면 위로 꺼내요.
  */
+/** 사이드바에서 New를 다는 화면이에요. */
+const FRESH_SECTIONS: readonly string[] = ['explore', 'blogs', 'contests']
+
 export function AppFrame({ sidebarOpen, onToggleSidebar, sidebar, children }: Props) {
   const text = useMessages(TEXT)
+  // 처음 쓰는 기기는 지금을 적어 두고, 공고 탐색, 기술 블로그, 공모전을 열면 그때를 적어서 사이드바의 New를 지워요.
+  // 휴대폰은 서랍을 열 때만 사이드바를 그려서, 늘 있는 이 틀에서 적어요.
+  useEffect(startVisits, [])
+  const page = sidebar.page
+  useEffect(() => {
+    if (page && FRESH_SECTIONS.includes(page)) markVisited(page as FreshSection)
+  }, [page])
   /** 앱의 설정 창이 떠 있는지. 보던 화면은 그대로 두고 그 위에 떠요. */
   const [settingsOpen, setSettingsOpen] = useState(false)
   const openSettings = useCallback(() => {

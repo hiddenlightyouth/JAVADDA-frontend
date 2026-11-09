@@ -67,6 +67,8 @@ const TEXT = messages({
     diagnosed: '진단함',
     diagnosing: '진단 중',
     diagnosedTip: '이미 진단한 공고예요. 누르면 그 리포트를 열어요.',
+    read: '읽음',
+    readTip: '원문을 열어 본 적이 있어요.',
     diagnosingTip: '지금 진단하고 있는 공고예요. 누르면 그 리포트를 열어요.',
   },
   en: {
@@ -114,6 +116,8 @@ const TEXT = messages({
     diagnosed: 'Diagnosed',
     diagnosing: 'Analyzing',
     diagnosedTip: 'You already diagnosed this posting. Click to open that report.',
+    read: 'Read',
+    readTip: 'You opened this before.',
     diagnosingTip: 'This posting is being diagnosed now. Click to open that report.',
   },
 })
@@ -425,6 +429,23 @@ export function DiagnosedTag({ postingId }: { postingId: string }) {
     </Tip>
   )
 }
+
+/**
+ * 원문을 열어 본 것에 붙이는 옅은 "읽음" 이름표예요(`seen.ts`). 공고 탐색의 카드와 줄, 기술 블로그 글, 공모전 카드와 줄이 같이 써요.
+ * 읽은 것은 제목도 옅게(`readTitle`) 해서, 목록을 훑을 때 안 읽은 것이 먼저 눈에 들어와요.
+ */
+export function ReadTag({ read }: { read: boolean }) {
+  const L = useMessages(TEXT)
+  if (!read) return null
+  return (
+    <Tip text={L.readTip} className="inline-flex shrink-0">
+      <Badge tone="muted">{L.read}</Badge>
+    </Tip>
+  )
+}
+
+/** 읽은 것의 제목 색이에요. 마우스를 올리면 다른 카드처럼 메인 컬러예요. */
+export const readTitle = (read: boolean) => (read ? 'text-gray-500' : 'text-gray-900')
 
 /** 진행 단계 이름을 화면에 보여줄 문장으로 바꿔요. 모르는 단계면 "처리하고 있어요"예요. */
 function useStageText(stage: string): string {

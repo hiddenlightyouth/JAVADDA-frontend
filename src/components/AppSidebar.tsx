@@ -5,9 +5,12 @@ import { followLink } from '../lib/links'
 import { track } from '../lib/analytics'
 import { signOut, useAuth, type Me } from '../lib/auth'
 import { openBugReport, useFeedback } from '../lib/feedback'
-import { companyOf, useReportPosting, useReports, useResume, useResumeShelf, type Report } from '../lib/gap'
+import { companyOf, POSTINGS, useReportPosting, useReports, useResume, useResumeShelf, type Report } from '../lib/gap'
 import { byResume, byUrgency, DeleteReportDialog, removeReport, REPORT_LIST_TEXT, UrgencyLabel, type ResumeGroup, type Urgency } from './History'
 import { Kbd } from './Shortcuts'
+import { latestTime, useFresh, type FreshSection } from '../lib/seen'
+import { fetchContests } from '../lib/contests'
+import { fetchBlogDigests } from '../lib/blogs'
 import { ScriptMark } from './LofyScript'
 import { messages, useMessages } from '../lib/i18n'
 import { readJson, writeJson } from '../lib/storage'
@@ -29,6 +32,7 @@ const TEXT = messages({
     resumeReady: '이력서 등록됨',
     blogs: '기술 블로그',
     contests: '공모전',
+    fresh: '새로 올라온 것이 있어요',
     labs: '잡아따 Labs',
     me: '내 정보',
     admin: '관리자',
@@ -53,6 +57,7 @@ const TEXT = messages({
     resumeReady: 'Resume added',
     blogs: 'Tech blogs',
     contests: 'Contests',
+    fresh: 'Something new since your last visit',
     labs: 'Javadda Labs',
     me: 'Account',
     admin: 'Admin',
@@ -270,6 +275,42 @@ function Snowfall() {
   )
 }
 
+/**
+ * 화면마다 가장 최근에 들어온 것의 시각이에요. 공고는 처음 그릴 때 받아 둔 목록에서 세고, 글과 공모전은 사이드바가 한 번 받아요.
+ * 받지 못하면 0이라 New를 달지 않아요.
+ */
+function useLatest(): Record<FreshSection, number> {
+  const [latest, setLatest] = useState<Record<FreshSection, number>>(() => ({
+    explore: latestTime(POSTINGS.map((posting) => posting.postedAt)),
+    blogs: 0,
+    contests: 0,
+  }))
+  useEffect(() => {
+    let alive = true
+    fetchContests()
+      .then((list) => alive && setLatest((value) => ({ ...value, contests: latestTime(list.map((contest) => contest.firstSeenAt)) })))
+      .catch(() => {})
+    fetchBlogDigests()
+      .then((digests) => alive && setLatest((value) => ({ ...value, blogs: latestTime(digests.flatMap((digest) => digest.posts.map((post) => post.date))) })))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+  return latest
+}
+
+/** 마지막으로 연 뒤에 새로 들어온 것이 있는 메뉴 오른쪽에 붙이는 작은 New예요. */
+function FreshTag({ section, latest }: { section: FreshSection; latest: number }) {
+  const text = useMessages(TEXT)
+  if (!useFresh(section, latest)) return null
+  return (
+    <span title={text.fresh} className="inline-flex h-[18px] shrink-0 items-center rounded-full bg-brand px-1.5 text-[10.5px] leading-none font-semibold text-white">
+      New
+    </span>
+  )
+}
+
 /** 사이드바 위쪽의 화면 링크예요. 오른쪽 끝에 단축키(shortcut)나 다른 표시(trailing)를 붙여요. */
 function NavLink({ href, active, onClick, icon, label, shortcut, trailing, locked }: {
   href: string
@@ -307,6 +348,7 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
   const { me } = useAuth()
   const list = useMessages(REPORT_LIST_TEXT)
   const text = useMessages(TEXT)
+  const latest = useLatest()
   const reports = useReports()
   // 리포트를 만든 이력서마다 폴더로 묶어서 전부 보여줘요. 길어지면 폴더를 접어요.
   const shelf = useResumeShelf()
@@ -399,6 +441,7 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
           }}
           label={text.explore}
           shortcut="T"
+          trailing={<FreshTag section="explore" latest={latest.explore} />}
           icon={<SearchIcon className="size-4 shrink-0" strokeWidth={1.4} />}
         />
         <NavLink
@@ -444,6 +487,7 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
           }}
           label={text.blogs}
           shortcut="G"
+          trailing={<FreshTag section="blogs" latest={latest.blogs} />}
           icon={<BookIcon className="size-4 shrink-0" />}
         />
         <NavLink
@@ -454,6 +498,7 @@ export function AppSidebar({ drawer = false, activeReportId, page, onNew, onExpl
             onContests()
           }}
           label={text.contests}
+          trailing={<FreshTag section="contests" latest={latest.contests} />}
           icon={<TrophyIcon className="size-4 shrink-0" />}
         />
         {/* 대표 이력서가 있으면 오른쪽 끝에 체크를 붙여서, 진단과 추천을 바로 쓸 수 있다는 걸 알려요. 서류 이름은 적지 않아요. */}

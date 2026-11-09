@@ -1,3 +1,4 @@
+import { markRead, pageKey, useRead } from '../lib/seen'
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { track } from '../lib/analytics'
 import { blogCompaniesOf, blogOutlook, COLLECTED_AT, fetchBlogDigests, fetchBlogOutlook, type BlogOutlook, isStale, THEME_NAMES, themeTrends, topSkills, type BlogDigest, type BlogPost, type BlogTheme, type ThemeTrend } from '../lib/blogs'
@@ -7,7 +8,7 @@ import { isPlainClick } from '../lib/links'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
 import { Modal } from './Dialog'
-import { CompanyFilter, CompanyMark, Notice, SkillChip, skillTone, Tip } from './GapParts'
+import { CompanyFilter, CompanyMark, Notice, ReadTag, readTitle, SkillChip, skillTone, Tip } from './GapParts'
 import { PostingBrowser, SplitView, type BrowserPage } from './PostingBrowser'
 import { LoadGate } from './ScreenParts'
 import { Badge, Bullets, label, primaryButton, quietButton, stagger, toolButton } from './ui'
@@ -115,6 +116,8 @@ type Entry = BlogPost & { companyId: string }
  * 다른 서비스 안에 띄우는 것을 막아 둔 블로그(`canEmbed`)는 read가 외부 페이지로 간다고 알리고 3초 뒤에 새 탭으로 열어요.
  */
 const openIn = (read: (page: BrowserPage) => void, page: BrowserPage) => (event: MouseEvent) => {
+  // 새 탭으로 열어도 읽은 것으로 쳐요.
+  markRead(pageKey(page.url))
   if (!isPlainClick(event)) return
   event.preventDefault()
   read(page)
@@ -345,6 +348,7 @@ function Gallery({ items }: { items: { key: string; node: ReactNode }[] }) {
 /** 글 하나의 카드예요. 카드 전체가 원문 링크라 어디를 눌러도 미니 브라우저로 열려요. */
 function PostCard({ entry, order, read }: { entry: Entry; order: number; read: (page: BrowserPage) => void }) {
   const company = companyOf(entry.companyId)
+  const seen = useRead(pageKey(entry.url))
   return (
     <a
       href={entry.url}
@@ -357,9 +361,10 @@ function PostCard({ entry, order, read }: { entry: Entry; order: number; read: (
       <span className="flex items-center gap-2 text-[12.5px] text-gray-500">
         <CompanyMark company={company} className="size-5 rounded-md! text-[9px]" />
         <span className="min-w-0 flex-1 truncate">{company.name}</span>
+        <ReadTag read={seen} />
         <span className="shrink-0 tabular-nums">{dayLabel(entry.date)}</span>
       </span>
-      <span className="mt-3 block text-[16px] leading-snug font-semibold text-gray-900 transition-colors group-hover:text-brand-hover">{entry.title}</span>
+      <span className={`mt-3 block text-[16px] leading-snug font-semibold ${readTitle(seen)} transition-colors group-hover:text-brand-hover`}>{entry.title}</span>
       <span className="mt-2 line-clamp-3 block text-[13px] leading-relaxed text-gray-600">{entry.summary}</span>
       <span className="mt-3 flex flex-wrap gap-1">
         {entry.themes.map((item) => (

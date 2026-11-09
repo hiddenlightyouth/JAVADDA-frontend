@@ -5,7 +5,8 @@ import { messages, useMessages } from '../../lib/i18n'
 import { readItem, writeItem } from '../../lib/storage'
 import { Dropdown } from '../Dropdown'
 import { ScrollPage } from '../AppPage'
-import { DeadlineTag, Failed, Notice, Tip, filterChip, filterRow } from '../GapParts'
+import { DeadlineTag, Failed, Notice, ReadTag, readTitle, Tip, filterChip, filterRow } from '../GapParts'
+import { pageKey, useRead } from '../../lib/seen'
 import { CalendarIcon, DocumentIcon, ExternalLinkIcon, SearchIcon } from '../Icons'
 import { jobsGrid, jobsList, NotchedFrame, onBlankClick, PostingCountBar, readLayout, useElementSize, type Layout } from '../JobCard'
 import { shortDate } from '../ScreenParts'
@@ -292,6 +293,7 @@ function Period({ contest }: { contest: Contest }) {
 export function ContestCard({ contest, order, onOpen }: { contest: Contest; order: number; onOpen: (contest: Contest, link?: ContestLink) => void }) {
   const L = useMessages(TEXT)
   const [ref, size] = useElementSize<HTMLLIElement>()
+  const read = useRead(...contest.links.map((link) => pageKey(link.url)))
   const open = () => onOpen(contest)
   return (
     <li ref={ref} onClick={onBlankClick(open)} className="group relative isolate flex animate-rise cursor-pointer flex-col p-4 sm:p-5" style={stagger(order)}>
@@ -302,7 +304,7 @@ export function ContestCard({ contest, order, onOpen }: { contest: Contest; orde
           {/* 오른쪽 위는 홈이 파고들어 있어서, 주최 줄은 그 자리를 비워 둬요. */}
           <span className="block truncate pr-20 text-[13.5px] font-medium text-gray-900">{contest.organizer}</span>
           <span className="block truncate pr-20 text-[12px] text-gray-400">{L.categories[contest.categories[0] ?? 'etc']}</span>
-          <h3 className="mt-3 line-clamp-3 text-[16px] leading-snug font-semibold text-gray-900">
+          <h3 className={`mt-3 line-clamp-3 text-[16px] leading-snug font-semibold ${readTitle(read)}`}>
             <button type="button" onClick={open} className="text-left transition-colors group-hover:text-brand-hover">
               {contest.title}
             </button>
@@ -323,6 +325,7 @@ export function ContestCard({ contest, order, onOpen }: { contest: Contest; orde
       {/* 카드가 좁으면 상금은 위에 남고, 사이트 동그라미와 공모전 보기가 아래 줄 오른쪽으로 내려가요. */}
       <div className="mt-5 flex flex-wrap items-center gap-x-1.5 gap-y-2 border-t border-gray-200 pt-3">
         {contest.prize && <Badge tone="brand">{L.prize(contest.prize)}</Badge>}
+        <ReadTag read={read} />
         <span className="ml-auto flex shrink-0 items-center gap-2.5">
           <SiteMarks contest={contest} onOpen={onOpen} />
           <button type="button" onClick={open} className={`${primaryButton} shrink-0 gap-1.5`}>
@@ -338,12 +341,13 @@ export function ContestCard({ contest, order, onOpen }: { contest: Contest; orde
 /** 리스트형 줄이에요. 공고 탐색의 줄(`JobRow`)과 같은 모양이고, 목록 폭이 좁으면 접수 기간, 분야, 상금, 버튼을 차례로 숨겨요. */
 function ContestRow({ contest, order, onOpen }: { contest: Contest; order: number; onOpen: (contest: Contest, link?: ContestLink) => void }) {
   const L = useMessages(TEXT)
+  const read = useRead(...contest.links.map((link) => pageKey(link.url)))
   const open = () => onOpen(contest)
   return (
     <li onClick={onBlankClick(open)} className="group flex animate-rise cursor-pointer items-center gap-4 rounded-2xl bg-gray-50 px-4 py-3.5 transition-colors hover:bg-gray-100" style={stagger(order)}>
       <Poster contest={contest} className="aspect-[3/4] w-12" />
       <div className="min-w-0 flex-1">
-        <h3 className="flex text-[15px] font-semibold text-gray-900">
+        <h3 className={`flex text-[15px] font-semibold ${readTitle(read)}`}>
           <button type="button" onClick={open} className="min-w-0 truncate text-left transition-colors group-hover:text-brand-hover">
             {contest.title}
           </button>
@@ -367,6 +371,9 @@ function ContestRow({ contest, order, onOpen }: { contest: Contest; order: numbe
           <Badge tone="brand">{L.prize(contest.prize)}</Badge>
         </span>
       )}
+      <span className="hidden shrink-0 @xl:inline-flex">
+        <ReadTag read={read} />
+      </span>
       <span className="hidden @lg:flex">
         <SiteMarks contest={contest} onOpen={onOpen} />
       </span>
