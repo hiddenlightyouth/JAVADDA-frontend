@@ -60,7 +60,7 @@ type AppMessage =
   /** 사이드바 폭(CSS 픽셀, 접으면 0). 앱 3.0부터 받아서 그 자리에 유리 패널을 띄워요. */
   | { type: 'sidebar'; width: number }
   | { type: 'open'; url: string }
-  /** 트랙패드를 톡 울려요(앱 3.0부터). alignment는 끄는 줄이 다른 자리를 지날 때, level은 놓을 때예요. 낮은 앱은 모르는 메시지라 넘겨요. */
+  /** 트랙패드를 톡 울려요(앱 3.1부터). alignment는 끄는 줄이 다른 자리를 지날 때, level은 놓을 때예요. 낮은 앱은 모르는 메시지라 넘겨요. */
   | { type: 'haptic'; kind: 'alignment' | 'level' }
   | { type: 'mic'; action: 'prepare'; recognize: boolean }
   | { type: 'mic'; action: 'open'; lang: string | null }
