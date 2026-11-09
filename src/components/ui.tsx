@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { messages, useMessages } from '../lib/i18n'
 import { LOAD_SHOW_AFTER_MS } from '../lib/load'
+import { usePetLoading } from '../lib/pet'
 import { CheckIcon } from './Icons'
 import { Kbd } from './Shortcuts'
 
@@ -456,6 +457,8 @@ export function Skeleton({ shape = 'page', count, className = '' }: { shape?: Sk
     const timer = setTimeout(() => setVisible(true), LOAD_SHOW_AFTER_MS)
     return () => clearTimeout(timer)
   }, [])
+  // 뼈대가 보이는 동안 펫이 춤춰요.
+  usePetLoading(visible)
   const many = (fallback: number) => Array.from({ length: count ?? fallback }, (_, index) => index)
   let body: ReactNode
   switch (shape) {

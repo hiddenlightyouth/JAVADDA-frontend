@@ -9,6 +9,7 @@ import {
   usePet,
   usePetActivity,
   usePetHidden,
+  usePetLoadingNow,
   writePetPosition,
   type PetKind,
   type PetPosition,
@@ -32,6 +33,7 @@ const clamp = (position: PetPosition): PetPosition => ({
 /** AI 요청과 만드는 중인 리포트를 모아 펫이 지금 바쁜지, 몇 퍼센트인지, 마지막으로 끝난 일이 무엇인지 알려요. */
 function usePetStatus(): PetStatus {
   const activity = usePetActivity()
+  const loading = usePetLoadingNow()
   const reports = useReports()
   // 만드는 중이던 리포트가 다 되거나 실패하면 알려요.
   const pendingIds = useRef<Set<string>>(new Set())
@@ -48,6 +50,7 @@ function usePetStatus(): PetStatus {
   const pendingReport = reports.find((report) => report.status === 'pending')
   return {
     busy: activity.jobs > 0 || !!pendingReport,
+    loading,
     percent: activity.jobs > 0 ? activity.progress : (pendingReport?.progress ?? null),
     event: activity.event,
   }
@@ -69,7 +72,7 @@ function DesktopPetBridge({ hidden }: { hidden: boolean }) {
   const status = usePetStatus()
   useEffect(() => {
     postPetState(status, hidden)
-  }, [status.busy, status.percent, status.event?.at, hidden])
+  }, [status.busy, status.loading, status.percent, status.event?.at, hidden])
   return null
 }
 
@@ -131,7 +134,7 @@ function InAppPet({ kind }: { kind: PetKind }) {
             setPokeAt(Date.now())
           }
         }}
-        className="pointer-events-auto block cursor-grab touch-none rounded-2xl active:cursor-grabbing"
+        className="pointer-events-auto block cursor-pointer touch-none rounded-2xl"
       >
         <PetStage kind={kind} status={status} pokeAt={pokeAt} bubbleAlign={onLeft ? 'left' : 'right'} />
       </button>

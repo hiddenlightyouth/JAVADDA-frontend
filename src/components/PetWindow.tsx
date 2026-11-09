@@ -5,6 +5,7 @@ import { PetStage } from './PetStage'
 interface Detail {
   kind?: PetKind | null
   busy?: boolean
+  loading?: boolean
   percent?: number | null
   event?: PetStatus['event']
   poke?: number
@@ -17,7 +18,7 @@ interface Detail {
  */
 export function PetWindow() {
   const [kind, setKind] = useState<PetKind>(() => (new URLSearchParams(location.search).get('kind') === 'codex' ? 'codex' : 'claude'))
-  const [status, setStatus] = useState<PetStatus>({ busy: false, percent: null, event: null })
+  const [status, setStatus] = useState<PetStatus>({ busy: false, loading: false, percent: null, event: null })
   const [pokeAt, setPokeAt] = useState(0)
   const [look, setLook] = useState(0)
 
@@ -25,7 +26,7 @@ export function PetWindow() {
     const onEvent = (event: Event) => {
       const detail = (event as CustomEvent<Detail>).detail ?? {}
       if (detail.kind === 'claude' || detail.kind === 'codex') setKind(detail.kind)
-      if (detail.busy !== undefined) setStatus({ busy: detail.busy, percent: detail.percent ?? null, event: detail.event ?? null })
+      if (detail.busy !== undefined) setStatus({ busy: detail.busy, loading: detail.loading ?? false, percent: detail.percent ?? null, event: detail.event ?? null })
       if (detail.poke) setPokeAt(detail.poke)
       if (typeof detail.look === 'number') setLook(detail.look)
     }
@@ -34,7 +35,7 @@ export function PetWindow() {
   }, [])
 
   return (
-    <div className="flex h-dvh items-end justify-center overflow-hidden select-none">
+    <div className="flex h-dvh cursor-pointer items-end justify-center overflow-hidden select-none">
       <PetStage key={kind} kind={kind} status={status} pokeAt={pokeAt} look={look} bubbleAlign="center" />
     </div>
   )

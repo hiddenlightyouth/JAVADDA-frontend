@@ -5,7 +5,12 @@ import type { PetKind } from '../lib/pet'
 // 펫을 three.js로 그려요. pixel-reels(scene.js)의 makeBot과 FACES를 펫 하나만 그리게 옮겼어요.
 // 펫을 켰을 때만 이 파일과 three.js를 받아요.
 
-export type PetMood = 'idle' | 'busy' | 'happy' | 'error' | 'talk'
+export type PetMood = 'idle' | 'dance' | 'happy' | 'error' | 'talk'
+
+/** 춤의 빠르기(1초에 몇 박)예요. 네 박마다 다음 동작으로 넘어가요. */
+const BEAT = 2.4
+/** 통통 뛰기, 옆으로 스텝, 두 팔 흔들기, 회전 점프를 차례로 춰요. */
+const MOVES = ['bounce', 'shuffle', 'wave', 'spin'] as const
 type FaceStyle = 'normal' | 'dry' | 'soft' | 'happy' | 'curious' | 'angry' | 'dizzy'
 
 interface BotDef {
@@ -279,8 +284,13 @@ export function createPetScene(canvas: HTMLCanvasElement, kind: PetKind, still: 
     if (t - hopStart < 1.1) return 'happy'
     if (mood === 'happy') return 'happy'
     if (mood === 'error') return 'dizzy'
-    // 일하는 동안은 집중한 눈이다가 가끔 동그랗게 떠요.
-    if (mood === 'busy') return Math.floor(t / 2.4) % 3 === 2 ? 'curious' : 'dry'
+    // 춤추는 동안은 박자마다 웃는 눈, 보통 눈, 동그란 눈을 오가요.
+    if (mood === 'dance') {
+      const move = MOVES[Math.floor((t * BEAT) / 4) % MOVES.length]
+      if (move === 'shuffle') return Math.floor(t * BEAT) % 2 ? 'normal' : 'happy'
+      if (move === 'spin') return (t * BEAT) % 4 > 3 ? 'curious' : 'happy'
+      return 'happy'
+    }
     return 'normal'
   }
 
@@ -311,13 +321,52 @@ export function createPetScene(canvas: HTMLCanvasElement, kind: PetKind, still: 
     let y = 0
     let sy = 1
     let spin = 0
-    let armSwing = 0
+    let x = 0
     let tilt = 0
+    let twist = 0
+    let armLift: [number, number] = [0, 0]
     if (!still) {
-      if (mood === 'busy') {
-        // 자판을 두드리듯 팔을 번갈아 올리고 몸을 조금씩 흔들어요.
-        armSwing = Math.sin(t * 16)
-        y = Math.abs(Math.sin(t * 8)) * 0.008
+      if (mood === 'dance') {
+        const phase = t * BEAT
+        const f = phase % 1
+        const lift = Math.sin(f * Math.PI)
+        const move = MOVES[Math.floor(phase / 4) % MOVES.length]
+        const left = Math.max(0, Math.sin(phase * Math.PI + Math.PI))
+        const right = Math.max(0, Math.sin(phase * Math.PI))
+        if (move === 'bounce') {
+          // 박자마다 크게 통통 뛰고 좌우로 흔들며 팔을 번갈아 뻗어요.
+          y = lift * 0.06
+          sy = 1 - (1 - lift) ** 3 * 0.14
+          tilt = Math.sin(phase * Math.PI) * 0.22
+          armLift = [left * 1.4, right * 1.4]
+        } else if (move === 'shuffle') {
+          // 옆으로 한 발씩 스텝을 밟으며 반대쪽으로 몸을 기울여요.
+          x = Math.sin((phase * Math.PI) / 2) * 0.07
+          y = lift * 0.025
+          tilt = -Math.sin((phase * Math.PI) / 2) * 0.2
+          twist = Math.sin((phase * Math.PI) / 2) * 0.6
+          armLift = [0.8, 0.8]
+        } else if (move === 'wave') {
+          // 두 팔을 번쩍 들고 흔들며 위아래로 들썩여요.
+          sy = 1 + Math.sin(phase * Math.PI * 2) * 0.07
+          y = Math.abs(Math.sin(phase * Math.PI)) * 0.02
+          twist = Math.sin(phase * Math.PI) * 0.35
+          armLift = [1.5 + Math.sin(phase * Math.PI * 4) * 0.35, 1.5 - Math.sin(phase * Math.PI * 4) * 0.35]
+        } else {
+          // 세 박은 작게 뛰고, 마지막 박에 높이 뛰어 한 바퀴 돌아요.
+          const beat = phase % 4
+          if (beat < 3) {
+            y = lift * 0.03
+            sy = 1 - (1 - lift) ** 3 * 0.18
+            armLift = [0.3, 0.3]
+          } else {
+            const p = beat - 3
+            y = Math.sin(p * Math.PI) * 0.14
+            sy = 1.08
+            spin = ease(p) * Math.PI * 2
+            armLift = [1.6, 1.6]
+          }
+        }
       } else if (mood === 'talk') {
         sy = 1 - Math.max(0, Math.sin(t * 14)) * 0.05
         y = Math.max(0, Math.sin(t * 7)) * 0.012
@@ -339,16 +388,16 @@ export function createPetScene(canvas: HTMLCanvasElement, kind: PetKind, still: 
           const p = (h - 0.78) / 0.22
           sy = 1 - Math.sin(p * Math.PI) * 0.12
         }
-        armSwing = 0
+        armLift = [0, 0]
       }
     }
-    bot.root.rotation.set(0, yaw + spin, tilt)
-    bot.root.position.y = y
+    bot.root.rotation.set(0, yaw + twist + spin, tilt)
+    bot.root.position.set(x, y, 0)
     bot.body.scale.set(1 + (1 - sy) * 0.5, sy, 1 + (1 - sy) * 0.5)
     bot.arms.forEach((arm, i) => {
       const s = i ? 1 : -1
-      arm.rotation.x = mood === 'busy' ? -0.5 + armSwing * s * 0.35 : 0
-      arm.rotation.z = mood === 'happy' || t - hopStart < 1.0 ? s * 0.6 : 0
+      arm.rotation.x = 0
+      arm.rotation.z = mood === 'happy' || t - hopStart < 1.0 ? s * 0.6 : mood === 'dance' ? s * (0.2 + armLift[i]) : 0
     })
     renderer.render(scene, camera)
   }

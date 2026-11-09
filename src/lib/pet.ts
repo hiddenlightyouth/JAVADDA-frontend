@@ -43,13 +43,15 @@ if (desktopPet) postToApp({ type: 'pet', kind: kindStore.get() })
 /** 펫이 지금 바쁜지, 몇 퍼센트인지, 마지막으로 끝난 일이 무엇인지예요. */
 export interface PetStatus {
   busy: boolean
+  /** 화면이 자료를 받는 중(뼈대가 보이는 중)이에요. 말풍선 없이 춤만 춰요. */
+  loading: boolean
   percent: number | null
   event: { kind: 'done' | 'error'; at: number } | null
 }
 
 /** 바탕화면의 펫 창에 지금 상태를 보내요. hidden이면 앱이 펫 창을 잠깐 내려요(면접 연습 화면 등). */
 export function postPetState(status: PetStatus, hidden: boolean) {
-  postToApp({ type: 'petState', busy: status.busy, percent: status.percent, event: status.event, hidden })
+  postToApp({ type: 'petState', busy: status.busy, loading: status.loading, percent: status.percent, event: status.event, hidden })
 }
 
 /** 창의 오른쪽 아래에서 떨어진 거리(px)예요. 끌어 옮긴 자리를 이 기기에 기억해요. */
@@ -101,6 +103,18 @@ export function petWork() {
       activityStore.set({ jobs, progress: jobs ? now.progress : null, event: { kind: ok ? 'done' : 'error', at: Date.now() } })
     },
   }
+}
+
+const loadingStore = createStore(0)
+export const usePetLoadingNow = () => useStore(loadingStore) > 0
+
+/** 자료를 받는 동안 보이는 뼈대(`Skeleton`)가 불러요. active인 동안 펫이 춤춰요. */
+export function usePetLoading(active: boolean) {
+  useEffect(() => {
+    if (!active) return
+    loadingStore.set(loadingStore.get() + 1)
+    return () => loadingStore.set(loadingStore.get() - 1)
+  }, [active])
 }
 
 const hiddenStore = createStore(0)

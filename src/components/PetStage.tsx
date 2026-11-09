@@ -91,7 +91,8 @@ export function PetStage({ kind, status, pokeAt, look, bubbleAlign }: Props) {
     say(lines[Math.floor(Math.random() * lines.length)], 'talk')
   }, [pokeAt])
 
-  const mood: PetMood = bubble?.mood ?? (status.busy ? 'busy' : 'idle')
+  // AI가 분석하거나 화면이 자료를 받는 동안 춤춰요.
+  const mood: PetMood = bubble?.mood ?? (status.busy || status.loading ? 'dance' : 'idle')
   useEffect(() => {
     sceneRef.current?.setMood(mood)
   })
