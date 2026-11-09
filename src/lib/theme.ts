@@ -106,9 +106,10 @@ export function setAppTheme(theme: AppTheme) {
   postToApp({ type: 'theme', theme })
 }
 
-/** 메인 컬러를 바꿔요. 앱 창의 색은 그대로라 앱에는 알리지 않아요. */
+/** 테마를 바꾸고 앱에도 알려서, 앱의 설정 창과 창 바탕이 같이 바뀌게 해요. */
 export function setAppAccent(accent: Accent) {
   store({ ...settings.get(), accent })
+  postToApp({ type: 'accent', accent })
 }
 
 /** 화면 공유 중에 화면을 가릴지 정하고 앱에도 알려서, 앱의 설정 창과 같이 바뀌게 해요. */
@@ -132,6 +133,7 @@ if (isApp) {
     store({
       ...settings.get(),
       theme: detail.theme && THEMES.includes(detail.theme) ? detail.theme : settings.get().theme,
+      accent: isAccent(detail.accent ?? null) ? (detail.accent as Accent) : settings.get().accent,
       shield: typeof detail.shield === 'boolean' ? detail.shield : settings.get().shield,
     })
   })
