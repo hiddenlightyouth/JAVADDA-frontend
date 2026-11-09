@@ -7,7 +7,6 @@ import { Carousel } from './Carousel'
 import { CompanyMark, DiagnosedTag, FitBadge } from './GapParts'
 import { JobCard, useJobBrowser } from './JobCard'
 import { ChevronRightIcon, SearchIcon } from './Icons'
-import { LofyScript } from './LofyScript'
 import { SplitView } from './PostingBrowser'
 import { SuggestionHint, useSuggestion } from './ScreenParts'
 import { menuPanel } from './ui'
@@ -289,9 +288,9 @@ export function Home({ onPick, onExplore, onRecommend, onCompany }: Props) {
     <SplitView side={browser.side}>
       <main className="relative flex-1 overflow-hidden">
         <div className={`relative h-full overflow-y-auto ${gutter} pb-10`}>
-          {/* 휴대폰에서는 로고, 타이틀, 설명, 검색창을 두지 않고 바로 공고 줄부터 보여줘요. 검색은 공고 탐색에서 해요. */}
-          <div className="mx-auto w-full max-w-lg pt-[max(4.5rem,11vh)] pb-10 max-sm:hidden sm:pt-[max(6rem,16vh)] sm:pb-14">
-            <LofyScript className="mx-auto mb-5 h-16 w-auto sm:h-20" />
+          {/* 휴대폰에서는 타이틀, 설명, 검색창을 두지 않고 바로 공고 줄부터 보여줘요. 검색은 공고 탐색에서 해요.
+              로고는 사이드바에 있어서 여기에는 두지 않고, 공고 줄이 먼저 눈에 들어오게 위 여백도 줄였어요. */}
+          <div className="mx-auto w-full max-w-lg pt-[max(3.5rem,9vh)] pb-10 max-sm:hidden sm:pb-12">
             <Title text={L.title} />
             <p className="mt-3 mb-7 animate-rise text-balance break-keep text-center text-[13px] leading-relaxed text-gray-500 sm:mb-8 sm:text-[14px]" style={{ animationDelay: '250ms' }}>
               {resume ? L.description : L.descriptionNoResume}
