@@ -62,11 +62,13 @@ export interface PetStatus {
   loading: boolean
   percent: number | null
   event: { kind: 'done' | 'error'; at: number } | null
+  /** 공고를 늘어놓은 화면(공고 탐색, 추천 공고)을 보는 중이에요. 도마뱀이 공고 종이에 매달려 같이 봐요. */
+  reading?: boolean
 }
 
 /** 바탕화면의 펫 창에 지금 상태를 보내요. hidden이면 앱이 펫 창을 잠깐 내려요(면접 연습 화면 등). */
 export function postPetState(status: PetStatus, hidden: boolean) {
-  postToApp({ type: 'petState', busy: status.busy, loading: status.loading, percent: status.percent, event: status.event, hidden })
+  postToApp({ type: 'petState', busy: status.busy, loading: status.loading, percent: status.percent, event: status.event, reading: !!status.reading, hidden })
 }
 
 /** 창의 오른쪽 아래에서 떨어진 거리(px)예요. 끌어 옮긴 자리를 이 기기에 기억해요. */
@@ -82,42 +84,18 @@ export const readPetPosition = (): PetPosition => {
 }
 export const writePetPosition = (position: PetPosition) => writeJson(POSITION_KEY, position)
 
-/** AI가 하는 일이에요. jobs는 지금 기다리는 요청 수, progress는 가장 최근 퍼센트, event는 마지막으로 끝난 일이에요. */
-export interface PetActivity {
-  jobs: number
-  progress: number | null
-  event: { kind: 'done' | 'error'; at: number } | null
-}
-
-const activityStore = createStore<PetActivity>({ jobs: 0, progress: null, event: null })
-export const usePetActivity = () => useStore(activityStore)
+/** 마지막으로 끝난 일(기쁨이나 실패 반응)이에요. 바쁜지와 퍼센트는 보고 있는 기다리는 칸을 따라가요(`usePetWatching`). */
+const eventStore = createStore<PetStatus['event']>(null)
+export const usePetEvent = () => useStore(eventStore)
 
 /** 끝난 일을 알려요. 리포트가 다 만들어졌을 때처럼 요청 밖에서 끝나는 일도 이걸로 알려요. */
 export function petEvent(kind: 'done' | 'error') {
-  activityStore.set({ ...activityStore.get(), event: { kind, at: Date.now() } })
+  eventStore.set({ kind, at: Date.now() })
 }
 
-/**
- * AI 요청을 시작했다고 알려요. 진행 퍼센트를 넘길 함수와, 끝났을 때 부를 함수를 돌려줘요.
- * withProgress가 불러서 이력서 읽기, 서류 검증, 예상 질문, 채점이 모두 펫을 바쁘게 해요.
- */
-export function petWork() {
-  const start = activityStore.get()
-  activityStore.set({ ...start, jobs: start.jobs + 1, progress: 0 })
-  let ended = false
-  return {
-    progress(value: number) {
-      if (ended) return
-      activityStore.set({ ...activityStore.get(), progress: value })
-    },
-    end(ok: boolean) {
-      if (ended) return
-      ended = true
-      const now = activityStore.get()
-      const jobs = Math.max(0, now.jobs - 1)
-      activityStore.set({ jobs, progress: jobs ? now.progress : null, event: { kind: ok ? 'done' : 'error', at: Date.now() } })
-    },
-  }
+/** AI 요청이 끝났다고 알려요(withProgress). 사용자가 기다리던 화면을 떠났으면 반응하지 않아요. */
+export function petWorkEnd(ok: boolean) {
+  if (petWatching()) petEvent(ok ? 'done' : 'error')
 }
 
 const loadingStore = createStore(0)
@@ -140,5 +118,42 @@ export function useHidePet() {
   useEffect(() => {
     hiddenStore.set(hiddenStore.get() + 1)
     return () => hiddenStore.set(hiddenStore.get() - 1)
+  }, [])
+}
+
+/**
+ * 사용자가 AI를 기다리는 칸(`AiProgress`)을 보고 있는지예요. 펫은 이 칸이 화면에 있는 동안만 바쁘게 춤추고 퍼센트를 적어요.
+ * 요청은 화면을 떠나도 끝까지 가지만, 기다리던 화면을 나가면 펫은 바로 멈춰요. percent는 마지막으로 그린 칸의 퍼센트예요.
+ */
+const watchStore = createStore<{ count: number; percent: number | null }>({ count: 0, percent: null })
+let watchLeftAt = 0
+/** 칸이 막 사라진 때(결과로 바뀐 순간)도 보고 있던 것으로 쳐서, 끝났을 때의 기쁨과 실패 반응은 그대로 나와요. */
+const WATCH_GRACE_MS = 1500
+export const petWatching = () => watchStore.get().count > 0 || Date.now() - watchLeftAt < WATCH_GRACE_MS
+export const usePetWatch = () => useStore(watchStore)
+
+/** AI를 기다리는 칸이 불러요. 칸이 떠 있는 동안 펫이 그 퍼센트로 바빠져요. */
+export function usePetWatching(percent: number) {
+  useEffect(() => {
+    watchStore.set({ ...watchStore.get(), count: watchStore.get().count + 1 })
+    return () => {
+      watchLeftAt = Date.now()
+      const count = Math.max(0, watchStore.get().count - 1)
+      watchStore.set({ count, percent: count ? watchStore.get().percent : null })
+    }
+  }, [])
+  useEffect(() => {
+    watchStore.set({ ...watchStore.get(), percent })
+  }, [percent])
+}
+
+const readingStore = createStore(0)
+export const usePetReadingNow = () => useStore(readingStore) > 0
+
+/** 공고를 늘어놓은 화면(공고 탐색, 추천 공고)이 불러요. 그 화면이 떠 있는 동안 도마뱀이 공고 종이에 매달려 같이 봐요. */
+export function usePetReading() {
+  useEffect(() => {
+    readingStore.set(readingStore.get() + 1)
+    return () => readingStore.set(readingStore.get() - 1)
   }, [])
 }

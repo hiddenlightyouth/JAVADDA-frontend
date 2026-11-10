@@ -63,7 +63,7 @@ type AppMessage =
   /** 고른 펫(앱 3.2부터). null이면 바탕화면의 펫 창을 닫아요. */
   | { type: 'pet'; kind: 'javadda' | 'claude' | 'codex' | null }
   /** 펫의 상태(앱 3.2부터). 앱이 펫 창에 javadda:pet 이벤트로 그대로 넘겨요. */
-  | { type: 'petState'; busy: boolean; loading: boolean; percent: number | null; event: { kind: 'done' | 'error'; at: number } | null; hidden: boolean }
+  | { type: 'petState'; busy: boolean; loading: boolean; percent: number | null; event: { kind: 'done' | 'error'; at: number } | null; reading: boolean; hidden: boolean }
   | { type: 'mic'; action: 'prepare'; recognize: boolean }
   | { type: 'mic'; action: 'open'; lang: string | null }
   | { type: 'mic'; action: 'close' }

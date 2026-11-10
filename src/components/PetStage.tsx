@@ -28,7 +28,7 @@ const CANVAS_WIDTH = 200
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
 /** 두 그리기(petScene, geckoScene)가 같은 함수를 돌려줘요. 도마뱀만 테마 색을 따라가요(setColor). */
-type Scene = ReturnType<typeof import('./petScene').createPetScene> & { setColor?: (hex: string) => void }
+type Scene = ReturnType<typeof import('./petScene').createPetScene> & { setColor?: (hex: string) => void; move?: (vx: number, vy: number) => void; read?: (on: boolean) => void }
 
 interface Props {
   kind: PetKind
@@ -42,13 +42,15 @@ interface Props {
   grabbed?: boolean
   /** 마지막으로 끌려간 거리(px)예요. at이 바뀔 때마다 반영해요. */
   pull?: { dx: number; at: number }
+  /** 화면을 돌아다니는 빠르기(px/초, 위가 +)예요. 도마뱀만 걷거나 벽을 타는 자세로 바꿔요. */
+  motion?: { vx: number; vy: number }
 }
 
 /**
  * 펫 한 마리와 말풍선이에요. 앱 화면 안의 펫(`Pet`)과 macOS 앱이 바탕화면에 띄우는 펫 창(`PetWindow`)이 같이 써요.
  * AI를 기다리는 동안 바쁘게 움직이고 퍼센트를 적고, 끝나면 뛰어오르며 기뻐하고, 실패하면 어지러워해요.
  */
-export function PetStage({ kind, status, pokeAt, look, bubbleAlign, grabbed = false, pull }: Props) {
+export function PetStage({ kind, status, pokeAt, look, bubbleAlign, grabbed = false, pull, motion }: Props) {
   const text = useMessages(TEXT)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sceneRef = useRef<Scene | null>(null)
@@ -124,6 +126,15 @@ export function PetStage({ kind, status, pokeAt, look, bubbleAlign, grabbed = fa
   useEffect(() => {
     if (pull) sceneRef.current?.pull(pull.dx)
   }, [pull?.at])
+
+  useEffect(() => {
+    sceneRef.current?.move?.(motion?.vx ?? 0, motion?.vy ?? 0)
+  }, [motion?.vx, motion?.vy])
+
+  // 공고 탐색과 추천 공고에서는 도마뱀이 공고 종이에 매달려 같이 봐요. 펫을 막 켰을 때도 맞추게 매번 알려요
+  useEffect(() => {
+    sceneRef.current?.read?.(!!status.reading)
+  })
 
   const mood: PetMood = bubble?.mood ?? (status.busy || status.loading ? 'dance' : 'idle')
   useEffect(() => {

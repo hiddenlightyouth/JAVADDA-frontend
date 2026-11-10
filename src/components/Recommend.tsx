@@ -3,6 +3,7 @@ import { track } from '../lib/analytics'
 import { familyName, fitOf, RECOMMEND_MIN_FIT, sortPostings, useResume, type JobFamily, type JobPosting, type PostingSort } from '../lib/gap'
 import { localizePath, messages, useMessages } from '../lib/i18n'
 import { followLink } from '../lib/links'
+import { usePetReading } from '../lib/pet'
 import { pathOf } from '../lib/routes'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
@@ -65,6 +66,7 @@ const NEAR_MIN_FIT = 30
 
 export function Recommend({ onPick, onResume, onExplore }: { onPick: (postingId: string) => void; onResume: () => void; onExplore: () => void }) {
   const L = useMessages(TEXT)
+  usePetReading()
   const resume = useResume()
   const [sort, setSort] = useState<PostingSort>('fit')
   const [threshold, setThreshold] = useState(RECOMMEND_MIN_FIT)

@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import type { PetMood } from './petScene'
 
 // 잡아따 도마뱀 펫을 three.js로 그려요. 블록을 쌓은 도마뱀이고, 자세마다 모양을 따로 쌓아 둬요(네 발, 앉기, 자기).
@@ -15,6 +16,17 @@ const SHAKE_WINDOW = 1.2
 const SHAKE_FLIPS = 4
 /** 이만큼(px) 넘게 끌려야 흔든 걸로 쳐요. */
 const SHAKE_PX = 6
+/** 위아래로 기어갈 때 세운 몸의 높이예요. 매달릴 때처럼 머리 끝에서 꼬리 끝까지 칸 안에 들어와요. */
+const CLIMB_Y = -3
+/** 잘 때 위에서 더 내려다보는 각도, 크기, 높이예요. 앉은 모습과 같은 무게로 보이고 바닥이 같아요. */
+/** 잘 때 바닥 높이예요. 앉은 모습과 바닥이 같아요. 크기는 다른 자세와 같은 블록 크기 그대로예요. */
+const SLEEP_Y = 2.8
+/** 공고 종이: 가운데 자리와 크기예요. 도마뱀은 종이 오른쪽 가장자리에 세로로 매달려 얼굴을 내밀어요. */
+const PAPER_X = -9
+const PAPER_W = 13
+const PAPER_H = 17
+/** 종이에 매달린 도마뱀의 자리예요. 크기는 다른 자세와 같고, 매달릴 때와 같은 높이라 머리 끝에서 꼬리 끝까지 칸 안에 들어와요. */
+const PEEK_X = 3
 
 type Slot = 'body' | 'belly' | 'stripe' | 'eye' | 'shine'
 type Part = 'body' | 'tail'
@@ -42,7 +54,8 @@ const QUESTION: [number, number][] = [[0, 4], [1, 4], [2, 4], [2, 3], [1, 2], [1
 
 function makeMaterials() {
   return {
-    body: new THREE.MeshStandardMaterial({ roughness: 0.5 }),
+    // 거칠기를 높여 번들거리지 않는 무광으로 보여요
+    body: new THREE.MeshStandardMaterial({ roughness: 0.75 }),
     // 배와 줄무늬는 톤 매핑을 빼요. 밝은 하늘색이 톤 매핑을 거치면 흰색으로 바래서, 매달렸을 때 배가 뚫린 것처럼 보였어요
     belly: new THREE.MeshStandardMaterial({ roughness: 0.6, toneMapped: false }),
     stripe: new THREE.MeshStandardMaterial({ roughness: 0.6, toneMapped: false }),
@@ -87,6 +100,20 @@ function makeGecko(mats: ReturnType<typeof makeMaterials>) {
         }
   }
 
+  /** 바닥에 부채꼴로 벌린 발가락 다섯과 끝의 빨판이에요. (x, z)가 발바닥 앞쪽, facing은 발이 향한 쪽(+z에서 돌린 각도)이에요. */
+  const toes = (parent: THREE.Object3D, x: number, z: number, facing = 0, size = 1) => {
+    for (const spread of [-1.1, -0.55, 0, 0.55, 1.1]) {
+      const a = facing + spread
+      const len = (spread === 0 ? 1.5 : 1.25) * size
+      const toe = cube(parent, x + Math.sin(a) * len * 0.5, 0, z + Math.cos(a) * len * 0.5, 'body')
+      toe.scale.set(0.45 * size, 0.5 * size, len)
+      toe.rotation.y = a
+      const pad = cube(parent, x + Math.sin(a) * (len + 0.15), 0.05, z + Math.cos(a) * (len + 0.15), 'belly')
+      pad.scale.set(0.7 * size, 0.55 * size, 0.6 * size)
+      pad.rotation.y = a
+    }
+  }
+
   // 네 발 모델: 돌아다니고, 달리고, 매달릴 때
   const walk = new THREE.Group()
   const head = new THREE.Group()
@@ -102,7 +129,9 @@ function makeGecko(mats: ReturnType<typeof makeMaterials>) {
   })
   walk.add(head, tail, ...legs)
   // 몸통: 가로 7, 높이 5, 길이 11. 배와 가슴은 밝은 톤, 등에 줄무늬
-  shell(walk, [-3, 3], [2, 6], [-8, 2], (x, y, z) => (y === 2 || (z === 2 && y <= 5) ? 'belly' : x === 0 && y === 6 ? 'stripe' : 'body'))
+  // 등에는 가운데 줄과 양옆의 점무늬가 있어서, 벽을 탈 때 위에서 본 등이 단색 판으로 보이지 않아요
+  shell(walk, [-3, 3], [2, 6], [-8, 2], (x, y, z) =>
+    y === 2 || (z === 2 && y <= 5) ? 'belly' : y === 6 && (x === 0 || (x === -2 && (z === -6 || z === 0)) || (x === 2 && z === -3)) ? 'stripe' : 'body')
   // 머리: 가로 11, 높이 10, 깊이 8. 턱 밑은 하늘색, 정수리와 뒤통수에 줄무늬
   const walkFace = new Map<string, THREE.Mesh>()
   shell(
@@ -110,7 +139,7 @@ function makeGecko(mats: ReturnType<typeof makeMaterials>) {
     [-5, 5],
     [7, 16],
     [3, 10],
-    (x, y, z) => (y === 7 && z >= 6 && Math.abs(x) <= 3 ? 'belly' : x === 0 && (y === 16 || z === 3) ? 'stripe' : 'body'),
+    (x, y, z) => (y === 7 && z >= 6 && Math.abs(x) <= 3 ? 'belly' : (x === 0 && (y === 16 || z === 3)) || (y === 16 && Math.abs(x) === 2 && z === 6) ? 'stripe' : 'body'),
     (x, y, z, m) => {
       if (z === 10) walkFace.set(`${x},${y}`, m)
     },
@@ -120,11 +149,11 @@ function makeGecko(mats: ReturnType<typeof makeMaterials>) {
   for (const [lx, lz] of LEG_AT) for (let y = 3; y <= 5; y++) for (let z = lz; z <= lz + 1; z++) cube(walk, Math.sign(lx) * 4, y, z, 'body')
   for (let x = -1; x <= 1; x++) for (let y = 4; y <= 6; y++) cube(walk, x, y, -9, 'body')
   for (let x = -2; x <= 2; x++) for (let y = 2; y <= 6; y++) for (let z = 3; z <= 4; z++) cube(walk, x, y, z, z === 4 || y === 2 ? 'belly' : 'body')
-  // 다리와 부채처럼 벌린 발가락 셋
+  // 다리와, 도마뱀붙이처럼 부채꼴로 벌린 발가락 다섯. 발가락 끝에 밝은 빨판이 있어요
   legs.forEach((g, i) => {
     const [lx, lz] = LEG_AT[i]
     for (const x of [lx - 0.5, lx + 0.5]) for (let y = 0; y <= 2; y++) for (let z = lz; z <= lz + 1; z++) cube(g, x, y, z, 'body')
-    for (const dx of [-1, 0, 1]) cube(g, lx + dx * 0.95, 0, lz + 2.1 - Math.abs(dx) * 0.2, 'body').scale.set(0.85, 0.85, 1)
+    toes(g, lx, lz + 1.3, i < 2 ? 0 : 0.25 * (i % 2 ? 1 : -1))
   })
   // 꼬리: 몸통만큼 길게 뒤로 뻗었다가 솟아올라 끝이 앞으로 말려요
   const TAIL: [number, number, number, number][] = [
@@ -163,7 +192,7 @@ function makeGecko(mats: ReturnType<typeof makeMaterials>) {
           if (y === 1 && (x === 5 || z === -1)) continue
           cube(sit, s * x, y, z, 'body')
         }
-    for (const [dx, dz] of [[1.8, 3.1], [3, 3.3], [4.2, 3.1], [5.3, 2.6]]) cube(sit, s * dx, 0, dz, 'body').scale.set(0.9, 0.85, 1)
+    toes(sit, s * 3.6, 2.6, s * 0.35, 1.1)
   }
   arms.forEach((g, i) => {
     const s = i ? 1 : -1
@@ -210,33 +239,53 @@ function makeGecko(mats: ReturnType<typeof makeMaterials>) {
   question.visible = false
   sitHead.add(question)
 
-  // 자는 모델: 몸을 동그랗게 말고 엎드려서 긴 꼬리로 몸 앞을 감싸요. 머리는 왼쪽 앞 바닥에 기대고 눈은 감은 한 줄
+  // 자는 모델: 몸을 동그랗게 말고 엎드려서 긴 꼬리로 몸 앞을 감싸요. 머리는 왼쪽 앞 바닥에 턱을 괴고 눈은 감은 한 줄이에요.
+  // 다른 자세와 블록 크기가 같고, 머리는 네 발 모델의 머리와 같은 크기(가로 11, 높이 9, 깊이 8)라 잠들어도 비율이 그대로예요.
+  // 무늬를 많이 넣으면 작은 크기에서 얼룩덜룩해 보여서, 등 가운데 줄무늬와 꼬리 마디만 밝은 톤이에요
   const sleep = new THREE.Group()
-  for (let x = -5; x <= 5; x++)
-    for (let z = -7; z <= 2; z++) {
-      const d = Math.hypot((x + 0.5) / 5.5, (z + 2.5) / 5)
-      if (d > 1) continue
-      const h = Math.round(4.6 * Math.sqrt(1 - d * d))
-      for (let y = 0; y <= h; y++) cube(sleep, x, y, z, x === 0 && y === h ? 'stripe' : 'body')
-    }
-  // 머리는 몸보다 작게, 몸 언덕 왼쪽 앞에 턱을 괴어요
-  for (let x = -6; x <= 0; x++)
-    for (let y = 0; y <= 5; y++)
-      for (let z = 2; z <= 7; z++) {
-        const ends = Number(x === -6 || x === 0) + Number(y === 0 || y === 5) + Number(z === 2 || z === 7)
-        if (ends >= 2) continue
-        if (x > -6 && x < 0 && y > 0 && y < 5 && z > 2 && z < 7) continue
-        const eye = z === 7 && y === 3 && (x === -5 || x === -4 || x === -2 || x === -1)
-        cube(sleep, x, y, z, eye ? 'eye' : y === 0 && z >= 4 && x >= -5 && x <= -1 ? 'belly' : 'body')
-      }
   const sleepTail = new THREE.Group()
+  const placed = new Set<string>()
+  const put = (parent: THREE.Object3D, x: number, y: number, z: number, slot: Slot, part: Part = 'body') => {
+    const k = `${x},${y},${z}`
+    if (placed.has(k)) return
+    placed.add(k)
+    cube(parent, x, y, z, slot, part)
+  }
+  // 머리: 네 발 모델의 머리처럼 모서리를 깎은 상자. 앞면(z 8)에 감은 눈 두 줄, 턱 밑은 밝은 배 색, 정수리와 뒤통수에 줄무늬
+  for (let x = -11; x <= -1; x++)
+    for (let y = 0; y <= 8; y++)
+      for (let z = 1; z <= 8; z++) {
+        const ends = Number(x === -11 || x === -1) + Number(y === 0 || y === 8) + Number(z === 1 || z === 8)
+        if (ends >= 2) continue
+        const eye = z === 8 && y === 4 && (x === -10 || x === -9 || x === -3 || x === -2)
+        put(sleep, x, y, z, eye ? 'eye' : y === 0 && z >= 4 && x >= -9 && x <= -3 ? 'belly' : x === -6 && (y === 8 || z === 1) ? 'stripe' : 'body')
+      }
+  // 몸 언덕: 네 발 모델의 몸통(가로 7, 높이 5, 길이 11)을 둥글게 만 덩어리. 머리 오른쪽 뒤에 있고 등 가운데에 줄무늬
+  for (let x = -5; x <= 9; x++)
+    for (let z = -9; z <= 3; z++) {
+      const d = Math.hypot((x - 2) / 7, (z + 3) / 6)
+      if (d > 1) continue
+      const top = Math.round(5.5 * Math.sqrt(1 - d * d))
+      for (let y = 0; y <= top; y++) put(sleep, x, y, z, x === 2 && y === top ? 'stripe' : 'body')
+    }
+  // 턱 옆에 접어 넣은 앞발 둘(네 발 모델의 발과 같은 두 칸 굵기)
+  for (const x0 of [-13, 0]) for (let x = x0; x <= x0 + 1; x++) for (const z of [5, 6]) put(sleep, x, 0, z, 'body')
+  // 꼬리: 몸 뒤에서 나와 오른쪽을 돌아 몸 앞을 낮게 감싸고, 끝이 코 앞에서 살짝 말려 올라가 머리에 거의 닿아요(C자로 닫혀요).
+  // 네 발 모델의 꼬리처럼 뿌리는 세 칸, 가운데는 두 칸, 끝은 한 칸 굵기예요
+  const SLEEP_TAIL: [number, number, number][] = [
+    [6, -10, 3], [8, -9, 3], [9, -7, 3], [10, -5, 2], [10, -3, 2], [10, -1, 2], [9, 1, 2], [8, 3, 2], [7, 5, 2], [5, 6, 2], [3, 7, 2], [1, 8, 2], [-1, 9, 2], [-3, 9.5, 2], [-5, 10, 1], [-7, 10, 1], [-9, 10, 1], [-11, 10, 1], [-12, 9.5, 1],
+  ]
+  sleepTail.position.set(6, 0, -10)
   sleep.add(sleepTail)
-  // 꼬리는 몸 뒤에서 나와 오른쪽을 돌아 머리 앞까지 빙 감싸요
-  const SLEEP_TAIL: [number, number, number][] = [[4, -7, 2], [5, -6, 2], [6, -4, 2], [6, -2, 2], [6, 0, 2], [5, 2, 2], [4, 4, 2], [3, 6, 2], [1, 8, 2], [-1, 8, 1], [-3, 9, 1], [-5, 9, 1]]
   SLEEP_TAIL.forEach(([x, z, size], i) => {
     for (let dx = 0; dx < size; dx++)
-      for (let dz = 0; dz < size; dz++) for (let y = 0; y < size; y++) cube(sleepTail, x + dx, y, z + dz, y === size - 1 && i % 2 && dx === 0 ? 'stripe' : 'body', 'tail')
+      for (let dz = 0; dz < size; dz++)
+        for (let y = 0; y < size; y++) put(sleepTail, x + dx, y, Math.round(z) + dz, y === size - 1 && i % 2 && dx === 0 ? 'stripe' : 'body', 'tail')
   })
+  // 꼬리 끝: 코 앞에서 위로 말려 올라가요
+  for (const [x, y, z] of [[-13, 1, 9], [-13, 2, 9], [-13, 3, 8]]) put(sleepTail, x, y, z, 'body', 'tail')
+  // 꼬리가 끊겼을 때 남는 뭉툭한 꼬리 뿌리
+  for (const [x, y] of [[5, 0], [6, 0], [5, 1], [6, 1]]) put(sleep, x, y, -9, 'body')
 
   return { walk, head, tail, legs, walkFace, sit, sitHead, sitTail, arms, sitFace, question, sleep, sleepTail }
 }
@@ -276,6 +325,31 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
   shadow.position.z = -40
   scene.add(shadow)
 
+  // 공고 종이: 흰 종이에 옅은 회색 테두리, 작은 회색 칸(기업 로고 자리)과 글 줄 넷. 빛을 받지 않아 기울어도 회색으로 보이지 않아요
+  const paperMats = [
+    new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false }),
+    new THREE.MeshBasicMaterial({ color: '#e4e7ec', toneMapped: false }),
+    new THREE.MeshBasicMaterial({ color: '#c9d4e8', toneMapped: false }),
+  ]
+  const paper = new THREE.Group()
+  {
+    const card = new THREE.Mesh(new RoundedBoxGeometry(PAPER_W, PAPER_H, 0.8, 3, 0.6), paperMats[0])
+    card.position.y = PAPER_H / 2
+    const edge = new THREE.Mesh(new RoundedBoxGeometry(PAPER_W + 0.5, PAPER_H + 0.5, 0.6, 3, 0.8), paperMats[1])
+    edge.position.set(0, PAPER_H / 2, -0.4)
+    const logo = new THREE.Mesh(new RoundedBoxGeometry(3, 3, 0.3, 2, 0.4), paperMats[2])
+    logo.position.set(-PAPER_W / 2 + 3, PAPER_H - 3.2, 0.5)
+    paper.add(card, edge, logo)
+    for (const [w, y] of [[9, PAPER_H - 7.6], [9, PAPER_H - 9.8], [7, PAPER_H - 12], [5, PAPER_H - 14.2]]) {
+      const line = new THREE.Mesh(new RoundedBoxGeometry(w, 1, 0.3, 2, 0.4), paperMats[2])
+      line.position.set(-PAPER_W / 2 + 1.8 + w / 2, y, 0.5)
+      paper.add(line)
+    }
+  }
+  paper.rotation.x = 0.3
+  paper.visible = false
+  scene.add(paper)
+
   // 칸은 위아래 30칸(블록 기준)을 보여줘요. 앉은 도마뱀이 칸의 절반을 조금 넘게 차지해요
   const VIEW = 30
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -200, 200)
@@ -298,10 +372,11 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
   const setColor = (hex: string) => {
     const hsl = { h: 0, s: 0, l: 0 }
     new THREE.Color(hex).getHSL(hsl)
-    mats.body.color.setHSL(hsl.h, hsl.s, Math.max(0.3, hsl.l - 0.02))
-    // 밝은 톤은 톤 매핑에서 바래서 채도는 거의 그대로 두고, 흰 화면에 묻히지 않게 너무 밝게는 하지 않아요
-    mats.stripe.color.setHSL(hsl.h, hsl.s * 0.9, Math.min(0.6, hsl.l + 0.02))
-    mats.belly.color.setHSL(hsl.h, hsl.s * 0.85, Math.min(0.66, hsl.l + 0.08))
+    // 메인 컬러를 그대로 칠하면 블록 면마다 쨍하게 번쩍여서, 캐릭터 일러스트처럼 채도를 덜어 낸 같은 색상의 톤으로 칠해요.
+    // 몸은 중간 밝기의 차분한 톤, 등줄무늬는 한 단계 밝고 옅게, 배는 거의 흰빛의 파스텔이에요. 어느 테마든 같은 비율이라 한 가족으로 보여요
+    mats.body.color.setHSL(hsl.h, hsl.s * 0.72, Math.min(0.54, Math.max(0.44, hsl.l - 0.06)))
+    mats.stripe.color.setHSL(hsl.h, hsl.s * 0.62, 0.7)
+    mats.belly.color.setHSL(hsl.h, hsl.s * 0.7, 0.8)
   }
   setColor(color)
 
@@ -377,6 +452,10 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
   let nextBlink = 1.5
   let lastActive = 0
   let grabbed = false
+  // 화면을 돌아다니는 빠르기(px/초, 위가 +)예요. 펫 칸을 옮기는 쪽(InAppPet)이 알려 줘요
+  let moveX = 0
+  let reading = false
+  let moveY = 0
   let releaseAt = -10
   let swing = 0
   let swingSpeed = 0
@@ -392,7 +471,8 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
     const now = clock.getElapsedTime()
     tailGone = now
     snapAt = now
-    const from = g.sleep.visible ? g.sleepTail : g.sit.visible ? g.sitTail : g.tail
+    // 꼬리는 매달린 채 흔들 때만 빠져요. 화면이 가려져 한동안 그리지 않았어도 늘 매달린 네 발 모델의 꼬리를 떼요
+    const from = g.tail
     const piece = from.clone(true)
     piece.traverse((o) => {
       const m = o as THREE.Mesh
@@ -403,12 +483,21 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
     piece.updateMatrixWorld(true)
     scene.attach(piece)
     for (const t of [g.tail, g.sitTail, g.sleepTail]) t.visible = false
-    // 매달린 채 끊기면 꼬리가 세로로 서 있어서, 바닥에 눕혀서 떨어뜨려요. 칸 밖으로 나가지 않게 가운데 쪽에 둬요
-    piece.rotation.set(0.3, vx > 0 ? 0.5 : -0.5, 0)
-    piece.position.x = Math.max(-halfW + 8, Math.min(halfW - 8, piece.position.x))
+    // 매달린 채 끊기면 꼬리가 세로로 서 있어서, 바닥에 옆으로 길게 눕혀요. 흔든 쪽 칸 끝으로 튕겨 나가 도마뱀과 떨어진 바닥에 떨어져요
+    // 꼬리는 뿌리에서 -z로 뻗고 끝이 +y로 말려 있어요. y로 반 바퀴 돌려 뿌리를 칸 끝에 두고 안쪽으로 뻗게 한 뒤,
+    // x로 눕혀 말린 끝이 바닥 쪽으로 가게 해요. 위에서 살짝 내려다보는 각도(0.3)는 남겨요
+    const side = Math.sign(vx) || 1
+    piece.rotation.set(0.3 - Math.PI / 2, side * Math.PI / 2, 0)
+    piece.scale.setScalar(1)
+    // 말린 끝(뿌리보다 4칸 넘게 솟은 칸)은 숨겨서 바닥에 곧게 누운 꼬리로 보여요
+    piece.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh && o.position.y > 4) o.visible = false
+    })
+    // 뿌리가 펫 칸 경계 근처에 오게 해서 꼬리가 칸 밖으로 많이 나가지 않아요. 도마뱀 발(±7칸)과는 충분히 떨어져요
+    piece.position.x = side * (VIEW / 2 + 1)
     piece.updateMatrixWorld(true)
     const box = new THREE.Box3().setFromObject(piece)
-    bits.push({ obj: piece, vx, vy: 10, g: 60, life: 6.5, born: now, spin: 0, floor: ground - (box.min.y - piece.position.y) })
+    bits.push({ obj: piece, vx: 0, vy: 6, g: 70, life: 6.5, born: now, spin: 0, floor: ground - (box.min.y - piece.position.y) })
   }
 
   const render = () => {
@@ -419,21 +508,21 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
     // 초기화: 네 발 모델을 기본으로 두고, 동작마다 앉은 모델이나 자는 모델로 바꿔 끼워요
     g.walk.visible = true
     g.sit.visible = false
-    g.sleep.visible = false
     g.walk.rotation.set(0, 0, 0)
     g.walk.position.set(0, 0.5, 0)
     g.walk.scale.set(1, 1, 1)
     g.sit.position.set(0, 0.5, 0)
     g.sit.scale.set(1, 1, 1)
-    g.sleep.position.set(0, 0.5, 0)
-    g.sleep.scale.set(1, 1, 1)
     g.head.rotation.set(0, 0, 0)
     g.sitHead.rotation.set(0, 0, 0)
+    g.sleep.visible = false
+    g.sleep.scale.set(1, 1, 1)
     g.tail.rotation.set(0, 0, 0)
     g.sitTail.rotation.set(0, 0, 0)
     g.legs.forEach((l) => l.rotation.set(0, 0, 0))
     g.arms.forEach((a) => a.rotation.set(0, 0, 0))
     g.question.visible = false
+    paper.visible = false
     const seat = () => {
       g.walk.visible = false
       g.sit.visible = true
@@ -448,6 +537,7 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
     let mouth = false
     let wantYaw = 0.45 + lookX * 0.5
     let hopY = 0
+    let onWall = false
 
     if (!still) {
       const busy = mood === 'dance'
@@ -469,7 +559,8 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
         })
         g.tail.rotation.y = Math.sin(t * 7) * 0.35
         wantYaw = 0.15 + Math.sin(t * 2.5) * 0.1
-        y = VIEW / 2 - 13 - ground
+        // 머리 꼭대기가 칸 위로 잘리지 않게, 매달린 몸 전체(머리 끝에서 꼬리 끝까지 27칸)가 칸 안에 들어오는 높이예요
+        y = VIEW / 2 - 18 - ground
         x = 0
         // 찡그린 눈썹에 실눈, 입은 일자로 꾹. 가끔 질끈 감고, 꼬리가 빠진 순간만 깜짝 놀라요
         style = t - snapAt < 1 ? 'wide' : Math.floor(t * 2.5) % 4 === 3 ? 'blink' : 'annoyed'
@@ -477,7 +568,7 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
         if (t > nextBit) {
           nextBit = t + 0.25
           const side = Math.random() < 0.5 ? -1 : 1
-          spawn(bit(0xbfe9ff, 0.7), x + side * 5, ground + y + 11, { vx: side * 8, vy: 10, g: 40, life: 0.6 })
+          spawn(bit(0xbfe9ff, 0.7), x + side * 5, ground + y + 9, { vx: side * 8, vy: 10, g: 40, life: 0.6 })
         }
       } else if (t - releaseAt < 0.6 && y > 0) {
         // 놓으면 떨어져요
@@ -500,6 +591,50 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
             life: 0.45,
             spin: Math.random() * 6 - 3,
           })
+        }
+        lastActive = t
+      } else if (moveX || moveY) {
+        // 화면을 돌아다닐 때. 옆으로는 옆모습으로 걷고, 위아래로는 배와 얼굴을 보이며 네 발로 기어요. 대각선 발을 번갈아 내딛어요
+        const step = t * 11
+        const pair = (i: number) => (i === 0 || i === 3 ? 0 : Math.PI)
+        // 칸이 통째로 움직이니 도마뱀은 칸 가운데로 돌아와요
+        x += (0 - x) * Math.min(1, dt * 4)
+        if (Math.abs(moveY) > Math.abs(moveX)) {
+          // 위아래로 갈 때는 사다리를 타는 캐릭터처럼 몸을 세우고 뒤돌아 등을 보여요. 머리는 늘 위이고(내려갈 때도 뒤로 살금살금),
+          // 앞발을 번갈아 머리 옆으로 쭉 뻗고 뒷발로 밀어 올려요. 위에서 본 납작한 실루엣은 진짜 도마뱀 같아 징그러워서 쓰지 않아요.
+          // 몸을 세운 뒤 통째로 반 바퀴 돌려 등이 화면 쪽이에요. 크기는 매달릴 때와 같아요
+          const up = moveY > 0
+          onWall = true
+          const hang = -1.5
+          const climb = up ? step : -step * 0.8
+          wantYaw = Math.PI
+          g.walk.rotation.x = hang
+          g.walk.rotation.z = Math.sin(climb) * 0.07
+          g.walk.position.y = 2
+          g.head.rotation.x = -hang - 0.12
+          // 가끔 어깨 너머로 고개를 살짝 돌려요
+          g.head.rotation.y = Math.sin(t * 0.8) * 0.3
+          // 대각선 짝(앞왼과 뒤오른, 앞오른과 뒤왼)이 함께 움직여요. 앞발은 머리 위로 뻗었다가 벽을 짚고 끌어내리고,
+          // 뒷발은 몸 아래로 밀어내요. 다리는 벽 쪽(배 쪽)으로만 움직이고 등 너머로 넘어가지 않아요. 옮기는 발만 벽에서 살짝 들려요
+          g.legs.forEach((l, i) => {
+            const front = i < 2
+            const phase = climb + pair(i)
+            const reach = Math.sin(phase)
+            const lift = Math.max(0, Math.cos(phase))
+            l.rotation.x = front ? hang + 0.35 - reach * 0.35 : -hang - 0.35 + reach * 0.35
+            l.rotation.z = (i % 2 ? 1 : -1) * ((front ? 0.5 : 0.35) + lift * 0.25)
+          })
+          g.tail.rotation.y = Math.sin(climb) * 0.35
+          y = CLIMB_Y - ground + Math.max(0, Math.sin(climb * 2)) * 0.5
+        } else {
+          // 옆으로 갈 때는 옆모습으로 종종종 걸어요
+          // 도마뱀은 머리를 낮게 들고 걸어서, 코를 앞아래로 숙이고 얼굴 앞면이 조금 보이게 덜 돌려요
+          wantYaw = Math.sign(moveX) * 1.15
+          g.head.rotation.x = 0.3
+          g.walk.position.y = 0
+          y = Math.abs(Math.sin(step)) * 0.4
+          g.legs.forEach((l, i) => (l.rotation.x = Math.sin(step + pair(i)) * 0.7))
+          g.tail.rotation.y = Math.sin(step) * 0.25
         }
         lastActive = t
       } else if (mood === 'happy' || t - hopStart < 1.4) {
@@ -542,13 +677,35 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
         g.arms[1].rotation.z = 0.6 + Math.sin(t * 4) * 0.3
         wantYaw = 0.3
         lastActive = t
+      } else if (reading) {
+        // 공고 탐색, 추천 공고: 공고 종이 오른쪽 가장자리에 세로로 착 달라붙어 얼굴을 내밀고 같이 봐요.
+        // 매달렸을 때처럼 몸을 세우고, 앞발은 위쪽 가장자리를, 뒷발은 아래쪽 가장자리를 붙잡아요. 꼬리는 아래로 늘어져 살랑여요
+        paper.visible = true
+        paper.position.set(PAPER_X, ground, -6)
+        x = PEEK_X
+        y = CLIMB_Y - ground
+        const hang = -1.5
+        g.walk.rotation.x = hang
+        g.walk.position.y = 2
+        g.head.rotation.x = -hang - 0.12
+        g.head.rotation.z = 0.12 + Math.sin(t * 0.9) * 0.05
+        g.legs.forEach((l, i) => {
+          const front = i < 2
+          l.rotation.x = front ? hang - 0.2 : -hang + 0.2
+          l.rotation.z = i % 2 ? 0.25 : -0.7
+        })
+        g.tail.rotation.y = Math.sin(t * 1.5) * 0.15
+        wantYaw = -0.2
+        lastActive = t
       } else if (t - lastActive > SLEEP_AFTER) {
-        // 오래 가만히 두면 몸을 말고 꼬리로 감싼 채 잠들어요
+        // 오래 가만히 두면 몸을 동그랗게 말고 꼬리로 감싼 채 잠들어요. 숨 쉴 때 등이 천천히 오르내려요
         g.walk.visible = false
         g.sleep.visible = true
-        g.sleep.scale.y = 1 + Math.sin(t * 1.6) * 0.025
+        g.sleep.scale.set(1, 1 + Math.sin(t * 1.6) * 0.03, 1)
+        g.sleep.position.set(0, SLEEP_Y, 0)
+        x += (0 - x) * Math.min(1, dt * 4)
         style = 'blink'
-        wantYaw = 0.15
+        wantYaw = 0.2
         if (t > nextBit) {
           nextBit = t + 1.6
           const zed = new THREE.Group()
@@ -560,7 +717,7 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
             c.position.set(zx * 0.5, zy * 0.5, 0)
             zed.add(c)
           }
-          spawn(zed, x + 4, ground + 9, { vx: 1.5, vy: 2.5, life: 2.2 })
+          spawn(zed, x + 6, ground + 17, { vx: 1.5, vy: 2.5, life: 2.2 })
         }
       } else {
         // 평소: 앉아서 숨 쉬듯 들썩이고 두리번거리다가, 가끔 폴짝폴짝 뛰어 자리를 옮겨요
@@ -592,7 +749,7 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
         }
       }
       // 달리거나 매달리거나 떨어지는 중이 아니면 바닥에 앉아요. 동작이 바뀌어도 공중에 뜬 채 남지 않아요
-      if (!grabbed && !busy && t - releaseAt >= 0.6) y = 0
+      if (!grabbed && !busy && !moveX && !moveY && !reading && t - releaseAt >= 0.6) y = 0
       // 놓은 뒤에는 흔들림이 잦아들어요
       if (!grabbed) {
         swingSpeed += (-38 * swing - 9 * swingSpeed) * dt
@@ -620,11 +777,11 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
     turn.rotation.y = yaw
     drawFace(style, mouth)
     root.position.set(x, ground + y + hopY, 0)
-    const lift = y + hopY
+    const lift = paper.visible ? 0 : y + hopY
     const k = Math.max(0.35, 1 - lift / 20)
-    shadow.position.set(x, ground - 0.4, -40)
-    shadow.scale.set(6.5 * k, 1.1 * k, 1)
-    ;(shadow.material as THREE.MeshBasicMaterial).opacity = (grabbed ? 0.06 : document.documentElement.classList.contains('dark') ? 0.35 : 0.14) * k
+    shadow.position.set(paper.visible ? PAPER_X + 2 : x, ground - 0.4, -40)
+    shadow.scale.set((paper.visible ? 10 : 6.5) * k, 1.1 * k, 1)
+    ;(shadow.material as THREE.MeshBasicMaterial).opacity = onWall ? 0 : (grabbed ? 0.06 : document.documentElement.classList.contains('dark') ? 0.35 : 0.14) * k
 
     for (let i = bits.length - 1; i >= 0; i--) {
       const b = bits[i]
@@ -682,6 +839,24 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
       if (Math.abs(next - lookX) > 0.02) lastActive = clock.getElapsedTime()
       lookX = next
     },
+    /** 공고를 늘어놓은 화면을 보는 중이면 공고 종이에 매달려 같이 봐요. */
+    read(on: boolean) {
+      if (on === reading) return
+      reading = on
+      lastActive = clock.getElapsedTime()
+      if (still) render()
+    },
+    /** 바로 잠들어요. 개발 서버의 `window.__pet`으로 자는 모습을 볼 때 써요. */
+    nap() {
+      lastActive = clock.getElapsedTime() - SLEEP_AFTER - 1
+    },
+    /** 화면을 돌아다니는 빠르기(px/초, 위가 +)예요. 둘 다 0이면 멈춰요. */
+    move(vx: number, vy: number) {
+      moveX = vx
+      moveY = vy
+      if (vx || vy) lastActive = clock.getElapsedTime()
+      if (still) render()
+    },
     /** 잡거나 놓아요. */
     grab(on: boolean) {
       if (on === grabbed) return
@@ -729,6 +904,7 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
         for (const material of Array.isArray(m.material) ? m.material : [m.material]) material.dispose()
       })
       shadow.geometry.dispose()
+      paper.traverse((o) => (o as THREE.Mesh).geometry?.dispose())
       renderer.dispose()
       void pokeAt
     },

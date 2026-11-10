@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { track } from '../lib/analytics'
 import { companyOf, COMPANY_CATEGORIES, COMPANY_SIZES, type CompanySize, type CompanyCategory, majorCompanies, sortPostings, useResume, type CareerLevel, type JobPosting, type PostingSort } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
+import { usePetReading } from '../lib/pet'
 import { readFlag, readJson, writeFlag, writeJson } from '../lib/storage'
 import { PageHeader, ScrollPage } from './AppPage'
 import { Dropdown } from './Dropdown'
@@ -83,6 +84,7 @@ const TEXT = messages({
 /** company를 주면 그 기업 공고만 골라 둔 채로 열어요. 기업 상세의 공고 탐색에서 보기와 기술 블로그의 공고 보기에서 와요. */
 export function Jobs({ onPick, initialCompany = null }: { onPick: (postingId: string) => void; initialCompany?: string | null }) {
   const L = useMessages(TEXT)
+  usePetReading()
   const resume = useResume()
   const [query, setQuery] = useState('')
   const [saved] = useState(readFilters)

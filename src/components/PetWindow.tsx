@@ -14,6 +14,8 @@ interface Detail {
   grab?: boolean
   /** 끌려간 가로 거리(pt)예요(앱 3.4부터). */
   drag?: number
+  /** 공고를 늘어놓은 화면을 보는 중이에요. */
+  reading?: boolean
 }
 
 /**
@@ -34,7 +36,7 @@ export function PetWindow() {
     const onEvent = (event: Event) => {
       const detail = (event as CustomEvent<Detail>).detail ?? {}
       if (isPetKind(detail.kind)) setKind(resolve(detail.kind))
-      if (detail.busy !== undefined) setStatus({ busy: detail.busy, loading: detail.loading ?? false, percent: detail.percent ?? null, event: detail.event ?? null })
+      if (detail.busy !== undefined) setStatus({ busy: detail.busy, loading: detail.loading ?? false, percent: detail.percent ?? null, event: detail.event ?? null, reading: detail.reading ?? false })
       if (detail.poke) setPokeAt(detail.poke)
       if (typeof detail.look === 'number') setLook(detail.look)
       if (typeof detail.grab === 'boolean') setGrabbed(detail.grab)

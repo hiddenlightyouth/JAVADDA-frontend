@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNo
 import { createPortal } from 'react-dom'
 import { careerName, categoryName, COMPANY_CATEGORIES, companyOf, daysLeft, daysSince, familyName, fitOf, levelOf, skillLogoOf, useDiagnosed, type Company, type CompanyCategory, type Resume, type GapKind, type JobPosting, type RadarAxis, type RequirementCheck, LEVEL_MAX } from '../lib/gap'
 import { messages, useMessages } from '../lib/i18n'
+import { usePetWatching } from '../lib/pet'
 import { ConfirmDialog } from './Dialog'
 import { BriefcaseIcon, BuildingIcon, CalendarIcon, CheckIcon, CloseIcon, ConceptIcon, MapPinIcon, PersonIcon, TriangleIcon, type Concept } from './Icons'
 import { shortDate } from './ScreenParts'
@@ -460,6 +461,8 @@ function useStageText(stage: string): string {
  */
 export function AiProgress({ progress, stage, title, className = '' }: { progress: number; stage: string; title?: string; className?: string }) {
   const text = useStageText(stage)
+  // 이 칸이 보이는 동안만 펫이 같이 기다려요. 화면을 떠나면 펫도 멈춰요
+  usePetWatching(progress)
   return <ProgressRing value={progress} text={text} title={title} className={`animate-fade ${className}`} />
 }
 
