@@ -16,11 +16,13 @@ interface Detail {
   drag?: number
   /** 공고를 늘어놓은 화면을 보는 중이에요. */
   reading?: boolean
+  /** 앱이 펫 창을 옮기는 빠르기(pt/초, 위가 +)예요. [0, 0]이면 멈췄어요(앱 3.6부터). */
+  move?: [number, number]
 }
 
 /**
  * macOS 앱(3.2부터)이 바탕화면에 띄우는 펫 창의 화면이에요(/pet-window?kind=claude). 바탕은 투명하고 펫만 그려요.
- * 상태와 누르기, 바라볼 쪽은 앱이 `javadda:pet` 이벤트로 넘겨줘요. 누르면 앱이 잡아따 창을 열어요.
+ * 상태와 누르기, 바라볼 쪽, 창을 옮기는 빠르기(3.6부터)는 앱이 `javadda:pet` 이벤트로 넘겨줘요. 누르면 앱이 잡아따 창을 열어요.
  */
 export function PetWindow() {
   // 앱은 잡아따 도마뱀을 모르고 claude로 알려줘서, 이 기기에 도마뱀을 골라 두었으면 도마뱀을 그려요
@@ -31,6 +33,7 @@ export function PetWindow() {
   const [look, setLook] = useState(0)
   const [grabbed, setGrabbed] = useState(false)
   const [pull, setPull] = useState<{ dx: number; at: number } | undefined>()
+  const [motion, setMotion] = useState<{ vx: number; vy: number } | undefined>()
 
   useEffect(() => {
     const onEvent = (event: Event) => {
@@ -41,6 +44,11 @@ export function PetWindow() {
       if (typeof detail.look === 'number') setLook(detail.look)
       if (typeof detail.grab === 'boolean') setGrabbed(detail.grab)
       if (typeof detail.drag === 'number') setPull({ dx: detail.drag, at: performance.now() })
+      // 앱이 펫 창을 옮기는 동안 그 방향으로 걷거나 기는 자세를 해요
+      if (Array.isArray(detail.move)) {
+        const [vx, vy] = detail.move
+        setMotion(vx || vy ? { vx, vy } : undefined)
+      }
     }
     window.addEventListener(PET_WINDOW_EVENT, onEvent)
     return () => window.removeEventListener(PET_WINDOW_EVENT, onEvent)
@@ -48,7 +56,7 @@ export function PetWindow() {
 
   return (
     <div className="flex h-dvh cursor-pointer items-end justify-center overflow-hidden select-none">
-      <PetStage key={kind} kind={kind} status={status} pokeAt={pokeAt} look={look} bubbleAlign="center" grabbed={grabbed} pull={pull} />
+      <PetStage key={kind} kind={kind} status={status} pokeAt={pokeAt} look={look} bubbleAlign="center" grabbed={grabbed} pull={pull} motion={motion} />
     </div>
   )
 }
