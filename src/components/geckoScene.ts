@@ -59,8 +59,9 @@ function makeMaterials() {
     // 배와 줄무늬는 톤 매핑을 빼요. 밝은 하늘색이 톤 매핑을 거치면 흰색으로 바래서, 매달렸을 때 배가 뚫린 것처럼 보였어요
     belly: new THREE.MeshStandardMaterial({ roughness: 0.6, toneMapped: false }),
     stripe: new THREE.MeshStandardMaterial({ roughness: 0.6, toneMapped: false }),
-    eye: new THREE.MeshStandardMaterial({ color: '#0b0d12', roughness: 0.2 }),
-    shine: new THREE.MeshStandardMaterial({ color: '#d4d8e0', roughness: 0.3 }),
+    // 눈은 순수한 검정 대신 몸 색이 비치는 아주 짙은 남색이라(setColor) 덜 딱딱하고, 하이라이트는 흰색이에요
+    eye: new THREE.MeshStandardMaterial({ roughness: 0.25 }),
+    shine: new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.3, toneMapped: false }),
   } satisfies Record<Slot, THREE.MeshStandardMaterial>
 }
 
@@ -73,7 +74,27 @@ function makeGecko(mats: ReturnType<typeof makeMaterials>) {
     parent.add(m)
     return m
   }
-  /** 속이 빈 상자. 겉면만 쌓고, 두 축 이상이 끝에 닿는 모서리 칸은 빼서 둥글게 해요. */
+  /**
+   * 깎아 낸 모서리 칸의 안쪽 반에 반 칸 블록을 채워요. 한 칸짜리 계단이 반 칸짜리 두 단으로 나뉘어 윤곽이 덜 각져 보여요.
+   * 범위의 끝에 닿은 축으로만 반으로 줄이고 안쪽으로 반의반 칸 옮겨요(모서리는 반 칸, 꼭짓점은 반의반 칸 크기예요).
+   */
+  const bevel = (
+    parent: THREE.Object3D,
+    x: number,
+    y: number,
+    z: number,
+    [x0, x1]: [number, number],
+    [y0, y1]: [number, number],
+    [z0, z1]: [number, number],
+    slot: Slot,
+  ) => {
+    const inward = (v: number, lo: number, hi: number) => (v === lo ? 0.25 : v === hi ? -0.25 : 0)
+    const ox = inward(x, x0, x1)
+    const oy = inward(y, y0, y1)
+    const oz = inward(z, z0, z1)
+    cube(parent, x + ox, y + oy, z + oz, slot).scale.set(ox ? 0.5 : 1, oy ? 0.5 : 1, oz ? 0.5 : 1)
+  }
+  /** 속이 빈 상자. 겉면만 쌓고, 두 축 이상이 끝에 닿는 모서리 칸은 빼고 반 칸 블록(bevel)으로 둥글게 해요. */
   const shell = (
     parent: THREE.Object3D,
     [x0, x1]: [number, number],
@@ -86,7 +107,11 @@ function makeGecko(mats: ReturnType<typeof makeMaterials>) {
       for (let y = y0; y <= y1; y++)
         for (let z = z0; z <= z1; z++) {
           const ends = Number(x === x0 || x === x1) + Number(y === y0 || y === y1) + Number(z === z0 || z === z1)
-          if (ends === 0 || ends >= 2) continue
+          if (ends === 0) continue
+          if (ends >= 2) {
+            bevel(parent, x, y, z, [x0, x1], [y0, y1], [z0, z1], paint(x, y, z))
+            continue
+          }
           // 블록은 onFace가 없어도 늘 쌓아요. onFace?.(…, cube())로 쓰면 onFace가 없을 때 cube까지 건너뛰어요
           const m = cube(parent, x, y, z, paint(x, y, z))
           onFace?.(x, y, z, m)
@@ -206,12 +231,22 @@ function makeGecko(mats: ReturnType<typeof makeMaterials>) {
     for (let y = 8; y <= 16; y++)
       for (let z = -3; z <= 4; z++) {
         const ends = Number(Math.abs(x) === 5) + Number(z === -3 || z === 4) + Number(y === 8 || y === 16)
-        if (ends >= 2) continue
-        // 정수리는 두 단으로 깎아서 뚜껑을 얹은 것처럼 보이지 않고 둥글게 이어져요
-        if (y === 16 && (Math.abs(x) >= 3 || z <= -1 || z >= 2)) continue
-        if (y === 15 && (Math.abs(x) === 5 || z === -3 || z === 4)) continue
-        if (Math.abs(x) < 4 && y > 9 && y < 15 && z > -2 && z < 3) continue
         const slot: Slot = y === 8 && z >= 1 && Math.abs(x) <= 3 ? 'belly' : x === 0 && ((y >= 15 && z <= 0) || z === -3) ? 'stripe' : 'body'
+        // 깎은 칸에는 반 칸 블록을 채워 계단을 반으로 나눠요. 옆과 아래 모서리, 정수리 두 단의 가장자리예요
+        if (ends >= 2) {
+          if (y < 15) bevel(sitHead, x, y, z, [-5, 5], [8, 16], [-3, 4], slot)
+          continue
+        }
+        // 정수리는 두 단으로 깎아서 뚜껑을 얹은 것처럼 보이지 않고 둥글게 이어져요
+        if (y === 16 && (Math.abs(x) >= 3 || z <= -1 || z >= 2)) {
+          if (Math.abs(x) <= 3 && z >= -1 && z <= 2) bevel(sitHead, x, y, z, [-3, 3], [8, 16], [-1, 2], slot)
+          continue
+        }
+        if (y === 15 && (Math.abs(x) === 5 || z === -3 || z === 4)) {
+          bevel(sitHead, x, y, z, [-5, 5], [8, 15], [-3, 4], slot)
+          continue
+        }
+        if (Math.abs(x) < 4 && y > 9 && y < 15 && z > -2 && z < 3) continue
         const m = cube(sitHead, x, y, z, slot)
         if (z === 4) sitFace.set(`${x},${y}`, m)
       }
@@ -256,17 +291,25 @@ function makeGecko(mats: ReturnType<typeof makeMaterials>) {
     for (let y = 0; y <= 8; y++)
       for (let z = 1; z <= 8; z++) {
         const ends = Number(x === -11 || x === -1) + Number(y === 0 || y === 8) + Number(z === 1 || z === 8)
-        if (ends >= 2) continue
+        if (ends >= 2) {
+          bevel(sleep, x, y, z, [-11, -1], [0, 8], [1, 8], 'body')
+          continue
+        }
         const eye = z === 8 && y === 4 && (x === -10 || x === -9 || x === -3 || x === -2)
         put(sleep, x, y, z, eye ? 'eye' : y === 0 && z >= 4 && x >= -9 && x <= -3 ? 'belly' : x === -6 && (y === 8 || z === 1) ? 'stripe' : 'body')
       }
   // 몸 언덕: 네 발 모델의 몸통(가로 7, 높이 5, 길이 11)을 둥글게 만 덩어리. 머리 오른쪽 뒤에 있고 등 가운데에 줄무늬
+  const moundTop = (x: number, z: number) => {
+    const d = Math.hypot((x - 2) / 7, (z + 3) / 6)
+    return d > 1 ? -1 : Math.round(5.5 * Math.sqrt(1 - d * d))
+  }
   for (let x = -5; x <= 9; x++)
     for (let z = -9; z <= 3; z++) {
-      const d = Math.hypot((x - 2) / 7, (z + 3) / 6)
-      if (d > 1) continue
-      const top = Math.round(5.5 * Math.sqrt(1 - d * d))
+      const top = moundTop(x, z)
+      if (top < 0) continue
       for (let y = 0; y <= top; y++) put(sleep, x, y, z, x === 2 && y === top ? 'stripe' : 'body')
+      // 옆 칸보다 한 칸 낮으면 위에 반 칸 높이 블록을 얹어, 언덕의 계단이 반 칸씩 둥글게 이어져요
+      if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => moundTop(x + dx, z + dz) > top)) cube(sleep, x, top + 0.75, z, 'body').scale.y = 0.5
     }
   // 턱 옆에 접어 넣은 앞발 둘(네 발 모델의 발과 같은 두 칸 굵기)
   for (const x0 of [-13, 0]) for (let x = x0; x <= x0 + 1; x++) for (const z of [5, 6]) put(sleep, x, 0, z, 'body')
@@ -301,7 +344,9 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
   const scene = new THREE.Scene()
   // 앞에서 부드럽게 비춰요. 옆면이 너무 어두우면 무거워 보여서 채움 빛을 넉넉히 둬요
   // 빛이 세면 화면을 정면으로 보는 밝은 면(매달렸을 때의 배)이 하얗게 날아가서, 전체 빛을 낮게 둬요
-  scene.add(new THREE.HemisphereLight('#ffffff', '#7d8796', 1.15))
+  // 아래에서 받는 빛(그늘)은 회색 대신 몸과 같은 색상의 진한 톤이에요(setColor). 그늘이 회색이면 칙칙해 보여요
+  const hemi = new THREE.HemisphereLight('#ffffff', '#7d8796', 1.15)
+  scene.add(hemi)
   const key = new THREE.DirectionalLight('#ffffff', 1.4)
   key.position.set(0.35, 1, 0.8)
   scene.add(key)
@@ -319,9 +364,21 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
   root.add(tilt)
   tilt.add(turn)
   turn.add(g.walk, g.sit, g.sleep)
-  root.scale.setScalar(1)
   scene.add(root)
-  const shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 32), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: 0.14, depthWrite: false }))
+  // 바닥 그림자는 가장자리가 흐려지는 둥근 그림자예요. 테두리가 딱딱한 원보다 바닥에 앉은 느낌이 자연스러워요
+  const shadowCanvas = document.createElement('canvas')
+  shadowCanvas.width = shadowCanvas.height = 64
+  const shadowPaint = shadowCanvas.getContext('2d')
+  if (shadowPaint) {
+    const fade = shadowPaint.createRadialGradient(32, 32, 0, 32, 32, 32)
+    fade.addColorStop(0, 'rgba(0,0,0,1)')
+    fade.addColorStop(0.55, 'rgba(0,0,0,0.6)')
+    fade.addColorStop(1, 'rgba(0,0,0,0)')
+    shadowPaint.fillStyle = fade
+    shadowPaint.fillRect(0, 0, 64, 64)
+  }
+  const shadowMap = new THREE.CanvasTexture(shadowCanvas)
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.MeshBasicMaterial({ color: '#000', map: shadowMap, transparent: true, opacity: 0.2, depthWrite: false }))
   shadow.position.z = -40
   scene.add(shadow)
 
@@ -376,7 +433,12 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
     // 몸은 중간 밝기의 차분한 톤, 등줄무늬는 한 단계 밝고 옅게, 배는 거의 흰빛의 파스텔이에요. 어느 테마든 같은 비율이라 한 가족으로 보여요
     mats.body.color.setHSL(hsl.h, hsl.s * 0.72, Math.min(0.54, Math.max(0.44, hsl.l - 0.06)))
     mats.stripe.color.setHSL(hsl.h, hsl.s * 0.62, 0.7)
-    mats.belly.color.setHSL(hsl.h, hsl.s * 0.7, 0.8)
+    mats.belly.color.setHSL(hsl.h, Math.min(1, hsl.s * 0.85), 0.8)
+    // 배와 줄무늬는 화면을 정면으로 보는 면이 많아 위에서 오는 빛을 덜 받아 회색으로 탁해져서, 자기 색으로 은은하게 밝혀요
+    mats.belly.emissive.copy(mats.belly.color).multiplyScalar(0.28)
+    mats.stripe.emissive.copy(mats.stripe.color).multiplyScalar(0.18)
+    mats.eye.color.setHSL(hsl.h, 0.45, 0.1)
+    hemi.groundColor.setHSL(hsl.h, hsl.s * 0.55, 0.32)
   }
   setColor(color)
 
@@ -435,7 +497,9 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
     return m
   }
 
-  const clock = new THREE.Clock()
+  // three.js의 Clock은 그만 쓰라는 경고가 떠서, 켠 뒤 흐른 시간(초)만 재는 작은 시계로 대신해요
+  const startedAt = performance.now()
+  const clock = { getElapsedTime: () => (performance.now() - startedAt) / 1000 }
   let mood: PetMood = 'idle'
   let lookX = 0
   let x = 0
@@ -465,6 +529,8 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
   let lastSign = 0
   let nextBit = 0
   let frame = 0
+  let lastPose = ''
+  let poseAt = -10
   let last = 0
 
   const dropTail = (vx: number) => {
@@ -631,10 +697,15 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
           // 도마뱀은 머리를 낮게 들고 걸어서, 코를 앞아래로 숙이고 얼굴 앞면이 조금 보이게 덜 돌려요
           wantYaw = Math.sign(moveX) * 1.15
           g.head.rotation.x = 0.3
-          g.walk.position.y = 0
           y = Math.abs(Math.sin(step)) * 0.4
-          g.legs.forEach((l, i) => (l.rotation.x = Math.sin(step + pair(i)) * 0.7))
-          g.tail.rotation.y = Math.sin(step) * 0.25
+          // 도마뱀처럼 다리를 옆으로 벌리고, 걸음마다 몸과 꼬리를 좌우로 흔들어요
+          g.legs.forEach((l, i) => {
+            l.rotation.x = Math.sin(step + pair(i)) * 0.7
+            l.rotation.z = (i % 2 ? 1 : -1) * 0.45
+          })
+          g.walk.position.y = -0.8
+          g.walk.rotation.y = Math.sin(step) * 0.14
+          g.tail.rotation.y = -Math.sin(step) * 0.35
         }
         lastActive = t
       } else if (mood === 'happy' || t - hopStart < 1.4) {
@@ -773,6 +844,14 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
       }
     }
 
+    // 자세 모델(네 발, 앉기, 자기)이 바뀌는 순간 툭 바뀌어 보이지 않게, 0.2초 동안 살짝 눌렸다 펴져요(크기는 그대로예요)
+    const pose = g.sleep.visible ? 'sleep' : g.sit.visible ? 'sit' : 'walk'
+    if (pose !== lastPose) {
+      lastPose = pose
+      poseAt = t
+    }
+    const settle = (1 - Math.min(1, (t - poseAt) / 0.2)) ** 2
+    root.scale.set(1 + 0.04 * settle, 1 - 0.07 * settle, 1 + 0.04 * settle)
     yaw += (wantYaw - yaw) * Math.min(1, dt * 6)
     turn.rotation.y = yaw
     drawFace(style, mouth)
@@ -780,8 +859,8 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
     const lift = paper.visible ? 0 : y + hopY
     const k = Math.max(0.35, 1 - lift / 20)
     shadow.position.set(paper.visible ? PAPER_X + 2 : x, ground - 0.4, -40)
-    shadow.scale.set((paper.visible ? 10 : 6.5) * k, 1.1 * k, 1)
-    ;(shadow.material as THREE.MeshBasicMaterial).opacity = onWall ? 0 : (grabbed ? 0.06 : document.documentElement.classList.contains('dark') ? 0.35 : 0.14) * k
+    shadow.scale.set((paper.visible ? 12 : 8) * k, 1.5 * k, 1)
+    ;(shadow.material as THREE.MeshBasicMaterial).opacity = onWall ? 0 : (grabbed ? 0.08 : document.documentElement.classList.contains('dark') ? 0.45 : 0.22) * k
 
     for (let i = bits.length - 1; i >= 0; i--) {
       const b = bits[i]
@@ -904,6 +983,7 @@ export function createGeckoScene(canvas: HTMLCanvasElement, still: boolean, colo
         for (const material of Array.isArray(m.material) ? m.material : [m.material]) material.dispose()
       })
       shadow.geometry.dispose()
+      shadowMap.dispose()
       paper.traverse((o) => (o as THREE.Mesh).geometry?.dispose())
       renderer.dispose()
       void pokeAt

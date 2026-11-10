@@ -286,7 +286,9 @@ export function createPetScene(canvas: HTMLCanvasElement, kind: BotKind, still: 
   let swing = 0
   let swingSpeed = 0
   let lift = 0
-  const clock = new THREE.Clock()
+  // three.js의 Clock은 그만 쓰라는 경고가 떠서, 켠 뒤 흐른 시간(초)만 재는 작은 시계로 대신해요
+  const startedAt = performance.now()
+  const clock = { getElapsedTime: () => (performance.now() - startedAt) / 1000 }
 
   const resize = () => {
     const w = canvas.clientWidth || 1
